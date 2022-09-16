@@ -8,7 +8,7 @@ RSX was formed in 2013 by passionate roboticists, space enthusiasts, and undergr
 
 For us, the sky is not the limit – it’s just in the way.
 
-For more information, visit our [website]](https://rsx.skule.ca/). 
+For more information, visit our [website](https://rsx.skule.ca/). 
 
 ## Repository Details 
 
