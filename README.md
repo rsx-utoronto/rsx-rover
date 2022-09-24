@@ -72,7 +72,7 @@ This will interactively run the docker container. You can either use VScode's re
 roscore&
 rviz
 ```
-The rviz gui should open on your host device 
+The rviz gui should open on your host device. 
 
 
 
