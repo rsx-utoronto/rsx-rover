@@ -50,7 +50,7 @@ You should get a docker image called rsx_dev_rsx
 
 Note: this will take about 15 minutes as it needs to install ROS onto the nvidia image 
 
-### Step 3: Set up your display variables
+### Step 3: Set up your display variables and start X server
 Start a bash terminal or powershell 
 ```
 ipconfig
@@ -59,6 +59,7 @@ Find the ip address of your host
 ```
 export DISPLAY=<your ip address>:0.0
 ```
+Start up Xming and accept all the default configurations and save your configuration to the Xming folder. Make sure the display variable is 0
 
 ### Step 4: Run the container 
 ```
