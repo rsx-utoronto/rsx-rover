@@ -2,10 +2,6 @@
 FROM nvcr.io/nvidia/cudagl:11.0-devel-ubuntu20.04
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC
-# RUN apt-get install wget
-# RUN apt-key del A4B469963BF863CC
-# RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb
-# RUN dpkg -i cuda-keyring_1.0-1_all.deb
 
 # Setup timezone
 RUN echo 'Etc/UTC' > /etc/timezone && \
@@ -33,17 +29,6 @@ RUN pip3 install setuptools
 RUN pip3 install numpy scikit-learn matplotlib PyYAML
 RUN pip3 install munch
 
-# Install pypcd
-RUN pip3 install --upgrade git+https://github.com/klintan/pypcd.git
-RUN pip3 install imageio
-
-# Install PyTorch
-RUN pip3 install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio==0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
-
-# Additionnal stuff
-RUN apt install ffmpeg -y --no-install-recommends
-RUN pip3 install imageio imageio-ffmpeg
-
 # Install ROS 
 RUN apt-get update
 RUN apt-get install curl gnupg2 lsb-release -y --no-install-recommends
@@ -62,18 +47,8 @@ RUN rosdep init
 RUN rosdep update
 
 RUN apt-get install python3-catkin-tools -y --no-install-recommends
-RUN apt-get install ros-noetic-velodyne* -y --no-install-recommends
-RUN apt-get install ros-noetic-pointcloud-to-laserscan -y --no-install-recommends
-RUN apt-get install ros-noetic-rgbd-launch -y --no-install-recommends
-# RUN apt-get install ros-noetic-range-sensor-layer -y --no-install-recommends
-RUN apt-get install ros-noetic-openni2* -y --no-install-recommends
-RUN apt-get install ros-noetic-octomap* -y --no-install-recommends
-RUN apt-get install ros-noetic-ros-control -y --no-install-recommends
 RUN apt-get install ros-noetic-tf2* -y --no-install-recommends
-RUN apt-get install ros-noetic-people-msgs -y --no-install-recommends
-RUN apt-get install ros-noetic-people-velocity-tracker -y --no-install-recommends
 RUN apt-get install ros-noetic-navigation* -y --no-install-recommends
-# RUN apt-get install ros-noetic-social-navigation-layers -y --no-install-recommends
 RUN apt-get install ros-noetic-teleop-twist-keyboard -y --no-install-recommends
 
 # Additionnal packages
@@ -106,8 +81,6 @@ RUN apt-get install ros-noetic-qt-gui-core -y --no-install-recommends
 RUN apt-get install ros-noetic-rqt-graph -y --no-install-recommends
 RUN apt-get install ros-noetic-costmap-converter -y --no-install-recommends
 
-RUN pip3 install pynvml
-
 # RUN apt-get install libnvidia-gl-430:i386
 
 # Install Mayavi from source
@@ -133,17 +106,6 @@ RUN apt-get install -y libopencv-dev python3-opencv qt5-default libvtk6-dev zlib
                         libtbb-dev 
 
 RUN apt install -y wget unzip
-# RUN wget -O opencv.zip https://github.com/opencv/opencv/archive/4.5.1.zip
-# RUN unzip opencv.zip && rm opencv.zip
-# RUN mv opencv-4.5.1 opencv
-# WORKDIR /workspace/compiled_libs/opencv
-# RUN mkdir -p build
-# WORKDIR /workspace/compiled_libs/opencv/build
-# RUN cmake -DWITH_QT=ON -DWITH_OPENGL=ON -DFORCE_VTK=ON -DWITH_TBB=ON -DWITH_GDAL=ON \
-#       -DWITH_XINE=ON -DENABLE_PRECOMPILED_HEADERS=OFF ..
-# RUN make -j4
-# RUN make install
-# RUN ldconfig
 
 # Setup user information
 ARG username0=bag
@@ -165,5 +127,7 @@ ENV ROS_DISTRO noetic
 ENV PATH /usr/local/nvidia/bin:${PATH}
 ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
 ENV USER=$username0
+ENV DISPLAY=host.docker.internal:0.0
+WORKDIR /home/$username0/rover_ws/src/rsx-rover
 
 

@@ -16,26 +16,23 @@ command=""
 ##########################
 
 # Docker run arguments
-docker_args="-it"
+docker_args="-it --rm"
+username="cathe"
 
 # Volumes (modify with your own path here)
-volumes="-v $PWD/..:/home/$USER/rover_ws/rsx-rover"
+volumes="-v /c/Users/$username/rsx-rover:/home/rsx/rover_ws/src/rsx-rover:rw"
 
-# Additional arguments to be able to open GUI
-XSOCK=/tmp/.X11-unix
-XAUTH=/home/$USER/.Xauthority
-other_args="-v $XSOCK:$XSOCK \
-    -v $XAUTH:$XAUTH \
-    --net=host \
+echo $PWD
+
+other_args="
     --privileged \
-	-e XAUTHORITY=${XAUTH} \
-    -e DISPLAY=$DISPLAY \
-    -w /home/$USER/rover_ws/src"
+    --net=host \
+    -e DISPLAY=$DISPLAY "
 
-
-docker run $docker_args \
+winpty docker run $docker_args \
 $volumes \
 $other_args \
+-e DISPLAY=$DISPLAY \
 --name "rsx-dev" \
 rsx_dev_rsx \
 $command
