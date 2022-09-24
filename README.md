@@ -25,7 +25,7 @@ mkdir -p rover_ws/src
 git clone git@github.com:rsx-utoronto/rsx-rover.git
 cd ..
 catkin_make 
-
+```
 ### On Windows or Mac 
 
 #### Step 0: Before cloning
