@@ -16,13 +16,62 @@ We primarily develop is C++ and Python using ROS noetic and ROS2 Humble.
 
 ## Getting Started 
 
-### Before Installing and Dependencies
+Note: It is recommended to set up [ssh keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) 
 
-Ubuntu 20.04 and 
-
-To clone and setup this repo: 
-
+### On Ubuntu Focal w/ ROS noetic 
 ```
+cd ~
 mkdir -p rover_ws/src 
+git clone git@github.com:rsx-utoronto/rsx-rover.git
+cd ..
+catkin_make 
+
+### On Windows or Mac 
+
+#### Step 0: Before cloning
+Make sure you have the following installed:
+1. [Git](https://gitforwindows.org/)
+2. [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+3. [Xming](https://sourceforge.net/projects/xming/)(windows) or [XQuartz](https://www.xquartz.org/)(macOS, not tested)
+
+#### Step 1: Clone repo
+Use git bash to clone the repo 
+```
+git clone git@github.com:rsx-utoronto/rsx-rover.git
+```
+
+### Step 2: Build docker image from Dockerfile 
+Start bash 
+```
+cd rsx-rover/docker
+./docker_build.sh
+```
+You should get a docker image called rsx_dev_rsx
+
+Note: this will take about 15 minutes as it needs to install ROS onto the nvidia image 
+
+### Step 3: Set up your display variables
+Start a bash terminal or powershell 
+```
+ipconfig
+```
+Find the ip address of your host 
+```
+export DISPLAY=<your ip address>:0.0
+```
+
+### Step 4: Run the container 
+```
+./rsx_docker_run.sh
+```
+This will interactively run the docker container. You can either use VScode's remote - container extension to connect or continue in the terminal 
+
+### Step 5: Test
+```
+roscore&
+rviz
+```
+The rviz gui should open on your host device 
+
 
 
