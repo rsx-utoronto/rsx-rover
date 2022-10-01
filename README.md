@@ -35,7 +35,7 @@ Make sure you have the following installed:
 3. [Xming](https://sourceforge.net/projects/xming/)(windows) or [XQuartz](https://www.xquartz.org/)(macOS, not tested)
 
 #### Step 1: Clone repo
-Use git bash to clone the repo 
+Use git bash to clone the repo (to your local machine)
 ```
 git clone git@github.com:rsx-utoronto/rsx-rover.git
 ```
@@ -55,7 +55,8 @@ Start a bash terminal or powershell
 ```
 ipconfig
 ```
-Find the ip address of your host 
+Find the ip address of your host. 
+On your host machine:
 ```
 export DISPLAY=<your ip address>:0.0
 ```
