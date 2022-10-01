@@ -58,7 +58,7 @@ ipconfig
 Find the ip address of your host. 
 On your host machine:
 ```
-export DISPLAY=<your ip address>:0.0
+export DISPLAY=<your ip address (ipv4 ethernet)>:0.0
 ```
 Start up Xming and accept all the default configurations and save your configuration to the Xming folder. Make sure the display variable is 0
 
