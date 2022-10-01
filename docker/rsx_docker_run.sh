@@ -30,7 +30,6 @@ other_args="
     -e DISPLAY=$DISPLAY "
 
 winpty docker run $docker_args \
-$volumes \
 $other_args \
 -e DISPLAY=$DISPLAY \
 --name "rsx-dev" \
