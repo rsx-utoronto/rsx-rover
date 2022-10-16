@@ -115,7 +115,7 @@ RUN adduser $username0 root
 RUN adduser $username0 sudo
 RUN echo $username0':rsx123' | chpasswd
 USER $username0
-RUN mkdir -p /home/$username0/rover-ws/src/rsx-rover
+RUN mkdir -p /home/$username0/rover_ws/src/rsx-rover
 
 RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 RUN echo "export USER=$username0" >> ~/.bashrc
