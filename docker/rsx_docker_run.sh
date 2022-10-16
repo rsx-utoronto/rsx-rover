@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# takes 2 positional arguments; first is your ipv4 address (for display), second is path to repo (for bind mount)
-# remember to enclose filepath in quotes
-
 ########
 # Init #
 ########
@@ -18,7 +15,7 @@ echo ""
 # Docker run arguments
 docker_args="-it --rm"
 
-display="$1:0.0" # Xming display
+display="$1:0.0" # X display
 repo_path="$2"   # bind mount (see difference between bind mounts and docker volumes: https://www.dltlabs.com/blog/bind-mounts-volumes-indocker-133067)
 
 other_args="
