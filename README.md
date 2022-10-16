@@ -32,7 +32,7 @@ catkin_make
 Make sure you have the following installed:
 1. [Git](https://gitforwindows.org/)
 2. [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-3. [Xming](https://sourceforge.net/projects/xming/)(windows) or [XQuartz](https://www.xquartz.org/)(macOS, not tested)
+3. [Xming](https://sourceforge.net/projects/xming/) (windows) or [XQuartz](https://www.xquartz.org/) (macOS, not tested)
 
 #### Step 1: Clone repo
 Use git bash to clone the repo (to your local machine)
@@ -63,9 +63,11 @@ export DISPLAY=<your ip address (ipv4 ethernet)>:0.0
 Start up Xming and accept all the default configurations and save your configuration to the Xming folder. Make sure the display variable is 0
 
 ### Step 4: Run the container 
-```
-./rsx_docker_run.sh
-```
+
+Use the rsx_docker_run.sh script to create a running container from the docker image (built in step 2). 
+
+> Refer to the [instructions for using rsx_docker_run.sh](docker/running_image_directions.md)
+
 This will interactively run the docker container. You can either use VScode's remote - container extension to connect or continue in the terminal 
 
 ### Step 5: Test
