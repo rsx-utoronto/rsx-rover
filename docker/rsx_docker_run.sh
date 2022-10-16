@@ -19,7 +19,7 @@ echo ""
 docker_args="-it --rm"
 
 display="$1:0.0" # Xming display
-repo_path="$2"   # bind mount
+repo_path="$2"   # bind mount (see difference between bind mounts and docker volumes: https://www.dltlabs.com/blog/bind-mounts-volumes-indocker-133067)
 
 other_args="
     --privileged \
