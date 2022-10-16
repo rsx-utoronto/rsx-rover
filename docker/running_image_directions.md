@@ -6,6 +6,8 @@ The script takes **two positional arguments:**
 1. your ipv4 address (used for connecting to X server for display)
 2. path to the cloned rsx-rover repo on your local computer (used to establish a bind mount)
 
+You can find your ipv4 address by typing `ipconfig` into a terminal (e.g., bash, powershell, windows cmdline).
+
 For example, if my ipv4 address was 10.0.0.1, and the rsx-rover repo on my computer was at "C:\bryan\rsx-rover", then the command I would run is:
 > `./rsx_docker_run.sh 10.0.0.1 "C:\bryan\rsx-rover"`
 
