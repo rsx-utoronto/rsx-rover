@@ -199,4 +199,4 @@ include_directories(
 # catkin_add_nosetests(test)
 
 add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
-target_link_libraries(drive_sender ${catkin_LIBRARIES})
+target_link_libraries(drive_sender_node ${catkin_LIBRARIES})

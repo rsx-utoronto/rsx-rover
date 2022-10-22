@@ -15,7 +15,7 @@ export ROS_IP=192.168.0.69
 record=0
 topic_list=()
 CONTROLLER_DEFAULT=0
-RVIZ_CONFIG="~/rover_ws/src/rover/scripts/launch/config/rviz"
+RVIZ_CONFIG="~/rover_ws/src/rsx-rover/config/rviz"
 
 # Parse optional args
 while [[ $# -gt 0 ]]

@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 
 import rospy
 from sensor_msgs.msg import NavSatFix
@@ -16,7 +16,7 @@ def main():
     rospy.init_node("gps_to_txt")
 
     # gps rostopic name
-    gps_topic = "" 
+    gps_topic = "/fix" 
     rospy.Subscriber(gps_topic, NavSatFix, gps_callback)
     rospy.spin()
 
