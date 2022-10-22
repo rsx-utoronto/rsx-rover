@@ -5,11 +5,8 @@
 ########
 
 echo ""
-echo "Running rsx dev docker"
+echo "Starting up container from rsx_dev_rsx"
 echo ""
-
-command=""
-
 
 ##########################
 # Start docker container #
@@ -17,21 +14,18 @@ command=""
 
 # Docker run arguments
 docker_args="-it --rm"
-username="cathe"
 
-# Volumes (modify with your own path here)
-volumes="-v /c/Users/$username/rsx-rover:/home/rsx/rover_ws/src/rsx-rover:rw"
-
-echo $PWD
+display="$1:0.0" # X display
+repo_path="$2"   # bind mount (see difference between bind mounts and docker volumes: https://www.dltlabs.com/blog/bind-mounts-volumes-indocker-133067)
 
 other_args="
     --privileged \
     --net=host \
-    -e DISPLAY=$DISPLAY "
+    -e DISPLAY=$display
+    -v $repo_path:/home/rsx/rover_ws/src/rsx-rover:rw"
 
-winpty docker run $docker_args \
-$other_args \
--e DISPLAY=$DISPLAY \
---name "rsx-dev" \
-rsx_dev_rsx \
-$command
+winpty docker run \
+    $docker_args \
+    $other_args \
+    --name "rsx-dev" \
+    rsx_dev_rsx
