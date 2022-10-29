@@ -27,14 +27,15 @@ cd ..
 catkin_make 
 ```
 ### On Windows or Mac 
+Note: On Mac Docker cannot access the gpu, so anything that requires it will not work (i.e. Gazebo)
 
-#### Step 0: Before cloning
+### Step 0: Before cloning
 Make sure you have the following installed:
 1. [Git](https://gitforwindows.org/)
 2. [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-3. [Xming](https://sourceforge.net/projects/xming/) (windows) or [XQuartz](https://www.xquartz.org/) (macOS, not tested)
+3. [Xming](https://sourceforge.net/projects/xming/) (windows) or [XQuartz](https://www.xquartz.org/) (macOS)
 
-#### Step 1: Clone repo
+### Step 1: Clone repo
 Use git bash to clone the repo (to your local machine)
 ```
 git clone git@github.com:rsx-utoronto/rsx-rover.git
@@ -52,15 +53,27 @@ Note: this will take about 15 minutes as it needs to install ROS onto the nvidia
 
 ### Step 3: Start X server
 
-Start up Xming and accept all the default configurations and save your configuration to the Xming folder. Make sure the display variable is 0
+Windows: 
+Start up Xming and accept all the default configurations and save your configuration to the Xming folder. Make sure the display variable is 0.
+Mac: 
+Start up XQuartz and navigate to Preferences -> Security. Make sure to check 'Allow connections from network clients' before restarting XQuartz.
 
 ### Step 4: Run the container 
-
+Windows:
 Use the rsx_docker_run.sh script to create a running container from the docker image (built in step 2). 
 
 > Refer to the [instructions for using rsx_docker_run.sh](docker/running_image_directions.md)
 
 This will interactively run the docker container. You can either use VScode's remote - container extension to connect or continue in the terminal 
+
+Mac:
+Start bash
+```
+ip=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
+xhost + $ip
+docker run -it --name rsx_dev -e DISPLAY=$ip:0 -v 'path to rsx-rover':/home/rsx/rover_ws/src/rsx-rover rsx_dev_rsx
+```
+Make sure to change 'path to rsx-rover' to where you cloned the repo on your device (ex. /Users/username/rsx-rover), this mounts it to the docker container. 
 
 ### Step 5: Test
 ```
