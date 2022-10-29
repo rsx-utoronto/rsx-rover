@@ -200,3 +200,9 @@ include_directories(
 
 add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
 target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
+
+add_executable(wheel_node rover/autonomy/src/wheel_node.cpp)
+target_link_libraries(wheel_node ${catkin_LIBRARIES})
+
+add_executable(wheel_odometry_node rover/autonomy/src/wheel_odometry_node.cpp)
+target_link_libraries(wheel_odometry_node ${catkin_LIBRARIES})
