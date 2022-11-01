@@ -9,7 +9,7 @@
 ros::NodeHandle n("~");
 std::string motor_name;
 
-void statusCallbackLeft(const ros_phoenix::MotorStatus msg)
+void statusCallback(const ros_phoenix::MotorStatus msg)
 {
     ros::Publisher positionPub = n.advertise<std_msgs::Float32>(motor_name+"/position", 1000);
     if(ros::ok()){
@@ -29,8 +29,7 @@ int main(int argc, char **argv)
   n.getParam("motor_name", motor_name);
 
   ros::Subscriber sub = n.subscribe(motor_name+"/status", 1000, statusCallback);
-  
-  ros::Rate loop_rate(10);
+
 
   return 0;
 }
