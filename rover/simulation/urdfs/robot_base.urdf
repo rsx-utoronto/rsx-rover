@@ -216,8 +216,8 @@
 
 <joint name="imu_joint" type="fixed">
     <origin
-      xyz="0.0 0 0.278189004081027"
-      rpy="0 0 0" />
+      xyz="0.0 0 0.0"
+      rpy="1.5707963267949 0 0" />
     <parent
       link="base_link" />
     <child
@@ -274,7 +274,7 @@
         <updateRate>20.0</updateRate>
       </plugin>
 </gazebo> -->
-
+<!--
 <gazebo reference="imu_link">
     <gravity>true</gravity>
     <sensor name="imu_sensor" type="imu">
@@ -294,8 +294,36 @@
       </plugin>
       <pose>0 0 0 0 0 0</pose>
     </sensor>
+</gazebo> -->
+<gazebo>
+  <plugin filename="libhector_gazebo_ros_imu.so"
+            name="hector_imu_plugin" >
+    <alwaysOn>true</alwaysOn>
+    <bodyName>imu_link</bodyName>
+    <topicName>imu</topicName>
+    <serviceName>/imu/calibrate</serviceName>
+    <gaussianNoise>0.0</gaussianNoise>
+    <updateRate>5.0</updateRate>
+    <frameName>imu_link</frameName>
+    <!-- Accelerometer config, 3 values are corresponding
+    to x,y,z axis respectively -->
+    <accelOffset>0 0 0 </accelOffset>
+    <accelGaussianNoise>0 0 0</accelGaussianNoise>
+    <accelDrift>0 0 0 </accelDrift>
+    <accelDriftFrequency>0 0 0</accelDriftFrequency>
+    <!-- Gyroscope config -->
+    <rateOffset>0 0 0</rateOffset>
+    <rateGaussianNoise> 0 0 0</rateGaussianNoise>
+    <rateDrift>0 0 0 </rateDrift>
+    <rateDriftFrequency> 0 0 0</rateDriftFrequency>
+    <!-- Separate error model for YAW angle -->
+    <yawOffset> 0 </yawOffset>
+    <yawGaussianNoise> 0 </yawGaussianNoise>
+    <yawDrift> 0 </yawDrift>
+    <yawDriftFrequency> 0 </yawDriftFrequency> -->
+  </plugin>
 </gazebo>
-
+ 
 <!--######################################################################-->
 <gazebo>
       <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
@@ -397,5 +425,4 @@
 </transmission>
 <!--######################################################################-->
 </robot>
-
 
