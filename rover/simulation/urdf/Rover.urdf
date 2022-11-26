@@ -1,0 +1,471 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="rover">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-0.541713766258109 -0.39835226761597 0.419515200099824"
+        rpy="0 0 0" />
+      <mass
+        value="1.29640563513338" />
+      <inertia
+        ixx="0.00672846851367381"
+        ixy="-4.18701658808344E-12"
+        ixz="1.67488363234134E-11"
+        iyy="0.0202362014370819"
+        iyz="-4.2310649101586E-11"
+        izz="0.0141290723043649" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/chassis.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/chassis.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="rocker_1">
+    <inertial>
+      <origin
+        xyz="-0.06340165227202 0.0349398172882698 0.170844109095454"
+        rpy="0 0 0" />
+      <mass
+        value="0.70205795902915" />
+      <inertia
+        ixx="0.00217365418533618"
+        ixy="6.75699648637058E-19"
+        ixz="-0.00213217567457792"
+        iyy="0.00810448763367225"
+        iyz="9.83156460081848E-19"
+        izz="0.00630951857064517" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/rocker_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/rocker_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_1"
+    type="continuous">
+    <origin
+      xyz="-0.565029747453997 -0.343460811752158 0.714395200000001"
+      rpy="-1.5707963267949 0 0" />
+    <parent
+      link="chassis" />
+    <child
+      link="rocker_1" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="wheel_1">
+    <inertial>
+      <origin
+        xyz="-0.00017629135360131 -0.0635452754038062 -0.000101140603862057"
+        rpy="0 0 0" />
+      <mass
+        value="3.71098878155855" />
+      <inertia
+        ixx="0.0272042502379572"
+        ixy="4.78355933988129E-05"
+        ixz="-4.7997814112481E-05"
+        iyy="0.0486688742528704"
+        iyz="2.76359428622245E-05"
+        izz="0.0272554802013549" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_3"
+    type="continuous">
+    <origin
+      xyz="0.565029747453997 0.714395200000001 0.343460811752158"
+      rpy="0 0 0" />
+    <parent
+      link="rocker_1" />
+    <child
+      link="wheel_1" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="wheel_2">
+    <inertial>
+      <origin
+        xyz="0.000178598120052054 -0.0635452759417753 -9.70154810366053E-05"
+        rpy="0 0 0" />
+      <mass
+        value="3.71098882599398" />
+      <inertia
+        ixx="0.0271986338574481"
+        ixy="-4.86634359333758E-05"
+        ixz="4.44470836974936E-05"
+        iyy="0.0486688706198307"
+        iyz="2.62518958042056E-05"
+        izz="0.0272610901759164" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_4"
+    type="continuous">
+    <origin
+      xyz="-0.57040152561046 0.7143947 0.337964017634837"
+      rpy="0 0 0" />
+    <parent
+      link="rocker_1" />
+    <child
+      link="wheel_2" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="wheel_3">
+    <inertial>
+      <origin
+        xyz="0.00194989719322669 -0.067545275079441 0.00121367777135682"
+        rpy="0 0 0" />
+      <mass
+        value="3.71098876771528" />
+      <inertia
+        ixx="0.0272070478217746"
+        ixy="4.70223110089377E-05"
+        ixz="-4.93890897054053E-05"
+        iyy="0.0486688742503829"
+        iyz="2.89980824740975E-05"
+        izz="0.0272526826411885" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_5"
+    type="continuous">
+    <origin
+      xyz="0.00291275239542993 0.718394699999995 0.348239370363993"
+      rpy="0 0 0" />
+    <parent
+      link="rocker_1" />
+    <child
+      link="wheel_3" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="rocker_2">
+    <inertial>
+      <origin
+        xyz="-0.0568984438490289 -0.0279401827117303 0.173118590021415"
+        rpy="0 0 0" />
+      <mass
+        value="0.702057959029176" />
+      <inertia
+        ixx="0.00201848663207345"
+        ixy="-8.64867731325201E-20"
+        ixz="-0.00196985892397946"
+        iyy="0.00810448763367223"
+        iyz="-2.54943641623793E-19"
+        izz="0.00646468612390788" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/rocker_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/rocker_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_2"
+    type="continuous">
+    <origin
+      xyz="-0.566089593050286 -0.343484933132904 0.131635200000001"
+      rpy="-1.5707963267949 0 0" />
+    <parent
+      link="chassis" />
+    <child
+      link="rocker_2" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="wheel_4">
+    <inertial>
+      <origin
+        xyz="0.00194021425049584 0.0675452760210624 0.00122909345216424"
+        rpy="0 0 0" />
+      <mass
+        value="3.71098880202612" />
+      <inertia
+        ixx="0.0272054221797023"
+        ixy="-4.65457353505029E-05"
+        ixz="-4.86053275352072E-05"
+        iyy="0.0486688742211578"
+        iyz="-2.97572117749254E-05"
+        izz="0.0272543080141054" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_6"
+    type="continuous">
+    <origin
+      xyz="0.551582011185932 -0.711395200000009 0.363429883828699"
+      rpy="0 0 0" />
+    <parent
+      link="rocker_2" />
+    <child
+      link="wheel_4" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="wheel_5">
+    <inertial>
+      <origin
+        xyz="0.00190412164591514 0.0675452763004369 0.00128429872637636"
+        rpy="0 0 0" />
+      <mass
+        value="3.7109887931054" />
+      <inertia
+        ixx="0.0272082525262715"
+        ixy="-4.56720854196086E-05"
+        ixz="-4.99283758016243E-05"
+        iyy="0.0486688742002614"
+        iyz="-3.10813718997883E-05"
+        izz="0.0272514775785935" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_5.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_7"
+    type="continuous">
+    <origin
+      xyz="-0.00820580930832887 -0.711395699999999 0.348294127176395"
+      rpy="0 0 0" />
+    <parent
+      link="rocker_2" />
+    <child
+      link="wheel_5" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="wheel_6">
+    <inertial>
+      <origin
+        xyz="0.000183308022644268 0.0635452758771148 -8.77894032265403E-05"
+        rpy="0 0 0" />
+      <mass
+        value="3.71098880708039" />
+      <inertia
+        ixx="0.0271974322176279"
+        ixy="4.97534168410984E-05"
+        ixz="4.36810350456358E-05"
+        iyy="0.0486688742475462"
+        iyz="-2.40124238018517E-05"
+        izz="0.027262298065" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_6.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rover/meshes/wheel_6.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_8"
+    type="continuous">
+    <origin
+      xyz="-0.58426543563399 -0.707395699999999 0.308828041098283"
+      rpy="0 0 0" />
+    <parent
+      link="rocker_2" />
+    <child
+      link="wheel_6" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+</robot>
