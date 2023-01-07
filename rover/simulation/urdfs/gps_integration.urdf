@@ -1,0 +1,51 @@
+<gazebo>
+    <plugin name="gps_controller" filename="libhector_gazebo_ros_gps.so">
+        <robotNamespace>/</robotNamespace>
+        <updateRate>40</updateRate>
+        <bodyName>base_link</bodyName>
+        <frameId>base_link</frameId>
+        <topicName>navsat/fix</topicName>
+        <velocityTopicName>navsat/vel</velocityTopicName>
+        <referenceLatitude>50.0</referenceLatitude>
+        <referenceLongitude>60.0</referenceLongitude>
+        <referenceHeading>0</referenceHeading>
+        <referenceAltitude>0</referenceAltitude>
+        <drift>0.0001 0.0001 0.0001</drift>
+    </plugin>
+ </gazebo>
+
+
+<link name="gps_link">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+    <box size="0.05 0.05 0.05"/>
+      </geometry>
+    </collision>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+    <box size="0.05 0.05 0.05"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+
+    <inertial>
+      <mass value="1e-5" />
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+    </inertial>
+  </link>
+
+<joint name="gps_joint" type="fixed">
+    <origin
+      xyz="0.0 0 0.278189004081027"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="gps_link" />
+    <axis
+      xyz="0 0 0" />
+</joint>
