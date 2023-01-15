@@ -15,6 +15,7 @@ def image_callback(ros_image):
     try:
         cv_image = bridge.imgmsg_to_cv2(ros_image,"bgr8")
     except CvBridgeError as e:
+        print("image_callback conversion error")
         print(e)
     else:
         findArucoMarkers(cv_image)
@@ -24,10 +25,12 @@ def image_callback(ros_image):
 
 def findArucoMarkers(img, markerSize=4, totalMarkers=50, draw=True):
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    key =getattr(aruco, 'DICT_' + str(markerSize) + 'X' + str(markerSize) + str(totalMarkers))
-    arucoDict = aruco.Dictionary_get(key)
-    arucoParam = aruco.DetectorParameters_create()
-    bboxs, ids,rejected=aruco.detectMarkers(imgGray,arucoDict,parameters=arucoParam)
+    key = getattr(cv2.aruco, f'DICT_{markerSize}X{markerSize}_{totalMarkers}')
+
+    dictionary = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
+    parameters = aruco.DetectorParameters()
+    detector = aruco.ArucoDetector(dictionary, parameters)
+    bboxs, ids, rejected = detector.detectMarkers(imgGray)
 
     print(ids)
     if draw:
@@ -37,7 +40,7 @@ def findArucoMarkers(img, markerSize=4, totalMarkers=50, draw=True):
 def main():
     rospy.init_node('image_converter',anonymous=True)
     # set to the right camera for now, can also set left camera
-    image_topic = "/zed/zed_node/right_raw/image_raw_color"
+    image_topic = "/camera/color/image_raw"
     rospy.Subscriber(image_topic, Image, image_callback)
 
     # Spin until ctrl + c
