@@ -51,7 +51,7 @@ def createEndEffectorTransform() -> list:
     pass
 
 def createTransformationMatrix():
-    ''' Creates a transformation
+    ''' Creates a transformation 
 
     '''
     pass
