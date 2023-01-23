@@ -16,7 +16,7 @@ if __name__ == "__main__":
             newJointState.header = Header()
             newJointState.header.stamp = rospy.Time.now()
             newJointState.name = ["Joint_1", "Joint_2", "Joint_3", "Joint_4", "Joint_5", "Joint_6"]
-            newJointState.position = [0, 0, 1, 0, 1, 1] # Angles in radians [Joint_1, Joint_2, ....]
+            newJointState.position = [0, 0, 1, 1, 1, 1] # Angles in radians [Joint_1, Joint_2, ....]
 
             jointPublisher.publish(newJointState) # send data to be published
 
