@@ -3,22 +3,24 @@ import rospy
 
 # joystick stuff (re-use old code)
 
-def createXYZRotationMatrix(roll, pitch, yaw) -> list:
+def createXYZRotationMatrix(roll:float, pitch:float, yaw:float) -> list:
     ''' Creates a rotation matrix based on XYZ euler angles (Row, Pitch, Yaw)
+
+    *include more detailed description here*
 
     Paramaters
     ----------
     roll
-        angle x-axis rotated (double)
+        angle x-axis rotated (float)
     pitch
-        angle y-axis rotates (double)
+        angle y-axis rotates (float)
     yaw
-        angle z-axis rotates (double)
+        angle z-axis rotates (float)
     
     Returns
     -------
-    ### numpy matrix
-        rotation matrix using XYZ euler angles  
+    numpy matrix
+        rotation matrix using XYZ euler angles
     '''
     pass
 
@@ -35,7 +37,7 @@ def createEndEffectorTransform() -> list:
         angle x-axis rotates
     pitch
         angle y-axis roates
-    yaw 
+    yaw
         angle z-axis rotates
 
     Exceptions
@@ -50,8 +52,27 @@ def createEndEffectorTransform() -> list:
     '''
     pass
 
-def createTransformationMatrix():
-    ''' Creates a transformation 
+def createTransformationMatrix() -> list:
+    ''' Creates a transform matrix based on dh-table paramters.
+
+    Input is assumed to be relative to user defined origin (base_link, link_1, etc). Uses
+    matrix 3.10 (p.g 79) from ECE470 textbook. 
+
+    Paramters
+    ---------
+    d
+        d value from dh-table
+    theta
+        theta value from dh-table
+    r
+        r value from dh-table
+    alpha
+        alpha value from dh-table
+
+    Return
+    ------
+    numpy matrix
+        the transfromation matrix based on the given paramters of the dh-table
 
     '''
     pass
@@ -65,7 +86,7 @@ def createDHTable(jointAngles) -> list:
     Paramaters
     ---------
     jointAngles
-        array for changing angles (theta star)
+        array for changing angles (theta star of dh-table)
 
     Returns
     -------
