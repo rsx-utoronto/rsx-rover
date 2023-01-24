@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import rospy
+import numpy as np
 
 # joystick stuff (re-use old code)
 
@@ -27,7 +28,7 @@ def createXYZRotationMatrix(roll:float, pitch:float, yaw:float) -> list:
 def createEndEffectorTransform() -> list:
     ''' Creates the matrix that defines the transform of the end effector based on target
 
-    Uses createXYZRotationMatrix to define rotation portion of matrix.
+    Uses createXYZRotationMatrix() to define rotation portion of matrix.
 
     Paramaters
     ----------
