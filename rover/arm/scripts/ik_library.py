@@ -5,8 +5,8 @@ import math
 
 # joystick stuff (re-use old code)
 
-def createXYZRotationMatrix(roll:float, pitch:float, yaw:float) -> list:
 
+def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
     ''' Creates a rotation matrix based on XYZ euler angles (Row, Pitch, Yaw)
 
     Paramaters
@@ -17,7 +17,7 @@ def createXYZRotationMatrix(roll:float, pitch:float, yaw:float) -> list:
         angle y-axis rotates (float) - 'beta'
     yaw
         angle z-axis rotates (float) - 'gamma'
-    
+
     Returns
     -------
     numpy matrix
@@ -26,9 +26,9 @@ def createXYZRotationMatrix(roll:float, pitch:float, yaw:float) -> list:
 
     ''' Convert degrees to radians '''
 
-    roll = roll * math.pi / 180
-    pitch = pitch * math.pi / 180
-    yaw = yaw * math.pi / 180
+    roll *= math.pi / 180
+    pitch *= math.pi / 180
+    yaw *= math.pi / 180
 
     ''' Define cosine and sine of each angle before entering into matrix to reduce # of calculations '''
 
@@ -43,11 +43,13 @@ def createXYZRotationMatrix(roll:float, pitch:float, yaw:float) -> list:
 
     ''' Assemble matrix using multiplication of x, y, and z-axis rotation matrices '''
 
-    rotationMatrix = np.array([ [(cPitch * cYaw) , (- cPitch * sYaw) , (sPitch)] ,
-                                [((cRoll * sYaw) + (cYaw * sRoll * sPitch)) , ((cRoll * cYaw) - (sRoll * sPitch * sYaw)) , (- cPitch * sRoll)] ,
-                                [((sRoll * sYaw) - (cRoll * cYaw * sPitch)) , ((cYaw * sRoll) + (cRoll * sPitch * sYaw)) , (cRoll * cPitch)] ])
+    rotationMatrix = np.array([[(cPitch * cYaw), (- cPitch * sYaw), (sPitch)],
+                               [((cRoll * sYaw) + (cYaw * sRoll * sPitch)), ((cRoll *
+                                                                              cYaw) - (sRoll * sPitch * sYaw)), (- cPitch * sRoll)],
+                               [((sRoll * sYaw) - (cRoll * cYaw * sPitch)), ((cYaw * sRoll) + (cRoll * sPitch * sYaw)), (cRoll * cPitch)]])
 
     return rotationMatrix
+
 
 def createEndEffectorTransform() -> list:
     ''' Creates the matrix that defines the transform of the end effector based on target
@@ -77,6 +79,7 @@ def createEndEffectorTransform() -> list:
     '''
     pass
 
+
 def createTransformationMatrix() -> list:
     ''' Creates a transform matrix based on dh-table paramters.
 
@@ -102,6 +105,7 @@ def createTransformationMatrix() -> list:
     '''
     pass
 
+
 def createDHTable(jointAngles) -> list:
     ''' Create DH Table for arm based on current position 
 
@@ -119,4 +123,3 @@ def createDHTable(jointAngles) -> list:
         a matrix containing the dh table (numpy matrix isn't the name of the return variable, just what type of data is returned)
     '''
     pass
-
