@@ -1,29 +1,53 @@
 #!/usr/bin/env python3
 import rospy
 import numpy as np
+import math
 
 # joystick stuff (re-use old code)
 
 def createXYZRotationMatrix(roll:float, pitch:float, yaw:float) -> list:
-    ''' Creates a rotation matrix based on XYZ euler angles (Row, Pitch, Yaw)
 
-    *include more detailed description here*
+    ''' Creates a rotation matrix based on XYZ euler angles (Row, Pitch, Yaw)
 
     Paramaters
     ----------
     roll
-        angle x-axis rotated (float)
+        angle x-axis rotated (float) - 'alpha'
     pitch
-        angle y-axis rotates (float)
+        angle y-axis rotates (float) - 'beta'
     yaw
-        angle z-axis rotates (float)
+        angle z-axis rotates (float) - 'gamma'
     
     Returns
     -------
     numpy matrix
         rotation matrix using XYZ euler angles
     '''
-    pass
+
+    ''' Convert degrees to radians '''
+
+    roll = roll * math.pi / 180
+    pitch = pitch * math.pi / 180
+    yaw = yaw * math.pi / 180
+
+    ''' Define cosine and sine of each angle before entering into matrix to reduce # of calculations '''
+
+    cRoll = math.cos(roll)
+    sRoll = math.sin(roll)
+
+    cPitch = math.cos(pitch)
+    sPitch = math.sin(pitch)
+
+    cYaw = math.cos(yaw)
+    sYaw = math.sin(yaw)
+
+    ''' Assemble matrix using multiplication of x, y, and z-axis rotation matrices '''
+
+    rotationMatrix = np.array([ [(cPitch * cYaw) , (- cPitch * sYaw) , (sPitch)] ,
+                                [((cRoll * sYaw) + (cYaw * sRoll * sPitch)) , ((cRoll * cYaw) - (sRoll * sPitch * sYaw)) , (- cPitch * sRoll)] ,
+                                [((sRoll * sYaw) - (cRoll * cYaw * sPitch)) , ((cYaw * sRoll) + (cRoll * sPitch * sYaw)) , (cRoll * cPitch)] ])
+
+    return rotationMatrix
 
 def createEndEffectorTransform() -> list:
     ''' Creates the matrix that defines the transform of the end effector based on target
