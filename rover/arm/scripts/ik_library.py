@@ -44,8 +44,7 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
     ''' Assemble matrix using multiplication of x, y, and z-axis rotation matrices '''
 
     rotationMatrix = np.array([[(cPitch * cYaw), (- cPitch * sYaw), (sPitch)],
-                               [((cRoll * sYaw) + (cYaw * sRoll * sPitch)), ((cRoll *
-                                                                              cYaw) - (sRoll * sPitch * sYaw)), (- cPitch * sRoll)],
+                               [((cRoll * sYaw) + (cYaw * sRoll * sPitch)), ((cRoll * cYaw) - (sRoll * sPitch * sYaw)), (- cPitch * sRoll)],
                                [((sRoll * sYaw) - (cRoll * cYaw * sPitch)), ((cYaw * sRoll) + (cRoll * sPitch * sYaw)), (cRoll * cPitch)]])
 
     return rotationMatrix
