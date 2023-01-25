@@ -120,4 +120,3 @@ def createDHTable(jointAngles) -> list:
     '''
     pass
 
-createDHTable()
