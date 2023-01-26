@@ -24,13 +24,13 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
         rotation matrix using XYZ euler angles
     '''
 
-    ''' Convert input angles to radians '''
+    # Convert input angles to radians
 
     roll *= math.pi / 180
     pitch *= math.pi / 180
     yaw *= math.pi / 180
 
-    ''' Define cosine and sine of each angle before entering into matrix to reduce # of calculations '''
+    # Define sine and cosine of each angle to reduce # of calculations
 
     cRoll = math.cos(roll)
     sRoll = math.sin(roll)
@@ -41,11 +41,13 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
     cYaw = math.cos(yaw)
     sYaw = math.sin(yaw)
 
-    ''' Assemble 3 x 3 matrix using multiplication of x, y, and z-axis rotation matrices'''
+    # Assemble 3x3 transformation matrix
 
     rotationMatrix = np.array([[(cPitch * cYaw) , (- cPitch * sYaw) , (sPitch)],
                                [((cRoll * sYaw + cYaw * sRoll * sPitch)) , ((cRoll * cYaw) - (sRoll * sPitch * sYaw)) , (- cPitch * sRoll)],
                                [((sRoll * sYaw) - (cRoll * cYaw * sPitch)) , ((cYaw * sRoll) + (cRoll * sPitch * sYaw)) , (cRoll * cPitch)]])
+
+    # Returns matrix
 
     return rotationMatrix
 
