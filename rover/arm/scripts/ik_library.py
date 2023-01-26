@@ -9,14 +9,14 @@ import math
 def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
     ''' Creates a rotation matrix based on XYZ euler angles (Row, Pitch, Yaw)
 
-    Paramaters
+    Paramaters (euler angles)
     ----------
-    roll
-        angle x-axis rotated (float) - 'alpha'
-    pitch
-        angle y-axis rotates (float) - 'beta'
-    yaw
-        angle z-axis rotates (float) - 'gamma'
+    roll (alpha)
+        angle x-axis rotated (float)
+    pitch (beta)
+        angle y-axis rotates (float)
+    yaw (gamma)
+        angle z-axis rotates (float)
 
     Returns
     -------
@@ -24,7 +24,7 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
         rotation matrix using XYZ euler angles
     '''
 
-    ''' Convert degrees to radians '''
+    ''' Convert input angles to radians '''
 
     roll *= math.pi / 180
     pitch *= math.pi / 180
@@ -41,11 +41,11 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
     cYaw = math.cos(yaw)
     sYaw = math.sin(yaw)
 
-    ''' Assemble matrix using multiplication of x, y, and z-axis rotation matrices '''
+    ''' Assemble 3 x 3 matrix using multiplication of x, y, and z-axis rotation matrices'''
 
-    rotationMatrix = np.array([[(cPitch * cYaw), (- cPitch * sYaw), (sPitch)],
-                               [((cRoll * sYaw) + (cYaw * sRoll * sPitch)), ((cRoll * cYaw) - (sRoll * sPitch * sYaw)), (- cPitch * sRoll)],
-                               [((sRoll * sYaw) - (cRoll * cYaw * sPitch)), ((cYaw * sRoll) + (cRoll * sPitch * sYaw)), (cRoll * cPitch)]])
+    rotationMatrix = np.array([[(cPitch * cYaw) , (- cPitch * sYaw) , (sPitch)],
+                               [((cRoll * sYaw + cYaw * sRoll * sPitch)) , ((cRoll * cYaw) - (sRoll * sPitch * sYaw)) , (- cPitch * sRoll)],
+                               [((sRoll * sYaw) - (cRoll * cYaw * sPitch)) , ((cYaw * sRoll) + (cRoll * sPitch * sYaw)) , (cRoll * cPitch)]])
 
     return rotationMatrix
 
