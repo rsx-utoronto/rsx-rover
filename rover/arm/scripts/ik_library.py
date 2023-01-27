@@ -43,9 +43,9 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
 
     # Assemble 3x3 transformation matrix
 
-    rotationMatrix = np.array([[(cPitch * cYaw) , (- cPitch * sYaw) , (sPitch)],
-                               [((cRoll * sYaw + cYaw * sRoll * sPitch)) , ((cRoll * cYaw) - (sRoll * sPitch * sYaw)) , (- cPitch * sRoll)],
-                               [((sRoll * sYaw) - (cRoll * cYaw * sPitch)) , ((cYaw * sRoll) + (cRoll * sPitch * sYaw)) , (cRoll * cPitch)]])
+    rotationMatrix = np.array([[(cPitch * cYaw), (- cPitch * sYaw), (sPitch)],
+                               [((cRoll * sYaw) + (cYaw * sRoll * sPitch)), ((cRoll * cYaw) - (sRoll * sPitch * sYaw)), (- cPitch * sRoll)],
+                               [((sRoll * sYaw) - (cRoll * cYaw * sPitch)), ((cYaw * sRoll) + (cRoll * sPitch * sYaw)), (cRoll * cPitch)]])
 
     # Returns matrix
 
