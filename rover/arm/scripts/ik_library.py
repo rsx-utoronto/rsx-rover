@@ -41,7 +41,10 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
     cYaw = math.cos(yaw)
     sYaw = math.sin(yaw)
 
-    # Assemble 3x3 transformation matrix
+    # Assemble 3x3 rotation matrix
+    # Rotations are applied in the same order each time:
+    # Roll -> Pitch -> Yaw
+    # The result is the matrix below
 
     rotationMatrix = np.array([[(cPitch * cYaw), (- cPitch * sYaw), (sPitch)],
                                [((cRoll * sYaw) + (cYaw * sRoll * sPitch)), ((cRoll * cYaw) - (sRoll * sPitch * sYaw)), (- cPitch * sRoll)],
