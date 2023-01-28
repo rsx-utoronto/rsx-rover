@@ -42,12 +42,18 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
 	geometry_msgs::Twist twist;
 
+
 	//indexs for controller values
 	int R2 = 5;
 	int L2 = 2;
 	int LS = 0;
+	
+	int X = 4;
+	int O = 5; 
 
 	//Values from Controller
+	int gear = 1;
+	
 	double posThrottle = joy->axes[R2];
 	double negThrottle = joy->axes[L2];
 	float turnFactor = static_cast<float>(joy->axes[LS]);
@@ -72,7 +78,19 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		dispVal = 0;
 		lin_vel = 0;
 	}
+	
+	//Encoding values for gear selection
+	if (joy->buttons[X] == 1)
+	{
+		gear = 0.5;
+	}
+	else if (joy->buttons[O] == 1)
+	{
+		gear = 1; //highest gear
+	}
 
+	lin_vel = lin_vel * gear;	
+	
 	twist.linear.x = lin_vel/255*MAX_LINEAR_SPEED;
 	twist.angular.z = turnFactor/1*MAX_ANGULAR_SPEED;
 
@@ -89,7 +107,7 @@ void TeleopRover::publishDrive(){
 	// 	twist.linear.x = 0.0;
 	// if (cnt == 200000)
 	// 	cnt = 0;
-	twist.linear.x = 0.5;
+	//twist.linear.x = 0.5;
 	twist.angular.z = 0.0;
 
 	drive_pub_.publish(twist);
