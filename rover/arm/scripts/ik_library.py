@@ -72,6 +72,20 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position) 
         angle z-axis rotates
 
     '''
+    # define exception - outOfWorkspace
+
+    class outOfWorkspace(exception):
+    # Raised when end effector coordinates are out of arm's range
+    pass
+
+    # checks for out of workspace
+
+    try:
+        if # conditions for outOfWorkspace
+            raise outOfWorkspace
+    except outOfWorkspace:
+        return print("Coordinates are out of workspace")
+
 
     # turn position list into numpy array
     positionArray = np.array(position)
@@ -86,12 +100,11 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position) 
                                     ])
 
     '''
-
     Exceptions
     ----------
     outOfWorkspace
         when the target transformation is outside of the arms reach
-
+    
     Returns
     -------
     numpy matrix
