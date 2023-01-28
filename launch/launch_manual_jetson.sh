@@ -52,9 +52,9 @@ fi
 
 # Start up motors 
 echo "Starting up falcons..."
-roslaunch rover falcons.launch &
+roslaunch rover ../rover/drive/launch/falcons.launch &
 
-# Start drive_sender
+# Start drrover drive_sender
 echo "Starting drive_sender..."
 rosrun rover drive_sender_falcons &
 
