@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import rospy
+import math
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 
@@ -11,12 +12,13 @@ if __name__ == "__main__": # if used rosrun on this script then ...
         rate = rospy.Rate(10) # 10 hz
 
         def anglePosition():
-            angle1, angle2, angle3, angle4, angle5, angle6 = input("Enter 6 angles in radians: ").split()
-            angleArray = list(map(float, [angle1, angle2, angle3, angle4, angle5, angle6])) # Angles in radians
+            angle1, angle2, angle3, angle4, angle5, angle6 = input("Enter 6 angles (seperated by spaces) in degrees: ").split() # Angles in degrees
+            angleArray = list(map(float, [angle1, angle2, angle3, angle4, angle5, angle6])) 
+            for i in range(len(angleArray)):
+                angleArray[i] = angleArray[i] * math.pi/180 # Conversion from degrees to radians
             return angleArray
         
         while not rospy.is_shutdown():
-
             # data to be published
             newJointState = JointState()
             newJointState.header = Header()
