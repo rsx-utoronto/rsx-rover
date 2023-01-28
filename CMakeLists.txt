@@ -203,3 +203,7 @@ target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 
 catkin_install_python(PROGRAMS scripts/comms_check.py
  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+=======
+catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
+ DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
