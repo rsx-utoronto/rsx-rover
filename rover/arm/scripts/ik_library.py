@@ -55,7 +55,7 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
     return rotationMatrix
 
 
-def createEndEffectorTransform() -> list:
+def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position) -> list:
     ''' Creates the matrix that defines the transform of the end effector based on target
 
     Uses createXYZRotationMatrix() to define rotation portion of matrix.
@@ -71,6 +71,20 @@ def createEndEffectorTransform() -> list:
     yaw
         angle z-axis rotates
 
+    '''
+    positionArray = np.array(position)
+
+    # create 4x4 block matrix
+    # | (rotation matrx) (position) |
+    # |   0      0       0       1  |
+
+    endEffectorTransform = np.block([
+                                    [ createXYZRotationMatrix(roll, pitch, yaw) , np.transpose(positionArray) ] ,
+                                    [ 0 , 0 , 0 , 1]
+                                    ])
+
+    '''
+
     Exceptions
     ----------
     outOfWorkspace
@@ -81,7 +95,7 @@ def createEndEffectorTransform() -> list:
     numpy matrix
         transfromation matrix of target end effector position
     '''
-    pass
+    return endEffectorTransform
 
 
 def createTransformationMatrix() -> list:
