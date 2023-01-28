@@ -72,6 +72,8 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position) 
         angle z-axis rotates
 
     '''
+
+    # turn position list into numpy array
     positionArray = np.array(position)
 
     # create 4x4 block matrix
