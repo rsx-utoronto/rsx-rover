@@ -2,8 +2,11 @@ import rospy
 import subprocess
 import time
 from std_msgs.msg import String
+from geometry_msgs.msg import Twist 
 
 def main(host):
+
+    pub = rospy.Publisher('drive',Twist, queue_size=10)
     # we continuously send pings to check network communication is working
     while not rospy.is_shutdown():
         """ 
@@ -11,14 +14,24 @@ def main(host):
         -c followed by a number is the number of pings to be sent
         -w followed by a number is how many milliseconds to wait for a response
         """
-        command = "ping -c 2 -w 1 %s" % (host) 
+        command = "ping -c 2 -w 500 %s" % (host) 
         connected = subprocess.call(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         if connected == 0:
             rospy.loginfo('Communication is working.')
+            print('connected')
         else:
-            rospy.loginfo('Communication is NOT working.')  
+            rospy.loginfo('Communication is NOT working.') 
+            print('not connected') 
+            cmd_vel = Twist()
+            cmd_vel.linear.x = 0
+            cmd_vel.linear.y = 0
+            cmd_vel.linear.z = 0
+            cmd_vel.angular.z = 0
+
+            pub.publish(cmd_vel)
+            
         time.sleep(2)
 
 if __name__ == '__main__':
-    host = 0 # this should be the ip that communication is checked for (i.e., will be pinged)
+    host = '192.168.0.69' # this should be the ip that communication is checked for (i.e., will be pinged)
     main(host)
