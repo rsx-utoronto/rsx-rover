@@ -46,9 +46,11 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
     # Roll -> Pitch -> Yaw
     # The result is the matrix below
 
-    rotationMatrix = np.array([[(cPitch * cYaw), (- cPitch * sYaw), (sPitch)],
-                               [((cRoll * sYaw) + (cYaw * sRoll * sPitch)), ((cRoll * cYaw) - (sRoll * sPitch * sYaw)), (- cPitch * sRoll)],
-                               [((sRoll * sYaw) - (cRoll * cYaw * sPitch)), ((cYaw * sRoll) + (cRoll * sPitch * sYaw)), (cRoll * cPitch)]])
+    rotationMatrix = np.array([
+                                [(cPitch * cYaw), (- cPitch * sYaw), (sPitch)] ,
+                                [((cRoll * sYaw) + (cYaw * sRoll * sPitch)), ((cRoll * cYaw) - (sRoll * sPitch * sYaw)), (- cPitch * sRoll)],
+                                [((sRoll * sYaw) - (cRoll * cYaw * sPitch)), ((cYaw * sRoll) + (cRoll * sPitch * sYaw)), (cRoll * cPitch)]
+                                ])
 
     # Returns matrix
 
@@ -113,7 +115,7 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position) 
     return endEffectorTransform
 
 
-def createTransformationMatrix() -> list:
+def createTransformationMatrix(d: float, theta: float, r: float , alpha: float) -> list:
     ''' Creates a transform matrix based on dh-table paramters.
 
     Input is assumed to be relative to user defined origin (base_link, link_1, etc). Uses
@@ -130,13 +132,37 @@ def createTransformationMatrix() -> list:
     alpha
         alpha value from dh-table
 
+    '''
+    # convert theta and alpha to radians
+
+    theta *= math.pi / 180
+    alpha *= math.pi / 180
+
+    # define cos and sin for theta and alpha
+
+    cosTheta = math.cos(theta)
+    sinTheta = math.sin(theta)
+
+    cosAlpha = math.cos(alpha)
+    sinAlpha = math.sin(alpha)
+
+    DHTransformMatrix = np.array([
+                                [ cosTheta , (-sinTheta * cosAlpha) , (sinTheta * sinAlpha) , (r * cosTheta)] ,
+                                [ sinTheta , (cosTheta * cosAlpha) , (-cosTheta * sinAlpha) , (r * sinTheta)] ,
+                                [ 0 , sinAlpha , cosAlpha , d] ,
+                                [ 0 , 0 , 0 , 1 ]
+                                ])
+
+    '''
+
     Return
     ------
     numpy matrix
         the transfromation matrix based on the given paramters of the dh-table
 
     '''
-    pass
+
+    return DHTransformationMatrix
 
 
 def createDHTable(jointAngles) -> list:
