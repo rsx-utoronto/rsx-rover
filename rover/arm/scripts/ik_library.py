@@ -6,7 +6,7 @@ import math
 # joystick stuff (re-use old code)
 
 
-def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
+def createXYZRotationMatrix(roll: float, pitch: float, yaw: float):
     ''' Creates a rotation matrix based on XYZ euler angles (Row, Pitch, Yaw)
 
     Paramaters (euler angles)
@@ -57,7 +57,7 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float) -> list:
     return rotationMatrix
 
 
-def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position) -> list:
+def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position):
     ''' Creates the matrix that defines the transform of the end effector based on target
 
     Uses createXYZRotationMatrix() to define rotation portion of matrix.
@@ -72,36 +72,7 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position) 
         angle y-axis roates
     yaw
         angle z-axis rotates
-
-    '''
-    # define exception - outOfWorkspace
-
-    class outOfWorkspace(exception):
-    # Raised when end effector coordinates are out of arm's range
-    pass
-
-    # checks for out of workspace
-
-    try:
-        if # conditions for outOfWorkspace
-            raise outOfWorkspace
-    except outOfWorkspace:
-        return print("Coordinates are out of workspace")
-
-
-    # turn position list into numpy array
-    positionArray = np.array(position)
-
-    # create 4x4 block matrix
-    # | (rotation matrx) (position) |
-    # |   0      0       0       1  |
-
-    endEffectorTransform = np.block([
-                                    [ createXYZRotationMatrix(roll, pitch, yaw) , np.transpose(positionArray) ] ,
-                                    [ 0 , 0 , 0 , 1]
-                                    ])
-
-    '''
+    
     Exceptions
     ----------
     outOfWorkspace
@@ -111,11 +82,38 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position) 
     -------
     numpy matrix
         transfromation matrix of target end effector position
+
     '''
-    return endEffectorTransform
+    # define exception - outOfWorkspace
 
+    class outOfWorkspace(exception):
+        pass
+    # Raised when end effector coordinates are out of arm's range
 
-def createTransformationMatrix(d: float, theta: float, r: float , alpha: float) -> list:
+    # checks for out of workspace
+
+    try:
+        if True: # conditions for outOfWorkspace
+            # turn position list into numpy array
+            positionArray = np.array(position)
+
+            # create 4x4 block matrix
+            # | (rotation matrx) (position) |
+            # |   0      0       0       1  |
+
+            endEffectorTransform = np.block([
+                                            [ createXYZRotationMatrix(roll, pitch, yaw) , np.transpose(positionArray) ] ,
+                                            [ 0 , 0 , 0 , 1]
+                                            ])
+
+            return endEffectorTransform
+        else:
+            raise outOfWorkspace
+    except outOfWorkspace:
+        print("Coordinates are out of workspace")
+        return None
+
+def createTransformationMatrix(d: float, theta: float, r: float , alpha: float):
     ''' Creates a transform matrix based on dh-table paramters.
 
     Input is assumed to be relative to user defined origin (base_link, link_1, etc). Uses
@@ -132,6 +130,10 @@ def createTransformationMatrix(d: float, theta: float, r: float , alpha: float) 
     alpha
         alpha value from dh-table
 
+    Return
+    ------
+    numpy matrix
+        the transfromation matrix based on the given paramters of the dh-table
     '''
     # convert theta and alpha to radians
 
@@ -153,19 +155,29 @@ def createTransformationMatrix(d: float, theta: float, r: float , alpha: float) 
                                 [ 0 , 0 , 0 , 1 ]
                                 ])
 
-    '''
-
-    Return
-    ------
-    numpy matrix
-        the transfromation matrix based on the given paramters of the dh-table
-
-    '''
-
     return DHTransformationMatrix
 
+def calculateTransformToLink(transforms, linkNumber):
+    ''' Find the transform matrix to specified location
 
-def createDHTable(jointAngles) -> list:
+    Basically just multiplies all elements in transforms from 0 to linkNumber
+
+    Paramters
+    ---------
+    transforms
+        array of transform matrices for each joint/link
+    
+    linkNumber
+        the number of the link you want the transform of (0 is base)
+
+    Returns
+    ------
+    numpy matrix
+        the multiplied matrix
+    '''
+    pass
+
+def createDHTable(jointAngles):
     ''' Create DH Table for arm based on current position 
 
     *include detailed description here based on what you made the function do*
@@ -180,5 +192,23 @@ def createDHTable(jointAngles) -> list:
     -------
     numpy matrix
         a matrix containing the dh table (numpy matrix isn't the name of the return variable, just what type of data is returned)
+    '''
+    pass
+
+def inverseKinematics(dhTable, targetPos):
+    ''' Calculates joint angles based on desired EE position and DH-Table Paramters
+
+    Parameters
+    ----------
+    dhTable
+        the DH-Table for the Arm
+    
+    targetPos
+        a numpy matrix that defines the desired EE positions
+    
+    Returns
+    -------
+    array
+        list of joint angles
     '''
     pass
