@@ -23,8 +23,13 @@ def main():
             # placeholder for allowing driving
             pass
         else:
-            msg = Twist()
-            pub.publish(msg)
+            cmd_vel = Twist()
+            cmd_vel.linear.x = 0
+            cmd_vel.linear.y = 0
+            cmd_vel.linear.z = 0
+            cmd_vel.angular.z = 0
+
+            pub.publish(cmd_vel)
         time.sleep(2) # this is the amount of time (in seconds) waiting before checking the connection again
 
 if __name__ == '__main__':
