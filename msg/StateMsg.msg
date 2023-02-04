@@ -1,0 +1,9 @@
+rsx-rover/GPSMsg next_goal_gps
+rsx-rover/GPSMsg rover_gps
+string next_ar_tag_id
+string light
+bool GPS_find
+bool AR_find
+bool searching
+bool done_checkpoint
+bool MISSION_OVER

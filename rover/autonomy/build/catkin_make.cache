@@ -1,0 +1,2 @@
+
+-DCATKIN_DEVEL_PREFIX=/home/anubha/rsx_ws/src/rsx-rover/rover/autonomy/devel -DCMAKE_INSTALL_PREFIX=/home/anubha/rsx_ws/src/rsx-rover/rover/autonomy/install -G Unix Makefiles
