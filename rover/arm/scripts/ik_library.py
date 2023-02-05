@@ -155,17 +155,17 @@ def createTransformationMatrix(d: float, theta: float, r: float , alpha: float):
                                 [ 0 , 0 , 0 , 1 ]
                                 ])
 
-    return DHTransformationMatrix
+    return DHTransformMatrix
 
-def calculateTransformToLink(transforms, linkNumber):
+def calculateTransformToLink(dhTable, linkNumber):
     ''' Find the transform matrix to specified location
 
     Basically just multiplies all elements in transforms from 0 to linkNumber
 
     Paramters
     ---------
-    transforms
-        array of transform matrices for each joint/link
+    dhTable
+        dhTable of arm
     
     linkNumber
         the number of the link you want the transform of (0 is base)
@@ -191,12 +191,22 @@ def createDHTable(jointAngles):
     Returns
     -------
     numpy matrix
-        a matrix containing the dh table (numpy matrix isn't the name of the return variable, just what type of data is returned)
+        a matrix containing the dh table in [r, alpha, d, theta] order
     '''
-    pass
+
+    DHTable = np.array([[0, math.pi/2, 1, jointAngles[0]],
+                [1, 0, 0, jointAngles[1]],
+                [0, math.pi/2, 0, jointAngles[2]],
+                [0, -math.pi/2, 1, jointAngles[3]],
+                [0, math.pi/2, 0, jointAngles[4]],
+                [0, 0, 1, jointAngles[5]]] )
+    return DHTable
 
 def inverseKinematics(dhTable, targetPos):
     ''' Calculates joint angles based on desired EE position and DH-Table Paramters
+
+    Step by step solution can be found pages 148 - 151 and 153-154 of ECE470 textbook.
+    
 
     Parameters
     ----------
@@ -211,4 +221,47 @@ def inverseKinematics(dhTable, targetPos):
     array
         list of joint angles
     '''
-    pass
+
+    try:
+        d1 = dhTable[0][2]
+        a2 = dhTable[1][0]
+        d4 = dhTable[3][2]
+        d6 = dhTable[5][2]
+
+        desiredWristRotation = np.array([targetPos[0][:3],targetPos[1][:3], targetPos[2][:3]])
+        desiredWristOrigin = np.transpose(np.array([targetPos[0][3], targetPos[1][2], targetPos[2][3]]))
+        
+        # calculate wrist center
+        wristCenter = desiredWristOrigin - d6 * desiredWristRotation * np.transpose(np.array([0, 0, 1]))
+        
+        wristCenterX = wristCenter[0]
+        wristCenterY = wristCenter[1]
+        wristCenterZ = wristCenter[2]
+
+        theta1 = math.atan2(wristCenterY, wristCenterX)
+        
+        cosTheta3Numerator = wristCenterX**2 + wristCenterY**2 + (wristCenterZ-d1)**2 - a2**2 - d4**2
+        cosTheta3 = cosTheta3Numerator/(2*a2*d4) 
+        
+        if abs(cosTheta3) > 1: # cos(x) cannot be greater than 1
+            print("Can not reach transform")
+            # return current joint angles
+            return [dhTable[0][3], dhTable[1][3], dhTable[2][3], dhTable[3][3], dhTable[4][3], dhTable[5][3]]
+            
+        theta3 = math.atan2(math.sqrt(1 - cosTheta3**2), cosTheta3) # positive in front of square root assumes elbow up
+
+        theta2 = math.atan2(wristCenterZ - d1, math.sqrt(wristCenterX**2 + wristCenterY**2))- math.atan2(d4*math.sin(theta3 - math.pi/2), a2 + d4*cosTheta3)
+    
+        theta5 = math.atan2(math.sqrt(1-desiredWristOrigin[2][2]**2), desiredWristOrigin[2][2])
+
+        theta4 = math.atan2(desiredWristRotation[1][2], desiredWristRotation[0][2])
+
+        theta6 = math.atan2(desiredWristRotation[2][1], -desiredWristRotation[2][0])
+
+        return [theta1, theta2, theta3, theta4, theta5, theta6]
+
+    except Exception as ex:
+        print("The following error occured: ")
+        print(ex)
+        # return current joint angles
+        return [dhTable[0][3], dhTable[1][3], dhTable[2][3], dhTable[3][3], dhTable[4][3], dhTable[5][3]]
