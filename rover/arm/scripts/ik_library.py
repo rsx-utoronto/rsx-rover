@@ -160,7 +160,7 @@ def createTransformationMatrix(d: float, theta: float, r: float , alpha: float):
 def calculateTransformToLink(dhTable, linkNumber):
     ''' Find the transform matrix to specified location
 
-    Basically just multiplies all elements in transforms from 0 to linkNumber
+    Basically just multiplies all element transforms from 0 to linkNumber. Uses createTransformMatrix().
 
     Paramters
     ---------
@@ -191,7 +191,7 @@ def createDHTable(jointAngles):
     Returns
     -------
     numpy matrix
-        a matrix containing the dh table in [r, alpha, d, theta] order
+        a matrix containing the dh table in [r, alpha, d, theta*] order
     '''
 
     DHTable = np.array([[0, math.pi/2, 1, jointAngles[0]],
