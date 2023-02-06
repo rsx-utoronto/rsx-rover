@@ -119,11 +119,11 @@ def controlEEPosition(currentEETransform, isButtonPressed, joystickAxis):
         numpy matrix of current end effector transform
 
     isButtonPressed
-        dictionary that contains button status with key names from BUTTON_NAMES
+        dictionary that contains button status with key names from BUTTON_NAMES constant
     
     joystickAxis
-        array that contains floats that represent magnitude of X and Y directions that each joytstick is pointed in. 
-        Also contains depth that triggers are pushed in.
+        dictionary that contains floats that represent magnitude of X and Y directions that each joytstick is pointed in. 
+        Also contains depth that triggers are pushed in. Values can be retrived via joystickAxis["Axis Name"].
 
     Returns
     -------
@@ -142,7 +142,13 @@ def controlGrippperAngle(isButtonPressed):
     Paramters
     ---------
     isButtonPressed
-        an array containing buttons pressed.
+        a dictionary containing buttons pressed. Values can be retrived via isButtonPressed["Button Name"].
+    
+    Returns
+    -------
+    float
+        a float containing the angle at which the gripper is open.
+    
     
     '''
     pass
