@@ -252,11 +252,15 @@ def inverseKinematics(dhTable, targetPos):
 
         theta2 = math.atan2(wristCenterZ - d1, math.sqrt(wristCenterX**2 + wristCenterY**2))- math.atan2(d4*math.sin(theta3 - math.pi/2), a2 + d4*cosTheta3)
     
-        theta5 = math.atan2(math.sqrt(1-desiredWristOrigin[2][2]**2), desiredWristOrigin[2][2])
+        t03 = calculateTransformToLink(createDHTable([theta1, theta2, theta3, 0, 0 ,0]), 3) # transform matrix from base to third link
+        r03 = np.array([t03[0][:3], t03[1][:3], t03[2][:3]]) # rotation matrix of third link
+        r36 = np.matmul(np.linalg.inv(r03), desiredWristOrigin ) # rotation matrix from third link to EE
+        
+        theta5 = math.atan2(math.sqrt(1-r36[2][2]**2), r36[2][2])
 
-        theta4 = math.atan2(desiredWristRotation[1][2], desiredWristRotation[0][2])
+        theta4 = math.atan2(r36[1][2], r36[0][2])
 
-        theta6 = math.atan2(desiredWristRotation[2][1], -desiredWristRotation[2][0])
+        theta6 = math.atan2(r36[2][1], -r36[2][0])
 
         return [theta1, theta2, theta3, theta4, theta5, theta6]
 
