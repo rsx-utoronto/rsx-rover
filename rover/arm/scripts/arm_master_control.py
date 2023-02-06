@@ -112,6 +112,7 @@ def controlEEPosition(currentEETransform, isButtonPressed, joystickAxis):
     Returns the current end effector transform if none of the relavent control buttons 
     have been pushed. Additionally, uses ikMode to determine if end effector transform 
     should be changed relative to global coordinate system or from camera coordinate system.
+    Uses ik.createEndEffectorTransform().
 
     Paramters
     ---------
