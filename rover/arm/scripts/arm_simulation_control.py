@@ -5,6 +5,9 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 
 def anglePosition():
+    '''
+    Prompts the user to enter 6 angles in degrees and returns an array of size 6. 
+    '''
     angle1, angle2, angle3, angle4, angle5, angle6 = input("Enter 6 angles (seperated by spaces) in degrees: ").split() # Angles in degrees
     angleArray = list(map(float, [angle1, angle2, angle3, angle4, angle5, angle6])) 
     for i in range(len(angleArray)):
@@ -12,11 +15,17 @@ def anglePosition():
     return angleArray
 
 def startJointPublisher():
+    '''
+    Initiates arm_sim_control, uses rospy.Publisher to take in the joint states and returns jointPublisher
+    '''
     rospy.init_node("arm_sim_control") # start node
     jointPublisher = rospy.Publisher("joint_states", JointState, queue_size=10) # refrence to the output topic, you can have multiple in a script
     return jointPublisher
 
 def runNewJointState(jointPublisherData):
+    '''
+    Publishes the newJointState header, stamp, name, and position in a continuous while loop. 
+    '''
     rate = rospy.Rate(10) # 10 hz
     while not rospy.is_shutdown():
         # data to be published
