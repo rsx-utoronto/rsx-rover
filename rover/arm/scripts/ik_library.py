@@ -159,8 +159,12 @@ def createTransformationMatrix(d: float, theta: float, r: float , alpha: float):
 
 def calculateTransformToLink(dhTable, linkNumber):
     ''' Find the transform matrix to specified location '''
+    
     transformToLink = np.eye(4,dtype=float)
 
+    for i in range(0,linkNumber + 1):
+        ithTransform = createTransformationMatrix(dhTable[i,2],dhTable[i,1],dhTable[i,0],dhTable[i,3])
+        transformToLink = np.matmul(transformToLink , ithTransform)
     
     '''
     Basically just multiplies all element transforms from 0 to linkNumber. Uses createTransformMatrix().
@@ -178,7 +182,7 @@ def calculateTransformToLink(dhTable, linkNumber):
     numpy matrix
         the multiplied matrix
     '''
-    pass
+    return transformToLink
 
 def createDHTable(jointAngles):
     ''' Create DH Table for arm based on current position 
