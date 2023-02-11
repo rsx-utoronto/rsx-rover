@@ -14,7 +14,8 @@ def main():
         -c followed by a number is the number of pings to be sent
         -w followed by a number is how many milliseconds to wait for a response
         """
-        command = ['ping', '-c', '2', '-w', '500', host]
+        # if running this script in a container, make sure ping is installed
+        command = ['ping', '-c', '2', '-w', '2', host]
         connected = subprocess.run(command, capture_output=True)
         if connected == 0:
             rospy.loginfo('Connected')
