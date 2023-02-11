@@ -73,7 +73,7 @@ def done_checkpoint_callback(data):
     publish_state()
 
 def listener():
-    rospy.init_node('state_machine_node', anonynous=True)
+    rospy.init_node('state_machine_node', anonymous=True)
     rospy.Subscriber('gps_find', gps_find_callback) #change node name
     rospy.Subscriber('ar_find', ar_find_callback) #change node name
     rospy.Subscriber('done_checkpoint', done_checkpoint_callback) #change node name
