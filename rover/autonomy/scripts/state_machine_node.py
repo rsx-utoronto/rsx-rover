@@ -1,5 +1,5 @@
 import rospy
-from rsx_rover.msg import GPSMsg, StateMsg
+from rover.msg import GPSMsg, StateMsg
 from std_msgs.msg import String
 
 goal_gps_list = [] #populate

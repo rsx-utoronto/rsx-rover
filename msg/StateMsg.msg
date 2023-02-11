@@ -1,4 +1,4 @@
-rsx-rover/GPSMsg next_goal_gps
+rover/GPSMsg next_goal_gps
 int32 next_ar_tag_id
 string light
 bool GPS_found
