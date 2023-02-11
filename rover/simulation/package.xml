@@ -1,5 +1,5 @@
 <package format="2">
-  <name>Rover</name>
+  <name>rover</name>
   <version>1.0.0</version>
   <description>
     <p>URDF Description package for Rover</p>

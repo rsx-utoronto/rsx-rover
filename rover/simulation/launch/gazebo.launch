@@ -1,4 +1,5 @@
 <launch>
+<param name="robot_description" textfile="$(find rover)/urdf/Rover.urdf" />  
   <include
     file="$(find gazebo_ros)/launch/empty_world.launch" />
   <node
@@ -10,11 +11,10 @@
     name="spawn_model"
     pkg="gazebo_ros"
     type="spawn_model"
-    args="-file $(find Rover)/urdf/Rover.urdf -urdf -model Rover"
+    args="-file $(find rover)/urdf/Rover.urdf -urdf -model Rover"
     output="screen" />
-  <node
-    name="fake_joint_calibration"
-    pkg="rostopic"
-    type="rostopic"
-    args="pub /calibrated std_msgs/Bool true" />
+  <rosparam command="load" file="$(find rover)/config/control.yaml" />
+
+  <node name="base_controller_spawner" pkg="controller_manager" type="spawner" args="robot_base_joint_publisher robot_base_velocity_controller"/>
+
 </launch>

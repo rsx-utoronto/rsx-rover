@@ -3,7 +3,7 @@
      Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
 <robot
-  name="Rover">
+  name="rover">
   <link
     name="chassis">
     <inertial>
@@ -26,7 +26,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/chassis.STL" />
+          filename="package://rover/meshes/chassis.STL" />
       </geometry>
       <material
         name="">
@@ -40,12 +40,12 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/chassis.STL" />
+          filename="package://rover/meshes/chassis.STL" />
       </geometry>
     </collision>
   </link>
   <link
-    name="rocker_1">
+    name="right_rocker">
     <inertial>
       <origin
         xyz="-0.0569379504262081 -0.0279401827117303 0.173105600500696"
@@ -66,7 +66,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/rocker_1.STL" />
+          filename="package://rover/meshes/rocker_1.STL" />
       </geometry>
       <material
         name="">
@@ -80,25 +80,25 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/rocker_1.STL" />
+          filename="package://rover/meshes/rocker_1.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="joint_1"
-    type="continuous">
+    name="chassis_right_rocker_joint"
+    type="fixed">
     <origin
       xyz="0.256227202845866 0.104049397997044 0.442431681089809"
       rpy="3.14159265358979 0 0" />
     <parent
       link="chassis" />
     <child
-      link="rocker_1" />
+      link="right_rocker" />
     <axis
       xyz="0 1 0" />
   </joint>
   <link
-    name="wheel_1">
+    name="front_right_wheel">
     <inertial>
       <origin
         xyz="-0.000176268265629331 -0.063545275407954 -0.000101180829060271"
@@ -119,7 +119,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_1.STL" />
+          filename="package://rover/meshes/wheel_1.STL" />
       </geometry>
       <material
         name="">
@@ -133,25 +133,25 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_1.STL" />
+          filename="package://rover/meshes/wheel_1.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="joint_3"
+    name="front_right_wheel_joint"
     type="continuous">
     <origin
       xyz="0.566011190291999 0.1316352 0.343614113670245"
       rpy="0 0 0" />
     <parent
-      link="rocker_1" />
+      link="right_rocker" />
     <child
-      link="wheel_1" />
+      link="front_right_wheel" />
     <axis
       xyz="0 1 0" />
   </joint>
   <link
-    name="wheel_2">
+    name="rear_right_wheel">
     <inertial>
       <origin
         xyz="0.000178620256626905 -0.0635452759401471 -9.69747179342118E-05"
@@ -172,7 +172,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_2.STL" />
+          filename="package://rover/meshes/wheel_2.STL" />
       </geometry>
       <material
         name="">
@@ -186,25 +186,25 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_2.STL" />
+          filename="package://rover/meshes/wheel_2.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="joint_4"
+    name="rear_right_wheel_joint"
     type="continuous">
     <origin
       xyz="-0.569418798760428 0.1316347 0.337858198560885"
       rpy="0 0 0" />
     <parent
-      link="rocker_1" />
+      link="right_rocker" />
     <child
-      link="wheel_2" />
+      link="rear_right_wheel" />
     <axis
       xyz="0 1 0" />
   </joint>
   <link
-    name="wheel_3">
+    name="middle_right_wheel">
     <inertial>
       <origin
         xyz="0.00194962016118483 -0.0675452750876231 0.00121412273220574"
@@ -225,7 +225,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_3.STL" />
+          filename="package://rover/meshes/wheel_3.STL" />
       </geometry>
       <material
         name="">
@@ -239,25 +239,25 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_3.STL" />
+          filename="package://rover/meshes/wheel_3.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="joint_5"
+    name="middle_right_wheel_joint"
     type="continuous">
     <origin
       xyz="0.00389311933816788 0.135634699999995 0.348264389277544"
       rpy="0 0 0" />
     <parent
-      link="rocker_1" />
+      link="right_rocker" />
     <child
-      link="wheel_3" />
+      link="middle_right_wheel" />
     <axis
       xyz="0 1 0" />
   </joint>
   <link
-    name="rocker_2">
+    name="left_rocker">
     <inertial>
       <origin
         xyz="-0.0634016522720201 0.0349398172882701 0.170844109095454"
@@ -278,7 +278,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/rocker_2.STL" />
+          filename="package://rover/meshes/rocker_2.STL" />
       </geometry>
       <material
         name="">
@@ -292,25 +292,25 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/rocker_2.STL" />
+          filename="package://rover/meshes/rocker_2.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="joint_2"
-    type="continuous">
+    name="chassis_left_rocker_joint"
+    type="fixed">
     <origin
       xyz="0.257280649253525 0.686809397997044 0.442407585082231"
       rpy="3.14159265358979 0 0" />
     <parent
       link="chassis" />
     <child
-      link="rocker_2" />
+      link="left_rocker" />
     <axis
       xyz="0 1 0" />
   </joint>
   <link
-    name="wheel_4">
+    name="front_left_wheel">
     <inertial>
       <origin
         xyz="0.00194021425049595 0.0675452760210624 0.0012290934521642"
@@ -331,7 +331,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_4.STL" />
+          filename="package://rover/meshes/wheel_4.STL" />
       </geometry>
       <material
         name="">
@@ -345,25 +345,25 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_4.STL" />
+          filename="package://rover/meshes/wheel_4.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="joint_6"
+    name="front_left_wheel_joint"
     type="continuous">
     <origin
       xyz="0.550522165589643 -0.128635200000009 0.363405762447953"
       rpy="0 0 0" />
     <parent
-      link="rocker_2" />
+      link="left_rocker" />
     <child
-      link="wheel_4" />
+      link="front_left_wheel" />
     <axis
       xyz="0 1 0" />
   </joint>
   <link
-    name="wheel_5">
+    name="middle_left_wheel">
     <inertial>
       <origin
         xyz="0.00190412164591511 0.0675452763004372 0.00128429872637638"
@@ -384,7 +384,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_5.STL" />
+          filename="package://rover/meshes/wheel_5.STL" />
       </geometry>
       <material
         name="">
@@ -398,25 +398,25 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_5.STL" />
+          filename="package://rover/meshes/wheel_5.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="joint_7"
+    name="middle_left_wheel_joint"
     type="continuous">
     <origin
       xyz="-0.00926565490461811 -0.128635699999999 0.348270005795649"
       rpy="0 0 0" />
     <parent
-      link="rocker_2" />
+      link="left_rocker" />
     <child
-      link="wheel_5" />
+      link="middle_left_wheel" />
     <axis
       xyz="0 1 0" />
   </joint>
   <link
-    name="wheel_6">
+    name="rear_left_wheel">
     <inertial>
       <origin
         xyz="0.000183308022644324 0.063545275877115 -8.77894032265403E-05"
@@ -437,7 +437,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_6.STL" />
+          filename="package://rover/meshes/wheel_6.STL" />
       </geometry>
       <material
         name="">
@@ -451,21 +451,147 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://Rover/meshes/wheel_6.STL" />
+          filename="package://rover/meshes/wheel_6.STL" />
       </geometry>
     </collision>
   </link>
   <joint
-    name="joint_8"
+    name="rear_left_wheel_joint"
     type="continuous">
     <origin
       xyz="-0.585325281230279 -0.124635699999999 0.308803919717537"
       rpy="0 0 0" />
     <parent
-      link="rocker_2" />
+      link="left_rocker" />
     <child
-      link="wheel_6" />
+      link="rear_left_wheel" />
     <axis
       xyz="0 1 0" />
   </joint>
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/</robotNamespace>
+      <controlPeriod>0.001</controlPeriod>
+      <legacyModeNS>false</legacyModeNS>
+    </plugin>
+  </gazebo>
+  <gazebo>
+      <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
+        <legacyMode>false</legacyMode>
+        <alwaysOn>true</alwaysOn>
+        <updateRate>1000.0</updateRate>
+        <leftJoint>front_left_wheel_joint, middle_left_wheel_joint, rear_left_wheel_joint</leftJoint>
+        <rightJoint>front_right_wheel_joint, middle_right_wheel_joint, rear_right_wheel_joint</rightJoint>
+        <wheelSeparation>0.5</wheelSeparation>
+        <wheelDiameter>0.2</wheelDiameter>
+        <wheelTorque>10</wheelTorque>
+        <publishTf>1</publishTf>
+        <odometryFrame>map</odometryFrame>
+        <commandTopic>cmd_vel</commandTopic> 
+        <odometryTopic>odom</odometryTopic>
+        <robotBaseFrame>chassis</robotBaseFrame>
+        <wheelAcceleration>2.8</wheelAcceleration>
+        <publishWheelJointState>true</publishWheelJointState>
+        <publishWheelTF>false</publishWheelTF>
+        <odometrySource>world</odometrySource>
+        <rosDebugLevel>Debug</rosDebugLevel>
+      </plugin>
+  </gazebo>
+  <gazebo reference="front_left_wheel">
+    <mu1 value="1.0"/>
+    <mu2 value="1.0"/>
+    <kp value="10000000.0" />
+    <kd value="1.0" />
+    <fdir1 value="1 0 0"/>
+  </gazebo>
+
+  <gazebo reference="front_right_wheel">
+  <mu1 value="1.0"/>
+  <mu2 value="1.0"/>
+  <kp value="10000000.0" />
+  <kd value="1.0" />
+  <fdir1 value="1 0 0"/>
+  </gazebo>
+
+  <gazebo reference="rear_left_wheel">
+    <mu1 value="1.0"/>
+    <mu2 value="1.0"/>
+    <kp value="10000000.0" />
+    <kd value="1.0" />
+    <fdir1 value="1 0 0"/>
+  </gazebo>
+
+  <gazebo reference="rear_left_wheel">
+    <mu1 value="1.0"/>
+    <mu2 value="1.0"/>
+    <kp value="10000000.0" />
+    <kd value="1.0" />
+    <fdir1 value="1 0 0"/>
+  </gazebo>
+  <!--######################################################################-->
+  <transmission name="front_left_wheel_trans" type="SimpleTransmission">
+    <type>transmission_interface/SimpleTransmission</type>
+    <actuator name="front_left_wheel_motor">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+    <joint name="front_left_wheel_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    </joint>
+  </transmission>
+
+  <transmission name="middle_left_wheel_trans" type="SimpleTransmission">
+    <type>transmission_interface/SimpleTransmission</type>
+    <actuator name="middle_left_wheel_motor">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+    <joint name="middle_left_wheel_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    </joint>
+  </transmission>
+
+  <transmission name="middle_right_wheel_trans" type="SimpleTransmission">
+    <type>transmission_interface/SimpleTransmission</type>
+    <actuator name="middle_right_wheel_motor">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+    <joint name="middle_right_wheel_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    </joint>
+  </transmission>
+
+  <transmission name="front_right_wheel_trans" type="SimpleTransmission">
+    <type>transmission_interface/SimpleTransmission</type>
+    <actuator name="front_right_wheel_motor">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+    <joint name="front_right_wheel_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    </joint>
+  </transmission>
+
+  <transmission name="rear_left_wheel_trans" type="SimpleTransmission">
+    <type>transmission_interface/SimpleTransmission</type>
+    <actuator name="rear_left_wheel_motor">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+    <joint name="rear_left_wheel_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    </joint>
+  </transmission>
+
+  <transmission name="rear_right_wheel_trans" type="SimpleTransmission">
+    <type>transmission_interface/SimpleTransmission</type>
+    <actuator name="rear_right_wheel_motor">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+    <joint name="rear_right_wheel_joint">
+      <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    </joint>
+  </transmission>
 </robot>
