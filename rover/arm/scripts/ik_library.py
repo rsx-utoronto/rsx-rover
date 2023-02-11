@@ -99,8 +99,7 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position):
     # |   0      0       0       1  |
 
     endEffectorTransform = np.block([
-                                    [createXYZRotationMatrix(
-                                        roll, pitch, yaw), np.transpose(positionArray)],
+                                    [createXYZRotationMatrix(roll, pitch, yaw), np.transpose(positionArray)],
                                     [0, 0, 0, 1]
                                     ])
 
