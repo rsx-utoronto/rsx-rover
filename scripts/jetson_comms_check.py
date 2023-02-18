@@ -4,11 +4,13 @@ import rospy
 import subprocess
 import time
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool 
 
 def main():
-    pub = rospy.Publisher('drive', Twist, queue_size=10)
+    pub_network = rospy.Publisher('network_status', Bool, queue_size=10)
     rospy.init_node("jetson_comms_check")
     host = rospy.get_param("base_ip", "192.168.0.69")
+    net_stat = Bool()
     # we continuously send pings to check network communication is working
     while not rospy.is_shutdown():
         """ 
@@ -16,18 +18,15 @@ def main():
         -c followed by a number is the number of pings to be sent
         -w followed by a number is how many milliseconds to wait for a response
         """
-        command = ['ping', '-c', '2', '-w', '500', host]
+        command = ['ping', '-c', '2', '-w', '2', host]
         connected = subprocess.run(command, capture_output=True)
-        if connected == 0:
-            pass
+        print(connected.returncode)
+        if connected.returncode == 0:
+            net_stat = True
         else:
-            cmd_vel = Twist()
-            cmd_vel.linear.x = 0
-            cmd_vel.linear.y = 0
-            cmd_vel.linear.z = 0
-            cmd_vel.angular.z = 0
-
-            pub.publish(cmd_vel)
+            net_stat = False
+        
+        pub_network.publish(net_stat)
         time.sleep(2) # this is the amount of time (in seconds) waiting before checking the connection again
 
 if __name__ == '__main__':

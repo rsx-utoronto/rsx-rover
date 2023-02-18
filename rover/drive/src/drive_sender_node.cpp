@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <boost/thread.hpp>
 #include <sensor_msgs/Joy.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
 
 
 class TeleopRover {
@@ -14,7 +16,7 @@ class TeleopRover {
 		TeleopRover();
 		void publishDrive();
 	private:
-		void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
+		void joyCallback(const sensor_msgs::Joy::ConstPtr& joy, const std_msgs::Bool::ConstPtr& network_status);
 
 		ros::NodeHandle nh_;
 		float MAX_ANGULAR_SPEED = 0.4;
@@ -22,7 +24,9 @@ class TeleopRover {
 		int linear_, angular_, right_left_, forward_backward_, yaw_; 
 		double l_scale_, a_scale_;
 		ros::Publisher drive_pub_;
-		ros::Subscriber joy_sub_;
+		ros::message_filters::Subscriber<sensor_msgs::Joy> joy_sub(nh_, "joy", 1);
+		ros::message_filters::Subscriber<std_msgs::Bool> net_sub(nh_, "network_status", 1);
+		ros::message_filters::TimeSynchronizer<sensor_msgs::Joy, std_msgs::Bool> sync(joy_sub, net_sub, 10);
 };
 
 TeleopRover::TeleopRover():
@@ -35,10 +39,11 @@ TeleopRover::TeleopRover():
 	nh_.param("scale_linear", l_scale_, l_scale_);
 
 	drive_pub_ = nh_.advertise<geometry_msgs::Twist>("drive", 1);
-	joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &TeleopRover::joyCallback, this);
+	sync.registerCallback(boost::bind(&joyCallback, _1, _2));
 }
 
-void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
+void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr& joy, const std_msgs::Bool::ConstPtr& network_status
+)
 {
 	geometry_msgs::Twist twist;
 
@@ -55,30 +60,42 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 
 	double dispVal = 0;
 
-	//Encoding Values for Throttle
-	if (posThrottle < 1 && negThrottle < 1){
-		dispVal = 0;
-		lin_vel =  0;
-
-	} else if (posThrottle < 1){
-		ROS_INFO("in Pos throttle");
-		dispVal = 255 - (posThrottle+1)*127.5;
-		lin_vel = 255 - (posThrottle+1)*127.5;
-	} else if (negThrottle < 1){
-		ROS_INFO("in neg throttle");
-		dispVal = -1*(255 - (negThrottle+1)*127.5);
-		lin_vel = -1*(255 - (negThrottle+1)*127.5);
+	if (network_status == false) {
+		twist.linear.x = 0; 
+		twist.linear.y = 0;
+		twist.linear.z = 0;
+		twist.angular.x = 0;
+		twist.angular.y = 0;
+		twist.angular.z = 0;
+		drive_pub_.publish(twist)
 	} else {
-		dispVal = 0;
-		lin_vel = 0;
+
+		//Encoding Values for Throttle
+		if (posThrottle < 1 && negThrottle < 1){
+			dispVal = 0;
+			lin_vel =  0;
+
+		} else if (posThrottle < 1){
+			ROS_INFO("in Pos throttle");
+			dispVal = 255 - (posThrottle+1)*127.5;
+			lin_vel = 255 - (posThrottle+1)*127.5;
+		} else if (negThrottle < 1){
+			ROS_INFO("in neg throttle");
+			dispVal = -1*(255 - (negThrottle+1)*127.5);
+			lin_vel = -1*(255 - (negThrottle+1)*127.5);
+		} else {
+			dispVal = 0;
+			lin_vel = 0;
+		}
+
+		twist.linear.x = lin_vel/255*MAX_LINEAR_SPEED;
+		twist.angular.z = turnFactor/1*MAX_ANGULAR_SPEED;
+
+		ROS_INFO("Turn Factor %f", turnFactor);
+		ROS_INFO("Motor Value %f", lin_vel);
+
+		drive_pub_.publish(twist);
 	}
-
-	twist.linear.x = lin_vel/255*MAX_LINEAR_SPEED;
-	twist.angular.z = turnFactor/1*MAX_ANGULAR_SPEED;
-
-	ROS_INFO("Turn Factor %f", turnFactor);
-	ROS_INFO("Motor Value %f", lin_vel);
-	drive_pub_.publish(twist);
 }
 
 void TeleopRover::publishDrive(){
