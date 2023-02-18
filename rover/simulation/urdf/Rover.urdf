@@ -349,6 +349,7 @@
       </geometry>
     </collision>
   </link>
+
   <joint
     name="front_left_wheel_joint"
     type="continuous">
@@ -468,6 +469,109 @@
     <axis
       xyz="0 1 0" />
   </joint>
+
+  <link name="imu_link">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+    <box size="0.05 0.05 0.05"/>
+      </geometry>
+    </collision>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+    <box size="0.05 0.05 0.05"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+
+    <inertial>
+      <mass value="1e-5" />
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+    </inertial>
+  </link>
+
+
+  <joint name="imu_joint" type="fixed">
+    <origin
+      xyz="0.0 0 0.0"
+      rpy="1.5707963267949 0 0" />
+    <parent
+      link="chassis" />
+    <child
+      link="imu_link" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+
+  <link name="gps_link">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+    <box size="0.05 0.05 0.05"/>
+      </geometry>
+    </collision>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+    <box size="0.05 0.05 0.05"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+
+    <inertial>
+      <mass value="1e-5" />
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+    </inertial>
+  </link>
+
+  <joint name="gps_joint" type="fixed">
+    <origin
+      xyz="0.0 0 0.278189004081027"
+      rpy="0 0 0" />
+    <parent
+      link="chassis" />
+    <child
+      link="gps_link" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+
+  <link name="lidar_link">
+    <inertial>
+      <mass value="0.425"/>
+      <origin xyz="0 0 0.03675" rpy="0 0 0" />
+      <inertia ixx="0.000308429" ixy="0" ixz="0"
+                iyy="0.000308429" iyz="0" izz="0.00034589"/>
+    </inertial>
+    <collision>
+      <origin xyz="0 0 0.03675" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://rover/rover/simulation/meshes/os1_64.stl" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://rover/rover/simulation/meshes/os1_64.stl" />
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="lidar_joint" type="fixed">
+      <parent link="chassis"/>
+      <child link="lidar_link"/>
+      <axis
+      xyz="0 0 0" />
+      <origin
+      xyz="0.0 0 0.278189004081027"
+      rpy="0 0 0" />
+  </joint> 
+
   <gazebo>
     <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
       <robotNamespace>/</robotNamespace>
@@ -529,6 +633,85 @@
     <fdir1 value="1 0 0"/>
   </gazebo>
   <!--######################################################################-->
+
+  <gazebo>
+    <plugin filename="libhector_gazebo_ros_imu.so"
+              name="hector_imu_plugin" >
+      <alwaysOn>true</alwaysOn>
+      <bodyName>imu_link</bodyName>
+      <topicName>imu</topicName>
+      <serviceName>/imu/calibrate</serviceName>
+      <gaussianNoise>0.0</gaussianNoise>
+      <updateRate>50.0</updateRate>
+      <frameName>imu_link</frameName>
+      <accelOffset>0 0 0 </accelOffset>
+      <accelGaussianNoise>0 0 0</accelGaussianNoise>
+      <accelDrift>0 0 0 </accelDrift>
+      <accelDriftFrequency>0 0 0</accelDriftFrequency>
+      <rateOffset>0 0 0</rateOffset>
+      <rateGaussianNoise> 0 0 0</rateGaussianNoise>
+      <rateDrift>0 0 0 </rateDrift>
+      <rateDriftFrequency> 0 0 0</rateDriftFrequency>
+      <yawOffset> 0 </yawOffset>
+      <yawGaussianNoise> 0 </yawGaussianNoise>
+      <yawDrift> 0 </yawDrift>
+      <yawDriftFrequency> 0 </yawDriftFrequency> 
+    </plugin>
+  </gazebo>
+
+<!--######################################################################-->
+  <gazebo>
+    <plugin name="gps_controller" filename="libhector_gazebo_ros_gps.so">
+        <robotNamespace>/</robotNamespace>
+        <updateRate>40</updateRate>
+        <bodyName>chassis</bodyName>
+        <frameId>chassis</frameId>
+        <topicName>navsat/fix</topicName>
+        <velocityTopicName>navsat/vel</velocityTopicName>
+        <referenceLatitude>50.0</referenceLatitude>
+        <referenceLongitude>60.0</referenceLongitude>
+        <referenceHeading>0</referenceHeading>
+        <referenceAltitude>0</referenceAltitude>
+        <drift>0.0001 0.0001 0.0001</drift>
+    </plugin>
+  </gazebo>
+<!--######################################################################-->
+
+<gazebo reference="lidar_link">
+    <sensor type="gpu_ray" name="os1_lidar">
+      <pose>0 0 0 0 0 0</pose>
+          <visualize>true</visualize>
+          <update_rate>10</update_rate>
+          <ray>
+            <scan>
+              <horizontal>
+                <samples>512</samples>
+                <resolution>1</resolution>
+                <min_angle>-3.141529</min_angle>
+                <max_angle>3.141529</max_angle>
+              </horizontal>
+              <vertical>
+                <samples>64</samples>
+                <resolution>1</resolution>
+                <min_angle>-3.141529</min_angle>
+                <max_angle>-3.141529</max_angle>
+              </vertical>
+            </scan>
+            <range>
+              <min>0.9</min>
+              <max>75.0</max>
+              <resolution>0.03</resolution>
+            </range>
+          </ray>
+      <plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_gpu_laser.so">
+        <topicName>/rrbot/laser/scan</topicName>
+        <frameName>hokuyo_link</frameName>
+      </plugin>
+    </sensor>
+</gazebo>
+
+<!--######################################################################-->
+
   <transmission name="front_left_wheel_trans" type="SimpleTransmission">
     <type>transmission_interface/SimpleTransmission</type>
     <actuator name="front_left_wheel_motor">
