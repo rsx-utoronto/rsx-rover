@@ -7,9 +7,11 @@
 #include <stdio.h>
 #include <boost/thread.hpp>
 #include <sensor_msgs/Joy.h>
+#include <std_msgs/Bool.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 
+using namespace message_filters;
 
 class TeleopRover {
 	public:
@@ -24,9 +26,9 @@ class TeleopRover {
 		int linear_, angular_, right_left_, forward_backward_, yaw_; 
 		double l_scale_, a_scale_;
 		ros::Publisher drive_pub_;
-		ros::message_filters::Subscriber<sensor_msgs::Joy> joy_sub(nh_, "joy", 1);
-		ros::message_filters::Subscriber<std_msgs::Bool> net_sub(nh_, "network_status", 1);
-		ros::message_filters::TimeSynchronizer<sensor_msgs::Joy, std_msgs::Bool> sync(joy_sub, net_sub, 10);
+		message_filters::Subscriber<sensor_msgs::Joy> joy_sub(nh_, "joy", 1);
+		message_filters::Subscriber<std_msgs::Bool> net_sub(nh_, "network_status", 1);
+		TimeSynchronizer<sensor_msgs::Joy, std_msgs::Bool> sync(joy_sub, net_sub, 10);
 };
 
 TeleopRover::TeleopRover():
@@ -60,14 +62,14 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr& joy, const std_m
 
 	double dispVal = 0;
 
-	if (network_status == false) {
+	if (network_status->data == false) {
 		twist.linear.x = 0; 
 		twist.linear.y = 0;
 		twist.linear.z = 0;
 		twist.angular.x = 0;
 		twist.angular.y = 0;
 		twist.angular.z = 0;
-		drive_pub_.publish(twist)
+		drive_pub_.publish(twist);
 	} else {
 
 		//Encoding Values for Throttle
