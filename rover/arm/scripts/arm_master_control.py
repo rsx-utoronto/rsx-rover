@@ -300,7 +300,7 @@ if __name__ == "__main__":
         # sets start target position equal to curArmAngles after they have been updated
         while curArmAngles == [0, 0, 0, 0, 0, 0]:
             tempDHTable = ik.createDHTable(curArmAngles)
-            prevTargetPos = ik.calculateTransformToLink(tempDHTable, 6)
+            prevTargetPos = ik.calculateTransformToLink(tempDHTable, 5)
 
         while not rospy.is_shutdown():
             main()

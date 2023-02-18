@@ -92,7 +92,7 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position):
 
     # checks for out of workspace
 
-    positionArray = np.array(position)
+    positionArray = np.array([position])
 
     # create 4x4 block matrix
     # | (rotation matrx) (position) |
@@ -229,23 +229,21 @@ def inverseKinematics(dhTable, targetPos):
         d4 = dhTable[3][2]
         d6 = dhTable[5][2]
 
-        desiredWristRotation = np.array(
-            [targetPos[0][:3], targetPos[1][:3], targetPos[2][:3]])
-        desiredWristOrigin = np.transpose(
-            np.array([targetPos[0][3], targetPos[1][2], targetPos[2][3]]))
+        desiredWristRotation = np.array([targetPos[0][:3], targetPos[1][:3], targetPos[2][:3]])
+        desiredWristOrigin = np.transpose([np.array([targetPos[0][3], targetPos[1][3], targetPos[2][3]])])
 
         # calculate wrist center
-        wristCenter = desiredWristOrigin - d6 * \
-            desiredWristRotation * np.transpose(np.array([0, 0, 1]))
-
+        rotationAdjustment = d6 * np.matmul(desiredWristRotation, np.transpose(np.array([0, 0, 1])))
+        
+        wristCenter = desiredWristOrigin - np.transpose([rotationAdjustment])
+        
         wristCenterX = wristCenter[0]
         wristCenterY = wristCenter[1]
         wristCenterZ = wristCenter[2]
 
         theta1 = math.atan2(wristCenterY, wristCenterX)
 
-        cosTheta3Numerator = wristCenterX**2 + \
-            wristCenterY**2 + (wristCenterZ-d1)**2 - a2**2 - d4**2
+        cosTheta3Numerator = wristCenterX**2 + wristCenterY**2 + (wristCenterZ-d1)**2 - a2**2 - d4**2
         cosTheta3 = cosTheta3Numerator/(2*a2*d4)
 
         if abs(cosTheta3) > 1:  # cos(x) cannot be greater than 1
@@ -256,12 +254,11 @@ def inverseKinematics(dhTable, targetPos):
         # positive in front of square root assumes elbow up
         theta3 = math.atan2(math.sqrt(1 - cosTheta3**2), cosTheta3)
 
-        theta2 = math.atan2(wristCenterZ - d1, math.sqrt(wristCenterX**2 + wristCenterY**2)
-                            ) - math.atan2(d4*math.sin(theta3 - math.pi/2), a2 + d4*cosTheta3)
+        theta2 = math.atan2(wristCenterZ - d1, math.sqrt(wristCenterX**2 + wristCenterY**2)) - math.atan2(d4*math.sin(theta3 - math.pi/2), a2 + d4*cosTheta3)
 
         # transform matrix from base to third link
-        t03 = calculateTransformToLink(createDHTable(
-            [theta1, theta2, theta3, 0, 0, 0]), 3)
+        t03 = calculateTransformToLink(createDHTable([theta1, theta2, theta3, 0, 0, 0]), 2)
+
         # rotation matrix of third link
         r03 = np.array([t03[0][:3], t03[1][:3], t03[2][:3]])
         # rotation matrix from third link to EE
@@ -276,7 +273,7 @@ def inverseKinematics(dhTable, targetPos):
         return [theta1, theta2, theta3, theta4, theta5, theta6]
 
     except Exception as ex:
-        print("The following error occured: ")
-        print(ex)
+        print("The following error occured:", ex)
+        # print(ex)
         # return current joint angles
         return [dhTable[0][3], dhTable[1][3], dhTable[2][3], dhTable[3][3], dhTable[4][3], dhTable[5][3]]
