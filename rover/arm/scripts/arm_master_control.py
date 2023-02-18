@@ -8,6 +8,7 @@ import arm_simulation_control as sim
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 from std_msgs.msg import Float32MultiArray
+import json
 
 # Global Variables 
 
@@ -134,7 +135,7 @@ def controlEEPosition(currentEETransform, isButtonPressed, joystickAxis):
 
     pass
 
-def controlGrippperAngle(isButtonPressed):
+def controlGripperAngle(isButtonPressed):
     ''' Adjust the angle at which the gripper is open
 
     Moves all fingers by an equal amount. Focuses on L1 and L2.
@@ -151,7 +152,19 @@ def controlGrippperAngle(isButtonPressed):
     
     
     '''
-    pass
+    global curArmAngles
+    gripperAngle = curArmAngles[6]
+    # Tune amount that angle is changed with each cycle
+    angleIncrement = 1
+
+    # If both buttons are pressed at the same time, angle will not change
+    if isButtonPressed["L1"] == 1 and isButtonPressed["L2"] != 1:
+        gripperAngle += angleIncrement
+
+    if isButtonPressed["L2"] == 1 and isButtonPressed["L1"] != 1:
+        gripperAngle -= angleIncrement
+
+    return gripperAngle
 
 def savePosition():
     ''' Saves the current angles the arm is in
@@ -160,7 +173,26 @@ def savePosition():
     of position before saving (preferable a GUI).
     '''
     global curArmAngles
-    pass
+
+    # (Placeholders for angles 1-5)
+
+    positionName = input("Enter Position Name: ")
+    newAngles = {
+        "title:":positionName,
+        "angle0":curArmAngles[0],
+        "angle1":curArmAngles[1],
+        "angle2":curArmAngles[2],
+        "angle3":curArmAngles[3],
+        "angle4":curArmAngles[4],
+        "angle5":curArmAngles[5],
+        "gripperAngle":curArmAngles[6]
+    }
+
+    with open('arm_angles.json','r+') as file:
+        current_file = json.load(file)
+        current_file["arm_angles"].append(newAngles)
+        file.seek(0)
+        json.dump(current_file,file,indent = 0)
 
 def goToPosition():
     ''' Pulls up GUI with options of saved joint angles.
