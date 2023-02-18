@@ -180,26 +180,51 @@ def savePosition():
 
     positionName = input("Enter Position Name: ")
     newAngles = {
-        "title:":positionName,
-        "angle0":curArmAngles[0],
-        "angle1":curArmAngles[1],
-        "angle2":curArmAngles[2],
-        "angle3":curArmAngles[3],
-        "angle4":curArmAngles[4],
-        "angle5":curArmAngles[5],
-        "gripperAngle":curArmAngles[6]
+    "title":positionName,
+    "angle0":curArmAngles[0],
+    "angle1":curArmAngles[1],
+    "angle2":curArmAngles[2],
+    "angle3":curArmAngles[3],
+    "angle4":curArmAngles[4],
+    "angle5":curArmAngles[5],
+    "gripperAngle":curArmAngles[6]
     }
 
     with open('arm_angles.json','r+') as file:
-        current_file = json.load(file)
-        current_file["arm_angles"].append(newAngles)
+        breakLoop = False
+        savedPos = json.load(file)
+        for x in range(len(savedPos["position_names"])):
+            if breakLoop:
+                break
+            if savedPos["position_names"][x]["title"] == positionName:
+                savedPos["position_names"].pop(x)
+                breakLoop = True
+        savedPos["position_names"].append(newAngles)
         file.seek(0)
-        json.dump(current_file,file,indent = 0)
+        json.dump(savedPos,file,indent = 0)
+        file.close()
+    pass
 
 def goToPosition():
     ''' Pulls up GUI with options of saved joint angles.
 
     '''
+    retrievePos = input("Enter Position Name to Retrieve: ")
+    with open('arm_angles.json','r') as file:
+        found = False
+        savedPos = json.load(file)
+        for x in range(len(savedPos["position_names"])):
+            if savedPos["position_names"][x]["title"] == retrievePos:
+                found = True
+                curArmAngles[0] = savedPos["position_names"][x]["angle0"]
+                curArmAngles[1] = savedPos["position_names"][x]["angle1"]
+                curArmAngles[2] = savedPos["position_names"][x]["angle2"]
+                curArmAngles[3] = savedPos["position_names"][x]["angle3"]
+                curArmAngles[4] = savedPos["position_names"][x]["angle4"]
+                curArmAngles[5] = savedPos["position_names"][x]["angle5"]
+                curArmAngles[6] = savedPos["position_names"][x]["gripperAngle"]
+        if not found:
+            print("Position name '"+retrievePos+"' not found")
     pass
 
 # ROS Stuff
