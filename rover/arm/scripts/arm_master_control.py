@@ -9,14 +9,16 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 from std_msgs.msg import Float32MultiArray
 import json
+import copy
 
 # Global Variables 
 
 BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SELECT", "START", "PLAY_STATION", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"]
 JOYSTICK_AXES_NAMES = ["L-Right", "L-Down", "L2", "R-Right", "R-Down", "R2"]
+IK_MODE = ["global", "relativeCamera", "relativeEndEffector", "forwardKinematics"]
 
 global curArmAngles
-global ikMode # "global" or "relativeCamera"
+global ikMode
 global prevTargetPos
 
 movementSpeed = 1
@@ -29,7 +31,7 @@ buttonsPressed = {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": Fals
 def initializeJoystick():
     '''### Connects Joystick to Script
 
-    For when the arm is operated by a PS3 or PS4 joystick. Could work with X-box Controllers.
+    For when the arm is operated by a PS3, PS4, or PS5 joystick. Probably will work with X-box Controllers.
     '''
     pygame.init()
     global joystick
@@ -252,27 +254,53 @@ def main():
     '''
     global curArmAngles
     global ikMode
+    global ikIteration
     global prevTargetPos
-    pass
+    
+    isButtonPressed = getJoystickButtons()
+    joystickAxes = getJoystickAxes()
+
+    if isButtonPressed["idk"]:
+        savePosition()
+    
+    if isButtonPressed["idk"]:
+        modeIteration += 1
+        if modeIteration >= len(ikMode):
+            modeIteration = 0
+        
+        ikMode = IK_MODE[modeIteration]
+    
+    dhTable = ik.createDHTable(curArmAngles)
+
+    targetEEPos = controlEEPosition(prevTargetPos, isButtonPressed, joystickAxes)
+
+    targetAngles = ik.inverseKinematics(dhTable, targetEEPos)    
+    targetAngles.append(controlGripperAngle(isButtonPressed))
+
+    publishNewAngles(targetAngles)
+    updateDesiredArmSimulation(targetEEPos)
+
+    prevTargetPos = copy.deepcopy(targetEEPos)
 
 
 # Main Area
 
 if __name__ == "__main__":
     curArmAngles = [0, 0, 0, 0, 0, 0]
-    ikMode = "global"
 
-    # initializeJoystick()
 
+    initializeJoystick()
+
+    ikIteration = 0
     
     try:
         rate = rospy.Rate(10) # run at 10Hz
         rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
 
         # sets start target position equal to curArmAngles after they have been updated
-        while curArmAngles != [0, 0, 0, 0, 0, 0]:
+        while curArmAngles == [0, 0, 0, 0, 0, 0]:
             tempDHTable = ik.createDHTable(curArmAngles)
-            prevTargetPos = ik.calculateTransformToLink()
+            prevTargetPos = ik.calculateTransformToLink(tempDHTable, 6)
 
         while not rospy.is_shutdown():
             main()
