@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-# import pygame
+import pygame
 import numpy
 import ik_library as ik
 import arm_simulation_control as sim
@@ -23,85 +23,84 @@ movementSpeed = 1
 buttonsPressed = {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": False, "L1": False, "R1": False, "L2": False, "R2": False, "SELECT": False, "START": False, "PLAY_STATION": False, 
         "L3": False, "R3": False,"UP": False, "DOWN": False, "LEFT": False, "RIGHT": False} 
 
-# # Joystick Controller
+# Joystick Controller
 
-# def initializeJoystick():
-#     '''### Connects Joystick to Script
+def initializeJoystick():
+    '''### Connects Joystick to Script
 
-#     For when the arm is operated by a PS3 or PS4 joystick. Could work with X-box Controllers.
-#     '''
-#     pygame.init()
-#     global joystick
-#     joystick = pygame.joystick.Joystick(0)
-#     joystick.init()
-#     print('Initialized joystick: %s' % joystick.get_name())
-#     # print(joystick.get_numbuttons())
+    For when the arm is operated by a PS3 or PS4 joystick. Could work with X-box Controllers.
+    '''
+    pygame.init()
+    global joystick
+    joystick = pygame.joystick.Joystick(0)
+    joystick.init()
+    print('Initialized joystick: %s' % joystick.get_name())
+    # print(joystick.get_numbuttons())
     
-# def getJoystickButtons() -> dict: # setting up the buttons
-#     ''' Gets the Currently Pressed Buttons on Joystick
+def getJoystickButtons() -> dict: # setting up the buttons
+    ''' Gets the Currently Pressed Buttons on Joystick
 
-#     If the value in the returned dictionary for a button is 
-#         1: button is pressed
-#         0: button is not pressed
-#         -1: button was just released 
+    If the value in the returned dictionary for a button is 
+        1: button is pressed
+        0: button is not pressed
+        -1: button was just released 
 
-#     Returns
-#     -------
-#     dictionary
-#         dictionary with keys for buttons from BUTTON_NAMES, value is either 1, 0, or -1
+    Returns
+    -------
+    dictionary
+        dictionary with keys for buttons from BUTTON_NAMES, value is either 1, 0, or -1
     
-#     '''
-#     pygame.event.pump() # allow pygame to handle internal actions, keep everything current
+    '''
+    pygame.event.pump() # allow pygame to handle internal actions, keep everything current
     
-#     global buttonsPressed
+    global buttonsPressed
     
-#     buttons = {"X": 0, "CIRCLE": 0, "TRIANGLE": 0, "SQUARE": 0 , "L1": 0, "R1": 0, "L2": 0, "R2": 0, "SELECT": 0, "START": 0, "PLAY_STATION": 0, 
-#         "L3": 0, "R3": 0,"UP": 0, "DOWN": 0, "LEFT": 0, "RIGHT": 0 } # 1 is pressed, 0 is not pressed, -1 is just released
+    buttons = {"X": 0, "CIRCLE": 0, "TRIANGLE": 0, "SQUARE": 0 , "L1": 0, "R1": 0, "L2": 0, "R2": 0, "SELECT": 0, "START": 0, "PLAY_STATION": 0, 
+        "L3": 0, "R3": 0,"UP": 0, "DOWN": 0, "LEFT": 0, "RIGHT": 0 } # 1 is pressed, 0 is not pressed, -1 is just released
  
-#     for i in range(0, joystick.get_numbuttons()):
-#         button = joystick.get_button(i)
-
+    for i in range(0, joystick.get_numbuttons()):
+        button = joystick.get_button(i)
         
-#         if buttonsPressed[BUTTON_NAMES[i]] == True and button == 0: # button just released
-#             button = -1
+        if buttonsPressed[BUTTON_NAMES[i]] == True and button == 0: # button just released
+            button = -1
 
-#         if button != 1:
-#             buttonsPressed[BUTTON_NAMES[i]] = False
-#         else:
-#             buttonsPressed[BUTTON_NAMES[i]] = True
+        if button != 1:
+            buttonsPressed[BUTTON_NAMES[i]] = False
+        else:
+            buttonsPressed[BUTTON_NAMES[i]] = True
     
-#         buttons[BUTTON_NAMES[i]] = button
+        buttons[BUTTON_NAMES[i]] = button
  
         
-#     return buttons
+    return buttons
 
-# def getJoystickAxes(): # setting up the axes for the control stick
-#     '''Get the state of the controllers joystick axes and bumpers.
+def getJoystickAxes(): # setting up the axes for the control stick
+    '''Get the state of the controllers joystick axes and bumpers.
 
-#     Get the value of joystick axes that are labelled in JOYSTICK_AXES_NAMES. Anything pushed
-#     in the direction labelled will be returned as positive float; against will be negative. L2 
-#     and R2 swill return depth pushed in.
+    Get the value of joystick axes that are labelled in JOYSTICK_AXES_NAMES. Anything pushed
+    in the direction labelled will be returned as positive float; against will be negative. L2 
+    and R2 swill return depth pushed in.
     
-#     Returns
-#     -------
-#     #### dictionary: 
-#     A dictionary with keys that are from JOYSTICK_AXES_NAME, value is amount pushed.
-#     '''
+    Returns
+    -------
+    #### dictionary: 
+    A dictionary with keys that are from JOYSTICK_AXES_NAME, value is amount pushed.
+    '''
     
-#     global joystick
+    global joystick
     
-#     axes = {}
+    axes = {}
     
-#     pygame.event.pump()
-#     #Read input from the joystick       
-#     for i in range(0, joystick.get_numaxes()):
-#         axes[JOYSTICK_AXES_NAMES[i]] = joystick.get_axis(i)
+    pygame.event.pump()
+    #Read input from the joystick       
+    for i in range(0, joystick.get_numaxes()):
+        axes[JOYSTICK_AXES_NAMES[i]] = joystick.get_axis(i)
 
-#         # set inputs to zero if near zero
-#         if abs(axes[JOYSTICK_AXES_NAMES[i]]) <= 0.05: 
-#                 axes[JOYSTICK_AXES_NAMES[i]] = 0
+        # set inputs to zero if near zero
+        if abs(axes[JOYSTICK_AXES_NAMES[i]]) <= 0.05: 
+                axes[JOYSTICK_AXES_NAMES[i]] = 0
     
-#     return axes
+    return axes
 
 # Arm Control
 
