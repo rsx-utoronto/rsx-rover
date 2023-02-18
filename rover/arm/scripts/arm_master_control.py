@@ -176,7 +176,10 @@ def savePosition():
     global curArmAngles
 
     # (Placeholders for angles 1-5)
-    armAngles = {
+
+    positionName = input("Enter Position Name: ")
+    newAngles = {
+        "title:":positionName,
         "angle0":curArmAngles[0],
         "angle1":curArmAngles[1],
         "angle2":curArmAngles[2],
@@ -186,9 +189,11 @@ def savePosition():
         "gripperAngle":curArmAngles[6]
     }
 
-    # Dumps angles to arm_angles.json
-    with open("arm_angles.json","w") as file:
-        json.dump(armAngles, file, indent=0)
+    with open('arm_angles.json','r+') as file:
+        current_file = json.load(file)
+        current_file["arm_angles"].append(newAngles)
+        file.seek(0)
+        json.dump(current_file,file,indent = 0)
 
 def goToPosition():
     ''' Pulls up GUI with options of saved joint angles.
