@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 
 <launch>
-  <rosparam command="load" file="$(find mobile_manipulator_body)/config/ekf.yaml" />
-  <param name="robot_description" textfile="$(find mobile_manipulator_body)/urdf/robot_base.urdf" />
+  <rosparam command="load" file="$(find rover)/rover/simulation/config/ekf.yaml" />
+  <param name="robot_description" textfile="$(find rover)/rover/simulation/urdfs/robot_base.urdf" />
   <include file="$(find gazebo_ros)/launch/empty_world.launch"/>
   <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model robot_base" />
-  <rosparam command="load" file="$(find mobile_manipulator_body)/config/control.yaml" />
+  <rosparam command="load" file="$(find rover)/rover/simulation/config/control.yaml" />
   <node name="base_controller_spawner" pkg="controller_manager" type="spawner" args="robot_base_joint_publisher robot_base_velocity_controller"/>
   <!-- Odom node (Encoders + IMU) -->
 
@@ -156,9 +156,9 @@
 	  <param name="odomN_differential" value="false"/>
   </node>
 
-  <node pkg="nmea_navsat_driver" type="nmea_serial_driver" name="navsat" respawn="true">
+  <!-- <node pkg="nmea_navsat_driver" type="nmea_serial_driver" name="navsat" respawn="true">
     <param name="port" value="/dev/ttyUSB0"/>
     <param name="baud" value="19200"/>
-  </node>
+  </node> -->
   
 </launch>

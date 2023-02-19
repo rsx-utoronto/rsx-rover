@@ -21,7 +21,7 @@
         xyz="0 0 0"
         rpy="1.5707963267949 0 3.14" />
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/robot_base.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/robot_base.stl" />
       </geometry>
       <material
         name="">
@@ -34,7 +34,7 @@
         xyz="0 0 0"
         rpy="1.5707963267949 0 3.14" />
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/robot_base.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/robot_base.stl" />
       </geometry>
     </collision>
   </link>
@@ -59,7 +59,7 @@
         xyz="0 0 0"
         rpy="1.5707963267949 0 0" />
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/wheel.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/wheel.stl" />
       </geometry>
       <material
         name="">
@@ -72,7 +72,7 @@
         xyz="0 0 0"
         rpy="1.5707963267949 0 0" />
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/wheel.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/wheel.stl" />
       </geometry>
     </collision>
   </link>
@@ -97,7 +97,7 @@
         xyz="0 0 0"
         rpy="1.5707963267949 0 0" />
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/wheel.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/wheel.stl" />
       </geometry>
       <material
         name="">
@@ -110,7 +110,7 @@
         xyz="0 0 0"
         rpy="1.5707963267949 0 0" />
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/wheel.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/wheel.stl" />
       </geometry>
     </collision>
   </link>
@@ -135,7 +135,7 @@
         xyz="0 0 0"
         rpy="1.5707963267949 0 0" />
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/wheel.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/wheel.stl" />
       </geometry>
       <material
         name="">
@@ -148,7 +148,7 @@
         xyz="0 0 0"
         rpy="1.5707963267949 0 0" />
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/wheel.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/wheel.stl" />
       </geometry>
     </collision>
   </link>
@@ -173,7 +173,7 @@
         xyz="0 0 0"
         rpy="1.5707963267949 0 0" />
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/wheel.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/wheel.stl" />
       </geometry>
       <material
         name="">
@@ -186,7 +186,7 @@
         xyz="0 0 0"
         rpy="1.5707963267949 0 0" />
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/wheel.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/wheel.stl" />
       </geometry>
     </collision>
   </link>
@@ -246,13 +246,13 @@
     <collision>
       <origin xyz="0 0 0.03675" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/os1_64.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/os1_64.stl" />
       </geometry>
     </collision>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://mobile_manipulator_body/meshes/os1_64.stl" />
+        <mesh filename="package://rover/rover/simulation/meshes/os1_64.stl" />
       </geometry>
     </visual>
   </link>
