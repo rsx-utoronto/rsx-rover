@@ -8,8 +8,8 @@ import threading
 
 # CAN bus instance
 global BUS
-global isSending
-isSending = False
+#global isSending
+#isSending = False
 
 # CANSpark APIs;
 CMD_API_SETPNT_SET = 0x001;
@@ -292,8 +292,9 @@ initialize_bus()
 #time.sleep(2)
 
 # Generating and sending CAN message for position set
-id = generate_can_id(dev_id= 0xA, api= CMD_API_POS_SET)
+id = generate_can_id(dev_id= 0xB, api= CMD_API_POS_SET)
 send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x00, 0x00])
+
 
 ## Deprecated RTR try (may try again later)
 #id = generate_can_id(dev_id= 0xA, api= CMD_API_POS_SET)
@@ -311,6 +312,14 @@ hb = can.Message(arbitration_id= generate_can_id(dev_id= 0x0, api= CMD_API_NONRI
 # Broadcasting the heartbeat
 task = BUS.send_periodic(hb, 0.01)
 print("Heartbeat initiated")
+
+id = generate_can_id(dev_id= 0xC, api= CMD_API_POS_SET)
+send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x00, 0x00])
+
+id = generate_can_id(dev_id= 0xD, api= CMD_API_POS_SET)
+send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x00, 0x00])
+
+
 
 # Starting infinite loop
 ## TO DO: 
