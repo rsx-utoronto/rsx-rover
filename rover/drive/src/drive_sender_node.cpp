@@ -16,15 +16,12 @@ using namespace message_filters;
 class TeleopRover {
 	public:
 		TeleopRover();
-		void publishDrive();
 		void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
 		void networkCallback(const std_msgs::Bool::ConstPtr& net_stat);
 
 		ros::NodeHandle nh;
 		float MAX_ANGULAR_SPEED = 0.4;
 		float MAX_LINEAR_SPEED = 0.6;
-		// int linear_, angular_, right_left_, forward_backward_, yaw_; 
-		// double l_scale_, a_scale_;
 		ros::Publisher drive_pub_;
 		ros::Subscriber joy_sub;
 		ros::Subscriber net_sub;
@@ -99,27 +96,10 @@ void TeleopRover::networkCallback(const std_msgs::Bool::ConstPtr& net_stat){
 	
 }
 
-void TeleopRover::publishDrive(){
-	geometry_msgs::Twist twist;
-	// if (cnt < 100000)
-	// 	twist.linear.x = 0.3;
-	// if ( cnt > 100000 && cnt < 200000)
-	// 	twist.linear.x = 0.0;
-	// if (cnt == 200000)
-	// 	cnt = 0;
-	twist.linear.x = 0.5;
-	twist.angular.z = 0.0;
-
-	drive_pub_.publish(twist);
-}
-
 
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "drive_sender_falcon");
 	TeleopRover drive_sender;
-	// while (ros::ok()){
-	// 	drive_sender.publishDrive();
-	// }
 	ros::spin();
 }
