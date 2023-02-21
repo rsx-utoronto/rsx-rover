@@ -448,7 +448,7 @@
 <gazebo reference="lidar_link">
         <sensor type="ray" name="os1_lidar">
           <pose>0 0 0 0 0 0</pose>
-            <visualize>true</visualize>
+            <visualize>false</visualize>
             <update_rate>30</update_rate>
             <ray>
               <scan>
