@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  message_filters
 )
 
 ## System dependencies are found with CMake's conventions
@@ -103,10 +104,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES Rover
-#  CATKIN_DEPENDS roscpp rospy std_msgs
-#  DEPENDS system_lib
+    #INCLUDE_DIRS include
+    #LIBRARIES Rover
+    CATKIN_DEPENDS roscpp rospy std_msgs message_filters
+    DEPENDS system_lib
 )
 
 ###########
@@ -200,3 +201,7 @@ include_directories(
 
 add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
 target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
+
+catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
+ DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
