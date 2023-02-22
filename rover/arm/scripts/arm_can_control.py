@@ -8,8 +8,6 @@ import threading
 
 # CAN bus instance
 global BUS
-#global isSending
-#isSending = False
 
 # CANSpark APIs;
 CMD_API_SETPNT_SET = 0x001;
@@ -57,6 +55,9 @@ CMD_API_I_ACCUM = 0x0A2;
 CMD_API_ANALOG_POS = 0x0A3;
 CMD_API_ALT_ENC_POS = 0x0A4;
 CMD_API_PARAM_ACCESS = 0x300;
+
+########## CLASSES ##########
+
 
 ########## HELPER FUNCTIONS ##########
 
@@ -264,11 +265,10 @@ def read_can_message(api = None):
 	#				{'can_id':0x0205190B, 'can_mask': 0x1FFFFFFF, 'extended':True},
 	#				{'can_id':0x0205194B, 'can_mask': 0x1FFFFFFF, 'extended':True},
 	#				{'can_id':0x0205198B, 'can_mask': 0x1FFFFFFF, 'extended':True}])
-	#BUS.set_filters([{'can_id':0x02050C8A, 'can_mask': 0xFFFFFFFF, 'extended':True}
-	#					,{'can_id':0x000502C0, 'can_mask': 0xFFFFFFFF, 'extended':True}])
+	#BUS.set_filters([{'can_id':0x02052C80, 'can_mask': 0x1FFFFFFF, 'extended':True}])
 	#id = generate_can_id(dev_id= 0xA, api= CMD_API_POS_SET)
 	#send_can_message(can_id= id, ext= True, rtr= True)
-	#print(BUS.recv())
+	print(BUS.recv())
 	pass
 
 def send_ros_message():
@@ -281,8 +281,21 @@ def send_ros_message():
 ############################## MAIN ##############################
 
 # Instantiating the CAN bus
-initialize_bus()
+initialize_bus(channel= 'can0')
 
+# Setting the filters
+BUS.set_filters([{'can_id':0x02052C80, 'can_mask': 0xFFFFFFFF, 'extended':True}
+		        ,{'can_id':0x02051800, 'can_mask': 0xFFFFFFC0, 'extended':True}
+				,{'can_id':0x02051840, 'can_mask': 0xFFFFFFC0, 'extended':True}
+				,{'can_id':0x02051880, 'can_mask': 0xFFFFFFC0, 'extended':True}
+				,{'can_id':0x020518C0, 'can_mask': 0xFFFFFFC0, 'extended':True}
+				,{'can_id':0x02051900, 'can_mask': 0xFFFFFFC0, 'extended':True}
+				,{'can_id':0x02051940, 'can_mask': 0xFFFFFFC0, 'extended':True}
+				,{'can_id':0x02051980, 'can_mask': 0xFFFFFFC0, 'extended':True}])
+	
+
+#reader = can.Listener()
+#can.Notifier(BUS, [reader])
 ## Deprecated first heartbeat
 #msg = can.Message(arbitration_id= 0x000502C0, data= bytes([0x01]), is_extended_id= True, is_remote_frame = False, is_error_frame = False)
 # Broadcasting the message
@@ -291,11 +304,6 @@ initialize_bus()
 #print("Heartbeat2 initiated")
 #time.sleep(2)
 
-# Generating and sending CAN message for position set
-id = generate_can_id(dev_id= 0xB, api= CMD_API_POS_SET)
-send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x00, 0x00])
-
-
 ## Deprecated RTR try (may try again later)
 #id = generate_can_id(dev_id= 0xA, api= CMD_API_POS_SET)
 #send_can_message(can_id= id, ext= True, rtr= True)
@@ -303,7 +311,7 @@ send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x00, 0x
 
 # Creating the message packet for Heartbeat
 hb = can.Message(arbitration_id= generate_can_id(dev_id= 0x0, api= CMD_API_NONRIO_HB), 
-	data= bytes([0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]), 
+	data= bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 
 	is_extended_id= True,
 	is_remote_frame = False, 
 	is_error_frame = False
@@ -313,11 +321,15 @@ hb = can.Message(arbitration_id= generate_can_id(dev_id= 0x0, api= CMD_API_NONRI
 task = BUS.send_periodic(hb, 0.01)
 print("Heartbeat initiated")
 
-id = generate_can_id(dev_id= 0xC, api= CMD_API_POS_SET)
-send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x00, 0x00])
+# Generating and sending CAN message for position set
+id = generate_can_id(dev_id= 0xE, api= CMD_API_POS_SET)
+send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0x00, 0x00])
 
-id = generate_can_id(dev_id= 0xD, api= CMD_API_POS_SET)
-send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x00, 0x00])
+#id = generate_can_id(dev_id= 0xC, api= CMD_API_POS_SET)
+#send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x00, 0x00])
+
+#id = generate_can_id(dev_id= 0xD, api= CMD_API_POS_SET)
+#send_can_message(can_id= id, data= [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
 
 
 
@@ -328,4 +340,5 @@ send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x00, 0x
 # 3. Should be able to detect if a command is given to request a new parameter
 while 1:
 	read_can_message()
-	pass
+#print(BUS.recv())
+#	pass
