@@ -398,7 +398,7 @@ def getJoystickButtons(): # setting up the buttons
 
     return buttons
 
-0
+
 def sendAngleValues(qVect, start = 0): # sends a message with angle values?
     global limitFlag
     global modeOfOperation
