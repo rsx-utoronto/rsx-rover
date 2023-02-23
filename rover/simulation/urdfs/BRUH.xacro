@@ -151,46 +151,46 @@
   </collision>
 </link>
 
-<joint name="Revolute 2" type="continuous">
+<joint name="Joint_1" type="continuous">
+  <origin xyz="0.05 0.04 0.00625" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="turntable_1"/>
+  <axis xyz="0.0 0.0 1.0"/>
+</joint>
+
+<joint name="Joint_2" type="continuous">
   <origin xyz="-0.025 0.003125 0.08125" rpy="-1.57 0 0"/>
   <parent link="turntable_1"/>
   <child link="LINK1_1"/>
-  <axis xyz="-1.0 0.0 -0.0"/>
+  <axis xyz="1.0 0.0 -0.0"/>
 </joint>
 
-<joint name="Revolute 3" type="continuous">
-  <origin xyz="0.0 0.0 0.375" rpy="0 0 0"/>
+<joint name="Joint_3" type="continuous">
+  <origin xyz="0.0 0.0 0.375" rpy="-1.57 0 0"/>
   <parent link="LINK1_1"/>
   <child link="Component3_1"/>
   <axis xyz="1.0 -0.0 0.0"/>
 </joint>
 
-<joint name="Revolute 4" type="continuous">
-  <origin xyz="0.034375 -0.06955 0.045" rpy="0 0 0"/>
+<joint name="Joint_4" type="continuous">
+  <origin xyz="0.034375 -0.06955 0.045" rpy="0 0 -1.57"/>
   <parent link="Component3_1"/>
   <child link="Component4_1"/>
-  <axis xyz="0.0 0.0 -1.0"/>
+  <axis xyz="0.0 0.0 1.0"/>
 </joint>
 
-<joint name="Revolute 5" type="continuous">
+<joint name="Joint_5" type="continuous">
   <origin xyz="0.007325 -0.029675 0.403125" rpy="0 0 0"/>
   <parent link="Component4_1"/>
   <child link="Component5_1"/>
-  <axis xyz="-0.0 -1.0 -0.0"/>
+  <axis xyz="-0.0 1.0 -0.0"/>
 </joint>
 
-<joint name="Revolute 6" type="continuous">
+<joint name="Joint_6" type="continuous">
   <origin xyz="-0.007325 0.029675 0.025" rpy="0 0 0"/>
   <parent link="Component5_1"/>
   <child link="Component6_1"/>
-  <axis xyz="-0.0 0.0 -1.0"/>
-</joint>
-
-<joint name="Revolute 7" type="continuous">
-  <origin xyz="0.05 0.04 0.00625" rpy="0 0 0"/>
-  <parent link="base_link"/>
-  <child link="turntable_1"/>
-  <axis xyz="0.0 0.0 -1.0"/>
+  <axis xyz="-0.0 0.0 1.0"/>
 </joint>
 
 </robot>
