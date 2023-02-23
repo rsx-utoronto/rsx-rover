@@ -3,11 +3,16 @@ import rospy
 import time
 import _thread
 import threading
+import struct
 
 ########## GLOBAL VARIABLES ##########
 
 # CAN bus instance
 global BUS
+
+########## CLASSES ##########
+
+cadwdw;;;lss 
 
 # CANSpark APIs;
 CMD_API_SETPNT_SET = 0x001;
@@ -58,7 +63,49 @@ CMD_API_PARAM_ACCESS = 0x300;
 
 ########## CLASSES ##########
 
+class Messenger(can.Listener):
+	"""
+	Subclass of Listener class in python-can module. Purpose of this
+	class is to override the on_message_received() method of can.Listener().
 
+	No required inputs for the class 
+	"""
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+	def on_message_received(self, msg: can.Message):
+		'''
+		(can.Message) -> (bytearray, int)
+
+		Calls the read_can_message function for *significant* message IDs.
+		Returns the message decoded as well as the associated API from these 
+		significant messages. Returns -1 for both if the can frame does not 
+		have a significant message ID
+
+		*significant IDs*
+			1. Status message number 1 - bits [15:6] = 0x061 (CMD_API_STAT1)
+			2. Status message number 2 - bits [15:6] = 0x062 (CMD_API_STAT2)
+			**TO ADD**
+			- Specific Parameter Accesses
+		
+		@parameters
+
+		msg (can.Message) = The complete can frame packet
+		'''
+		
+		# Extracting the API from can_id
+		can_id = msg.arbitration_id
+		api = (can_id >> 6) & 0b00000000000001111111111
+
+		# Can include more APIs in the future
+		if api == CMD_API_STAT1 or api == CMD_API_STAT2:
+			return (msg.data, api)
+		
+		else:
+			return (-1, -1)
+		
+		
 ########## HELPER FUNCTIONS ##########
 
 def generate_can_id(dev_id : int, api : int, 
@@ -80,7 +127,7 @@ def generate_can_id(dev_id : int, api : int,
 	"""
 
 	# Forming the CAN ID
-	can_id = 0 << 6
+	can_id = 0 << 5
 	can_id = (can_id | dev_type) << 8
 	can_id = (can_id | man_id) << 10
 	can_id = (can_id | api) << 6
@@ -240,36 +287,48 @@ def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = F
 
 	return
 
-def read_can_message(api = None):
+def read_can_message(data, api):
 	"""
-	Reads messages from a CAN bus that are supposed to be sent from the motor controllers.
-	You can request information for a specific parameter by providing the correct API, or
-	collect basic information from the status messages
+	Converts CAN data packets from hex to float decimal values. This function
+	is still a work in progress
 
 	*******NEEDS TO BE COMPLETED*******
 	@parameters
 
-	api (int) (optional) = The API you want to request information for.
+	data (bytearray) = The CAN data packet containing just the payload. 
+	api (int) = The API you want the payload of.
 	"""
-	#BUS.set_filters([{'can_id':0x0205180A, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x0205184A, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x0205188A, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x020518CA, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x0205190A, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x0205194A, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x0205198A, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x0205180B, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x0205184B, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x0205188B, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x020518CB, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x0205190B, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x0205194B, 'can_mask': 0x1FFFFFFF, 'extended':True},
-	#				{'can_id':0x0205198B, 'can_mask': 0x1FFFFFFF, 'extended':True}])
-	#BUS.set_filters([{'can_id':0x02052C80, 'can_mask': 0x1FFFFFFF, 'extended':True}])
-	#id = generate_can_id(dev_id= 0xA, api= CMD_API_POS_SET)
-	#send_can_message(can_id= id, ext= True, rtr= True)
-	print(BUS.recv())
-	pass
+	
+	if api:
+		# API: Status Message 1 - Gives us current motor velocity, motor voltage and
+		# motor current. We only need current
+		# ** NEEDS TO BE COMPLETED **
+		if api == CMD_API_STAT1:
+			curr_fix_point = (data[-1] << 4) | (data[-2] & 0x0F)
+			# **NEED TO FIGURE THIS PART OUT FOR CURRENT**
+			pass
+		
+		# API: Status Message 2 - Gives us current position and comes every 20ms
+		elif api == CMD_API_STAT2:
+			
+			# Extracting the position value bytes
+			pos_float = data[3] << 4
+			pos_float = (pos_float | data[2]) << 4
+			pos_float = (pos_float | data[1]) << 4
+			pos_float = (pos_float | data[0])
+
+			# Converting the extracted bytes to hex
+			pos_hex = str(hex(pos_float))
+
+			# Converting the hex representation to floating point decimal value
+			pos_float = struct.unpack('!f', bytes.fromhex(pos_hex[2:]))[0]
+
+			return pos_float
+
+	else:
+		# Error Message, invalid API
+		print("Invalid API ID")
+		return -1
 
 def send_ros_message():
 	"""
@@ -294,23 +353,14 @@ BUS.set_filters([{'can_id':0x02052C80, 'can_mask': 0xFFFFFFFF, 'extended':True}
 				,{'can_id':0x02051980, 'can_mask': 0xFFFFFFC0, 'extended':True}])
 	
 
-#reader = can.Listener()
-#can.Notifier(BUS, [reader])
-## Deprecated first heartbeat
-#msg = can.Message(arbitration_id= 0x000502C0, data= bytes([0x01]), is_extended_id= True, is_remote_frame = False, is_error_frame = False)
-# Broadcasting the message
-#task = BUS.send_periodic(msg, 0.02)
-#_thread.start_new_thread(read_can_message, ())
-#print("Heartbeat2 initiated")
-#time.sleep(2)
-
-## Deprecated RTR try (may try again later)
-#id = generate_can_id(dev_id= 0xA, api= CMD_API_POS_SET)
-#send_can_message(can_id= id, ext= True, rtr= True)
-#task.stop()
+reader = Messenger()
+can.Notifier(BUS, [reader])
 
 # Creating the message packet for Heartbeat
-hb = can.Message(arbitration_id= generate_can_id(dev_id= 0x0, api= CMD_API_NONRIO_HB), 
+hb = can.Message(
+	arbitration_id= generate_can_id(
+		dev_id= 0x0, 
+		api= CMD_API_NONRIO_HB), 
 	data= bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 
 	is_extended_id= True,
 	is_remote_frame = False, 
@@ -339,6 +389,6 @@ send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0x00, 0x
 # 2. Send the CAN messages read over ROS topic back to IK
 # 3. Should be able to detect if a command is given to request a new parameter
 while 1:
-	read_can_message()
+	#read_can_message()
 #print(BUS.recv())
-#	pass
+	pass
