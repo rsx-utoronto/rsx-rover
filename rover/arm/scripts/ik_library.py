@@ -26,9 +26,9 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float):
 
     # Convert input angles to radians
 
-    roll *= math.pi / 180
-    pitch *= math.pi / 180
-    yaw *= math.pi / 180
+    # roll *= math.pi / 180
+    # pitch *= math.pi / 180
+    # yaw *= math.pi / 180
 
     # Define sine and cosine of each angle to reduce # of calculations
 
@@ -170,7 +170,7 @@ def calculateTransformToLink(dhTable, linkNumber):
     '''
     transformToLink = np.eye(4)
 
-    for i in range(0, linkNumber + 1):
+    for i in range(0, linkNumber):
         ithTransform = createTransformationMatrix(dhTable[i, 0], dhTable[i, 1], dhTable[i, 2], dhTable[i, 3])
         transformToLink = np.matmul(transformToLink, ithTransform)
 
@@ -238,13 +238,13 @@ def inverseKinematics(dhTable, targetPos):
         desiredWristOrigin = np.transpose([np.array([targetPos[0][3], targetPos[1][3], targetPos[2][3]])])
 
         # calculate wrist center
-        rotationAdjustment = d6 * np.matmul(desiredWristRotation, np.transpose(np.array([[0, 0, 1]])))
+        rotationAdjustment = d6 * np.matmul(desiredWristRotation, np.transpose(np.array([0, 0, 1])))
         
         wristCenter = desiredWristOrigin - np.transpose([rotationAdjustment])
         
-        wristCenterX = wristCenter[0]
-        wristCenterY = wristCenter[1]
-        wristCenterZ = wristCenter[2]
+        wristCenterX = wristCenter[0][0]
+        wristCenterY = wristCenter[1][0]
+        wristCenterZ = wristCenter[2][0]
 
         theta1 = math.atan2(wristCenterY, wristCenterX)
 
@@ -258,18 +258,19 @@ def inverseKinematics(dhTable, targetPos):
             return [dhTable[0][3], dhTable[1][3], dhTable[2][3], dhTable[3][3], dhTable[4][3], dhTable[5][3]]
 
         # positive in front of square root assumes elbow up
-        theta3 = math.atan2(math.sqrt(1 - cosTheta3**2), cosTheta3)
-        theta3Adjusted = theta3 + math.atan2(d4, r3) # assumes that zero is right angle down
+        theta3 = math.atan2(cosTheta3, math.sqrt(1 - cosTheta3**2))
+        theta3Adjusted = theta3 - math.atan2(r3, d4) # assumes that zero is right angle down
 
-        theta2 = math.atan2(wristCenterZ - d1, math.sqrt(wristCenterX**2 + wristCenterY**2)) - math.atan2(d4*math.sin(theta3 - math.pi/2), r2 + d4*cosTheta3)
+        innerAngle = math.atan2(link3Hypotenuse*math.sin(theta3 - math.pi/2), r2 + link3Hypotenuse*math.cos(theta3 - math.pi/2))
+        theta2 = math.atan2(wristCenterZ - d1, math.sqrt(wristCenterX**2 + wristCenterY**2)) - innerAngle
 
         # transform matrix from base to third link
-        t03 = calculateTransformToLink(createDHTable([theta1, theta2, theta3, 0, 0, 0]), 2)
+        t03 = calculateTransformToLink(createDHTable([theta1, theta2, theta3Adjusted, 0, 0, 0]), 3)
 
         # rotation matrix of third link
         r03 = np.array([t03[0][:3], t03[1][:3], t03[2][:3]])
         # rotation matrix from third link to EE
-        r36 = np.matmul(np.linalg.inv(r03), desiredWristOrigin)
+        r36 = np.matmul(np.linalg.inv(r03), desiredWristRotation)
 
         theta5 = math.atan2(math.sqrt(1-r36[2][2]**2), r36[2][2])
 
@@ -277,7 +278,7 @@ def inverseKinematics(dhTable, targetPos):
 
         theta6 = math.atan2(r36[2][1], -r36[2][0])
 
-        return [theta1, theta2, theta3, theta4, theta5, theta6]
+        return [theta1, theta2, theta3Adjusted, theta4, theta5, theta6]
 
     except Exception as ex:
         print("The following error occured:", ex)
