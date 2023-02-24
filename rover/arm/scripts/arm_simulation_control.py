@@ -18,7 +18,7 @@ def startJointPublisher():
     '''
     Initiates arm_sim_control, uses rospy.Publisher to take in the joint states and returns jointPublisher
     '''
-    rospy.init_node("arm_sim_control") # start node
+    # rospy.init_node("arm_sim_control") # start node
     jointPublisher = rospy.Publisher("joint_states", JointState, queue_size=10) # refrence to the output topic, you can have multiple in a script
     return jointPublisher
 
@@ -36,6 +36,19 @@ def runNewJointState(jointPublisherData):
         newJointState.position = anglePosition() # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
         jointPublisherData.publish(newJointState) # send data to be published
         rate.sleep() # controls loop rate based on what is set in the rate variable 
+
+def runNewJointState2(jointPublisherData, angles):
+    '''
+    Publishes the newJointState header, stamp, name, and position in a continuous while loop. 
+    '''
+
+    # data to be published
+    newJointState = JointState()
+    newJointState.header = Header()
+    newJointState.header.stamp = rospy.Time.now()
+    newJointState.name = ["Joint_1", "Joint_2", "Joint_3", "Joint_4", "Joint_5", "Joint_6"]
+    newJointState.position = angles # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
+    jointPublisherData.publish(newJointState) # send data to be published
 
 if __name__ == "__main__": # if used rosrun on this script then ...
     try:

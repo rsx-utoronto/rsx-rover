@@ -6,7 +6,7 @@ import math
 # joystick stuff (re-use old code)
 
 
-def createXYZRotationMatrix(roll: float, pitch: float, yaw: float):
+def createXYZRotationMatrix(yaw: float, pitch: float, roll: float):
     ''' Creates a rotation matrix based on XYZ euler angles (Row, Pitch, Yaw)
 
     Paramaters (euler angles)
@@ -284,3 +284,4 @@ def inverseKinematics(dhTable, targetPos):
         print("The following error occured:", ex)
         # return current joint angles
         return [dhTable[0][3], dhTable[1][3], dhTable[2][3], dhTable[3][3], dhTable[4][3], dhTable[5][3]]
+    
