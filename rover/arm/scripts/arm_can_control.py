@@ -130,6 +130,22 @@ def generate_can_id(dev_id : int, api : int,
 	can_id = (can_id | dev_id)
 	return can_id
 
+	"""
+	x is the input fixed number which is of integer datatype
+	e is the number of fractional bits for example in Q1.15 e = 15
+	"""
+	def to_float(x,e):
+		c = abs(x)
+		sign = 1 
+		if x < 0:
+			# convert back from two's complement
+			c = x - 1 
+			c = ~c
+			sign = -1
+		f = (1.0 * c) / (2 ** e)
+		f = f * sign
+		return f
+
 ### DEPRECATED ###
 # def heartbeat1(isSending : bool, ext= True, rtr= False, err= False):
 # 	"""
