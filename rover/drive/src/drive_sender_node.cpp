@@ -8,26 +8,26 @@
 #include <boost/thread.hpp>
 #include <sensor_msgs/Joy.h>
 
+class TeleopRover
+{
+public:
+	TeleopRover();
+	void publishDrive();
 
-class TeleopRover {
-	public:
-		TeleopRover();
-		void publishDrive();
-	private:
-		void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
+private:
+	void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
 
-		ros::NodeHandle nh_;
-		float MAX_ANGULAR_SPEED = 0.4;
-		float MAX_LINEAR_SPEED = 0.6;
-		int linear_, angular_, right_left_, forward_backward_, yaw_; 
-		double l_scale_, a_scale_;
-		ros::Publisher drive_pub_;
-		ros::Subscriber joy_sub_;
+	ros::NodeHandle nh_;
+	float MAX_ANGULAR_SPEED = 0.4;
+	float MAX_LINEAR_SPEED = 0.6;
+	int linear_, angular_, right_left_, forward_backward_, yaw_;
+	double l_scale_, a_scale_;
+	ros::Publisher drive_pub_;
+	ros::Subscriber joy_sub_;
 };
 
-TeleopRover::TeleopRover():
-	linear_(1),
-	angular_(2)
+TeleopRover::TeleopRover() : linear_(1),
+							 angular_(2)
 {
 	nh_.param("axis_linear", linear_, linear_);
 	nh_.param("axis_angular", angular_, angular_);
@@ -38,22 +38,19 @@ TeleopRover::TeleopRover():
 	joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &TeleopRover::joyCallback, this);
 }
 
-void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
+void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 {
 	geometry_msgs::Twist twist;
 
-
-	//indexs for controller values
+	// indexs for controller values
 	int R2 = 5;
 	int L2 = 2;
 	int LS = 0;
-	
 	int X = 4;
-	int O = 5; 
+	int O = 5;
 
-	//Values from Controller
-	int gear = 1;
-	
+	// Values from Controller
+	int gear = 0; // set to 0 at start
 	double posThrottle = joy->axes[R2];
 	double negThrottle = joy->axes[L2];
 	float turnFactor = static_cast<float>(joy->axes[LS]);
@@ -61,65 +58,75 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 
 	double dispVal = 0;
 
-	//Encoding Values for Throttle
-	if (posThrottle < 1 && negThrottle < 1){
-		dispVal = 0;
-		lin_vel =  0;
-
-	} else if (posThrottle < 1){
-		ROS_INFO("in Pos throttle");
-		dispVal = 255 - (posThrottle+1)*127.5;
-		lin_vel = 255 - (posThrottle+1)*127.5;
-	} else if (negThrottle < 1){
-		ROS_INFO("in neg throttle");
-		dispVal = -1*(255 - (negThrottle+1)*127.5);
-		lin_vel = -1*(255 - (negThrottle+1)*127.5);
-	} else {
+	// Encoding Values for Throttle
+	if (posThrottle < 1 && negThrottle < 1)
+	{
 		dispVal = 0;
 		lin_vel = 0;
 	}
-	
-	//Encoding values for gear selection
-	if (joy->buttons[X] == 1)
+	else if (posThrottle < 1)
 	{
-		gear = 0.5;
+		ROS_INFO("in Pos throttle");
+		dispVal = 255 - (posThrottle + 1) * 127.5;
+		lin_vel = 255 - (posThrottle + 1) * 127.5;
 	}
-	else if (joy->buttons[O] == 1)
+	else if (negThrottle < 1)
 	{
-		gear = 1; //highest gear
+		ROS_INFO("in neg throttle");
+		dispVal = -1 * (255 - (negThrottle + 1) * 127.5);
+		lin_vel = -1 * (255 - (negThrottle + 1) * 127.5);
+	}
+	else
+	{
+		dispVal = 0;
+		lin_vel = 0;
+	}
+	// Encoding values for gear selection (range 0 - 1)
+	if (joy->buttons[X] == 1) // reduce
+	{
+		if (gear >= 0.1)
+			gear -= 0.1;
+		else
+			gear = 0;
+	}
+	else if (joy->buttons[O] == 1) // increase
+	{
+		if (gear <= 0.9)
+			gear += 0.1;
+		else
+			gear = 1;
 	}
 
-	lin_vel = lin_vel * gear;	
-	
-	twist.linear.x = lin_vel/255*MAX_LINEAR_SPEED;
-	twist.angular.z = turnFactor/1*MAX_ANGULAR_SPEED;
+	lin_vel = lin_vel * gear;
+	twist.linear.x = lin_vel / 255 * MAX_LINEAR_SPEED;
+	twist.angular.z = turnFactor / 1 * MAX_ANGULAR_SPEED;
 
 	ROS_INFO("Turn Factor %f", turnFactor);
 	ROS_INFO("Motor Value %f", lin_vel);
 	drive_pub_.publish(twist);
 }
 
-void TeleopRover::publishDrive(){
+void TeleopRover::publishDrive()
+{
 	geometry_msgs::Twist twist;
 	// if (cnt < 100000)
-	// 	twist.linear.x = 0.3;
+	// twist.linear.x = 0.3;
 	// if ( cnt > 100000 && cnt < 200000)
-	// 	twist.linear.x = 0.0;
+	// twist.linear.x = 0.0;
 	// if (cnt == 200000)
-	// 	cnt = 0;
-	//twist.linear.x = 0.5;
+	// cnt = 0;
+	// twist.linear.x = 0.5;
 	twist.angular.z = 0.0;
 
 	drive_pub_.publish(twist);
 }
 
-
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "drive_sender_falcon");
 	TeleopRover drive_sender;
 	// while (ros::ok()){
-	// 	drive_sender.publishDrive();
+	// drive_sender.publishDrive();
 	// }
 	ros::spin();
 }
