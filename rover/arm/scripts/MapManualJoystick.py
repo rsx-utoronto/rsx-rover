@@ -41,11 +41,11 @@ def MapJoystick(joy_input, current_pos, speed_limit, dt):   #takes in the joysti
 #  def ManualDrive(GoalPos, SpeedLimit, dt):
 #      return MapJoystick(GetJoysticParams(), GoalPos, SpeedLimit, dt)
 
-while (True):
+# while (True):
     
-    pos = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
-    t = time.time()
-    print(pos)
-    time.sleep(.01)
+#     pos = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
+#     t = time.time()
+#     print(pos)
+#     time.sleep(.01)
 
     

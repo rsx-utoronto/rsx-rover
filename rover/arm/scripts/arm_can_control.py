@@ -1,5 +1,5 @@
 import can
-import rospy
+#import rospy
 import time
 import _thread
 import threading
@@ -9,10 +9,6 @@ import struct
 
 # CAN bus instance
 global BUS
-
-########## CLASSES ##########
-
-cadwdw;;;lss 
 
 # CANSpark APIs;
 CMD_API_SETPNT_SET = 0x001;
@@ -245,14 +241,14 @@ def read_ros_message():
 
 def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = False):
 	"""
-	(int, list(int), bool, bool, bool)
+	(int, list(float), bool, bool, bool)
 
 	Forms and sends the complete CAN packet with the given data and can_id
 
 	@parameters
 
 	can_id (int) = The complete 29 bit CAN address, can be generated from generate_can_id
-	data (list(int)) = An iterable object of ints or bytes, data can be max 64 bit
+	data (list(float)) = An iterable object of ints or bytes, data can be max 64 bit
 	ext (bool) (optional) = True if can_id is extended 29 bits, False if it is 11 bits.
 		True by default
 	err (bool) (optional) = True if it is an error frame, False otherwise.
@@ -339,56 +335,56 @@ def send_ros_message():
 
 ############################## MAIN ##############################
 
-# Instantiating the CAN bus
-initialize_bus(channel= 'can0')
+# # Instantiating the CAN bus
+# initialize_bus(channel= 'can0')
 
-# Setting the filters
-BUS.set_filters([{'can_id':0x02052C80, 'can_mask': 0xFFFFFFFF, 'extended':True}
-		        ,{'can_id':0x02051800, 'can_mask': 0xFFFFFFC0, 'extended':True}
-				,{'can_id':0x02051840, 'can_mask': 0xFFFFFFC0, 'extended':True}
-				,{'can_id':0x02051880, 'can_mask': 0xFFFFFFC0, 'extended':True}
-				,{'can_id':0x020518C0, 'can_mask': 0xFFFFFFC0, 'extended':True}
-				,{'can_id':0x02051900, 'can_mask': 0xFFFFFFC0, 'extended':True}
-				,{'can_id':0x02051940, 'can_mask': 0xFFFFFFC0, 'extended':True}
-				,{'can_id':0x02051980, 'can_mask': 0xFFFFFFC0, 'extended':True}])
+# # Setting the filters
+# BUS.set_filters([{'can_id':0x02052C80, 'can_mask': 0xFFFFFFFF, 'extended':True}
+# 		        ,{'can_id':0x02051800, 'can_mask': 0xFFFFFFC0, 'extended':True}
+# 				,{'can_id':0x02051840, 'can_mask': 0xFFFFFFC0, 'extended':True}
+# 				,{'can_id':0x02051880, 'can_mask': 0xFFFFFFC0, 'extended':True}
+# 				,{'can_id':0x020518C0, 'can_mask': 0xFFFFFFC0, 'extended':True}
+# 				,{'can_id':0x02051900, 'can_mask': 0xFFFFFFC0, 'extended':True}
+# 				,{'can_id':0x02051940, 'can_mask': 0xFFFFFFC0, 'extended':True}
+# 				,{'can_id':0x02051980, 'can_mask': 0xFFFFFFC0, 'extended':True}])
 	
 
-reader = Messenger()
-can.Notifier(BUS, [reader])
+# reader = Messenger()
+# can.Notifier(BUS, [reader])
 
-# Creating the message packet for Heartbeat
-hb = can.Message(
-	arbitration_id= generate_can_id(
-		dev_id= 0x0, 
-		api= CMD_API_NONRIO_HB), 
-	data= bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 
-	is_extended_id= True,
-	is_remote_frame = False, 
-	is_error_frame = False
-)
+# # Creating the message packet for Heartbeat
+# hb = can.Message(
+# 	arbitration_id= generate_can_id(
+# 		dev_id= 0x0, 
+# 		api= CMD_API_NONRIO_HB), 
+# 	data= bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 
+# 	is_extended_id= True,
+# 	is_remote_frame = False, 
+# 	is_error_frame = False
+# )
 
-# Broadcasting the heartbeat
-task = BUS.send_periodic(hb, 0.01)
-print("Heartbeat initiated")
+# # Broadcasting the heartbeat
+# task = BUS.send_periodic(hb, 0.01)
+# print("Heartbeat initiated")
 
-# Generating and sending CAN message for position set
-id = generate_can_id(dev_id= 0xE, api= CMD_API_POS_SET)
-send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0x00, 0x00])
+# # Generating and sending CAN message for position set
+# id = generate_can_id(dev_id= 0xE, api= CMD_API_POS_SET)
+# send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0x00, 0x00])
 
-#id = generate_can_id(dev_id= 0xC, api= CMD_API_POS_SET)
-#send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x00, 0x00])
+# #id = generate_can_id(dev_id= 0xC, api= CMD_API_POS_SET)
+# #send_can_message(can_id= id, data= [0x00, 0x00, 0xA0, 0x41, 0x00, 0x00, 0x00, 0x00])
 
-#id = generate_can_id(dev_id= 0xD, api= CMD_API_POS_SET)
-#send_can_message(can_id= id, data= [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+# #id = generate_can_id(dev_id= 0xD, api= CMD_API_POS_SET)
+# #send_can_message(can_id= id, data= [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
 
 
 
-# Starting infinite loop
-## TO DO: 
-# 1. Actually read the CAN messages received
-# 2. Send the CAN messages read over ROS topic back to IK
-# 3. Should be able to detect if a command is given to request a new parameter
-while 1:
-	#read_can_message()
-#print(BUS.recv())
-	pass
+# # Starting infinite loop
+# ## TO DO: 
+# # 1. Actually read the CAN messages received
+# # 2. Send the CAN messages read over ROS topic back to IK
+# # 3. Should be able to detect if a command is given to request a new parameter
+# while 1:
+# 	#read_can_message()
+# #print(BUS.recv())
+# 	pass
