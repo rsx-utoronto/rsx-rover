@@ -1,6 +1,7 @@
-from arm_can_control import *
+import arm_can_control as arm_can
 from GetManualJoystickFinal import *
 from MapManualJoystick import *
+import struct
 
 def pos_to_sparkdata(f : float):
     """
@@ -14,7 +15,10 @@ def pos_to_sparkdata(f : float):
     f (float): Float value that needs to be converted
     """
     input_hex =  hex(struct.unpack('<I', struct.pack('<f', f))[0])
-    return [eval('0x'+input_hex[-2:]), eval('0x'+input_hex[-4:-2]),
+    if len(input_hex) != 10:
+        input_hex = input_hex[:2] + input_hex[2:] + (10-len(input_hex))*'0'
+    
+        return [eval('0x'+input_hex[-2:]), eval('0x'+input_hex[-4:-2]),
             eval('0x'+input_hex[-6:-4]), eval('0x'+input_hex[-8:-6]),
             0x00, 0x00, 0x00, 0x00]
 
@@ -76,13 +80,13 @@ def generate_data_packet (data_list : list):
 if __name__=="__main__":
     
     # Instantiating the CAN bus
-    initialize_bus()
+    arm_can.initialize_bus()
 
     # Creating the message packet for Heartbeat
-    hb = can.Message(
-        arbitration_id= generate_can_id(
+    hb = arm_can.can.Message(
+        arbitration_id= arm_can.generate_can_id(
             dev_id= 0x0, 
-            api= CMD_API_NONRIO_HB), 
+            api= arm_can.CMD_API_NONRIO_HB), 
         data= bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 
         is_extended_id= True,
         is_remote_frame = False, 
@@ -90,7 +94,7 @@ if __name__=="__main__":
     )
 
     # Broadcasting the heartbeat
-    task = BUS.send_periodic(hb, 0.01)
+    task = arm_can.BUS.send_periodic(hb, 0.01)
     print("Heartbeat initiated")
 
     # Starting the infinite loop
@@ -106,15 +110,19 @@ if __name__=="__main__":
 
         # Sending data packets one by one
         for i in range(len(spark_input)):
-
+            
             # Motor number corresponds with device ID of the SparkMAX
-            motor_num = 10 + i
+            motor_num = 11 + i
 
             if motor_num > 10 and motor_num < 18:
-                id = generate_can_id(dev_id= motor_num, api= CMD_API_POS_SET)
-                send_can_message(can_id= id, data= spark_input[i])
-            break
+                print("Sending data packet")
+                id = arm_can.generate_can_id(dev_id= motor_num, api= arm_can.CMD_API_POS_SET)
+                print(id)
+                arm_can.send_can_message(can_id= id, data= spark_input[i])
+            
+            else:
+                break
 
         t = time.time()
-        time.sleep(.01)
+        time.sleep(.1)
 
