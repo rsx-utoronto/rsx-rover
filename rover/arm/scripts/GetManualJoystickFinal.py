@@ -41,8 +41,9 @@ def getJoystickAnalogKeys():
     return analog_keys
 
 
-def GetManualJoystick(joypos):
+def GetManualJoystick():
     ################################# CHECK PLAYER INPUT #################################
+    joypos = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -51,6 +52,8 @@ def GetManualJoystick(joypos):
             pass
 
         buttons = getJoystickButtons()
+        
+
 
         # FOR BUTTON PRESSES -------------------------------------------------------
         if event.type == pygame.JOYBUTTONDOWN:
@@ -63,17 +66,17 @@ def GetManualJoystick(joypos):
             if buttons[11]:
                 joypos[11] = 1
             if buttons[3]:
-                joypos[7] = 1
+                joypos[7] = (1)                
             if buttons[0]:
-                joypos[8] = 1
+                joypos[7] = (-1)                  
             if buttons[2]:
                 joypos[9] = 1
             if buttons[1]:
                 joypos[10] = 1
             if buttons[9]:
-                joypos[5] = 1
+                joypos[5] = (-1)                 
             if buttons[10]:
-                joypos[6] = 1
+                joypos[5] = (1)                  
 
         # FOR BUTTON RELEASES ---------------------------------------------------------
         if event.type == pygame.JOYBUTTONUP:
@@ -86,7 +89,7 @@ def GetManualJoystick(joypos):
             if buttons[11] == 0:
                 joypos[11] = 0
             if buttons[3] == 0:
-                joypos[7] = 0
+                joypos[7] = 0                   
             if buttons[0] == 0:
                 joypos[8] = 0
             if buttons[2] == 0:
@@ -94,51 +97,72 @@ def GetManualJoystick(joypos):
             if buttons[1] == 0:
                 joypos[10] = 0
             if buttons[9] == 0:
-                joypos[5] = 0
+                joypos[5] = 0                    
             if buttons[10] == 0:
-                joypos[6] = 0
+                joypos[5] = 0                   
         # FOR ANALOG BUTTONS --------------------------------------------------------------------
         if event.type == pygame.JOYAXISMOTION:
             getJoystickAnalogKeys()
             analog_keys[event.axis] = event.value
 
             if (analog_keys[2] != 0):
-                joypos[3] = analog_keys[2]
-            if (joypos[3] < .08 and joypos[3] > -.08):
+                joypos[3] = -(analog_keys[2])              
+            if (joypos[3] < .18 and joypos[3] > -.18):
                 joypos[3] = 0
 
             if (analog_keys[3] != 0):
-                joypos[2] = analog_keys[3] * -1
-            if (joypos[2] < .08 and joypos[2] > -.08):
+                joypos[2] = (analog_keys[3])
+            if (joypos[2] < .18 and joypos[2] > -.18):
                 joypos[2] = 0
 
             if (analog_keys[1] != 0):
-                joypos[1] = analog_keys[1] * -1
-            if (joypos[1] < .08 and joypos[1] > -.08):
+                joypos[1] = (analog_keys[1])
+            if (joypos[1] < .18 and joypos[1] > -.18):
                 joypos[1] = 0
 
             if (analog_keys[0]):
-                joypos[0] = analog_keys[0]
-            if (joypos[0] < .08 and joypos[0] > -.08):
+                joypos[0] = -analog_keys[0]
+            if (joypos[0] < .18 and joypos[0] > -.18):
                 joypos[0] = 0
 
-            if (analog_keys[5] != -1):
-                joypos[4] = (analog_keys[5] + 1) / (2)
+            if (analog_keys[5] != 1):
+                joypos[4] = -((analog_keys[5] + 1) / (2))
             if (analog_keys[4] != -1):
-                joypos[4] = -(analog_keys[4] + 1) / 2
-            if (joypos[4] < .0001 and joypos[4] > -.0001):
+                joypos[4] = ((analog_keys[4] + 1) / 2)
+            if (joypos[4] < .1 and joypos[4] > -.1):
                 joypos[4] = 0
-
+            
+            # if event.axis == 0:
+            #     joypos[0] = (event.value + 1) * 90
+            # elif event.axis == 1:
+            #     joypos[1] = (event.value + 1) * 90
+            # elif event.axis == 2:
+            #     joypos[2] = (event.value + 1) * 90
+            # elif event.axis == 3:
+            #     joypos[3] = (event.value + 1) * 90
+            # elif event.axis == 4:
+            #     joypos[4] = (event.value + 1) * 90
+            # elif event.axis == 5:
+            #     joypos[5] = (event.value + 1) * 90
     return joypos
 
 
 initializeJoystick()
 setJoystickButtons()
-joypos = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-while (True):
-    joypos = GetManualJoystick(joypos)
-    print(joypos)
-    time.sleep(.1)
+getJoystickButtons()
+getJoystickAnalogKeys()
+#joypos = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+# while True:
+#     print(getJoystickButtons())
+
+# while (True):
+#     joypos = GetManualJoystick()
+#     print(joypos)
+#     time.sleep(.1)
+    
 
     #print(getJoystickButtons())
+
+
 
