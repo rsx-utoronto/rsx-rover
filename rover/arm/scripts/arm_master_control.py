@@ -18,7 +18,7 @@ def pos_to_sparkdata(f : float):
     if len(input_hex) != 10:
         input_hex = input_hex[:2] + input_hex[2:] + (10-len(input_hex))*'0'
     
-        return [eval('0x'+input_hex[-2:]), eval('0x'+input_hex[-4:-2]),
+    return [eval('0x'+input_hex[-2:]), eval('0x'+input_hex[-4:-2]),
             eval('0x'+input_hex[-6:-4]), eval('0x'+input_hex[-8:-6]),
             0x00, 0x00, 0x00, 0x00]
 
@@ -43,38 +43,38 @@ def generate_data_packet (data_list : list):
         reduction = 100
 
         if joint_num == 1:
-            angle = angle/360 * reduction
+            angle = angle/360
             spark_data.append(pos_to_sparkdata(angle))
         
         elif joint_num == 2:
-            angle = angle/360 * reduction
+            angle = angle/360
             spark_data.append(pos_to_sparkdata(angle))
 
-        
         elif joint_num == 3:
-            angle = angle/360 * reduction
+            angle = angle/360
             spark_data.append(pos_to_sparkdata(angle))
         
         elif joint_num == 4:
-            angle = angle/360 * reduction
+            angle = angle/360
             spark_data.append(pos_to_sparkdata(angle))
         
         elif joint_num == 5:
-            angle = angle/360 * reduction
+            angle = angle/360
             spark_data.append(pos_to_sparkdata(angle))
 
         elif joint_num == 6:
-            angle = angle/360 * reduction
+            angle = angle/360
+            print("motor 6 pos", angle)
             spark_data.append(pos_to_sparkdata(angle))
 
         elif joint_num == 7:
-            angle = angle/360 * reduction
+            angle = angle/360
             spark_data.append(pos_to_sparkdata(angle))
 
         else:
             print("Error: Reaching infinite loop/Out of Index")
             break
-
+    print(spark_data)
     return spark_data
 
 if __name__=="__main__":
@@ -107,17 +107,16 @@ if __name__=="__main__":
         
         # Converting received angles to SparkMAX data packets
         spark_input = generate_data_packet(input_angles)
+        print("Motor 6 spark input", spark_input[5])
 
         # Sending data packets one by one
-        for i in range(len(spark_input)):
+        for i in range(1, len(spark_input)):
             
             # Motor number corresponds with device ID of the SparkMAX
             motor_num = 11 + i
 
             if motor_num > 10 and motor_num < 18:
-                print("Sending data packet")
                 id = arm_can.generate_can_id(dev_id= motor_num, api= arm_can.CMD_API_POS_SET)
-                print(id)
                 arm_can.send_can_message(can_id= id, data= spark_input[i])
             
             else:

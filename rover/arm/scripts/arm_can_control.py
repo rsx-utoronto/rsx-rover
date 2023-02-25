@@ -1,5 +1,5 @@
 import can
-#import rospy
+import rospy
 import time
 import _thread
 import threading
