@@ -28,6 +28,10 @@ def generate_data_packet (data_list : list):
 
     Takes in the goal position angles for each motor and converts them to bytearrays specific for
     each motor
+
+    @parameters
+
+    data_list (list(float)): List containing the anglular positions for each motor in the order
     """
     
     # A variable to keep count of joint number
@@ -42,6 +46,7 @@ def generate_data_packet (data_list : list):
         # Gear reduction
         reduction = 100
 
+        # Checking which joint to move
         if joint_num == 1:
             angle = angle/360
             spark_data.append(pos_to_sparkdata(angle))
@@ -73,7 +78,7 @@ def generate_data_packet (data_list : list):
         else:
             print("Error: Reaching infinite loop/Out of Index")
             break
-    #print(spark_data)
+    
     return spark_data
 
 if __name__=="__main__":
@@ -102,11 +107,11 @@ if __name__=="__main__":
         # Getting angles from the remote controller
         input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
         
+        # Printing input angles from remote controller
         print(input_angles)
         
         # Converting received angles to SparkMAX data packets
         spark_input = generate_data_packet(input_angles)
-        #print("Motor 3 spark input", spark_input[2])
 
         # Sending data packets one by one
         for i in range(1, len(spark_input)+1):
