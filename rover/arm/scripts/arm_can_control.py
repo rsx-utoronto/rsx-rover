@@ -292,11 +292,11 @@ def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = F
 	# Sending the created message
 	try:
 		BUS.send(msg)
-		print(f"Message sent on {BUS.channel_info}")
+		#print(f"Message sent on {BUS.channel_info}")
 
 	except can.CanError:
-		print("Message NOT sent")
-
+		#print("Message NOT sent")
+		pass
 	return
 
 def read_can_message(data, api):

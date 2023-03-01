@@ -13,10 +13,10 @@ def initializeJoystick():
     global joystick
     joystick = pygame.joystick.Joystick(0)
     joystick.init()
-    print('this works')
+    #print('this works')
     print('Initialized joystick:', joystick.get_name())
     # print number of buttons
-    print(joystick.get_numbuttons())
+    #print(joystick.get_numbuttons())
 
 
 def setJoystickButtons():  # setting up the buttons
@@ -40,10 +40,11 @@ def getJoystickAnalogKeys():
 
     return analog_keys
 
+joypos = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 def GetManualJoystick():
     ################################# CHECK PLAYER INPUT #################################
-    joypos = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -109,11 +110,13 @@ def GetManualJoystick():
                 joypos[3] = -(analog_keys[2])              
             if (joypos[3] < .18 and joypos[3] > -.18):
                 joypos[3] = 0
-
+            #print("Raw joystick input:", analog_keys[3])
             if (analog_keys[3] != 0):
                 joypos[2] = (analog_keys[3])
-            if (joypos[2] < .18 and joypos[2] > -.18):
+            if (joypos[2] < .18 and joypos[2] > -.18 and analog_keys[3] != 0):
+                print("Triggered")
                 joypos[2] = 0
+            #print("my joystick output:", joypos[2])
 
             if (analog_keys[1] != 0):
                 joypos[1] = (analog_keys[1])

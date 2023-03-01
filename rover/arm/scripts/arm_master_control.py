@@ -64,7 +64,6 @@ def generate_data_packet (data_list : list):
 
         elif joint_num == 6:
             angle = angle/360
-            print("motor 6 pos", angle)
             spark_data.append(pos_to_sparkdata(angle))
 
         elif joint_num == 7:
@@ -74,7 +73,7 @@ def generate_data_packet (data_list : list):
         else:
             print("Error: Reaching infinite loop/Out of Index")
             break
-    print(spark_data)
+    #print(spark_data)
     return spark_data
 
 if __name__=="__main__":
@@ -107,21 +106,21 @@ if __name__=="__main__":
         
         # Converting received angles to SparkMAX data packets
         spark_input = generate_data_packet(input_angles)
-        print("Motor 6 spark input", spark_input[5])
+        #print("Motor 3 spark input", spark_input[2])
 
         # Sending data packets one by one
-        for i in range(1, len(spark_input)):
+        for i in range(1, len(spark_input)+1):
             
             # Motor number corresponds with device ID of the SparkMAX
-            motor_num = 11 + i
+            motor_num = 10 + i
 
             if motor_num > 10 and motor_num < 18:
                 id = arm_can.generate_can_id(dev_id= motor_num, api= arm_can.CMD_API_POS_SET)
-                arm_can.send_can_message(can_id= id, data= spark_input[i])
+                arm_can.send_can_message(can_id= id, data= spark_input[i - 1])
             
             else:
                 break
 
         t = time.time()
-        time.sleep(.1)
+        #time.sleep(.2)
 
