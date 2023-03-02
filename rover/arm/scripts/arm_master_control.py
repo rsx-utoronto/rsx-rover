@@ -3,25 +3,6 @@ from GetManualJoystickFinal import *
 from MapManualJoystick import *
 import struct
 
-def pos_to_sparkdata(f : float):
-    """
-    float -> list()
-
-    Takes in a float position value and returns the data packet in the form that
-    SparkMAX requires
-
-    @parameters:
-
-    f (float): Float value that needs to be converted
-    """
-    input_hex =  hex(struct.unpack('<I', struct.pack('<f', f))[0])
-    if len(input_hex) != 10:
-        input_hex = input_hex[:2] + input_hex[2:] + (10-len(input_hex))*'0'
-    
-    return [eval('0x'+input_hex[-2:]), eval('0x'+input_hex[-4:-2]),
-            eval('0x'+input_hex[-6:-4]), eval('0x'+input_hex[-8:-6]),
-            0x00, 0x00, 0x00, 0x00]
-
 def generate_data_packet (data_list : list):
     """
     list(float) -> list(list(int))
@@ -49,31 +30,31 @@ def generate_data_packet (data_list : list):
         # Checking which joint to move
         if joint_num == 1:
             angle = angle/360
-            spark_data.append(pos_to_sparkdata(angle))
+            spark_data.append(arm_can.pos_to_sparkdata(angle))
         
         elif joint_num == 2:
             angle = angle/360
-            spark_data.append(pos_to_sparkdata(angle))
+            spark_data.append(arm_can.pos_to_sparkdata(angle))
 
         elif joint_num == 3:
             angle = angle/360
-            spark_data.append(pos_to_sparkdata(angle))
+            spark_data.append(arm_can.pos_to_sparkdata(angle))
         
         elif joint_num == 4:
             angle = angle/360
-            spark_data.append(pos_to_sparkdata(angle))
+            spark_data.append(arm_can.pos_to_sparkdata(angle))
         
         elif joint_num == 5:
             angle = angle/360
-            spark_data.append(pos_to_sparkdata(angle))
+            spark_data.append(arm_can.pos_to_sparkdata(angle))
 
         elif joint_num == 6:
             angle = angle/360
-            spark_data.append(pos_to_sparkdata(angle))
+            spark_data.append(arm_can.pos_to_sparkdata(angle))
 
         elif joint_num == 7:
             angle = angle/360
-            spark_data.append(pos_to_sparkdata(angle))
+            spark_data.append(arm_can.pos_to_sparkdata(angle))
 
         else:
             print("Error: Reaching infinite loop/Out of Index")

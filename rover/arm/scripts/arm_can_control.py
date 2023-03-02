@@ -130,21 +130,45 @@ def generate_can_id(dev_id : int, api : int,
 	can_id = (can_id | dev_id)
 	return can_id
 
+
+def pos_to_sparkdata(f : float):
+    """
+    float -> list()
+
+    Takes in a float position value and returns the data packet in the form that
+    SparkMAX requires
+
+    @parameters:
+
+    f (float): Float value that needs to be converted
+    """
+    input_hex =  hex(struct.unpack('<I', struct.pack('<f', f))[0])
+    if len(input_hex) != 10:
+        input_hex = input_hex[:2] + input_hex[2:] + (10-len(input_hex))*'0'
+    
+    return [eval('0x'+input_hex[-2:]), eval('0x'+input_hex[-4:-2]),
+            eval('0x'+input_hex[-6:-4]), eval('0x'+input_hex[-8:-6]),
+            0x00, 0x00, 0x00, 0x00]
+
+def sparkfixed_to_float(fixed : int, frac : int = 4):
 	"""
-	x is the input fixed number which is of integer datatype
-	e is the number of fractional bits for example in Q1.15 e = 15
+	Returns floating point representation of the fixed point represenation of 
+	data received from SparkMAX
+
+	@parameters:
+	fixed (int): Input fixed point number from SparkMAX
+	frac (int) (optional): Number of fractional bits
 	"""
-	def to_float(x,e):
-		c = abs(x)
-		sign = 1 
-		if x < 0:
-			# convert back from two's complement
-			c = x - 1 
-			c = ~c
-			sign = -1
-		f = (1.0 * c) / (2 ** e)
-		f = f * sign
-		return f
+	c = abs(fixed)
+	sign = 1 
+	if fixed < 0:
+		# convert back from two's complement
+		c = fixed - 1 
+		c = ~c
+		sign = -1
+	f = (1.0 * c) / (2 ** frac)
+	f = f * sign
+	return f
 
 ### DEPRECATED ###
 # def heartbeat1(isSending : bool, ext= True, rtr= False, err= False):
