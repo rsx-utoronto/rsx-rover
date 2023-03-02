@@ -268,7 +268,7 @@ def initialize_bus(channel= 'can0', interface= 'socketcan'):
 	global BUS
 
 	# Initializing the global BUS
-	BUS = can.ThreadSafeBus(channel= channel, interface= interface)
+	BUS = can.ThreadSafeBus(channel= channel, interface= interface, receive_own_messages= False)
 	print('BUS initialzed')
 	return
 

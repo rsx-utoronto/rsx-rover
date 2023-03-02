@@ -82,18 +82,24 @@ if __name__=="__main__":
     task = arm_can.BUS.send_periodic(hb, 0.01)
     print("Heartbeat initiated")
 
+    # Variable Declaration for input from motor controller
+    input_angles = []
+
     # Starting the infinite loop
     while 1:
+
+        # Checking if SparkMAXes are powered on and sending status messages
+        if arm_can.BUS.recv(timeout= 0.2):
+            pass
 
         # Getting angles from the remote controller
         input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
         
         # Printing input angles from remote controller
-        #print(input_angles)
+        print(input_angles)
         
         # Converting received angles to SparkMAX data packets
         spark_input = generate_data_packet(input_angles)
-        print(spark_input)
 
         # Sending data packets one by one
         for i in range(1, len(spark_input)+1):
