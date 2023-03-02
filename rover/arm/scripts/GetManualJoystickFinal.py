@@ -58,63 +58,91 @@ def GetManualJoystick():
 
         # FOR BUTTON PRESSES -------------------------------------------------------
         if event.type == pygame.JOYBUTTONDOWN:
-            if buttons[13]:
-                joypos[13] = 1
-            if buttons[14]:
-                joypos[14] = 1
-            if buttons[12]:
-                joypos[12] = 1
-            if buttons[11]:
-                joypos[11] = 1
-            if buttons[3]:
-                joypos[7] = (1)                
-            if buttons[0]:
-                joypos[7] = (-1)                  
+            # if buttons[13]:
+            #     joypos[13] = 1
+            # if buttons[14]:
+            #     joypos[14] = 1
+            # if buttons[12]:
+            #     joypos[12] = 1
+            # if buttons[11]:
+            #     joypos[11] = 1
+            # if buttons[3]:
+            #     joypos[7] = (1)                
+            # if buttons[0]:
+            #     joypos[7] = (-1)                  
+            # if buttons[2]:
+            #     joypos[9] = 1
+            # if buttons[1]:
+            #     joypos[10] = 1
+            # if buttons[9]:
+            #     joypos[5] = (-1)                 
+            # if buttons[10]:
+            #     joypos[5] = (1)                  
+            if buttons[4]:
+                joypos[5] = -1
+            if buttons[5]:
+                joypos[5] = 1
             if buttons[2]:
-                joypos[9] = 1
-            if buttons[1]:
-                joypos[10] = 1
-            if buttons[9]:
-                joypos[5] = (-1)                 
+                joypos[6] = 1
+            if buttons[0]:
+                joypos[6] = -1
+            if buttons[3]:
+                joypos[7] = -1
+            if buttons[1]: 
+                joypos[7] = 1
+        ##################################################   KILL SWITCH TO STOP EVERYTHING   #################################################
             if buttons[10]:
-                joypos[5] = (1)                  
+                joypos[29] = 1
 
         # FOR BUTTON RELEASES ---------------------------------------------------------
         if event.type == pygame.JOYBUTTONUP:
-            if buttons[13] == 0:
-                joypos[13] = 0
-            if buttons[14] == 0:
-                joypos[14] = 0
-            if buttons[12] == 0:
-                joypos[12] = 0
-            if buttons[11] == 0:
-                joypos[11] = 0
-            if buttons[3] == 0:
-                joypos[7] = 0                   
-            if buttons[0] == 0:
-                joypos[8] = 0
+            # if buttons[13] == 0:
+            #     joypos[13] = 0
+            # if buttons[14] == 0:
+            #     joypos[14] = 0
+            # if buttons[12] == 0:
+            #     joypos[12] = 0
+            # if buttons[11] == 0:
+            #     joypos[11] = 0
+            # if buttons[3] == 0:
+            #     joypos[7]  0                   
+            # if buttons[0] == 0:
+            #     joypos[8] = 0
+            # if buttons[2] == 0:
+            #     joypos[9] = 0
+            # if buttons[1] == 0:
+            #     joypos[10] = 0
+            # if buttons[9] == 0:
+            #     joypos[5] = 0                    
+            # if buttons[10] == 0:
+            #     joypos[5] = 0      
+            # 
+            if buttons[4] == 0:
+                joypos[5] = 0
+            if buttons[5] == 0:
+                joypos[5] = 0
             if buttons[2] == 0:
-                joypos[9] = 0
+                joypos[6] = 0
+            if buttons[0] == 0:
+                joypos[6] = 0
+            if buttons[3] == 0:
+                joypos[7] = 0
             if buttons[1] == 0:
-                joypos[10] = 0
-            if buttons[9] == 0:
-                joypos[5] = 0                    
-            if buttons[10] == 0:
-                joypos[5] = 0                   
+                joypos[7] = 0
+             
         # FOR ANALOG BUTTONS --------------------------------------------------------------------
         if event.type == pygame.JOYAXISMOTION:
             getJoystickAnalogKeys()
             analog_keys[event.axis] = event.value
 
-            if (analog_keys[2] != 0):
-                joypos[3] = -(analog_keys[2])              
+            if (analog_keys[4] != 0 and analog_keys[4] != -1):
+                joypos[3] = -(analog_keys[4])              
             if (joypos[3] < .18 and joypos[3] > -.18):
                 joypos[3] = 0
             #print("Raw joystick input:", analog_keys[3])
             if (analog_keys[3] != 0):
                 joypos[2] = (analog_keys[3])
             if (joypos[2] < .18 and joypos[2] > -.18 and analog_keys[3] != 0):
-                print("Triggered")
                 joypos[2] = 0
             #print("my joystick output:", joypos[2])
 
@@ -124,17 +152,18 @@ def GetManualJoystick():
                 joypos[1] = 0
 
             if (analog_keys[0]):
-                joypos[0] = -analog_keys[0]
+                joypos[0] = analog_keys[0]
             if (joypos[0] < .18 and joypos[0] > -.18):
                 joypos[0] = 0
 
-            if (analog_keys[5] != 1):
-                joypos[4] = -((analog_keys[5] + 1) / (2))
-            if (analog_keys[4] != -1):
-                joypos[4] = ((analog_keys[4] + 1) / 2)
-            if (joypos[4] < .1 and joypos[4] > -.1):
+            if (analog_keys[5] > -1):
+                joypos[4] = ((analog_keys[5] + 1)/ 2)
+            elif (analog_keys[2] > -1 and analog_keys[2]!=0):
+                joypos[4] = -((analog_keys[2] + 1)/ 2)
+            if (joypos[4] < .2 and joypos[4] > -.2):
                 joypos[4] = 0
             
+            #print(analog_keys)
             # if event.axis == 0:
             #     joypos[0] = (event.value + 1) * 90
             # elif event.axis == 1:
@@ -165,7 +194,7 @@ getJoystickAnalogKeys()
 #     time.sleep(.1)
     
 
-    #print(getJoystickButtons())
+#     #print(getJoystickButtons())
 
 
 

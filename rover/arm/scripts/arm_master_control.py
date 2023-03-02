@@ -108,10 +108,11 @@ if __name__=="__main__":
         input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
         
         # Printing input angles from remote controller
-        print(input_angles)
+        #print(input_angles)
         
         # Converting received angles to SparkMAX data packets
         spark_input = generate_data_packet(input_angles)
+        print(spark_input)
 
         # Sending data packets one by one
         for i in range(1, len(spark_input)+1):
