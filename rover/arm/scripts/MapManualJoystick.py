@@ -9,7 +9,7 @@ import GetManualJoystickFinal
 joy_input = GetManualJoystickFinal.GetManualJoystick()
 
 current_pos = [0,0,0,0,0,0,0]
-speed_limit = [20000, 20000, 80000, 20000, 20000, 20000, 800000]                    # Gear Ratio for the 550s is 1x100
+speed_limit = [20000/100, 20000/100, 80000/100, 20000/100, 20000/20, 20000/20, 800000/20]                    # Gear Ratio are after the /
 t = 0
 
 
