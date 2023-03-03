@@ -44,7 +44,6 @@ joypos = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 def GetManualJoystick():
     ################################# CHECK PLAYER INPUT #################################
-    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -86,10 +85,8 @@ def GetManualJoystick():
                 joypos[6] = 1
             if buttons[0]:
                 joypos[6] = -1
-            if buttons[3]:
-                joypos[7] = -1
-            if buttons[1]: 
-                joypos[7] = 1
+            #if buttons[1]: 
+            #    joypos[7] = 1
         ##################################################   KILL SWITCH TO STOP EVERYTHING   #################################################
             if buttons[10]:
                 joypos[29] = 1
@@ -126,9 +123,12 @@ def GetManualJoystick():
             if buttons[0] == 0:
                 joypos[6] = 0
             if buttons[3] == 0:
-                joypos[7] = 0
-            if buttons[1] == 0:
-                joypos[7] = 0
+                if joypos[7]:
+                    joypos[7] = 0
+                else:
+                    joypos[7] = 1
+            #if buttons[1] == 0:
+            #    joypos[7] = 0
              
         # FOR ANALOG BUTTONS --------------------------------------------------------------------
         if event.type == pygame.JOYAXISMOTION:
@@ -188,10 +188,10 @@ getJoystickAnalogKeys()
 # while True:
 #     print(getJoystickButtons())
 
-# while (True):
-#     joypos = GetManualJoystick()
-#     print(joypos)
-#     time.sleep(.1)
+#while (True):
+#    joypos = GetManualJoystick()
+#    print(joypos)
+#    time.sleep(.1)
     
 
 #     #print(getJoystickButtons())

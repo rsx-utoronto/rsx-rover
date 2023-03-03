@@ -3,6 +3,7 @@
 import arm_can_control as arm_can
 from GetManualJoystickFinal import *
 from MapManualJoystick import *
+import arm_servo as servo
 import struct
 import rospy
 from std_msgs.msg import Float32MultiArray
@@ -89,6 +90,8 @@ def read_pos_from_spark():
     
     """
     motor_ids = []
+    can_id = msg.arbitration_id
+    api = (can_id >> 6) & 0b00000000000001111111111
 
     # Checking if SparkMAXes are powered on and sending status messages
     while True:
@@ -132,8 +135,8 @@ if __name__=="__main__":
         # Printing input angles from remote controller
         print(input_angles)
         
-        # Converting received angles to SparkMAX data packets
-        spark_input = generate_data_packet(input_angles)
+        # Converting received SparkMAX angles to SparkMAX data packets
+        spark_input = generate_data_packet(input_angles[:7])
 
         # Sending data packets one by one
         for i in range(1, len(spark_input)+1):
@@ -147,8 +150,17 @@ if __name__=="__main__":
             
             else:
                 break
-
-        t = time.time()
+        
+        # Toggling End Effector configuration using servo
+        
+        # Going 63 degrees configuration
+        if input_angles[7] == 0: 
+            servo.write_servo_low_angle()
+        
+        # Going 84 degrees configuration
+        else:
+            servo.write_servo_high_angle()
+        #t = time.time()
         #time.sleep(.2)
 
 
