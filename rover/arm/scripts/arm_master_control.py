@@ -205,10 +205,10 @@ def controlGripperAngle(isButtonPressed):
     angleIncrement = 1
 
     # If both buttons are pressed at the same time, angle will not change
-    if isButtonPressed["L1"] == 1 and isButtonPressed["L2"] != 1:
+    if isButtonPressed["SQUARE"] == 1 and isButtonPressed["TRIANGLE"] != 1:
         gripperAngle += angleIncrement
 
-    if isButtonPressed["L2"] == 1 and isButtonPressed["L1"] != 1:
+    if isButtonPressed["SQUARE"] == 1 and isButtonPressed["TRIANGLE"] != 1:
         gripperAngle -= angleIncrement
 
     return gripperAngle
@@ -351,7 +351,7 @@ def main():
 
     targetAngles = ik.inverseKinematics(dhTable, targetEEPos)  
     curArmAngles = copy.deepcopy(targetAngles)
-    # targetAngles.append(controlGripperAngle(isButtonPressed))
+    targetAngles.append(controlGripperAngle(isButtonPressed))
 
     # publishNewAngles(targetAngles)
     updateDesiredArmSimulation(targetEEPos)
