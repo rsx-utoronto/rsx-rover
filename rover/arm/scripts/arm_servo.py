@@ -1,4 +1,5 @@
 import serial
+import subprocess
 
 #arduino serial port name on linux
 port_name = '/dev/ttyACM0'
@@ -24,6 +25,14 @@ def write_servo_low_angle():
     Tell servo to go to low angle (angle_low)
     """
     arduino_port.write((str(angle_low)).encode('utf-8'))
+
+def set_permissions():
+    """
+    (None) -> (None)
+    A solution recommended online when facing permissions issues with pyserial
+    """
+    cmd_str = "sudo usermod -aG dialout rsx"
+    subprocess.run(cmd_str, shell=True)
 
 def close_arduino_port():
     """
