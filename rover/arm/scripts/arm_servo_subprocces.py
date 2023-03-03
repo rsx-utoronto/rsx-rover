@@ -23,6 +23,14 @@ def set_permissions():
     cmd_str = "sudo usermod -aG dialout rsx"
     subprocess.run(cmd_str, shell=True)
 
+def initialize_arduino_port():
+    """
+    (None) -> (None)
+    Initialize serial port
+    """
+    cmd_str = "stty 9600 -F" + port_name
+    subprocess.run(cmd_str, shell=True)
+
 def shell_write_servo_low_angle():
     """
     (None) -> (None)
