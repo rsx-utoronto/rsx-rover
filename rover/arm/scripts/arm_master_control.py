@@ -22,6 +22,7 @@ global ikMode
 global prevTargetTransform
 global prevTargetValues # [roll, pitch, yaw, [x, y, z]]
 global jointPublisher
+global armAngles
 
 movementSpeed = 1
 
@@ -159,7 +160,7 @@ def controlEEPosition(isButtonPressed, joystickAxis):
     if joystickAxis["L-Down"] != 0:
         newX -= joystickAxis["L-Down"]*scale
     if joystickAxis["L-Right"] != 0:
-        newY += joystickAxis["L-Right"]*scale
+        newY -= joystickAxis["L-Right"]*scale
     if joystickAxis["L2"] != 0:
         newZ -= joystickAxis["L2"]*scale
     if joystickAxis["R2"] != 0:
@@ -354,7 +355,9 @@ def main():
 
     # publishNewAngles(targetAngles)
     updateDesiredArmSimulation(targetEEPos)
-
+    ikAngles = Float32MultiArray()
+    ikAngles.data = targetAngles
+    armAngles.publish(ikAngles)
     # prevTargetPos = copy.deepcopy(targetEEPos)
 
 
@@ -371,13 +374,14 @@ if __name__ == "__main__":
     try:
         rospy.init_node("arm_master_control")
         jointPublisher = sim.startJointPublisher()
+        armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
         rate = rospy.Rate(10) # run at 10Hz
         rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
 
         # sets start target position equal to curArmAngles after they have been updated
         # while curArmAngles == [0, 0, 0, 0, 0, 0]:
         #     tempDHTable = ik.createDHTable(curArmAngles)
-        #     prevTargetPos = ik.calculateTransformToLink(tempDHTable, 5)
+        #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
 
         while not rospy.is_shutdown():
             main()
