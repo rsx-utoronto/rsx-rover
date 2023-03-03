@@ -362,7 +362,7 @@ def main():
 
 if __name__ == "__main__":
     curArmAngles = [0, 0, 0, 0, 0, 0]
-    prevTargetValues = [0, 0, 0, [150, 150, 150]]
+    prevTargetValues = [0, 0, 0, [250, 0, 450]]
 
     initializeJoystick()
 
