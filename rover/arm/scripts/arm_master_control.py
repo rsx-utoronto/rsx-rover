@@ -1,7 +1,11 @@
+#!/usr/bin/env python3
+
 import arm_can_control as arm_can
 from GetManualJoystickFinal import *
 from MapManualJoystick import *
 import struct
+import rospy
+from std_msgs.msg import Float32MultiArray
 
 ########## GLOBAL VARIABLES ##########
 
@@ -9,11 +13,11 @@ global CURR_POS
 
 ########## HELPER FUNCTIONS ##########
 
-def read_ros_message():
+def read_ros_message(data):
 	"""
 	Reads messages from a ROS topic that are supposed to be sent to the motor controllers
 	"""
-	pass
+	print(data.data)
 
 def send_ros_message():
 	"""
@@ -116,6 +120,9 @@ if __name__=="__main__":
     # Variable Declaration for input from motor controller
     input_angles = []
 
+    rospy.init_node("arm_CAN")
+    rospy.Subscriber("ik_angles", Float32MultiArray, read_ros_message)
+
     # Starting the infinite loop
     while 1:
 
@@ -144,3 +151,5 @@ if __name__=="__main__":
         t = time.time()
         #time.sleep(.2)
 
+
+# rospy.spin()
