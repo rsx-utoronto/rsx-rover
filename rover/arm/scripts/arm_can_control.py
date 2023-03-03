@@ -150,6 +150,7 @@ def pos_to_sparkdata(f : float):
             eval('0x'+input_hex[-6:-4]), eval('0x'+input_hex[-8:-6]),
             0x00, 0x00, 0x00, 0x00]
 
+
 def sparkfixed_to_float(fixed : int, frac : int = 4):
 	"""
 	Returns floating point representation of the fixed point represenation of 
@@ -273,12 +274,6 @@ def initialize_bus(channel= 'can0', interface= 'socketcan'):
 	return
 
 
-def read_ros_message():
-	"""
-	Reads messages from a ROS topic that are supposed to be sent to the motor controllers
-	"""
-	pass
-
 def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = False):
 	"""
 	(int, list(float), bool, bool, bool)
@@ -323,6 +318,7 @@ def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = F
 		pass
 	return
 
+
 def read_can_message(data, api):
 	"""
 	Converts CAN data packets from hex to float decimal values. This function
@@ -347,15 +343,23 @@ def read_can_message(data, api):
 		# API: Status Message 2 - Gives us current position and comes every 20ms
 		elif api == CMD_API_STAT2:
 			
+			# Checking if all the bits are 0 or not, if yes return 0
+			if not(data[3] or data[2] or data[1] or data[0]):
+				return 0
+
 			# Extracting the position value bytes
-			pos_float = data[3] << 4
-			pos_float = (pos_float | data[2]) << 4
-			pos_float = (pos_float | data[1]) << 4
+			pos_float = data[3] << 8
+			pos_float = (pos_float | data[2]) << 8
+			pos_float = (pos_float | data[1]) << 8
 			pos_float = (pos_float | data[0])
 
 			# Converting the extracted bytes to hex
 			pos_hex = str(hex(pos_float))
 
+			# Check if we have 16 hex characters in pos_hex, if not then pad it with zeros
+			if len(pos_hex) != 10:
+				pos_hex = format(pos_float, '#010x')
+			
 			# Converting the hex representation to floating point decimal value
 			pos_float = struct.unpack('!f', bytes.fromhex(pos_hex[2:]))[0]
 
@@ -365,12 +369,6 @@ def read_can_message(data, api):
 		# Error Message, invalid API
 		print("Invalid API ID")
 		return -1
-
-def send_ros_message():
-	"""
-	Sends messages over a ROS topic back to IK
-	"""
-	pass
 
 
 ############################## MAIN ##############################
