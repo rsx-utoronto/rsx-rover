@@ -188,10 +188,10 @@ getJoystickAnalogKeys()
 # while True:
 #     print(getJoystickButtons())
 
-while (True):
-    joypos = GetManualJoystick()
-    print(joypos)
-    time.sleep(.1)
+#while (True):
+#    joypos = GetManualJoystick()
+#    print(joypos)
+#    time.sleep(.1)
     
 
 #     #print(getJoystickButtons())
