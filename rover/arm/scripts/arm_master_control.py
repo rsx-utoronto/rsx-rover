@@ -3,6 +3,24 @@ from GetManualJoystickFinal import *
 from MapManualJoystick import *
 import struct
 
+########## GLOBAL VARIABLES ##########
+
+global CURR_POS
+
+########## HELPER FUNCTIONS ##########
+
+def read_ros_message():
+	"""
+	Reads messages from a ROS topic that are supposed to be sent to the motor controllers
+	"""
+	pass
+
+def send_ros_message():
+	"""
+	Sends messages over a ROS topic back to IK
+	"""
+	pass
+
 def generate_data_packet (data_list : list):
     """
     list(float) -> list(list(int))
@@ -62,6 +80,19 @@ def generate_data_packet (data_list : list):
     
     return spark_data
 
+def read_pos_from_spark():
+    """
+    
+    """
+    motor_ids = []
+
+    # Checking if SparkMAXes are powered on and sending status messages
+    while True:
+        msg = arm_can.BUS.recv()
+        #if msg.arbitration_id & 0x00000000
+
+############################## MAIN ##############################
+
 if __name__=="__main__":
     
     # Instantiating the CAN bus
@@ -87,10 +118,6 @@ if __name__=="__main__":
 
     # Starting the infinite loop
     while 1:
-
-        # Checking if SparkMAXes are powered on and sending status messages
-        if arm_can.BUS.recv(timeout= 0.2):
-            pass
 
         # Getting angles from the remote controller
         input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
