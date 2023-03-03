@@ -123,8 +123,8 @@ if __name__=="__main__":
     # Variable Declaration for input from motor controller
     input_angles = []
 
-    rospy.init_node("arm_CAN")
-    rospy.Subscriber("ik_angles", Float32MultiArray, read_ros_message)
+    # rospy.init_node("arm_CAN")
+    # rospy.Subscriber("ik_angles", Float32MultiArray, read_ros_message)
 
     # Starting the infinite loop
     while 1:
@@ -156,10 +156,12 @@ if __name__=="__main__":
         # Going 63 degrees configuration
         if input_angles[7] == 0: 
             servo.write_servo_low_angle()
+            print("Set low")
         
         # Going 84 degrees configuration
         else:
             servo.write_servo_high_angle()
+            print("Set high")
         #t = time.time()
         #time.sleep(.2)
 
