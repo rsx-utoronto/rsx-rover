@@ -1,7 +1,6 @@
 import serial
 import time
-from GetManualJoystickFinal import *
-from MapManualJoystick import *
+
 #arduino serial port name on linux
 port_name = '/dev/ttyACM0'
 
@@ -38,23 +37,23 @@ def close_arduino_port():
     """
     arduino_port.close()
 
-triggered = 0
+# triggered = 0
 
-while 1:
-    # Getting angles from the remote controller
-    input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
+# while 1:
+#     # Getting angles from the remote controller
+#     input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
         
-    # Printing input angles from remote controller
-    print(input_angles)
+#     # Printing input angles from remote controller
+#     print(input_angles)
 
-    # Going 63 degrees configuration
-    if input_angles[7] == 0 and triggered != 0: 
-        triggered = 0
-        write_servo_low_angle()
-        print("Set low")
+#     # Going 63 degrees configuration
+#     if input_angles[7] == 0 and triggered != 0: 
+#         triggered = 0
+#         write_servo_low_angle()
+#         print("Set low")
     
-    # Going 84 degrees configuration
-    elif input_angles[7] == 1 and triggered != 1:
-        triggered = 1
-        write_servo_high_angle()
-        print("Set high")
+#     # Going 84 degrees configuration
+#     elif input_angles[7] == 1 and triggered != 1:
+#         triggered = 1
+#         write_servo_high_angle()
+#         print("Set high")

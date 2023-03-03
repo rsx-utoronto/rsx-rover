@@ -7,10 +7,15 @@ import arm_servo as servo
 import struct
 import rospy
 from std_msgs.msg import Float32MultiArray
+import threading
 
 ########## GLOBAL VARIABLES ##########
 
-global CURR_POS
+# Variable to store current position of arm motors
+CURR_POS = [0, 0, 0, 0, 0, 0, 0]
+
+# Shared lock variable
+lock = threading.Lock()
 
 ########## HELPER FUNCTIONS ##########
 
@@ -48,35 +53,38 @@ def generate_data_packet (data_list : list):
         joint_num += 1
         
         # Gear reduction
-        reduction = 100
+        if motor_num <= 4: 
+            reduction = 100
+        else:
+            reduction = 20
 
         # Checking which joint to move
         if joint_num == 1:
-            angle = angle/360
+            angle = angle/360 * reduction
             spark_data.append(arm_can.pos_to_sparkdata(angle))
         
         elif joint_num == 2:
-            angle = angle/360
+            angle = angle/360 * reduction
             spark_data.append(arm_can.pos_to_sparkdata(angle))
 
         elif joint_num == 3:
-            angle = angle/360
+            angle = angle/360 * reduction
             spark_data.append(arm_can.pos_to_sparkdata(angle))
         
         elif joint_num == 4:
-            angle = angle/360
+            angle = angle/360 * reduction
             spark_data.append(arm_can.pos_to_sparkdata(angle))
         
         elif joint_num == 5:
-            angle = angle/360
+            angle = angle/360 * reduction
             spark_data.append(arm_can.pos_to_sparkdata(angle))
 
         elif joint_num == 6:
-            angle = angle/360
+            angle = angle/360 * reduction
             spark_data.append(arm_can.pos_to_sparkdata(angle))
 
         elif joint_num == 7:
-            angle = angle/360
+            angle = angle/360 * reduction
             spark_data.append(arm_can.pos_to_sparkdata(angle))
 
         else:
@@ -85,18 +93,27 @@ def generate_data_packet (data_list : list):
     
     return spark_data
 
-def read_pos_from_spark():
+def read_pos_from_spark(lock : threading.Lock):
     """
     
     """
-    motor_ids = []
-    can_id = msg.arbitration_id
-    api = (can_id >> 6) & 0b00000000000001111111111
 
     # Checking if SparkMAXes are powered on and sending status messages
-    while True:
+    while 1:
         msg = arm_can.BUS.recv()
-        #if msg.arbitration_id & 0x00000000
+        can_id = msg.arbitration_id
+        dev_id = can_id & 0b00000000000000000000000111111
+        api = (can_id >> 6) & 0b00000000000001111111111
+
+        if api != arm_can.CMD_API_STAT2:
+            # Skip to the next iteration of the loop
+            continue
+        
+        else:
+            with lock:
+                index = dev_id - 11
+                CURR_POS[index] = arm_can.read_can_message(msg.data, api)
+        
 
 ############################## MAIN ##############################
 
@@ -126,6 +143,9 @@ if __name__=="__main__":
     # rospy.init_node("arm_CAN")
     # rospy.Subscriber("ik_angles", Float32MultiArray, read_ros_message)
 
+    # Variable to hold current configuration of servo, starting with 63 degrees always
+    triggered = 0
+
     # Starting the infinite loop
     while 1:
 
@@ -153,13 +173,15 @@ if __name__=="__main__":
         
         # Toggling End Effector configuration using servo
         
-        # Going 63 degrees configuration
-        if input_angles[7] == 0: 
+        # Going 63 degrees configuration if not in this configuration
+        if input_angles[7] == 0 and triggered != 0: 
+            triggered = 0
             servo.write_servo_low_angle()
             print("Set low")
         
-        # Going 84 degrees configuration
-        else:
+        # Going 84 degrees configuration if not in this configuration
+        elif input_angles[7] == 1 and triggered != 1:
+            triggered = 1
             servo.write_servo_high_angle()
             print("Set high")
         #t = time.time()
