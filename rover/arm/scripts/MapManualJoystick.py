@@ -9,14 +9,14 @@ import GetManualJoystickFinal
 joy_input = GetManualJoystickFinal.GetManualJoystick()
 
 current_pos = [0,0,0,0,0,0,0,0]
-speed_limit = [20000/100, 20000/100, 80000/100, 20000/100, 20000/20, 20000/20, 800000/20]                    # Gear Ratio are after the /
+speed_limit = [1000/100, 1000/100, 4000/100, 2000/100, 1500/20, 1500/20, 80000/20]                    # Gear Ratio are after the /
 t = 0
 
 
 
 def SetJointSpeed(joy_input, current_pos, speed_limit, dt):
 
-    return (speed_limit*joy_input*dt)+ current_pos
+    return (speed_limit*(joy_input)*dt)+ current_pos
 
 
 
