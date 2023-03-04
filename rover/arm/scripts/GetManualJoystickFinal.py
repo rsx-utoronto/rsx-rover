@@ -160,7 +160,7 @@ def GetManualJoystick():
                 joypos[4] = ((analog_keys[5] + 1)/ 2)
             elif (analog_keys[2] > -1 and analog_keys[2]!=0):
                 joypos[4] = -((analog_keys[2] + 1)/ 2)
-            if (joypos[4] < .2 and joypos[4] > -.2):
+            if (joypos[4] < .5 and joypos[4] > -.5):
                 joypos[4] = 0
             
             #print(analog_keys)
