@@ -24,6 +24,12 @@ cansend can0 02050C80#FFFFFFFFFFFFFFFF
 ```
 This is the message I usually prefer checking the candump with. If can connection is good, you should see the above message pop up in candump terminal
 
+Once CAN network is enabled and you can see candump, go back to Terminal 1 again and type:
+### Terminal 1
+```
+python3 arm_master_can.py
+```
+
 ## Inverse Kinematics
 
 ### Terminal 1
