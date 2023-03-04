@@ -1,5 +1,29 @@
 # Arm Code
 
+## CAN Setup
+
+To enable the CAN network, open a terminal and go the location of cloned repository
+
+### Terminal 1
+```
+cd ~/rover-ws/src/rsx-rover/rover/arm/scripts/
+./setup_can.bash
+(Enter the password for your system)
+```
+
+### Terminal 2
+To read CAN messages on the bus, type the following on terminal:
+```
+candump can0
+```
+
+### Terminal 3 (for debugging)
+If the above command does not work, try sending a singular CAN packet on another terminal:
+```
+cansend can0 02050C80#FFFFFFFFFFFFFFFF
+```
+This is the message I usually prefer checking the candump with. If can connection is good, you should see the above message pop up in candump terminal
+
 ## Inverse Kinematics
 
 ### Terminal 1
