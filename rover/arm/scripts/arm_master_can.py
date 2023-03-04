@@ -53,7 +53,7 @@ def generate_data_packet (data_list : list):
         joint_num += 1
         
         # Gear reduction
-        if motor_num <= 4: 
+        if joint_num <= 4: 
             reduction = 100
         else:
             reduction = 20
