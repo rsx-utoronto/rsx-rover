@@ -3,6 +3,9 @@
 import time
 import pygame
 import numpy as np
+import os
+import sys
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 running = True
 
