@@ -3,7 +3,7 @@
 import arm_can_control as arm_can
 from GetManualJoystickFinal import *
 from MapManualJoystick import *
-import arm_servo as servo
+#import arm_servo as servo
 import struct
 import rospy
 from std_msgs.msg import Float32MultiArray
@@ -53,7 +53,7 @@ def generate_data_packet (data_list : list):
         joint_num += 1
         
         # Gear reduction
-        if motor_num <= 4: 
+        if joint_num <= 4: 
             reduction = 100
         else:
             reduction = 20
@@ -151,7 +151,8 @@ if __name__=="__main__":
 
         # Getting angles from the remote controller
         input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
-        
+        t = time.time()
+
         # Printing input angles from remote controller
         print(input_angles)
         
@@ -176,15 +177,14 @@ if __name__=="__main__":
         # Going 63 degrees configuration if not in this configuration
         if input_angles[7] == 0 and triggered != 0: 
             triggered = 0
-            servo.write_servo_low_angle()
+            #servo.write_servo_low_angle()
             print("Set low")
         
         # Going 84 degrees configuration if not in this configuration
         elif input_angles[7] == 1 and triggered != 1:
             triggered = 1
-            servo.write_servo_high_angle()
+            #servo.write_servo_high_angle()
             print("Set high")
-        #t = time.time()
         #time.sleep(.2)
 
 
