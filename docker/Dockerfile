@@ -108,6 +108,9 @@ RUN apt-get install -y libopencv-dev python3-opencv qt5-default libvtk6-dev zlib
 RUN apt install -y wget unzip
 RUN apt-get update
 
+# install pygame
+RUN pip3 install pygame
+
 # Setup user information
 ARG username0=bag
 ARG userid0=1085
