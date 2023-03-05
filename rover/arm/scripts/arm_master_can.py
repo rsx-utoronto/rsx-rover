@@ -14,6 +14,7 @@ import threading
 # Variable to store current position of arm motors
 CURR_POS = [0, 0, 0, 0, 0, 0, 0]
 
+
 # Shared lock variable
 lock = threading.Lock()
 
@@ -119,7 +120,7 @@ def read_pos_from_spark():
                 CURR_POS[index] = arm_can.read_can_message(msg.data, api)
             # Ending thread lock
     
-def cmp_goal_curr_pos(spark_input : list):
+def cmp_goal_curr_pos(spark_input : list, dt : float):
     '''
     (list(int)) -> (list(int))
 
@@ -136,12 +137,15 @@ def cmp_goal_curr_pos(spark_input : list):
 
         # Checking if input is as long as CURR_POS
         if len(spark_input) == len(CURR_POS):
+            
 
             for i in range(len(spark_input)):
 
                 # Doing comparisons for safety
-                if spark_input[i] < (CURR_POS[i] - dt * speed) or spark_input[i] > (CURR_POS[i] + dt * speed):
+                if spark_input[i] < (CURR_POS[i] - 10 * dt * speed_limit[i]) or spark_input[i] > (CURR_POS[i] + 10 * dt * speed_limit[i]):
                     spark_input[i] = CURR_POS[i]
+            print("CURR:", CURR_POS)
+            print("input:", spark_input)
             return spark_input
         
         else:
@@ -195,14 +199,14 @@ if __name__=="__main__":
         t = time.time()
 
         # Printing input angles from remote controller
-        print(input_angles)
+        #print(input_angles)
         
-        # Converting received SparkMAX angles to SparkMAX data packets
-        spark_input = generate_data_packet(input_angles[:7])
-
         # Comparison between spark_input and CURR_POS for safety
         ################# TO DO ###################
-        # cmp_goal_curr_pos(spark_input)
+        #angles = cmp_goal_curr_pos(input_angles[:7], t-time.time())
+
+        # Converting received SparkMAX angles to SparkMAX data packets
+        spark_input = generate_data_packet(input_angles[0:7])
 
         # Sending data packets one by one
         for i in range(1, len(spark_input)+1):
