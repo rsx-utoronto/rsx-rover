@@ -496,7 +496,7 @@
 
   <joint name="imu_joint" type="fixed">
     <origin
-      xyz="0.0 0 0.0"
+      xyz="0.280596630449412 0.391929398096866 0.497299040946044"
       rpy="1.5707963267949 0 0" />
     <parent
       link="chassis" />
@@ -531,7 +531,7 @@
 
   <joint name="gps_joint" type="fixed">
     <origin
-      xyz="0.0 0 0.278189004081027"
+      xyz="0.280596630449412 0.391929398096866 0.278189004081027" 
       rpy="0 0 0" />
     <parent
       link="chassis" />
@@ -568,7 +568,7 @@
       <axis
       xyz="0 0 0" />
       <origin
-      xyz="0.0 0 0.278189004081027"
+      xyz="0.280596630449412 0.391929398096866 0.278189004081027"
       rpy="0 0 0" />
   </joint> 
 
@@ -680,7 +680,7 @@
 <gazebo reference="lidar_link">
     <sensor type="gpu_ray" name="os1_lidar">
       <pose>0 0 0 0 0 0</pose>
-          <visualize>true</visualize>
+          <visualize>false</visualize>
           <update_rate>10</update_rate>
           <ray>
             <scan>

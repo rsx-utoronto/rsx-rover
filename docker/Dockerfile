@@ -35,7 +35,7 @@ RUN apt-get install curl gnupg2 lsb-release -y --no-install-recommends
 RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
 RUN curl -sSL 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xC1CF6E31E6BADE8868B172B4F42ED6FBAB17C654' | apt-key add -
 RUN apt update
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
 RUN apt-get update
 
 RUN apt-get update
@@ -106,6 +106,7 @@ RUN apt-get install -y libopencv-dev python3-opencv qt5-default libvtk6-dev zlib
                         libtbb-dev 
 
 RUN apt install -y wget unzip
+RUN apt-get update
 
 # Setup user information
 ARG username0=bag
@@ -115,7 +116,6 @@ RUN adduser $username0 root
 RUN adduser $username0 sudo
 RUN echo $username0':rsx123' | chpasswd
 USER $username0
-RUN mkdir -p /home/$username0/rover_ws/src/rsx-rover
 
 RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 RUN echo "export USER=$username0" >> ~/.bashrc
