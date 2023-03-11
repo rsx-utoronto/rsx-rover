@@ -238,12 +238,14 @@ def savePosition():
     with open('arm_angles.json','r+') as file:
         breakLoop = False
         savedPos = json.load(file)
+    # Checks if any existing positions have same positionName
         for x in range(len(savedPos["position_names"])):
             if breakLoop:
                 break
-            if savedPos["position_names"][x]["title"] == positionName:
+            if savedPos["position_names"][x]["title"] == positionName: # if found, deletes existing entry
                 savedPos["position_names"].pop(x)
                 breakLoop = True
+    # Appends new position to end of file
         savedPos["position_names"].append(newAngles)
         file.seek(0)
         json.dump(savedPos,file,indent = 0)
@@ -255,11 +257,13 @@ def goToPosition():
 
     '''
     retrievePos = input("Enter Position Name to Retrieve: ")
+
     with open('arm_angles.json','r') as file:
         found = False
         savedPos = json.load(file)
+    # Checks to see if position names match request
         for x in range(len(savedPos["position_names"])):
-            if savedPos["position_names"][x]["title"] == retrievePos:
+            if savedPos["position_names"][x]["title"] == retrievePos: # if found, changes current angles to requested position
                 found = True
                 curArmAngles[0] = savedPos["position_names"][x]["angle0"]
                 curArmAngles[1] = savedPos["position_names"][x]["angle1"]
@@ -268,8 +272,9 @@ def goToPosition():
                 curArmAngles[4] = savedPos["position_names"][x]["angle4"]
                 curArmAngles[5] = savedPos["position_names"][x]["angle5"]
                 curArmAngles[6] = savedPos["position_names"][x]["gripperAngle"]
+
         if not found:
-            print("Position name '"+retrievePos+"' not found")
+            print("Position name '"+retrievePos+"' not found") # if not found, prints message
     pass
 
 # ROS Stuff
