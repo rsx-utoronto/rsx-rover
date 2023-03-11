@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import rospy
 import math
+import geometry_msgs.msg
+import tf_conversions
+import tf2_ros
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 
@@ -13,6 +16,14 @@ def anglePosition():
     for i in range(len(angleArray)):
         angleArray[i] = angleArray[i] * math.pi/180 # Conversion from degrees to radians
     return angleArray
+
+def framePosition(): 
+    '''
+    Prompts the user to enter 3 distances and returns an array of size 3. 
+    '''
+    x, y, z = input("Enter x y z (seperated by spaces) in units: ").split() # Distances from base_link in unit squares values
+    posArray = list(map(float, [x, y, z])) 
+    return posArray
 
 def startJointPublisher():
     '''
@@ -27,6 +38,8 @@ def runNewJointState(jointPublisherData):
     Publishes the newJointState header, stamp, name, and position in a continuous while loop. 
     '''
     rate = rospy.Rate(10) # 10 hz
+    br = tf2_ros.TransformBroadcaster()
+    t = geometry_msgs.msg.TransformStamped()
     while not rospy.is_shutdown():
         # data to be published
         newJointState = JointState()
@@ -35,6 +48,26 @@ def runNewJointState(jointPublisherData):
         newJointState.name = ["Joint_1", "Joint_2", "Joint_3", "Joint_4", "Joint_5", "Joint_6"]
         newJointState.position = anglePosition() # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
         jointPublisherData.publish(newJointState) # send data to be published
+
+        t.header.frame_id = "base_link"
+        t.child_frame_id = "test_link"
+
+        roll = 0 # Test values
+        pitch = 0 # Test values
+        yaw = 0 # Test values
+
+        posArray = framePosition()
+        t.header.stamp = rospy.Time.now()
+        t.transform.translation.x = posArray[0]
+        t.transform.translation.y = posArray[1]
+        t.transform.translation.z = posArray[2]
+        q = tf_conversions.transformations.quaternion_from_euler(roll,pitch,yaw)
+        t.transform.rotation.x = q[0]
+        t.transform.rotation.y = q[1]
+        t.transform.rotation.z = q[2]
+        t.transform.rotation.w = q[3]
+        br.sendTransform(t)
+
         rate.sleep() # controls loop rate based on what is set in the rate variable 
 
 def runNewJointState2(jointPublisherData, angles):
