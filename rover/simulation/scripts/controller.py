@@ -35,6 +35,19 @@ goal = Point()
 goal.x = 5
 goal.y = 3
 
+pos_integral = 0
+Kpp = 0.1
+Kdp = 0.01
+Kip = 0.01
+previous_pos_error = 0
+
+angle_integral = 0
+Kpa = 0.1
+Kda = 0.01
+Kia = 0.01
+previous_angle_error = 0
+
+
 while not rospy.is_shutdown():
     inc_x = goal.x -x
     inc_y = goal.y -y
@@ -47,43 +60,67 @@ while not rospy.is_shutdown():
 
     P = 1
 
-    print("pos error: ", pos_error)
+    print("pos_error: ", pos_error)
     print("angle_error: ", angle_error)
+    
+    if abs(angle_error) < 0.5:
 
+        pos_integral += pos_error
+        pos_derivative = ((pos_error)- (previous_pos_error))
+        pos_correction = (Kpp*pos_error) + (Kip*pos_integral) + (Kdp*pos_derivative)
+
+        previous_pos_error = pos_error
+        speed.angular.z = 0.0
+
+        speed.linear.x = P*(0.5 + pos_correction)
+    else:
+        angle_integral += angle_error
+        angle_derivative = ((angle_error)- (previous_angle_error))
+        angle_correction = (Kpa*angle_error) + (Kia*angle_integral) + (Kda*angle_derivative)
+
+        previous_angle_error = angle_error
+
+        speed.angular.z = (0.2 + angle_correction)
+        speed.linear.x = 0.0
+    
+
+    """ 
     if (abs(pos_error) < 0.01):
         speed.linear.x = 0.0
         speed.angular.z = 0.0
     elif abs(angle_error) > 2.5:
         if angle_error < 0:
-            speed.linear.x = -0.1
-            speed.angular.z = 1
+            speed.linear.x = 0.1
+            speed.angular.z = 0.4
         else: 
-            speed.linear.x = -0.1
-            speed.angular.z = -1
+            speed.linear.x = 0.1
+            speed.angular.z = -0.4
     elif abs(angle_error) > 1.57:
         if angle_error < 0:
-            speed.linear.x = -0.8
-            speed.angular.z = 0.5
+            speed.linear.x = 0.8
+            speed.angular.z = 0.3
         else: 
-            speed.linear.x = -0.8
-            speed.angular.z = -0.5
+            speed.linear.x = 0.8
+            speed.angular.z = -0.3
     elif abs(angle_error) > 0.1:
         if angle_error < 0:
-            speed.linear.x = -pos_error*P
+            speed.linear.x = pos_error*P
             speed.angular.z = 0.2
         else: 
-            speed.linear.x = -pos_error*P
+            speed.linear.x = pos_error*P
             speed.angular.z = -0.2
     elif abs(angle_error) < 0.1 and abs(angle_error) > 0.01:
         if angle_error < 0:
-            speed.linear.x = -pos_error*P
+            speed.linear.x = pos_error*P
             speed.angular.z = 0.1
         else: 
-            speed.linear.x = -pos_error*P
+            speed.linear.x = pos_error*P
             speed.angular.z = -0.1
     else:
-        speed.linear.x = -pos_error*P
-        speed.angular.z = 0.0
+        speed.linear.x = pos_error*P
+        speed.angular.z = 0.0 
+    """
+    
     print("Speed: ", speed)
     pub.publish(speed)
     pub_error.publish(pos_error)
