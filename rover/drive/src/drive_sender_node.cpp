@@ -18,10 +18,13 @@ private:
 	void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
 
 	ros::NodeHandle nh_;
-	float MAX_ANGULAR_SPEED = 0.4;
-	float MAX_LINEAR_SPEED = 0.6;
+
+	double robot_radius = 0.8;
+	double MAX_LINEAR_SPEED = 2.5;
+	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
 	int linear_, angular_, right_left_, forward_backward_, yaw_;
 	double l_scale_, a_scale_;
+	double gear = 0; // set to 0 initially
 	ros::Publisher drive_pub_;
 	ros::Subscriber joy_sub_;
 };
@@ -46,14 +49,13 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	int R2 = 5;
 	int L2 = 2;
 	int LS = 0;
-	int X = 4;
-	int O = 5;
+	int dec_speed = 4;
+	int inc_speed = 5;
 
 	// Values from Controller
-	int gear = 0; // set to 0 at start
 	double posThrottle = joy->axes[R2];
 	double negThrottle = joy->axes[L2];
-	float turnFactor = static_cast<float>(joy->axes[LS]);
+	double turnFactor = static_cast<double>(joy->axes[LS]);
 	double lin_vel;
 
 	double dispVal = 0;
@@ -67,14 +69,14 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	else if (posThrottle < 1)
 	{
 		ROS_INFO("in Pos throttle");
-		dispVal = 255 - (posThrottle + 1) * 127.5;
-		lin_vel = 255 - (posThrottle + 1) * 127.5;
+		dispVal = 255.0 - (posThrottle + 1) * 127.5;
+		lin_vel = 255.0 - (posThrottle + 1) * 127.5;
 	}
 	else if (negThrottle < 1)
 	{
 		ROS_INFO("in neg throttle");
-		dispVal = -1 * (255 - (negThrottle + 1) * 127.5);
-		lin_vel = -1 * (255 - (negThrottle + 1) * 127.5);
+		dispVal = -1 * (255.0 - (negThrottle + 1) * 127.5);
+		lin_vel = -1 * (255.0 - (negThrottle + 1) * 127.5);
 	}
 	else
 	{
@@ -82,14 +84,14 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 		lin_vel = 0;
 	}
 	// Encoding values for gear selection (range 0 - 1)
-	if (joy->buttons[X] == 1) // reduce
+	if (joy->buttons[dec_speed] == 1) // reduce
 	{
 		if (gear >= 0.1)
 			gear -= 0.1;
 		else
 			gear = 0;
 	}
-	else if (joy->buttons[O] == 1) // increase
+	else if (joy->buttons[inc_speed] == 1) // increase
 	{
 		if (gear <= 0.9)
 			gear += 0.1;
@@ -98,26 +100,12 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	}
 
 	lin_vel = lin_vel * gear;
-	twist.linear.x = lin_vel / 255 * MAX_LINEAR_SPEED;
-	twist.angular.z = turnFactor / 1 * MAX_ANGULAR_SPEED;
+	ROS_INFO("Linear velocity: %f", lin_vel);
+	twist.linear.x = static_cast<double>(lin_vel/(double)255.0)*MAX_LINEAR_SPEED; // Should be in range of -MAX_LINEAR_SPEED to +MAX_LINEAR_SPEED 
+	twist.angular.z = static_cast<double>(turnFactor)*MAX_ANGULAR_SPEED; // Should be in range of -MAX_ANGULAR_SPEED to +MAX_ANGULAR_SPEED 
 
 	ROS_INFO("Turn Factor %f", turnFactor);
 	ROS_INFO("Motor Value %f", lin_vel);
-	drive_pub_.publish(twist);
-}
-
-void TeleopRover::publishDrive()
-{
-	geometry_msgs::Twist twist;
-	// if (cnt < 100000)
-	// twist.linear.x = 0.3;
-	// if ( cnt > 100000 && cnt < 200000)
-	// twist.linear.x = 0.0;
-	// if (cnt == 200000)
-	// cnt = 0;
-	// twist.linear.x = 0.5;
-	twist.angular.z = 0.0;
-
 	drive_pub_.publish(twist);
 }
 
@@ -125,8 +113,5 @@ int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "drive_sender_falcon");
 	TeleopRover drive_sender;
-	// while (ros::ok()){
-	// drive_sender.publishDrive();
-	// }
 	ros::spin();
 }
