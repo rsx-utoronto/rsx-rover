@@ -101,7 +101,7 @@ def read_pos_from_spark():
     Function that runs in a separate thread that constantly reads status message regarding
     position from all the motors and updates the global variable CURR_POS to store the values
     """
-
+    print("Reading curr first")
     # Checking if SparkMAXes are powered on and sending status messages
     while 1:
         msg = arm_can.BUS.recv()
@@ -131,7 +131,7 @@ def cmp_goal_curr_pos(spark_input : list, dt : float):
 
     spark_input (list(int)): Input positions for the motors
     '''
-
+    print("comparing first")
     # Starting thread lock
     with lock:
 
@@ -144,8 +144,8 @@ def cmp_goal_curr_pos(spark_input : list, dt : float):
                 # Doing comparisons for safety
                 if spark_input[i] < (CURR_POS[i] - 10 * dt * speed_limit[i]) or spark_input[i] > (CURR_POS[i] + 10 * dt * speed_limit[i]):
                     spark_input[i] = CURR_POS[i]
-            print("CURR:", CURR_POS)
-            print("input:", spark_input)
+            #print("CURR:", CURR_POS)
+            #print("input:", spark_input)
             return spark_input
         
         else:
@@ -203,10 +203,10 @@ if __name__=="__main__":
         
         # Comparison between spark_input and CURR_POS for safety
         ################# TO DO ###################
-        #angles = cmp_goal_curr_pos(input_angles[:7], t-time.time())
+        angles = cmp_goal_curr_pos(input_angles[:7], t-time.time())
 
         # Converting received SparkMAX angles to SparkMAX data packets
-        spark_input = generate_data_packet(input_angles[0:7])
+        spark_input = generate_data_packet(angles)
 
         # Sending data packets one by one
         for i in range(1, len(spark_input)+1):
