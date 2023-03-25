@@ -78,7 +78,7 @@ while not rospy.is_shutdown():
             if abs(angle_error) < 0.3: 
                 speed.angular.z = 0.0
             else: 
-                speed.angular.z = ()
+                speed.angular.z = (angle_correction)
             speed.linear.x = 0.0
             
             
