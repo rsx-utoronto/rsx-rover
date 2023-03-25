@@ -17,35 +17,26 @@ class TeleopRover {
 	public:
 		TeleopRover();
 		void publishDrive();
-	private:
-		void joyCallback(const sensor_msgs::Joy::ConstPtr& joy, const std_msgs::Bool::ConstPtr& network_status);
+		ros::Publisher drive_pub_;
 
-		ros::NodeHandle nh_;
 		float MAX_ANGULAR_SPEED = 0.4;
 		float MAX_LINEAR_SPEED = 0.6;
 		int linear_, angular_, right_left_, forward_backward_, yaw_; 
 		double l_scale_, a_scale_;
-		ros::Publisher drive_pub_;
-		message_filters::Subscriber<sensor_msgs::Joy> joy_sub(nh_, "joy", 1);
-		message_filters::Subscriber<std_msgs::Bool> net_sub(nh_, "network_status", 1);
-		TimeSynchronizer<sensor_msgs::Joy, std_msgs::Bool> sync(joy_sub, net_sub, 10);
 };
 
-TeleopRover::TeleopRover():
-	linear_(1),
-	angular_(2)
+TeleopRover::TeleopRover()//:
+//	linear_(1),
+//	angular_(2)
 {
-	nh_.param("axis_linear", linear_, linear_);
-	nh_.param("axis_angular", angular_, angular_);
-	nh_.param("scale_angular", a_scale_, a_scale_);
-	nh_.param("scale_linear", l_scale_, l_scale_);
+	//nh_.param("axis_linear", linear_, linear_);
+	//nh_.param("axis_angular", angular_, angular_);
+	//nh_.param("scale_angular", a_scale_, a_scale_);
+	//nh_.param("scale_linear", l_scale_, l_scale_);
 
-	drive_pub_ = nh_.advertise<geometry_msgs::Twist>("drive", 1);
-	sync.registerCallback(boost::bind(&joyCallback, _1, _2));
 }
 
-void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr& joy, const std_msgs::Bool::ConstPtr& network_status
-)
+void joyCallback(const sensor_msgs::Joy::ConstPtr& joy, const std_msgs::Bool::ConstPtr& network_status, const ros::Publisher drive_pub_)
 {
 	geometry_msgs::Twist twist;
 
@@ -118,7 +109,18 @@ void TeleopRover::publishDrive(){
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "drive_sender_falcon");
+	ros::NodeHandle nh_;
+
 	TeleopRover drive_sender;
+
+	message_filters::Subscriber<sensor_msgs::Joy> joy_sub(nh_, "joy", 1);
+	message_filters::Subscriber<std_msgs::Bool> net_sub(nh_, "network_status", 1);
+	TimeSynchronizer<sensor_msgs::Joy, std_msgs::Bool> sync(joy_sub, net_sub, 10);
+
+	ros::Publisher drive_pub_ = nh_.advertise<geometry_msgs::Twist>("drive", 1);
+	sync.registerCallback(boost::bind(&joyCallback, _1, _2));
+
+	drive_sender.drive_pub_ = drive_pub_;
 	// while (ros::ok()){
 	// 	drive_sender.publishDrive();
 	// }
