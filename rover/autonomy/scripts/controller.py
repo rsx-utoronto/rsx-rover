@@ -23,8 +23,8 @@ def newOdom(msg):
 
 rospy.init_node("speed_controller")
 
-sub = rospy.Subscriber("/robot_base_velocity_controller/odom", Odometry, newOdom)
-pub = rospy.Publisher("/robot_base_velocity_controller/cmd_vel", Twist, queue_size = 1)
+sub = rospy.Subscriber("/odom/ekf/enc_imu", Odometry, newOdom)
+pub = rospy.Publisher("/drive", Twist, queue_size = 1)
 pub_error = rospy.Publisher("/robot_base_velocity_controller/error", Float32, queue_size = 1)
 
 speed = Twist()
@@ -75,7 +75,7 @@ while not rospy.is_shutdown():
 
     if abs(angle_error) < 0.5:
         if pos_error < 0.4:
-            if abs(angle_error) < 0.3: 
+            if abs(angle_error) < 0.1: 
                 speed.angular.z = 0.0
             else: 
                 speed.angular.z = (angle_correction)
