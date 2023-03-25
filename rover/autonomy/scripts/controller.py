@@ -62,30 +62,34 @@ while not rospy.is_shutdown():
 
     print("pos_error: ", pos_error)
     print("angle_error: ", angle_error)
-    
+
+    angle_integral += angle_error
+    angle_derivative = ((angle_error)- (previous_angle_error))
+    angle_correction = (Kpa*angle_error) + (Kia*angle_integral) + (Kda*angle_derivative)
+    pos_integral += pos_error
+    pos_derivative = ((pos_error)- (previous_pos_error))
+    pos_correction = (Kpp*pos_error) + (Kip*pos_integral) + (Kdp*pos_derivative)
+
+    previous_pos_error = pos_error
+    previous_angle_error = angle_error
+
     if abs(angle_error) < 0.5:
         if pos_error < 0.4:
+            if abs(angle_error) < 0.3: 
+                speed.angular.z = 0.0
+            else: 
+                speed.angular.z = ()
             speed.linear.x = 0.0
-            speed.angular.z = 0.0
             
-        else: 
-            pos_integral += pos_error
-            pos_derivative = ((pos_error)- (previous_pos_error))
-        #if you have gone past: 
+            
+        else:
+                    #if you have gone past: 
         #1. make speed negative and oscillate 
         #2. don't do pos_correction 
-            pos_correction = (Kpp*pos_error) + (Kip*pos_integral) + (Kdp*pos_derivative)
 
-            previous_pos_error = pos_error
             speed.angular.z = 0.0
-
             speed.linear.x = P*(0.5 + pos_correction)
     else:
-        angle_integral += angle_error
-        angle_derivative = ((angle_error)- (previous_angle_error))
-        angle_correction = (Kpa*angle_error) + (Kia*angle_integral) + (Kda*angle_derivative)
-
-        previous_angle_error = angle_error
 
         speed.angular.z = (0.2 + angle_correction)
         speed.linear.x = 0.0
