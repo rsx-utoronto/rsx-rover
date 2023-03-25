@@ -37,14 +37,14 @@ goal.y = 3
 
 pos_integral = 0
 Kpp = 0.1
-Kdp = 0.01
-Kip = 0.01
+Kdp = 0.05
+Kip = 0.001
 previous_pos_error = 0
 
 angle_integral = 0
 Kpa = 0.1
-Kda = 0.01
-Kia = 0.01
+Kda = 0.05
+Kia = 0.001
 previous_angle_error = 0
 
 
@@ -70,6 +70,7 @@ while not rospy.is_shutdown():
         pos_correction = (Kpp*pos_error) + (Kip*pos_integral) + (Kdp*pos_derivative)
 
         previous_pos_error = pos_error
+        
         speed.angular.z = 0.0
 
         speed.linear.x = P*(0.5 + pos_correction)
