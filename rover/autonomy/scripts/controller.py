@@ -96,9 +96,9 @@ Kip = 0.001
 previous_pos_error = 0
 
 angle_integral = 0
-Kpa = 0.1
-Kda = 0.05
-Kia = 0.001
+Kpa = 0.01
+Kda = 0.005
+Kia = 0.0001
 previous_angle_error = 0
 
 
@@ -132,7 +132,7 @@ while not rospy.is_shutdown():
             if abs(angle_error) < 0.1: 
                 speed.angular.z = 0.0
             else: 
-                speed.angular.z = (angle_correction)
+                speed.angular.z = max(0.5, (angle_correction))
             speed.linear.x = 0.0
             
             
@@ -142,10 +142,10 @@ while not rospy.is_shutdown():
         #2. don't do pos_correction 
 
             speed.angular.z = 0.0
-            speed.linear.x = P*(0.5 + pos_correction)
+            speed.linear.x = max(0.5, P*(0.02 + pos_correction))
     else:
 
-        speed.angular.z = (0.2 + angle_correction)
+        speed.angular.z = max(0.5, (0.2 + angle_correction))
         speed.linear.x = 0.0
     
     
