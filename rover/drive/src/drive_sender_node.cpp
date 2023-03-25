@@ -18,7 +18,10 @@ private:
 	void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
 
 	ros::NodeHandle nh_;
-
+	double throttle_min = -1;
+	double throttle_max = 1
+	double turn_min = -1;
+	double turn_max = 1;
 	double robot_radius = 0.8;
 	double MAX_LINEAR_SPEED = 2.5;
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
@@ -48,14 +51,16 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	// indexs for controller values
 	int R2 = 5;
 	int L2 = 2;
-	int LS = 0;
+	int LS_x = 0;
+	int LS_y = 1;
 	int dec_speed = 4;
 	int inc_speed = 5;
 
 	// Values from Controller
 	double posThrottle = joy->axes[R2];
 	double negThrottle = joy->axes[L2];
-	double turnFactor = static_cast<double>(joy->axes[LS]);
+	double turnFactor_x = static_cast<double>(joy->axes[LS_x]);
+	double turnFactor_y = static_cast<double>(joy->axes[LS_y]);
 	double lin_vel;
 
 	double dispVal = 0;
@@ -63,26 +68,24 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	// Encoding Values for Throttle
 	if (posThrottle < 1 && negThrottle < 1)
 	{
-		dispVal = 0;
 		lin_vel = 0;
 	}
 	else if (posThrottle < 1)
 	{
 		ROS_INFO("in Pos throttle");
-		dispVal = 255.0 - (posThrottle + 1) * 127.5;
 		lin_vel = 255.0 - (posThrottle + 1) * 127.5;
 	}
 	else if (negThrottle < 1)
 	{
 		ROS_INFO("in neg throttle");
-		dispVal = -1 * (255.0 - (negThrottle + 1) * 127.5);
 		lin_vel = -1 * (255.0 - (negThrottle + 1) * 127.5);
 	}
 	else
 	{
-		dispVal = 0;
 		lin_vel = 0;
 	}
+
+	// Encoding turn values
 	// Encoding values for gear selection (range 0 - 1)
 	if (joy->buttons[dec_speed] == 1) // reduce
 	{
