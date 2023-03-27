@@ -101,7 +101,6 @@ def read_pos_from_spark():
     Function that runs in a separate thread that constantly reads status message regarding
     position from all the motors and updates the global variable CURR_POS to store the values
     """
-    print("Reading curr first")
     # Checking if SparkMAXes are powered on and sending status messages
     while 1:
         msg = arm_can.BUS.recv()
@@ -118,8 +117,7 @@ def read_pos_from_spark():
             with lock:
                 index = dev_id - 11
                 CURR_POS[index] = arm_can.read_can_message(msg.data, api)
-            # Ending thread lock
-    
+            # Ending thread lock    
 def cmp_goal_curr_pos(spark_input : list, dt : float):
     '''
     (list(int)) -> (list(int))
@@ -131,7 +129,6 @@ def cmp_goal_curr_pos(spark_input : list, dt : float):
 
     spark_input (list(int)): Input positions for the motors
     '''
-    print("comparing first")
     # Starting thread lock
     with lock:
 
@@ -140,12 +137,17 @@ def cmp_goal_curr_pos(spark_input : list, dt : float):
             
 
             for i in range(len(spark_input)):
-
+                # print("comparing first")
+                # print("spark input[{}]:".format(i), spark_input[i])
+                # print("CURR_POS[{}]:".format(i), CURR_POS[i])
+                # print("LHS Limit:", CURR_POS[i] - 10 * dt * speed_limit[i])
+                # print("RHS Limit:", CURR_POS[i] + 10 * dt * speed_limit[i])
+                # print("Bool:", spark_input[i] < (CURR_POS[i] - 10 * speed_limit[i]) or spark_input[i] > (CURR_POS[i] + 10 * speed_limit[i]))
                 # Doing comparisons for safety
-                if spark_input[i] < (CURR_POS[i] - 10 * dt * speed_limit[i]) or spark_input[i] > (CURR_POS[i] + 10 * dt * speed_limit[i]):
+                if spark_input[i] < (CURR_POS[i] - 10 * speed_limit[i]) or spark_input[i] > (CURR_POS[i] + 10 * speed_limit[i]):
                     spark_input[i] = CURR_POS[i]
-            #print("CURR:", CURR_POS)
-            #print("input:", spark_input)
+            print("CURR:", CURR_POS)
+            print("input:", spark_input)
             return spark_input
         
         else:
@@ -179,7 +181,7 @@ if __name__=="__main__":
     print("Heartbeat initiated")
 
     # Starting a thread to read current position of motors
-    curr_pos_thread = threading.Thread(target= read_pos_from_spark, args= ())
+    curr_pos_thread = threading.Thread(target= read_pos_from_spark, args= (), daemon= True)
     curr_pos_thread.start()
 
     # Variable Declaration for input from motor controller
@@ -193,17 +195,17 @@ if __name__=="__main__":
 
     # Starting the infinite loop
     while 1:
-
+        
         # Getting angles from the remote controller
         input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
         t = time.time()
 
         # Printing input angles from remote controller
-        #print(input_angles)
+        print(input_angles)
         
         # Comparison between spark_input and CURR_POS for safety
         ################# TO DO ###################
-        angles = cmp_goal_curr_pos(input_angles[:7], t-time.time())
+        angles = cmp_goal_curr_pos(input_angles[:7], 0.00015115737915039062)
 
         # Converting received SparkMAX angles to SparkMAX data packets
         spark_input = generate_data_packet(angles)
