@@ -176,8 +176,19 @@ def controlEEPosition(isButtonPressed, joystickAxis):
     elif isButtonPressed["R1"]:
         newRoll += scale2
 
+     # control roll, pitch, yaw
+    # if isButtonPressed["RIGHT"]:
+    #     newYaw += scale2
+    # if joystickAxis["DOWN"]:
+    #     newPitch -= scale2
+    # if isButtonPressed["L1"]:
+    #     newRoll -= scale2
+    # elif isButtonPressed["R1"]:
+    #     newRoll += scale2
+
     newTarget = [newRoll, newPitch, newYaw, [newX, newY, newZ]]
     prevTargetValues = copy.deepcopy(newTarget)
+    print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", newRoll, " pitch: ", newPitch, " yaw: ", newYaw)
 
     return ik.createEndEffectorTransform(newRoll, newPitch, newYaw, newTarget[3])
     

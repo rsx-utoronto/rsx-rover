@@ -99,7 +99,7 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position):
     # |   0      0       0       1  |
 
     endEffectorTransform = np.block([
-                                    [createXYZRotationMatrix(roll, pitch, yaw), np.transpose(positionArray)],
+                                    [createXYZRotationMatrix(yaw, pitch, roll), np.transpose(positionArray)],
                                     [0, 0, 0, 1]
                                     ])
 
@@ -194,7 +194,7 @@ def createDHTable(jointAngles):
         a matrix containing the dh table in [r, alpha, d, theta*] order
     '''
 
-    # units in mm
+    # units in mm [r, al]
     DHTable = np.array([[0, math.pi/2, 75, jointAngles[0]],
                         [375, 0, 0, jointAngles[1]],
                         [69.55, math.pi/2, 0, jointAngles[2]],
