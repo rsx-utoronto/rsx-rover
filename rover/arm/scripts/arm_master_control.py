@@ -216,10 +216,10 @@ def controlGripperAngle(isButtonPressed):
     angleIncrement = 1
 
     # If both buttons are pressed at the same time, angle will not change
-    if isButtonPressed["L1"] == 1 and isButtonPressed["L2"] != 1:
+    if isButtonPressed["SQUARE"] == 1 and isButtonPressed["X"] != 1:
         gripperAngle += angleIncrement
 
-    if isButtonPressed["L2"] == 1 and isButtonPressed["L1"] != 1:
+    if isButtonPressed["X"] == 1 and isButtonPressed["SQUARE"] != 1:
         gripperAngle -= angleIncrement
 
     return gripperAngle
@@ -330,7 +330,7 @@ def updateDesiredArmSimulation(endEffectorTransform):
     '''
     global curArmAngles
     global jointPublisher
-    sim.runNewJointState2(jointPublisher, curArmAngles)
+    sim.runNewJointState2(jointPublisher, curArmAngles[:6])
 
 
 
@@ -365,12 +365,13 @@ def main():
 
     targetEEPos = controlEEPosition(isButtonPressed, joystickAxes)
 
-    targetAngles = ik.inverseKinematics(dhTable, targetEEPos)  
+    targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+    simAngles = copy.deepcopy(targetAngles) 
+    targetAngles.append(controlGripperAngle(isButtonPressed))
     curArmAngles = copy.deepcopy(targetAngles)
-    # targetAngles.append(controlGripperAngle(isButtonPressed))
 
     # publishNewAngles(targetAngles)
-    updateDesiredArmSimulation(targetEEPos)
+    updateDesiredArmSimulation(simAngles[0:5])
     ikAngles = Float32MultiArray()
     ikAngles.data = targetAngles
     armAngles.publish(ikAngles)
@@ -380,7 +381,7 @@ def main():
 # Main Area
 
 if __name__ == "__main__":
-    curArmAngles = [0, 0, 0, 0, 0, 0]
+    curArmAngles = [0, 0, 0, 0, 0, 0, 0]
     prevTargetValues = [0, 0, 0, [250, 0, 450]]
 
     initializeJoystick()
