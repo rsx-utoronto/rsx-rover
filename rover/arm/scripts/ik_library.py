@@ -33,31 +33,41 @@ def createXYZRotationMatrix(yaw: float, pitch: float, roll: float):
     # Define sine and cosine of each angle to reduce # of calculations
 
     cRoll = math.cos(roll)
-    sRoll = math.sin(roll)
+    sRoll = math.sin(roll) # 
 
     cPitch = math.cos(pitch)
-    sPitch = math.sin(pitch)
+    sPitch = math.sin(pitch) # beta
 
-    cYaw = math.cos(yaw)
-    sYaw = math.sin(yaw)
+    cYaw = math.cos(yaw) 
+    sYaw = math.sin(yaw) # alpha
 
-    # Assemble 3x3 rotation matrix
+    # Assemble 3x3 rotation matrices
     # Rotations are applied in the same order each time:
-    # Roll -> Pitch -> Yaw
-    # The result is the matrix below
+    # Yaw --> Pitch --> Roll
 
-    rotationMatrix = np.array([
-        [(cPitch * cYaw), (- cPitch * sYaw), (sPitch)],
-        [((cRoll * sYaw) + (cYaw * sRoll * sPitch)), ((cRoll *
-                                                       cYaw) - (sRoll * sPitch * sYaw)), (- cPitch * sRoll)],
-        [((sRoll * sYaw) - (cRoll * cYaw * sPitch)), ((cYaw *
-                                                       sRoll) + (cRoll * sPitch * sYaw)), (cRoll * cPitch)]
-    ])
+    yawRotation = np.array([
+                            [cYaw, -sYaw, 0],
+                            [sYaw, cYaw, 0],
+                            [0, 0, 1]
+                            ])
+    
+    pitchRotation = np.array([
+                            [cPitch, 0, sPitch],
+                            [0, 1, 0],
+                            [-sPitch, 0, cPitch]
+                            ])
+    
+    rollRotation = np.array([
+                            [1, 0, 0],
+                            [0, cRoll, -sRoll],
+                            [0, sRoll, cRoll]
+                            ])
+
+    rotationMatrix = np.matmul(np.matmul(yawRotation, pitchRotation), rollRotation)
 
     # Returns matrix
 
     return rotationMatrix
-
 
 def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position):
     ''' Creates the matrix that defines the transform of the end effector based on target
