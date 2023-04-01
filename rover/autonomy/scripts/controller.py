@@ -23,8 +23,8 @@ def newOdom(msg):
 
 rospy.init_node("speed_controller")
 
-sub = rospy.Subscriber("/odom/ekf/enc_imu", Odometry, newOdom)
-pub = rospy.Publisher("/drive", Twist, queue_size = 1)
+sub = rospy.Subscriber("/robot_base_velocity_controller/odom", Odometry, newOdom)
+pub = rospy.Publisher("/robot_base_velocity_controller/cmd_vel", Twist, queue_size = 1)
 pub_error = rospy.Publisher("/robot_base_velocity_controller/error", Float32, queue_size = 1)
 
 speed = Twist()
@@ -32,19 +32,19 @@ speed = Twist()
 r = rospy.Rate(10)
 
 goal = Point()
-goal.x = 5
-goal.y = 3
+goal.x = -3
+goal.y = 0
 
 pos_integral = 0
-Kpp = 0.1
-Kdp = 0.05
-Kip = 0.001
+Kpp = 1
+Kdp = 0.5
+Kip = 0.01
 previous_pos_error = 0
 
 angle_integral = 0
-Kpa = 0.1
-Kda = 0.05
-Kia = 0.001
+Kpa = 1
+Kda = 0.1
+Kia = 0.01
 previous_angle_error = 0
 
 
@@ -52,13 +52,16 @@ while not rospy.is_shutdown():
     inc_x = goal.x -x
     inc_y = goal.y -y
 
-    pos_error = math.sqrt(inc_x**2 + inc_y**2)
+    if (inc_x < 0 and inc_y < 0) or (inc_x == 0 and inc_y < 0) and (inc_x < 0 and inc_y == 0):
+        pos_error = math.sqrt(inc_x**2 + inc_y**2)
+    else:
+        pos_error = math.sqrt(inc_x**2 + inc_y**2)
 
     angle_to_goal = math.atan2(inc_x, inc_y)
 
     angle_error = angle_to_goal - theta
 
-    P = 1
+    P = 0.1
 
     print("pos_error: ", pos_error)
     print("angle_error: ", angle_error)
@@ -79,7 +82,7 @@ while not rospy.is_shutdown():
                 speed.angular.z = 0.0
             else: 
                 speed.angular.z = (angle_correction)
-            speed.linear.x = 0.0
+                speed.linear.x = 0.0
             
             
         else:
