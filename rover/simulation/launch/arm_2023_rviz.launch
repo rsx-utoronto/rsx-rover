@@ -1,11 +1,15 @@
 <launch>
    <!-- Load the urdf into the parameter server. -->
-
    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find rover)/rover/simulation/urdfs/BRUH.xacro"/>
+
+   <arg name="ik_on" default="false"/>
    <arg name="rvizconfig" default="$(find rover)/rover/simulation/rviz_config/arm_urdf.rviz"/>
-    
+
    <node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub"/>
-   <node name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" />
+
+   <node name="arm_master_control" pkg="rover" type="arm_master_control.py" if="$(arg ik_on)" output="screen"/>
+   <node name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" unless="$(arg ik_on)"/>
+
 	<node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true"/>
    
 </launch>
