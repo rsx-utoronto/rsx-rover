@@ -54,10 +54,20 @@ def generate_data_packet (data_list : list):
         joint_num += 1
         
         # Gear reduction
-        if joint_num <= 4: 
-            reduction = 100
-        else:
+        if joint_num == 1 or joint_num == 3: 
+            reduction = 120
+        
+        elif joint_num == 2:
+            reduction = 160
+        
+        elif joint_num == 4:
             reduction = 20
+
+        elif joint_num == 7:
+            reduction = 40
+        
+        else:
+            reduction = 10
 
         # Checking which joint to move
         if joint_num == 1:
@@ -118,6 +128,7 @@ def read_pos_from_spark():
                 index = dev_id - 11
                 CURR_POS[index] = arm_can.read_can_message(msg.data, api)
             # Ending thread lock    
+             
 def cmp_goal_curr_pos(spark_input : list, dt : float):
     '''
     (list(int)) -> (list(int))
@@ -134,20 +145,16 @@ def cmp_goal_curr_pos(spark_input : list, dt : float):
 
         # Checking if input is as long as CURR_POS
         if len(spark_input) == len(CURR_POS):
-            
 
             for i in range(len(spark_input)):
-                # print("comparing first")
-                # print("spark input[{}]:".format(i), spark_input[i])
-                # print("CURR_POS[{}]:".format(i), CURR_POS[i])
-                # print("LHS Limit:", CURR_POS[i] - 10 * dt * speed_limit[i])
-                # print("RHS Limit:", CURR_POS[i] + 10 * dt * speed_limit[i])
-                # print("Bool:", spark_input[i] < (CURR_POS[i] - 10 * speed_limit[i]) or spark_input[i] > (CURR_POS[i] + 10 * speed_limit[i]))
+                
+                # Getting the float value from potential input
+                float_val = arm_can.read_can_message(spark_input[i], arm_can.CMD_API_STAT2)
+
                 # Doing comparisons for safety
-                if spark_input[i] < (CURR_POS[i] - 10 * speed_limit[i]) or spark_input[i] > (CURR_POS[i] + 10 * speed_limit[i]):
-                    spark_input[i] = CURR_POS[i]
+                if float_val < (CURR_POS[i] - 3 * speed_limit[i] * dt) or float_val > (CURR_POS[i] + 3 * speed_limit[i] * dt):
+                    spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
             print("CURR:", CURR_POS)
-            print("input:", spark_input)
             return spark_input
         
         else:
@@ -202,14 +209,15 @@ if __name__=="__main__":
 
         # Printing input angles from remote controller
         print(input_angles)
-        
-        # Comparison between spark_input and CURR_POS for safety
-        ################# TO DO ###################
-        angles = cmp_goal_curr_pos(input_angles[:7], 0.00015115737915039062)
 
         # Converting received SparkMAX angles to SparkMAX data packets
-        spark_input = generate_data_packet(angles)
+        spark_input = generate_data_packet(input_angles[:7])
 
+        # Comparison between spark_input and CURR_POS for safety
+        ################# TO DO ###################
+        spark_input = cmp_goal_curr_pos(spark_input, 0.00015115737915039062)
+
+        print(hex(spark_input[2][0]), hex(spark_input[2][1]), hex(spark_input[2][2]), hex(spark_input[2][3]))
         # Sending data packets one by one
         for i in range(1, len(spark_input)+1):
             
