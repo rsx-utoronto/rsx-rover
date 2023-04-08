@@ -33,12 +33,12 @@ def createXYZRotationMatrix(yaw: float, pitch: float, roll: float):
     # Define sine and cosine of each angle to reduce # of calculations
 
     cRoll = math.cos(roll)
-    sRoll = math.sin(roll) # gamma
+    sRoll = math.sin(roll) # 
 
     cPitch = math.cos(pitch)
     sPitch = math.sin(pitch) # beta
 
-    cYaw = math.cos(yaw)
+    cYaw = math.cos(yaw) 
     sYaw = math.sin(yaw) # alpha
 
     # Assemble 3x3 rotation matrices
