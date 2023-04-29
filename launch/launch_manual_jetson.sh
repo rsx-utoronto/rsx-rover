@@ -8,8 +8,8 @@
 # Setup environment 
 cd ~/catkin_ws
 source devel/setup.bash
-export ROS_MASTER_URI=http://192.168.0.250:11311
-export ROS_IP=192.168.0.250
+# export ROS_MASTER_URI=http://192.168.0.250:11311
+# export ROS_IP=192.168.0.250
 
 # Do not start roscore unless specified
 core=0
