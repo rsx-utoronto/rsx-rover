@@ -60,7 +60,7 @@ rosrun rover drive_sender_node &
 
 # Start sensors
 echo "Launching sensors..."
-roslaunch rover sensors.launch &
+# roslaunch rover sensors.launch &
 
 # wheel odom node launch 
 

@@ -7,6 +7,10 @@
 #include <stdio.h>
 #include <boost/thread.hpp>
 #include <sensor_msgs/Joy.h>
+#include <std_msgs/Bool.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+
 
 class TeleopRover
 {
@@ -35,18 +39,14 @@ private:
 TeleopRover::TeleopRover() : linear_(1),
 							 angular_(2)
 {
-	nh_.param("axis_linear", linear_, linear_);
-	nh_.param("axis_angular", angular_, angular_);
-	nh_.param("scale_angular", a_scale_, a_scale_);
-	nh_.param("scale_linear", l_scale_, l_scale_);
-
-	drive_pub_ = nh_.advertise<geometry_msgs::Twist>("drive", 1);
-	joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &TeleopRover::joyCallback, this);
+	TeleopRover::network_status = false;
+	drive_pub_ = nh.advertise<geometry_msgs::Twist>("drive", 1);
+	TeleopRover::joy_sub = nh.subscribe("joy", 10, &TeleopRover::joyCallback, this);
+	TeleopRover::net_sub = nh.subscribe("network_status", 1, &TeleopRover::networkCallback, this);
 }
 
 void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 {
-	geometry_msgs::Twist twist;
 
 	// indexs for controller values
 	int R2 = 5;
@@ -109,10 +109,28 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 
 	ROS_INFO("Turn Factor %f", turnFactor);
 	ROS_INFO("Motor Value %f", lin_vel);
+
 	drive_pub_.publish(twist);
 }
 
-int main(int argc, char **argv)
+void TeleopRover::networkCallback(const std_msgs::Bool::ConstPtr& net_stat){
+	if (net_stat->data == false){
+		TeleopRover::network_status = false;
+		twist.linear.x = 0; 
+		twist.linear.y = 0;
+		twist.linear.z = 0;
+		twist.angular.x = 0;
+		twist.angular.y = 0;
+		twist.angular.z = 0;
+		drive_pub_.publish(twist);
+	} else {
+		TeleopRover::network_status = true;
+	}
+	
+}
+
+
+int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "drive_sender_falcon");
 	TeleopRover drive_sender;
