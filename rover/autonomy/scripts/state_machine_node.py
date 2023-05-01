@@ -3,80 +3,93 @@ from rsx_rover.msg import GPSMsg, StateMsg
 from std_msgs.msg import String
 
 class StateMachineNode:
-    goal_gps_list = [] #populate
 
-    gps_index = 0
+    def __init__(self, task_id_lst, task_dict, node_dict, gps_node=None, gps_loc_lst=[]):
 
-    ar_tag_goal_id = 0 #id for 4x4_50 library for AR tag
+        '''
+        gps_loc_lst is optional and type list[GPSMsg] - should be the list of GPS coordinates to visit in order
+        task_id_lst is type list[int] - list of the ids of tasks to trigger in order
+        task_dict is type dict[int, str] - a dictionary mapping task id to a description
+        node_dict is type dict[int, str] - a dictionary mapping task id to the node associated with it
+        gps_node is optional and type str - the node which publishes if the intended gps coordinate is reached
+        '''
 
-    light = 'red'
+        self.gps_loc_lst = gps_loc_lst
+        self.task_id_lst = task_id_lst
+        self.task_dict = task_dict
+        self.node_dict = node_dict
+        self.gps_node = gps_node
 
-    GPS_found = False
-    AR_found = False
-    searching = False
-    MISSION_OVER = False
+        self.index = 0
+        self.next_goal_gps = None if self.gps_loc_lst == [] else self.gps_loc_lst[0]
+        self.goal_gps_found = False
+        self.current_task = self.task_dict[self.task_id_lst[0]]
+        self.MISSION_OVER = False
 
 
     def publish_state(self):
 
-      
-        pub = rospy.Publisher('state_machine_node_pub', StateMsg, queue_size=10)
 
-        gps = GPSMsg()
-        gps.latitude = self.goal_gps_list[self.gps_index][0]
-        gps.longitude = self.goal_gps_list[self.gps_index][1]
+        pub = rospy.Publisher('state_machine_node_pub', StateMsg, queue_size=10)
         msg = StateMsg()
-        msg.next_goal_gps = gps
-        msg.next_ar_tag_id = self.ar_tag_goal_id
-        msg.light = self.light
-        msg.GPS_found = self.GPS_found
-        msg.AR_found = self.AR_found
-        msg.searching = self.searching
+        msg.next_goal_gps = self.next_goal_gps
+        msg.goal_gps_found = self.goal_gps_found
+        msg.current_task = self.current_task
         msg.MISSION_OVER = self.MISSION_OVER
 
         if not rospy.is_shutdown():
             rospy.loginfo(msg)
             pub.publish(msg)
+
     
     def gps_find_callback(self, data):
 
-        if bool(data.data) and not self.AR_found:
-            self.searching = True
-        self.publish_state()
+        """
+        After the goal gps location is reached, the node for the associated task is subscribed to
+        """
 
-    def ar_find_callback(self, data):
-        
         if bool(data.data):
-            self.AR_found = True
-            self.searching = False
-            self.light = 'green'
+            self.goal_gps_found = True
+            node_name = self.node_dict[self.task_id_lst[self.index]]
+            rospy.Subscriber(node_name, self.task_callback)
         
         self.publish_state()
 
-    def done_checkpoint_callback(self, data):
+
+    def task_callback(self, data):
+
+        """
+        if this is the last task in the list, then its mission over
+        otherwise, the list index is incremented, the goal gps nd current task are updated 
+        """
 
         if bool(data.data):
-            if self.gps_index == 4 and self.ar_tag_goal_id == 4:
+            self.index += 1
+
+            if self.index == len(self.task_id_lst):
                 self.MISSION_OVER = True
-                self.light = 'blue'
             else:
-                self.ar_tag_goal_id += 1
-                self.gps_index += 1
-                self.GPS_found, AR_found = False
-                self.light = 'red'
-        
-        self.publish_state()
 
+                if self.gps_loc_lst != []:
+                    self.next_goal_gps = self.gps_loc_lst[self.index]
+                    self.goal_gps_found = False
+                self.current_task = self.task_dict[self.task_id_lst[self.index]]
+
+        self.publish_state()    
+
+    
     def listener(self):
+
+        """
+        subscribes to gps node if its not set to none
+        otherwise subscribes to the first task in the list
+        """
+
         rospy.init_node('state_machine_node', anonymous=True)
-        rospy.Subscriber('gps_find', self.gps_find_callback) #change node name
-        rospy.Subscriber('ar_find', self.ar_find_callback) #change node name
-        rospy.Subscriber('done_checkpoint', self.done_checkpoint_callback) #change node name
 
-        rospy.spin()
-
-if __name__ == '__main__':
-    state_machine_node = StateMachineNode()
-    state_machine_node.listener()
-
+        if self.gps_node is not None:
+            rospy.Subscriber(self.gps_node, self.gps_find_callback)
+        else:
+            rospy.Subscriber(
+                self.node_dict[self.task_id_lst[0]], self.task_callback)
 

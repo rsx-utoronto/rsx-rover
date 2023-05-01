@@ -1,7 +1,4 @@
 rover/GPSMsg next_goal_gps
-int32 next_ar_tag_id
-string light
-bool GPS_found
-bool AR_found
-bool searching
+string current_task
+bool goal_gps_found
 bool MISSION_OVER
