@@ -3,10 +3,20 @@ import rospy
 import numpy as np
 import math
 
-# joystick stuff (re-use old code)
+# Custom Exceptions
 
+class CannotReachTransform(Exception):
+    """Exception Raised when transformation cannot be reached
 
-def createXYZRotationMatrix(yaw: float, pitch: float, roll: float):
+    """
+
+    def __init__(self, message="Transformation outside of robot workspace"):
+        self.message = message
+        super().__init__(self.message)
+
+# IK Code
+
+def createXYZRotationMatrix(roll: float, pitch: float, yaw: float):
     ''' Creates a rotation matrix based on XYZ euler angles (Row, Pitch, Yaw)
 
     Paramaters (euler angles)
@@ -236,62 +246,59 @@ def inverseKinematics(dhTable, targetPos):
         list of joint angles
     '''
 
-    try:
-        # useful values from DH table
-        d1 = dhTable[0][2]
-        r2 = dhTable[1][0]
-        r3 = dhTable[2][0]
-        d4 = dhTable[3][2]
-        d6 = dhTable[5][2]
+    
+    # useful values from DH table
+    d1 = dhTable[0][2]
+    r2 = dhTable[1][0]
+    r3 = dhTable[2][0]
+    d4 = dhTable[3][2]
+    d6 = dhTable[5][2]
 
-        desiredWristRotation = np.array([targetPos[0][:3], targetPos[1][:3], targetPos[2][:3]])
-        desiredWristOrigin = np.transpose([np.array([targetPos[0][3], targetPos[1][3], targetPos[2][3]])])
+    desiredWristRotation = np.array([targetPos[0][:3], targetPos[1][:3], targetPos[2][:3]])
+    desiredWristOrigin = np.transpose([np.array([targetPos[0][3], targetPos[1][3], targetPos[2][3]])])
 
-        # calculate wrist center
-        rotationAdjustment = d6 * np.matmul(desiredWristRotation, np.transpose(np.array([0, 0, 1])))
-        
-        wristCenter = desiredWristOrigin - np.transpose([rotationAdjustment])
-        
-        wristCenterX = wristCenter[0][0]
-        wristCenterY = wristCenter[1][0]
-        wristCenterZ = wristCenter[2][0]
+    # calculate wrist center
+    rotationAdjustment = d6 * np.matmul(desiredWristRotation, np.transpose(np.array([0, 0, 1])))
+    
+    wristCenter = desiredWristOrigin - np.transpose([rotationAdjustment])
+    
+    wristCenterX = wristCenter[0][0]
+    wristCenterY = wristCenter[1][0]
+    wristCenterZ = wristCenter[2][0]
 
-        theta1 = math.atan2(wristCenterY, wristCenterX)
+    theta1 = math.atan2(wristCenterY, wristCenterX)
 
-        link3Hypotenuse = math.sqrt(r3**2 + d4**2) # adjust for offset of arm at link 3
-        cosTheta3Numerator = wristCenterX**2 + wristCenterY**2 + (wristCenterZ-d1)**2 - r2**2 - link3Hypotenuse**2
-        cosTheta3 = cosTheta3Numerator/(2*r2*link3Hypotenuse)
+    link3Hypotenuse = math.sqrt(r3**2 + d4**2) # adjust for offset of arm at link 3
+    cosTheta3Numerator = wristCenterX**2 + wristCenterY**2 + (wristCenterZ-d1)**2 - r2**2 - link3Hypotenuse**2
+    cosTheta3 = cosTheta3Numerator/(2*r2*link3Hypotenuse)
 
-        if abs(cosTheta3) > 1:  # cos(x) cannot be greater than 1
-            print("Can not reach transform")
-            # return current joint angles
-            return [dhTable[0][3], dhTable[1][3], dhTable[2][3], dhTable[3][3], dhTable[4][3], dhTable[5][3]]
-
-        # positive in front of square root assumes elbow up
-        theta3 = math.atan2(cosTheta3, math.sqrt(1 - cosTheta3**2))
-        theta3Adjusted = theta3 - math.atan2(r3, d4) # assumes that zero is right angle down
-
-        innerAngle = math.atan2(link3Hypotenuse*math.sin(theta3 - math.pi/2), r2 + link3Hypotenuse*math.cos(theta3 - math.pi/2))
-        theta2 = math.atan2(wristCenterZ - d1, math.sqrt(wristCenterX**2 + wristCenterY**2)) - innerAngle
-
-        # transform matrix from base to third link
-        t03 = calculateTransformToLink(createDHTable([theta1, theta2, theta3Adjusted, 0, 0, 0]), 3)
-
-        # rotation matrix of third link
-        r03 = np.array([t03[0][:3], t03[1][:3], t03[2][:3]])
-        # rotation matrix from third link to EE
-        r36 = np.matmul(np.linalg.inv(r03), desiredWristRotation)
-
-        theta5 = math.atan2(math.sqrt(1-r36[2][2]**2), r36[2][2])
-
-        theta4 = math.atan2(r36[1][2], r36[0][2])
-
-        theta6 = math.atan2(r36[2][1], -r36[2][0])
-
-        return [theta1, theta2, theta3Adjusted, theta4, theta5, theta6]
-
-    except Exception as ex:
-        print("The following error occured:", ex)
+    if abs(cosTheta3) > 1:  # cos(x) cannot be greater than 1
+        raise CannotReachTransform
+        #print("Can not reach transform")
         # return current joint angles
         return [dhTable[0][3], dhTable[1][3], dhTable[2][3], dhTable[3][3], dhTable[4][3], dhTable[5][3]]
+
+    # positive in front of square root assumes elbow up
+    theta3 = math.atan2(cosTheta3, math.sqrt(1 - cosTheta3**2))
+    theta3Adjusted = theta3 - math.atan2(r3, d4) # assumes that zero is right angle down
+
+    innerAngle = math.atan2(link3Hypotenuse*math.sin(theta3 - math.pi/2), r2 + link3Hypotenuse*math.cos(theta3 - math.pi/2))
+    theta2 = math.atan2(wristCenterZ - d1, math.sqrt(wristCenterX**2 + wristCenterY**2)) - innerAngle
+
+    # transform matrix from base to third link
+    t03 = calculateTransformToLink(createDHTable([theta1, theta2, theta3Adjusted, 0, 0, 0]), 3)
+
+    # rotation matrix of third link
+    r03 = np.array([t03[0][:3], t03[1][:3], t03[2][:3]])
+    # rotation matrix from third link to EE
+    r36 = np.matmul(np.linalg.inv(r03), desiredWristRotation)
+
+    theta5 = math.atan2(math.sqrt(1-r36[2][2]**2), r36[2][2])
+
+    theta4 = math.atan2(r36[1][2], r36[0][2])
+
+    theta6 = math.atan2(r36[2][1], -r36[2][0])
+
+    return [theta1, theta2, theta3Adjusted, theta4, theta5, theta6]
+
     

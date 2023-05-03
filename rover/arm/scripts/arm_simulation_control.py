@@ -94,8 +94,8 @@ def runNewJointState2(jointPublisherData, angles):
     # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
     newJointState.position = angles
     jointPublisherData.publish(newJointState)  # send data to be published
-    positionArray = framePosition() # Display End Effector position with a transform
-    displayEndEffectorTransform(positionArray)
+    # positionArray = framePosition() # Display End Effector position with a transform
+    # displayEndEffectorTransform(positionArray)
 
 
 if __name__ == "__main__":  # if used rosrun on this script then ...

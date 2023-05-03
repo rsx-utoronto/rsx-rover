@@ -21,6 +21,7 @@ global curArmAngles
 global ikMode
 global prevTargetTransform
 global prevTargetValues # [roll, pitch, yaw, [x, y, z]]
+global newTargetValues
 global jointPublisher
 global armAngles
 
@@ -141,6 +142,7 @@ def controlEEPosition(isButtonPressed, joystickAxis):
         numpy matrix of new end effector position 
     '''
     global prevTargetValues
+    global newTargetValues
     global ikMode
 
     newTarget = copy.deepcopy(prevTargetValues)
@@ -187,8 +189,8 @@ def controlEEPosition(isButtonPressed, joystickAxis):
     #     newRoll += scale2
 
     newTarget = [newRoll, newPitch, newYaw, [newX, newY, newZ]]
-    prevTargetValues = copy.deepcopy(newTarget)
     print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", newRoll, " pitch: ", newPitch, " yaw: ", newYaw)
+    newTargetValues = newTarget
 
     return ik.createEndEffectorTransform(newRoll, newPitch, newYaw, newTarget[3])
     
@@ -332,9 +334,6 @@ def updateDesiredArmSimulation(endEffectorTransform):
     global jointPublisher
     sim.runNewJointState2(jointPublisher, curArmAngles[:6])
 
-
-
-
 # Program Control
 
 def main():
@@ -347,36 +346,32 @@ def main():
     global ikMode
     global ikIteration
     global prevTargetTransform
+    global prevTargetValues
+    global newTargetValues
     
     isButtonPressed = getJoystickButtons()
     joystickAxes = getJoystickAxes()
-    
-    # if isButtonPressed["idk"]:
-    #     savePosition()
-    
-    # if isButtonPressed["idk"]:
-    #     modeIteration += 1
-    #     if modeIteration >= len(ikMode):
-    #         modeIteration = 0
-        
-    #     ikMode = IK_MODE[modeIteration]
-    
+
     dhTable = ik.createDHTable(curArmAngles)
 
     targetEEPos = controlEEPosition(isButtonPressed, joystickAxes)
 
-    targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-    simAngles = copy.deepcopy(targetAngles) 
-    targetAngles.append(controlGripperAngle(isButtonPressed))
-    curArmAngles = copy.deepcopy(targetAngles)
+    try:
+        targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+        simAngles = copy.deepcopy(targetAngles) 
+        targetAngles.append(controlGripperAngle(isButtonPressed))
+        curArmAngles = copy.deepcopy(targetAngles)
 
-    # publishNewAngles(targetAngles)
-    updateDesiredArmSimulation(simAngles[0:5])
-    ikAngles = Float32MultiArray()
-    ikAngles.data = targetAngles
-    armAngles.publish(ikAngles)
-    # prevTargetPos = copy.deepcopy(targetEEPos)
+        # publishNewAngles(targetAngles)
+        updateDesiredArmSimulation(simAngles[0:5])
+        ikAngles = Float32MultiArray()
+        ikAngles.data = targetAngles
+        armAngles.publish(ikAngles)
 
+        prevTargetTransform = copy.deepcopy(targetEEPos)
+        prevTargetValues = copy.deepcopy(newTargetValues)
+    except ik.CannotReachTransform:
+        print("Cannot reach outside arm workspace")
 
 # Main Area
 
