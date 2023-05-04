@@ -1,0 +1,10 @@
+obstacle_range: 10.0
+raytrace_range: 10.5
+footprint: [[x0, y0], [x1, y1], ... [xn, yn]]
+#robot_radius: ir_of_robot
+inflation_radius: 0.55
+
+observation_sources: point_cloud_sensor
+
+# Set to values for sim for now
+point_cloud_sensor: {sensor_frame: lidar_link, data_type: PointCloud2, topic: /os1_cloud_node/points, marking: true, clearing: true}
