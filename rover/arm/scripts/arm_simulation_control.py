@@ -6,6 +6,7 @@ import tf_conversions
 import tf2_ros
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
+from std_msgs.msg import Float64
 
 
 def anglePosition():
@@ -35,11 +36,27 @@ def startJointPublisher():
     '''
     Initiates arm_sim_control, uses rospy.Publisher to take in the joint states and returns jointPublisher
     '''
-    #rospy.init_node("arm_sim_control")  # start node
+    # rospy.init_node("arm_sim_control")  # start node
     # refrence to the output topic, you can have multiple in a script
     jointPublisher = rospy.Publisher("joint_states", JointState, queue_size=10)
     return jointPublisher
 
+def startGazeboJointControllers(numJoints):
+    ''' Starts to publishers for the joints in gazebo
+
+    Parameters
+    ----------
+    numJoints
+        the number of joints in the gazebo model
+    '''
+
+    gazeboPublisher = list()
+
+    for i in range(numJoints):
+        tempController = rospy.Publisher(f"/arm/joint{i}_position_controller/command", Float64, queue_size=10)
+        gazeboPublisher.append(tempController)
+    
+    return gazeboPublisher
 
 def runNewJointState(jointPublisherData):
     '''
@@ -48,12 +65,12 @@ def runNewJointState(jointPublisherData):
     rate = rospy.Rate(10)  # 10 hz
     while not rospy.is_shutdown():
         # data to be published
-        newJointState = JointState()
-        newJointState.header = Header()
-        newJointState.header.stamp = rospy.Time.now()
-        newJointState.name = ["Joint_1", "Joint_2", "Joint_3", "Joint_4", "Joint_5", "Joint_6"] # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
-        newJointState.position = anglePosition()
-        jointPublisherData.publish(newJointState)  # Send data to be published
+        # newJointState = JointState()
+        # newJointState.header = Header()
+        # newJointState.header.stamp = rospy.Time.now()
+        # newJointState.name = ["Joint_1", "Joint_2", "Joint_3", "Joint_4", "Joint_5", "Joint_6"] # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
+        # newJointState.position = anglePosition()
+        # jointPublisherData.publish(newJointState)  # Send data to be published
         positionArray = framePosition() # Display End Effector position with a transform
         displayEndEffectorTransform(positionArray)
         rate.sleep()  # Controls loop rate based on what is set in the rate variable
@@ -97,9 +114,23 @@ def runNewJointState2(jointPublisherData, angles):
     # positionArray = framePosition() # Display End Effector position with a transform
     # displayEndEffectorTransform(positionArray)
 
+def moveInGazebo(jointControllerPublishers, angles):
+    ''' Moves arm in Gazebo based on IK angles
+    
+    Paramters
+    ---------
+    jointControllerPublishers
+        list of publishers for each joint controller
+    angles
+        list of joint angle in same order as publishers
+    '''
+    
+    for i in range(len(jointControllerPublishers)):
+        jointControllerPublishers[i].publish(angles[i-1])
 
 if __name__ == "__main__":  # if used rosrun on this script then ...
     try:
+        rospy.init_node("arm_sim_control")  # start node
         jointPublisher = startJointPublisher()
         runNewJointState(jointPublisher)
 

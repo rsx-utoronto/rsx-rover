@@ -10,6 +10,7 @@ from std_msgs.msg import Header
 from std_msgs.msg import Float32MultiArray
 import json
 import copy
+from math import pi
 
 # Global Variables 
 
@@ -17,12 +18,14 @@ BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SE
 JOYSTICK_AXES_NAMES = ["L-Right", "L-Down", "L2", "R-Right", "R-Down", "R2"]
 IK_MODE = ["global", "relativeCamera", "relativeEndEffector", "forwardKinematics"]
 
+global gazebo_on
 global curArmAngles
 global ikMode
 global prevTargetTransform
 global prevTargetValues # [roll, pitch, yaw, [x, y, z]]
 global newTargetValues
 global jointPublisher
+global gazeboPublisher
 global armAngles
 
 movementSpeed = 1
@@ -170,7 +173,7 @@ def controlEEPosition(isButtonPressed, joystickAxis):
     
     # control roll, pitch, yaw
     if joystickAxis["R-Right"] != 0:
-        newYaw += joystickAxis["R-Right"]*scale2
+        newYaw -= joystickAxis["R-Right"]*scale2
     if joystickAxis["R-Down"] != 0:
         newPitch -= joystickAxis["R-Down"]*scale2
     if isButtonPressed["L1"]:
@@ -332,7 +335,15 @@ def updateDesiredArmSimulation(endEffectorTransform):
     '''
     global curArmAngles
     global jointPublisher
-    sim.runNewJointState2(jointPublisher, curArmAngles[:6])
+    global gazeboPublisher
+
+    # run function to illustrate target transformation here 
+
+    if gazebo_on:
+        curArmAngles[2] = curArmAngles[2] - pi/2
+        sim.moveInGazebo(gazeboPublisher, curArmAngles[:6])
+    else:
+        sim.runNewJointState2(jointPublisher, curArmAngles[:6])
 
 # Program Control
 
@@ -377,18 +388,25 @@ def main():
 
 if __name__ == "__main__":
     curArmAngles = [0, 0, 0, 0, 0, 0, 0]
-    prevTargetValues = [0, 0, 0, [250, 0, 450]]
+    prevTargetValues = [0, 0, 0, [0, 250, 450]]
 
     initializeJoystick()
 
     ikIteration = 0
     
     try:
+
         rospy.init_node("arm_master_control")
-        jointPublisher = sim.startJointPublisher()
-        armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
+        gazebo_on = rospy.get_param("/gazebo_on")
         rate = rospy.Rate(10) # run at 10Hz
+
+        armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
         rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
+        
+        if gazebo_on:
+            gazeboPublisher = sim.startGazeboJointControllers(6)
+        else:
+            jointPublisher = sim.startJointPublisher()
 
         # sets start target position equal to curArmAngles after they have been updated
         # while curArmAngles == [0, 0, 0, 0, 0, 0]:

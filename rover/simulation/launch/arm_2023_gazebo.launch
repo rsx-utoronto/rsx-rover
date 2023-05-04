@@ -1,4 +1,5 @@
 <launch>
+    <param name="gazebo_on" type="boolean" value="true"/>
     <!-- Load urdf into paramter server-->
     <param name="robot_description" command="$(find xacro)/xacro --inorder $(find rover)/rover/simulation/urdfs/BRUH_gazebo.xacro"/>
     <arg name="rvizconfig" default="$(find rover)/rover/simulation/rviz_config/arm_urdf.rviz"/>
@@ -21,6 +22,8 @@
     joint3_position_controller joint4_position_controller joint5_position_controller 
     joint6_position_controller joint_state_controller"/>
 
+    <arg name="ik_on" default="true"/>
+    <node name="arm_master_control" pkg="rover" type="arm_master_control.py" if="$(arg ik_on)" output="screen"/>
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub" respawn="false" output="screen">
         <remap from="/joint_states" to="/arm/joint_states"/>
     </node>
