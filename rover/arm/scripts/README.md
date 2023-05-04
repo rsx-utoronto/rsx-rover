@@ -32,28 +32,25 @@ python3 arm_master_can.py
 
 ## Inverse Kinematics
 
-### Terminal 1
+### Running for the First Time
 
 ```
 cd ~/rover_ws # or whatever you named the ros workspace 
 chmod +x src/rsx-rover/rover/arm/scripts/arm_master_control.py # makes file executable, only need to run the first time
-rosocre
 ```
 
-### Terminal 2
-
-Actual Inverse Kinematics
+### For use with Real Arm
 ```
 cd ~/rover_ws
 source devel/setup.bash
-rosrun rover arm_master_control.py
+roslaunch rover arm_2023_rviz.launch ik_on:=true
 ```
 
-### Terminal 3
+### For use in Gazebo
 
 The RViz simulation
 ```
 cd ~/rover_ws
 source devel/setup.bash
-roslaunch rover arm_2023_rviz.laucnh
+roslaunch rover arm_2023_gazebo.launch
 ```
