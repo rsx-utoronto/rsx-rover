@@ -83,7 +83,7 @@ def displayEndEffectorTransform(endEffectorPosition):
     br = tf2_ros.TransformBroadcaster()
     t = geometry_msgs.msg.TransformStamped()
     t.header.frame_id = "base_link"
-    t.child_frame_id = "end_effector"
+    t.child_frame_id = "target_position"
 
     posArray = endEffectorPosition
     t.header.stamp = rospy.Time.now()

@@ -7,7 +7,6 @@ import math
 
 class CannotReachTransform(Exception):
     """Exception Raised when transformation cannot be reached
-
     """
 
     def __init__(self, message="Transformation outside of robot workspace"):
@@ -274,8 +273,6 @@ def inverseKinematics(dhTable, targetPos):
 
     if abs(cosTheta3) > 1:  # cos(x) cannot be greater than 1
         raise CannotReachTransform
-        #print("Can not reach transform")
-        # return current joint angles
         return [dhTable[0][3], dhTable[1][3], dhTable[2][3], dhTable[3][3], dhTable[4][3], dhTable[5][3]]
 
     # positive in front of square root assumes elbow up

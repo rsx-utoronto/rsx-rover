@@ -336,8 +336,25 @@ def updateDesiredArmSimulation(endEffectorTransform):
     global curArmAngles
     global jointPublisher
     global gazeboPublisher
+    global newTargetValues
 
-    # run function to illustrate target transformation here 
+    tempTarget = copy.deepcopy(newTargetValues) # target transform scaled to rviz
+    tempX = tempTarget[3][0] # swap x and y coords
+    tempTarget[3][0] = tempTarget[3][1]
+    tempTarget[3][1] = tempX
+
+    # scale target transform
+    if tempTarget[3][0] >= 0:
+        tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0594
+    else:
+        tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0494
+    if tempTarget[3][1] >= 0:
+        tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.03
+    else:
+        tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.04
+    tempTarget[3][2] = (0.47/450)*tempTarget[3][2]
+
+    sim.displayEndEffectorTransform(tempTarget) # display target transform
 
     if gazebo_on:
         curArmAngles[2] = curArmAngles[2] - pi/2
@@ -388,35 +405,35 @@ def main():
 
 if __name__ == "__main__":
     curArmAngles = [0, 0, 0, 0, 0, 0, 0]
-    prevTargetValues = [0, 0, 0, [0, 250, 450]]
+    prevTargetValues = [0, 0, 0, [250, 0, 450]]
 
     initializeJoystick()
 
     ikIteration = 0
     
-    try:
+    # try:
 
-        rospy.init_node("arm_master_control")
-        gazebo_on = rospy.get_param("/gazebo_on")
-        rate = rospy.Rate(10) # run at 10Hz
+    rospy.init_node("arm_master_control")
+    gazebo_on = rospy.get_param("/gazebo_on")
+    rate = rospy.Rate(10) # run at 10Hz
 
-        armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
-        rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
-        
-        if gazebo_on:
-            gazeboPublisher = sim.startGazeboJointControllers(6)
-        else:
-            jointPublisher = sim.startJointPublisher()
+    armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
+    rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
+    
+    if gazebo_on:
+        gazeboPublisher = sim.startGazeboJointControllers(6)
+    else:
+        jointPublisher = sim.startJointPublisher()
 
-        # sets start target position equal to curArmAngles after they have been updated
-        # while curArmAngles == [0, 0, 0, 0, 0, 0]:
-        #     tempDHTable = ik.createDHTable(curArmAngles)
-        #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
+    # sets start target position equal to curArmAngles after they have been updated
+    # while curArmAngles == [0, 0, 0, 0, 0, 0]:
+    #     tempDHTable = ik.createDHTable(curArmAngles)
+    #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
 
-        while not rospy.is_shutdown():
-            main()
-            rate.sleep()
+    while not rospy.is_shutdown():
+        main()
+        rate.sleep()
 
-    except Exception as ex:
-        print("The following error has occured: ")
-        print(ex)
+    # except Exception as ex:
+    #     print("The following error has occured: ")
+    #     print(ex)

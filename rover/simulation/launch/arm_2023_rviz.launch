@@ -1,5 +1,6 @@
 <launch>
    <!-- Load the urdf into the parameter server. -->
+   <param name="gazebo_on" type="boolean" value="false"/>
    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find rover)/rover/simulation/urdfs/BRUH.xacro"/>
 
    <arg name="ik_on" default="false"/>
@@ -13,3 +14,4 @@
 	<node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true"/>
    
 </launch>
+   
