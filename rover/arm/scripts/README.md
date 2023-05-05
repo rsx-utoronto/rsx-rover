@@ -47,8 +47,6 @@ roslaunch rover arm_2023_rviz.launch ik_on:=true
 ```
 
 ### For use in Gazebo
-
-The RViz simulation
 ```
 cd ~/rover_ws
 source devel/setup.bash
