@@ -14,6 +14,13 @@ find_package(catkin REQUIRED COMPONENTS
   message_filters
 )
 
+find_package(PCL 1.2 REQUIRED)
+
+# Variables set by the pcl config.cmake.in file
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -202,6 +209,8 @@ include_directories(
 add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
 target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 
+add_executable(lidar_pcl_subscriber rover/autonomy/scripts/point_cloud_subscriber.cpp rover/autonomy/scripts/traversability_score_helpers.cpp)
+target_link_libraries(lidar_pcl_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
 catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-
