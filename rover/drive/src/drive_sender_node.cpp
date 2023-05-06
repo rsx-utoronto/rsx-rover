@@ -17,27 +17,29 @@ class TeleopRover
 public:
 	TeleopRover();
 	void publishDrive();
+	void pubConstSpeed();
 
 private:
 	void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
+	void networkCallback(const std_msgs::Bool::ConstPtr& net_stat);
 
-	ros::NodeHandle nh_;
-	double throttle_min = -1;
-	double throttle_max = 1
-	double turn_min = -1;
-	double turn_max = 1;
+	ros::NodeHandle nh;
+	// double throttle_min = -1;
+	// double throttle_max = 1
+	// double turn_min = -1;
+	// double turn_max = 1;
 	double robot_radius = 0.8;
 	double MAX_LINEAR_SPEED = 2.5;
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
-	int linear_, angular_, right_left_, forward_backward_, yaw_;
-	double l_scale_, a_scale_;
 	double gear = 0; // set to 0 initially
 	ros::Publisher drive_pub_;
-	ros::Subscriber joy_sub_;
+	ros::Subscriber joy_sub;
+	ros::Subscriber net_sub;
+	int network_status = 1;
+	geometry_msgs::Twist twist;
 };
 
-TeleopRover::TeleopRover() : linear_(1),
-							 angular_(2)
+TeleopRover::TeleopRover()
 {
 	TeleopRover::network_status = false;
 	drive_pub_ = nh.advertise<geometry_msgs::Twist>("drive", 1);
@@ -51,16 +53,17 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	// indexs for controller values
 	int R2 = 5;
 	int L2 = 2;
-	int LS_x = 0;
-	int LS_y = 1;
+	int LS = 0;
+	// int LS_y = 1;
 	int dec_speed = 4;
 	int inc_speed = 5;
 
 	// Values from Controller
 	double posThrottle = joy->axes[R2];
 	double negThrottle = joy->axes[L2];
-	double turnFactor_x = static_cast<double>(joy->axes[LS_x]);
-	double turnFactor_y = static_cast<double>(joy->axes[LS_y]);
+	// double turnFactor_x = static_cast<double>(joy->axes[LS_x]);
+	// double turnFactor_y = static_cast<double>(joy->axes[LS_y]);
+	double turnFactor = static_cast<double>(joy->axes[LS]);
 	double lin_vel;
 
 	double dispVal = 0;
@@ -129,10 +132,19 @@ void TeleopRover::networkCallback(const std_msgs::Bool::ConstPtr& net_stat){
 	
 }
 
+void TeleopRover::pubConstSpeed() {
+	geometry_msgs::Twist test_msg;
+	test_msg.linear.x = 1.0;
+	drive_pub_.publish(test_msg);
+}
+
 
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "drive_sender_falcon");
 	TeleopRover drive_sender;
+	// while (ros::ok()){
+	// 	drive_sender.pubConstSpeed();
+	// }
 	ros::spin();
 }
