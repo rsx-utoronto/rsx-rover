@@ -219,7 +219,7 @@ def createDHTable(jointAngles):
                         [69.55, math.pi/2, 0, jointAngles[2]],
                         [0, -math.pi/2, 448.125, jointAngles[3]],
                         [0, math.pi/2, 0, jointAngles[4]],
-                        [0, 0, 253.125, jointAngles[5]]])
+                        [0, 0, 155, jointAngles[5]]]) #253.125
     return DHTable
 
 

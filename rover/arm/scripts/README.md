@@ -50,5 +50,5 @@ roslaunch rover arm_2023_rviz.launch ik_on:=true
 ```
 cd ~/rover_ws
 source devel/setup.bash
-roslaunch rover arm_2023_gazebo.launch
+roslaunch rover arm_2023_gazebo.launch ik_on:=true
 ```

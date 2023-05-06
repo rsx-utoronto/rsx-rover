@@ -218,7 +218,7 @@ def controlGripperAngle(isButtonPressed):
     global curArmAngles
     gripperAngle = curArmAngles[6]
     # Tune amount that angle is changed with each cycle
-    angleIncrement = 1
+    angleIncrement = 0.01
 
     # If both buttons are pressed at the same time, angle will not change
     if isButtonPressed["SQUARE"] == 1 and isButtonPressed["X"] != 1:
@@ -226,6 +226,11 @@ def controlGripperAngle(isButtonPressed):
 
     if isButtonPressed["X"] == 1 and isButtonPressed["SQUARE"] != 1:
         gripperAngle -= angleIncrement
+
+    if gripperAngle < -0.05:
+        gripperAngle = -0.05
+    if gripperAngle > 0:
+        gripperAngle = 0
 
     return gripperAngle
 
@@ -323,7 +328,7 @@ def updateLiveArmSimulation(data):
 
     pass
 
-def updateDesiredArmSimulation(endEffectorTransform):
+def updateDesiredArmSimulation(curArmAngles):
     ''' Updates RViz simulation with desired arm position.
 
     Displays a tf2 transform of the end effector position.
@@ -333,7 +338,6 @@ def updateDesiredArmSimulation(endEffectorTransform):
     endEffectorTransform:
         numpy matrix that corresponds to end effector transform 
     '''
-    global curArmAngles
     global jointPublisher
     global gazeboPublisher
     global newTargetValues
@@ -356,11 +360,14 @@ def updateDesiredArmSimulation(endEffectorTransform):
 
     sim.displayEndEffectorTransform(tempTarget) # display target transform
 
+    curArmAngles.append(curArmAngles[6]) # make gripper angles equal
     if gazebo_on:
-        curArmAngles[2] = curArmAngles[2] - pi/2
-        sim.moveInGazebo(gazeboPublisher, curArmAngles[:6])
+        curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
+        # curArmAngles[6] = -curArmAngles[6]
+        print(curArmAngles)
+        sim.moveInGazebo(gazeboPublisher, curArmAngles)
     else:
-        sim.runNewJointState2(jointPublisher, curArmAngles[:6])
+        sim.runNewJointState2(jointPublisher, curArmAngles)
 
 # Program Control
 
@@ -389,9 +396,9 @@ def main():
         simAngles = copy.deepcopy(targetAngles) 
         targetAngles.append(controlGripperAngle(isButtonPressed))
         curArmAngles = copy.deepcopy(targetAngles)
-
+        
         # publishNewAngles(targetAngles)
-        updateDesiredArmSimulation(simAngles[0:5])
+        updateDesiredArmSimulation(curArmAngles)
         ikAngles = Float32MultiArray()
         ikAngles.data = targetAngles
         armAngles.publish(ikAngles)
@@ -421,7 +428,7 @@ if __name__ == "__main__":
     rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
     
     if gazebo_on:
-        gazeboPublisher = sim.startGazeboJointControllers(6)
+        gazeboPublisher = sim.startGazeboJointControllers(9)
     else:
         jointPublisher = sim.startJointPublisher()
 
