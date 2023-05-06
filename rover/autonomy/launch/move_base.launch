@@ -3,11 +3,11 @@
    <master auto="start"/>
 
    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
-    <rosparam file="$(find rover)/autonomy/config/costmap_common_params.yaml" command="load" ns="global_costmap" /> 
-    <rosparam file="$(find rover)/autonomy/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
-    <rosparam file="$(find rover)/autonomy/config/local_costmap_params.yaml" command="load" />
-    <rosparam file="$(find rover)/autonomy/config/global_costmap_params.yaml" command="load" /> 
-    <rosparam file="$(find rover)/autonomy/config/base_local_planner_params.yaml" command="load" />
+    <rosparam file="$(find rover)/rover/autonomy/config/costmap_common.yaml" command="load" ns="global_costmap" /> 
+    <rosparam file="$(find rover)/rover/autonomy/config/costmap_common.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find rover)/rover/autonomy/config/local_costmap.yaml" command="load" />
+    <rosparam file="$(find rover)/rover/autonomy/config/global_costmap.yaml" command="load" /> 
+    <rosparam file="$(find rover)/rover/autonomy/config/base_local_planner.yaml" command="load" />
     <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
     <param name="controller_frequency" value="10.0" />
    </node>
