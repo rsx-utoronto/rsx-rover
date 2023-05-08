@@ -41,7 +41,7 @@ def generate_data_packet (data_list : list):
 
     @parameters
 
-    data_list (list(float)): List containing the anglular positions for each motor in the order
+    data_list (list(float)): List containing the anglular positions (in degrees) for each motor in the order
     """
     
     # A variable to keep count of joint number
@@ -129,7 +129,7 @@ def read_pos_from_spark():
                 CURR_POS[index] = arm_can.read_can_message(msg.data, api)
             # Ending thread lock    
              
-def cmp_goal_curr_pos(spark_input : list, dt : float):
+def cmp_goal_curr_pos(spark_input : list, dt : float = 1):
     '''
     (list(int)) -> (list(int))
 
@@ -215,9 +215,8 @@ if __name__=="__main__":
 
         # Comparison between spark_input and CURR_POS for safety
         ################# TO DO ###################
-        spark_input = cmp_goal_curr_pos(spark_input, 0.00015115737915039062)
+        spark_input = cmp_goal_curr_pos(spark_input)
 
-        print(hex(spark_input[2][0]), hex(spark_input[2][1]), hex(spark_input[2][2]), hex(spark_input[2][3]))
         # Sending data packets one by one
         for i in range(1, len(spark_input)+1):
             

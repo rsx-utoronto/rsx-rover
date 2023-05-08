@@ -10,98 +10,55 @@ import struct
 # CAN bus instance
 global BUS
 
-# CANSpark APIs;
-CMD_API_SETPNT_SET = 0x001;
-CMD_API_DC_SET = 0x002;
-CMD_API_SPD_SET = 0x012;
-CMD_API_SMART_VEL_SET = 0x013;
-CMD_API_POS_SET = 0x032;
-CMD_API_VOLT_SET = 0x042; 
-CMD_API_CURRENT_SET = 0x043;
-CMD_API_SMARTMOTION_SET = 0x052;
-CMD_API_STAT0 = 0x060;
-CMD_API_STAT1 = 0x061;
-CMD_API_STAT2 = 0x062;
-CMD_API_STAT3 = 0x063;
-CMD_API_STAT4 = 0x064;
-CMD_API_STAT5 = 0x065;
-CMD_API_STAT6 = 0x066;
-CMD_API_CLEAR_FAULTS = 0x06E;
-CMD_API_DRV_STAT = 0x06A;
-CMD_API_BURN_FLASH = 0x072;
-CMD_API_SET_FOLLOWER = 0x073;
-CMD_API_FACTORY_DEFAULT = 0x074;
-CMD_API_FACTORY_RESET = 0x075;
-CMD_API_IDENTIFY = 0x076;
-CMD_API_NACK = 0x080;
-CMD_API_ACK = 0x081;
-CMD_API_BROADCAST = 0x090;
-CMD_API_HEARTBEAT = 0x092;
-CMD_API_SYNC = 0x093;
-CMD_API_ID_QUERY = 0x094;
-CMD_API_ID_ASSIGN = 0x095;
-CMD_API_FIRMWARE = 0x098;
-CMD_API_ENUM = 0x099;
-CMD_API_LOCK = 0x09B;
-CMD_API_LOCKB = 0x0B1;
-CMD_API_NONRIO_HB = 0x0B2;
+# CANSpark APIs
+CMD_API_SETPNT_SET = 0x001
+CMD_API_DC_SET = 0x002
+CMD_API_SPD_SET = 0x012
+CMD_API_SMART_VEL_SET = 0x013
+CMD_API_POS_SET = 0x032
+CMD_API_VOLT_SET = 0x042 
+CMD_API_CURRENT_SET = 0x043
+CMD_API_SMARTMOTION_SET = 0x052
+CMD_API_STAT0 = 0x060
+CMD_API_STAT1 = 0x061
+CMD_API_STAT2 = 0x062
+CMD_API_STAT3 = 0x063
+CMD_API_STAT4 = 0x064
+CMD_API_STAT5 = 0x065
+CMD_API_STAT6 = 0x066
+CMD_API_CLEAR_FAULTS = 0x06E
+CMD_API_DRV_STAT = 0x06A
+CMD_API_BURN_FLASH = 0x072
+CMD_API_SET_FOLLOWER = 0x073
+CMD_API_FACTORY_DEFAULT = 0x074
+CMD_API_FACTORY_RESET = 0x075
+CMD_API_IDENTIFY = 0x076
+CMD_API_NACK = 0x080
+CMD_API_ACK = 0x081
+CMD_API_BROADCAST = 0x090
+CMD_API_HEARTBEAT = 0x092
+CMD_API_SYNC = 0x093
+CMD_API_ID_QUERY = 0x094
+CMD_API_ID_ASSIGN = 0x095
+CMD_API_FIRMWARE = 0x098
+CMD_API_ENUM = 0x099
+CMD_API_LOCK = 0x09B
+CMD_API_LOCKB = 0x0B1
+CMD_API_NONRIO_HB = 0x0B2
 
-CMD_API_SWDL_BOOTLOADER = 0x1FF;
-CMD_API_SWDL_DATA = 0x09C;
-CMD_API_SWDL_CHKSUM = 0x09D;
-CMD_API_SWDL_RETRANSMIT = 0x09E;
+CMD_API_SWDL_BOOTLOADER = 0x1FF
+CMD_API_SWDL_DATA = 0x09C
+CMD_API_SWDL_CHKSUM = 0x09D
+CMD_API_SWDL_RETRANSMIT = 0x09E
 
-CMD_API_MECH_POS = 0x0A0;
-CMD_API_I_ACCUM = 0x0A2;
-CMD_API_ANALOG_POS = 0x0A3;
-CMD_API_ALT_ENC_POS = 0x0A4;
-CMD_API_PARAM_ACCESS = 0x300;
+CMD_API_MECH_POS = 0x0A0
+CMD_API_I_ACCUM = 0x0A2
+CMD_API_ANALOG_POS = 0x0A3
+CMD_API_ALT_ENC_POS = 0x0A4
+CMD_API_PARAM_ACCESS = 0x300
 
 ########## CLASSES ##########
 
-class Messenger(can.Listener):
-	"""
-	Subclass of Listener class in python-can module. Purpose of this
-	class is to override the on_message_received() method of can.Listener().
-
-	No required inputs for the class 
-	"""
-
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
-
-	def on_message_received(self, msg: can.Message):
-		'''
-		(can.Message) -> (bytearray, int)
-
-		Calls the read_can_message function for *significant* message IDs.
-		Returns the message decoded as well as the associated API from these 
-		significant messages. Returns -1 for both if the can frame does not 
-		have a significant message ID
-
-		*significant IDs*
-			1. Status message number 1 - bits [15:6] = 0x061 (CMD_API_STAT1)
-			2. Status message number 2 - bits [15:6] = 0x062 (CMD_API_STAT2)
-			**TO ADD**
-			- Specific Parameter Accesses
-		
-		@parameters
-
-		msg (can.Message) = The complete can frame packet
-		'''
-		
-		# Extracting the API from can_id
-		can_id = msg.arbitration_id
-		api = (can_id >> 6) & 0b00000000000001111111111
-
-		# Can include more APIs in the future
-		if api == CMD_API_STAT1 or api == CMD_API_STAT2:
-			return (msg.data, api)
-		
-		else:
-			return (-1, -1)
-		
-		
 ########## HELPER FUNCTIONS ##########
 
 def generate_can_id(dev_id : int, api : int, 
@@ -135,7 +92,7 @@ def pos_to_sparkdata(f : float):
     """
     float -> list()
 
-    Takes in a float position value and returns the data packet in the form that
+    Takes in a float position value (number of rotations) and returns the data packet in the form that
     SparkMAX requires
 
     @parameters:
@@ -356,7 +313,7 @@ def read_can_message(data, api):
 			# Converting the extracted bytes to hex
 			pos_hex = str(hex(pos_float))
 
-			# Check if we have 16 hex characters in pos_hex, if not then pad it with zeros
+			# Check if we have 8 hex characters in pos_hex, if not then pad it with zeros
 			if len(pos_hex) != 10:
 				pos_hex = format(pos_float, '#010x')
 			
