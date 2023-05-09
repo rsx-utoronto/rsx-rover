@@ -1,9 +1,9 @@
 <?xml version="1.0" ?>
 <robot name="bruh_with_EE" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-<!-- <xacro:include filename="$(find bruh_with_EE_description)/urdf/materials.xacro" />
-<xacro:include filename="$(find bruh_with_EE_description)/urdf/bruh_with_EE.trans" />
-<xacro:include filename="$(find bruh_with_EE_description)/urdf/bruh_with_EE.gazebo" /> -->
+<xacro:include filename="$(find rover)/rover/simulation/urdfs/bruh_with_EE_info/materials.xacro" />
+<!-- <xacro:include filename="$$(find rover)/rover/simulation/urdfs/bruh_with_EE_info/bruh_with_EE.trans" /> -->
+<xacro:include filename="$(find rover)/rover/simulation/urdfs/bruh_with_EE_info/bruh_with_EE.gazebo" />
 <link name="base_link">
   <inertial>
     <origin xyz="0.049999999999908465 0.03732491617294113 0.003125" rpy="0 0 0"/>

@@ -27,6 +27,7 @@ global newTargetValues
 global jointPublisher
 global gazeboPublisher
 global armAngles
+global positionOrForceValueEE
 
 movementSpeed = 1
 
@@ -218,7 +219,7 @@ def controlGripperAngle(isButtonPressed):
     global curArmAngles
     gripperAngle = curArmAngles[6]
     # Tune amount that angle is changed with each cycle
-    angleIncrement = 0.01
+    angleIncrement = positionOrForceValueEE/5
 
     # If both buttons are pressed at the same time, angle will not change
     if isButtonPressed["SQUARE"] == 1 and isButtonPressed["X"] != 1:
@@ -227,10 +228,10 @@ def controlGripperAngle(isButtonPressed):
     if isButtonPressed["X"] == 1 and isButtonPressed["SQUARE"] != 1:
         gripperAngle -= angleIncrement
 
-    if gripperAngle < -0.05:
-        gripperAngle = -0.05
-    if gripperAngle > 0:
-        gripperAngle = 0
+    if gripperAngle < -positionOrForceValueEE:
+        gripperAngle = -positionOrForceValueEE
+    if gripperAngle > positionOrForceValueEE:
+        gripperAngle = positionOrForceValueEE
 
     return gripperAngle
 
@@ -412,7 +413,7 @@ def main():
 
 if __name__ == "__main__":
     curArmAngles = [0, 0, 0, 0, 0, 0, 0]
-    prevTargetValues = [0, 0, 0, [250, 0, 450]]
+    prevTargetValues = [0, pi, 0, [250, 0, 450]] # start position
 
     initializeJoystick()
 
@@ -428,8 +429,10 @@ if __name__ == "__main__":
     rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
     
     if gazebo_on:
+        positionOrForceValueEE = 0.04
         gazeboPublisher = sim.startGazeboJointControllers(9)
     else:
+        positionOrForceValueEE = 0.04
         jointPublisher = sim.startJointPublisher()
 
     # sets start target position equal to curArmAngles after they have been updated
