@@ -129,7 +129,7 @@ def read_pos_from_spark():
                 CURR_POS[index] = arm_can.read_can_message(msg.data, api)
             # Ending thread lock    
              
-def cmp_goal_curr_pos(spark_input : list, dt : float = 1):
+def cmp_goal_curr_pos(spark_input : list, dt : float = 0.1):
     '''
     (list(int)) -> (list(int))
 
@@ -140,6 +140,10 @@ def cmp_goal_curr_pos(spark_input : list, dt : float = 1):
 
     spark_input (list(int)): Input positions for the motors
     '''
+
+    # Multiplying factors
+    factor = [6, 8, 1.5, 0.5, 1/3, 1/3, 1/5]
+
     # Starting thread lock
     with lock:
 
@@ -152,7 +156,7 @@ def cmp_goal_curr_pos(spark_input : list, dt : float = 1):
                 float_val = arm_can.read_can_message(spark_input[i], arm_can.CMD_API_STAT2)
 
                 # Doing comparisons for safety
-                if float_val < (CURR_POS[i] - 3 * speed_limit[i] * dt) or float_val > (CURR_POS[i] + 3 * speed_limit[i] * dt):
+                if float_val < (CURR_POS[i] - factor[i] * speed_limit[i] * dt) or float_val > (CURR_POS[i] + factor[i] * speed_limit[i] * dt):
                     spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
             print("CURR:", CURR_POS)
             return spark_input
@@ -207,14 +211,13 @@ if __name__=="__main__":
         input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
         t = time.time()
 
-        # Printing input angles from remote controller
-        print(input_angles)
+        # Printing input angles from remote controller for debugging
+        #print(input_angles)
 
         # Converting received SparkMAX angles to SparkMAX data packets
         spark_input = generate_data_packet(input_angles[:7])
 
         # Comparison between spark_input and CURR_POS for safety
-        ################# TO DO ###################
         spark_input = cmp_goal_curr_pos(spark_input)
 
         # Sending data packets one by one
