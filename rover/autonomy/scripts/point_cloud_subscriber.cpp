@@ -1,8 +1,9 @@
 /* Subscribes to lidar to receive point cloud data */
 
 #include "ros/ros.h"
-#include "traversability_score_helpers.h"
-
+//#include "traversability_score_helpers.h"
+#include "pcl_traversibility_score.h"
+#include "segment_pcl.h"
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -16,10 +17,13 @@ void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg) {
     pcl::fromROSMsg(*cloud_msg, *cloud);
 
     /* segment point cloud here */
+    // std::cout << "dimensions: "<< cloud->width << " " << cloud->height << "\n";
+    
+    segment_pcl(cloud, 10);
 
     // calculate the traversability score
-    double score = calculateTraversabilityScore(cloud);
-    std::cout << "traversability score: " << score << std::endl;
+    // double score = calculateTraversabilityScore(cloud);
+    // std::cout << "traversability score: " << score << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -28,7 +32,8 @@ int main(int argc, char** argv) {
     ros::NodeHandle nh;
 
     // Create a ROS Subscriber to lidar with a queue_size of 1 and a callback function to cloud_cb
-    ros::Subscriber sub = nh.subscribe("Lidar topic name?", 1, cloud_cb);
+    // ros::Subscriber sub = nh.subscribe("/ouster/points", 1, cloud_cb);
+    ros::Subscriber sub = nh.subscribe("/velodyne_points", 1, cloud_cb);
 
     ros::spin();
 
