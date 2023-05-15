@@ -219,7 +219,7 @@ def controlGripperAngle(isButtonPressed):
     global curArmAngles
     gripperAngle = curArmAngles[6]
     # Tune amount that angle is changed with each cycle
-    angleIncrement = positionOrForceValueEE/5
+    angleIncrement = 0.001
 
     # If both buttons are pressed at the same time, angle will not change
     if isButtonPressed["SQUARE"] == 1 and isButtonPressed["X"] != 1:
@@ -228,10 +228,10 @@ def controlGripperAngle(isButtonPressed):
     if isButtonPressed["X"] == 1 and isButtonPressed["SQUARE"] != 1:
         gripperAngle -= angleIncrement
 
-    if gripperAngle < -positionOrForceValueEE:
-        gripperAngle = -positionOrForceValueEE
-    if gripperAngle > positionOrForceValueEE:
-        gripperAngle = positionOrForceValueEE
+    if gripperAngle < -0.04:
+        gripperAngle = -0.04
+    if gripperAngle > 0:
+        gripperAngle = 0
 
     return gripperAngle
 
@@ -419,31 +419,28 @@ if __name__ == "__main__":
 
     ikIteration = 0
     
-    # try:
+    try:
+        rospy.init_node("arm_master_control")
+        gazebo_on = rospy.get_param("/gazebo_on")
+        rate = rospy.Rate(10) # run at 10Hz
 
-    rospy.init_node("arm_master_control")
-    gazebo_on = rospy.get_param("/gazebo_on")
-    rate = rospy.Rate(10) # run at 10Hz
+        armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
+        rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
 
-    armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
-    rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
-    
-    if gazebo_on:
-        positionOrForceValueEE = 0.04
-        gazeboPublisher = sim.startGazeboJointControllers(9)
-    else:
-        positionOrForceValueEE = 0.04
-        jointPublisher = sim.startJointPublisher()
+        if gazebo_on:
+            gazeboPublisher = sim.startGazeboJointControllers(9)
+        else:
+            jointPublisher = sim.startJointPublisher()
 
-    # sets start target position equal to curArmAngles after they have been updated
-    # while curArmAngles == [0, 0, 0, 0, 0, 0]:
-    #     tempDHTable = ik.createDHTable(curArmAngles)
-    #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
+        # sets start target position equal to curArmAngles after they have been updated
+        # while curArmAngles == [0, 0, 0, 0, 0, 0]:
+        #     tempDHTable = ik.createDHTable(curArmAngles)
+        #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
 
-    while not rospy.is_shutdown():
-        main()
-        rate.sleep()
+        while not rospy.is_shutdown():
+            main()
+            rate.sleep()
 
-    # except Exception as ex:
-    #     print("The following error has occured: ")
-    #     print(ex)
+    except Exception as ex:
+        print("The following error has occured: ")
+        print(ex)
