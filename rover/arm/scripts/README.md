@@ -40,10 +40,23 @@ chmod +x src/rsx-rover/rover/arm/scripts/arm_master_control.py # makes file exec
 ```
 
 ### For use with Real Arm
-```
+``` 
 cd ~/rover_ws
 source devel/setup.bash
 roslaunch rover arm_2023_rviz.launch ik_on:=true
+```
+
+### Gazebo Prereqs
+
+This is only needed to allow the griper to pickup objects in gazebo. I use a [plugin](https://github.com/JenniferBuehler/gazebo-pkgs) by Jennifer Buehler to allow the end-effector pick up stuff. Run the following commands to install the plugin (I lifted them from the github)
+
+```
+sudo apt install ros-noetic-gazebo-ros ros-noetic-eigen-conversions ros-noetic-object-recognition-msgs ros-noetic-roslint
+cd ~/rover_ws/src # or whatever workspace you put the rover workspace in
+git clone https://github.com/JenniferBuehler/general-message-pkgs.git
+git clone https://github.com/JenniferBuehler/gazebo-pkgs.git
+cd ..
+catkin_make
 ```
 
 ### For use in Gazebo
