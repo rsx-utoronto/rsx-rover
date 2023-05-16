@@ -391,15 +391,15 @@
 <link name="camera_optical"/>
 
 <joint name="camera_joint" type="fixed">
-  <parent link="Link_4"/>
+  <parent link="Link_6"/>
   <child link="camera_link"/>
-  <origin xyz="0 0.1 0.4" rpy="0 1.57 0"/> <!--red green blue-->
+  <origin xyz="0 0.1 0" rpy="1.571 -1.571 1.571"/> <!--red green blue-->
 </joint>
 
 <joint name="optical_joint" type="fixed">
   <parent link="camera_link"/>
   <child link="camera_optical"/>
-  <origin xyz="0 0 0" rpy="3.1415 0 0"/>
+  <origin xyz="0 0 0" rpy="-1.571 0 -1.571"/>
 </joint>
 
 <gazebo reference="camera_link">
