@@ -13,6 +13,7 @@ def main():
     while not rospy.is_shutdown():
         rospy.Subscriber('gui', Bool, callback, queue_size=1)
         rospy.Subscriber('slider', Float64, callback, queue_size=1)
+        rospy.Subscriber('slider2', Float64, callback, queue_size=1)
     
         time.sleep(0.1)
 
