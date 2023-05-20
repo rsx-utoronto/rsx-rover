@@ -69,38 +69,12 @@ def generate_data_packet (data_list : list):
         else:
             reduction = 10
 
-        # Checking which joint to move
-        if joint_num == 1:
-            angle = angle/360 * reduction
-            spark_data.append(arm_can.pos_to_sparkdata(angle))
-        
-        elif joint_num == 2:
-            angle = angle/360 * reduction
-            spark_data.append(arm_can.pos_to_sparkdata(angle))
+        # Converting the angle to spark data
+        angle = angle/360 * reduction
+        spark_data.append(arm_can.pos_to_sparkdata(angle))
 
-        elif joint_num == 3:
-            angle = angle/360 * reduction
-            spark_data.append(arm_can.pos_to_sparkdata(angle))
-        
-        elif joint_num == 4:
-            angle = angle/360 * reduction
-            spark_data.append(arm_can.pos_to_sparkdata(angle))
-        
-        elif joint_num == 5:
-            angle = angle/360 * reduction
-            spark_data.append(arm_can.pos_to_sparkdata(angle))
-
-        elif joint_num == 6:
-            angle = angle/360 * reduction
-            spark_data.append(arm_can.pos_to_sparkdata(angle))
-
-        elif joint_num == 7:
-            angle = angle/360 * reduction
-            spark_data.append(arm_can.pos_to_sparkdata(angle))
-
-        else:
-            print("Error: Reaching infinite loop/Out of Index")
-            break
+        if 5 == joint_num:
+            print(angle)
     
     return spark_data
 
@@ -142,7 +116,7 @@ def cmp_goal_curr_pos(spark_input : list, dt : float = 0.1):
     '''
 
     # Multiplying factors
-    factor = [6, 8, 1.5, 0.5, 1/3, 1/3, 1/5]
+    factor = [0.6, 0.8, 0.15, 0.05, 1/30, 1/30, 1/50]
 
     # Starting thread lock
     with lock:
@@ -157,8 +131,17 @@ def cmp_goal_curr_pos(spark_input : list, dt : float = 0.1):
 
                 # Doing comparisons for safety
                 if float_val < (CURR_POS[i] - factor[i] * speed_limit[i] * dt) or float_val > (CURR_POS[i] + factor[i] * speed_limit[i] * dt):
-                    spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
-            print("CURR:", CURR_POS)
+
+                    # Offset the input value
+                    offset = float_val - CURR_POS[i]
+                    float_val -= offset
+                    spark_input[i] = arm_can.pos_to_sparkdata(float_val)
+
+                    # For debugging safety code, you can uncomment this
+                    #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
+
+            print("CURR:", CURR_POS[4])
+            print("Input:", arm_can.read_can_message(spark_input[4], arm_can.CMD_API_STAT2))
             return spark_input
         
         else:
