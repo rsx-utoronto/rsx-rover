@@ -1,6 +1,6 @@
 TebLocalPlannerROS:
 
- odom_topic: /odom/ekf/enc_imu
+ odom_topic: /robot_base_velocity_controller/odom
  map_frame: /odom
     
  # Trajectory

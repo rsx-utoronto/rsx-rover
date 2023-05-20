@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <sdf version="1.5">
-    <model name="Atacama Desert Heightmap">
+    <model name="drumheller">
       <static>true</static>
       <link name="link">
         <collision name="collision">
           <geometry>
             <heightmap>
-              <uri>model://heightmap/materials/textures/atacama_desert_heightmap.png</uri>
+              <uri>model://drumheller/materials/textures/drumheller.png</uri>
               <size>129 129 10</size>
               <pos>0 0 0</pos>
             </heightmap>
@@ -39,7 +39,7 @@
                 <min_height>4</min_height>
                 <fade_dist>5</fade_dist>
               </blend>
-              <uri>model://heightmap/materials/textures/atacama_desert_heightmap.png</uri>
+              <uri>model://drumheller/materials/textures/drumheller.png</uri>
               <size>129 129 10</size>
               <pos>0 0 0</pos>
             </heightmap>

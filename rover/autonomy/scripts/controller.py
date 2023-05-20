@@ -25,7 +25,7 @@ def newOdom(msg):
 rospy.init_node("speed_controller")
 
 sub = rospy.Subscriber("/odom/ekf/enc_imu", Odometry, newOdom)
-pub = rospy.Publisher("/drive", Twist, queue_size = 1)
+pub = rospy.Publisher("/robot_base_velocity_controller/cmd_vel", Twist, queue_size = 1)
 pub_error = rospy.Publisher("/robot_base_velocity_controller/error", Float32, queue_size = 1)
 
 speed = Twist()
