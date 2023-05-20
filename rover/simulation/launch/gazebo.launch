@@ -2,8 +2,8 @@
   <rosparam command="load" file="$(find rover)/rover/simulation/config/ekf.yaml" />
   <param name="robot_description" textfile="$(find rover)/rover/simulation/urdfs/rover.urdf" />  
   <include
-    file="$(find gazebo_ros)/launch/empty_world.launch" />
-    <!-- file="$(find gazebo_ros)/launch/atacama_desert.launch" /> -->
+    file="$(find gazebo_ros)/launch/atacama_desert.launch" />
+    <!-- file="$(find gazebo_ros)/launch/empty_world.launch" /> -->
   <node
     name="tf_footprint_base"
     pkg="tf"
