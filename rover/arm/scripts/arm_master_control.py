@@ -2,7 +2,7 @@
 
 import rospy
 import pygame
-import numpy
+# import numpy
 import ik_library as ik
 import arm_simulation_control as sim
 from sensor_msgs.msg import JointState
@@ -11,23 +11,29 @@ from std_msgs.msg import Float32MultiArray
 import json
 import copy
 from math import pi
+from enum import Enum
+
+# Enums
+
+class Mode(Enum):
+    GLOBAL_IK = 1
+    RELATIVE_IK = 2
+    FORWARD_KIN = 3
 
 # Global Variables 
 
 BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SELECT", "START", "PLAY_STATION", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"]
 JOYSTICK_AXES_NAMES = ["L-Right", "L-Down", "L2", "R-Right", "R-Down", "R2"]
-IK_MODE = ["global", "relativeCamera", "relativeEndEffector", "forwardKinematics"]
 
 global gazebo_on
 global curArmAngles
-global ikMode
+global scriptMode
 global prevTargetTransform
 global prevTargetValues # [roll, pitch, yaw, [x, y, z]]
 global newTargetValues
 global jointPublisher
 global gazeboPublisher
 global armAngles
-global positionOrForceValueEE
 
 movementSpeed = 1
 
@@ -124,7 +130,7 @@ def controlEEPosition(isButtonPressed, joystickAxis):
     
     Takes Joystick Input and changes End Effector Transform Matrix accordingly. 
     Returns the current end effector transform if none of the relavent control buttons 
-    have been pushed. Additionally, uses ikMode to determine if end effector transform 
+    have been pushed. Additionally, uses scriptMode to determine if end effector transform 
     should be changed relative to global coordinate system or from camera coordinate system.
     Uses ik.createEndEffectorTransform().
 
@@ -147,7 +153,7 @@ def controlEEPosition(isButtonPressed, joystickAxis):
     '''
     global prevTargetValues
     global newTargetValues
-    global ikMode
+    global scriptMode
 
     newTarget = copy.deepcopy(prevTargetValues)
     
@@ -162,35 +168,34 @@ def controlEEPosition(isButtonPressed, joystickAxis):
     newY = newTarget[3][1]
     newZ = newTarget[3][2]
 
-    # control x, y, z
-    if joystickAxis["L-Down"] != 0:
-        newX -= joystickAxis["L-Down"]*scale
-    if joystickAxis["L-Right"] != 0:
-        newY -= joystickAxis["L-Right"]*scale
-    if joystickAxis["L2"] != 0:
-        newZ -= joystickAxis["L2"]*scale
-    if joystickAxis["R2"] != 0:
-        newZ += joystickAxis["R2"]*scale
-    
-    # control roll, pitch, yaw
-    if joystickAxis["R-Right"] != 0:
-        newYaw -= joystickAxis["R-Right"]*scale2
-    if joystickAxis["R-Down"] != 0:
-        newPitch -= joystickAxis["R-Down"]*scale2
-    if isButtonPressed["L1"]:
-        newRoll -= scale2
-    elif isButtonPressed["R1"]:
-        newRoll += scale2
-
-     # control roll, pitch, yaw
-    # if isButtonPressed["RIGHT"]:
-    #     newYaw += scale2
-    # if joystickAxis["DOWN"]:
-    #     newPitch -= scale2
-    # if isButtonPressed["L1"]:
-    #     newRoll -= scale2
-    # elif isButtonPressed["R1"]:
-    #     newRoll += scale2
+    if scriptMode == Mode.GLOBAL_IK:
+        # control x, y, z
+        if joystickAxis["L-Down"] != 0:
+            newX -= joystickAxis["L-Down"]*scale
+        if joystickAxis["L-Right"] != 0:
+            newY -= joystickAxis["L-Right"]*scale
+        if joystickAxis["L2"] != 0:
+            newZ -= joystickAxis["L2"]*scale
+        if joystickAxis["R2"] != 0:
+            newZ += joystickAxis["R2"]*scale
+        
+        # control roll, pitch, yaw
+        if joystickAxis["R-Right"] != 0:
+            newYaw -= joystickAxis["R-Right"]*scale2
+        # if joystickAxis["R-Down"] != 0:
+        #     newPitch -= joystickAxis["R-Down"]*scale2
+        if isButtonPressed["DOWN"]:
+            newPitch -= scale2
+        elif isButtonPressed["UP"]:
+            newPitch += scale2
+        if isButtonPressed["L1"]:
+            newRoll -= scale2
+        elif isButtonPressed["R1"]:
+            newRoll += scale2
+    elif scriptMode == Mode.RELATIVE_IK:
+        pass
+    elif scriptMode == Mode.FORWARD_KIN:
+        pass
 
     newTarget = [newRoll, newPitch, newYaw, [newX, newY, newZ]]
     print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", newRoll, " pitch: ", newPitch, " yaw: ", newYaw)
@@ -198,7 +203,6 @@ def controlEEPosition(isButtonPressed, joystickAxis):
 
     return ik.createEndEffectorTransform(newRoll, newPitch, newYaw, newTarget[3])
     
-
 def controlGripperAngle(isButtonPressed):
     ''' Adjust the angle at which the gripper is open
 
@@ -343,10 +347,15 @@ def updateDesiredArmSimulation(curArmAngles):
     global gazeboPublisher
     global newTargetValues
 
+    # the following is specific the URDF, you will have to change these values and maybe swap coordiantes if you change URDFs
     tempTarget = copy.deepcopy(newTargetValues) # target transform scaled to rviz
     tempX = tempTarget[3][0] # swap x and y coords
     tempTarget[3][0] = tempTarget[3][1]
     tempTarget[3][1] = tempX
+
+    tempRoll = tempTarget[0] # swap roll and pitch
+    tempTarget[0] = -tempTarget[1]
+    tempTarget[1] = 0#tempRoll
 
     # scale target transform
     if tempTarget[3][0] >= 0:
@@ -376,10 +385,10 @@ def main():
     ''' Function that runs the program
     
     Takes Joystick values, chooses IK type (global or relative to camera), changes arm movement speed, changes EE transform, 
-    solves IK, publishes joints, and updates RViz simualtion.
+    solves IK, publishes joints, and updates RViz.
     '''
     global curArmAngles
-    global ikMode
+    global scriptMode
     global ikIteration
     global prevTargetTransform
     global prevTargetValues
@@ -388,59 +397,71 @@ def main():
     isButtonPressed = getJoystickButtons()
     joystickAxes = getJoystickAxes()
 
-    dhTable = ik.createDHTable(curArmAngles)
+    # if isButtonPressed["LEFT"]: # changes mode in which code is running
+    #     print(scriptMode)
+    #     if (scriptMode.value + 1) > len(Mode):
+    #         scriptMode = list(Mode)[0]
+    #     else:
+    #         scriptMode = list(Mode)[scriptMode.value + 1]
 
-    targetEEPos = controlEEPosition(isButtonPressed, joystickAxes)
+    if scriptMode == Mode.GLOBAL_IK:
+        dhTable = ik.createDHTable(curArmAngles)
 
-    try:
-        targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-        simAngles = copy.deepcopy(targetAngles) 
-        targetAngles.append(controlGripperAngle(isButtonPressed))
-        curArmAngles = copy.deepcopy(targetAngles)
-        
-        # publishNewAngles(targetAngles)
-        updateDesiredArmSimulation(curArmAngles)
-        ikAngles = Float32MultiArray()
-        ikAngles.data = targetAngles
-        armAngles.publish(ikAngles)
+        targetEEPos = controlEEPosition(isButtonPressed, joystickAxes)
 
-        prevTargetTransform = copy.deepcopy(targetEEPos)
-        prevTargetValues = copy.deepcopy(newTargetValues)
-    except ik.CannotReachTransform:
-        print("Cannot reach outside arm workspace")
+        try:
+            targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+            # simAngles = copy.deepcopy(targetAngles) 
+            targetAngles.append(controlGripperAngle(isButtonPressed))
+            curArmAngles = copy.deepcopy(targetAngles)
+            
+            # publishNewAngles(targetAngles)
+            updateDesiredArmSimulation(curArmAngles)
+            ikAngles = Float32MultiArray()
+            ikAngles.data = targetAngles
+            armAngles.publish(ikAngles)
+
+            prevTargetTransform = copy.deepcopy(targetEEPos)
+            prevTargetValues = copy.deepcopy(newTargetValues)
+        except ik.CannotReachTransform:
+            print("Cannot reach outside arm workspace")
+    elif scriptMode == Mode.FORWARD_KIN:
+        pass
 
 # Main Area
 
 if __name__ == "__main__":
     curArmAngles = [0, 0, 0, 0, 0, 0, 0]
-    prevTargetValues = [0, pi, 0, [250, 0, 450]] # start position
+    prevTargetValues = [0, 0, 0, [250, 0, 450]] # start position
 
     initializeJoystick()
 
     ikIteration = 0
     
-    try:
-        rospy.init_node("arm_master_control")
-        gazebo_on = rospy.get_param("/gazebo_on")
-        rate = rospy.Rate(10) # run at 10Hz
+    # try:
+    scriptMode = Mode.GLOBAL_IK
 
-        armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
-        rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
+    rospy.init_node("arm_master_control")
+    gazebo_on = rospy.get_param("/gazebo_on")
+    rate = rospy.Rate(10) # run at 10Hz
 
-        if gazebo_on:
-            gazeboPublisher = sim.startGazeboJointControllers(9)
-        else:
-            jointPublisher = sim.startJointPublisher()
+    armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
+    rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
 
-        # sets start target position equal to curArmAngles after they have been updated
-        # while curArmAngles == [0, 0, 0, 0, 0, 0]:
-        #     tempDHTable = ik.createDHTable(curArmAngles)
-        #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
+    if gazebo_on:
+        gazeboPublisher = sim.startGazeboJointControllers(9)
+    else:
+        jointPublisher = sim.startJointPublisher()
 
-        while not rospy.is_shutdown():
-            main()
-            rate.sleep()
+    # sets start target position equal to curArmAngles after they have been updated
+    # while curArmAngles == [0, 0, 0, 0, 0, 0]:
+    #     tempDHTable = ik.createDHTable(curArmAngles)
+    #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
 
-    except Exception as ex:
-        print("The following error has occured: ")
-        print(ex)
+    while not rospy.is_shutdown():
+        main()
+        rate.sleep()
+
+    # except Exception as ex:
+    #     print("The following error has occured: ")
+    #     print(ex)

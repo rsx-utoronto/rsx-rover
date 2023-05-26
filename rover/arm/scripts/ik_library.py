@@ -6,7 +6,7 @@ import math
 # Custom Exceptions
 
 class CannotReachTransform(Exception):
-    """Exception Raised when transformation cannot be reached
+    """Exception Raised when transformation cannot be reached by arm
     """
 
     def __init__(self, message="Transformation outside of robot workspace"):
@@ -16,7 +16,7 @@ class CannotReachTransform(Exception):
 # IK Code
 
 def createXYZRotationMatrix(roll: float, pitch: float, yaw: float):
-    ''' Creates a rotation matrix based on XYZ euler angles (Row, Pitch, Yaw)
+    ''' Creates a rotation matrix based on XYZ euler angles (Roll, Pitch, Yaw)
 
     Paramaters (euler angles)
     ----------
@@ -78,6 +78,36 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float):
 
     return rotationMatrix
 
+def calculateRotationAngles(transformationMatrix):
+    ''' Returns the roll, pitch, and yaw angles of a transformation matrix
+
+    The function will also work with a rotation matrix since it is embeded within 
+    a transformation matrix:
+        | [ Rotation ] X |
+        | [          ] Y |
+        | [  Matrix  ] Z |
+        | 0   0   0    1 |
+
+    I recommend looking at ZYX matrix in variable form to understand how the formulas 
+    for the angles were derived.
+
+    Parmaters
+    ---------
+    transformationMatrix
+        a 4x4 transformation matrix or a 3x3 rotation m atrix
+
+    Returns
+    -------
+    list
+        a list of floats containing the angles in the form [roll, pitch, yaw]
+    '''
+
+    roll = math.atan2(transformationMatrix[2,1], transformationMatrix[2,2])
+    pitch = math.atan2(-transformationMatrix[2,0], math.sqrt(transformationMatrix[2,1]**2 + transformationMatrix[2,2]**2))
+    yaw = math.atan2(transformationMatrix[1,0], transformationMatrix[0,0])
+
+    return [roll, pitch, yaw]
+
 def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position):
     ''' Creates the matrix that defines the transform of the end effector based on target
 
@@ -87,17 +117,12 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position):
     ----------
     position
         list in format [x, y, z] that contains x, y, and z location matrix
-    row
+    roll
         angle x-axis rotates
     pitch
         angle y-axis roates
     yaw
         angle z-axis rotates
-
-    Exceptions
-    ----------
-    outOfWorkspace
-        when the target transformation is outside of the arms reach
 
     Returns
     -------
@@ -118,12 +143,11 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position):
     # |   0      0       0       1  |
 
     endEffectorTransform = np.block([
-                                    [createXYZRotationMatrix(yaw, pitch, roll), np.transpose(positionArray)],
+                                    [createXYZRotationMatrix(roll, pitch, yaw), np.transpose(positionArray)],
                                     [0, 0, 0, 1]
                                     ])
 
     return endEffectorTransform
-
 
 def createTransformationMatrix(r, alpha, d, theta):
     ''' Creates a transform matrix based on dh-table paramters.
@@ -168,7 +192,6 @@ def createTransformationMatrix(r, alpha, d, theta):
 
     return DHTransformMatrix
 
-
 def calculateTransformToLink(dhTable, linkNumber):
     ''' Find the transform matrix to specified location
 
@@ -194,7 +217,6 @@ def calculateTransformToLink(dhTable, linkNumber):
         transformToLink = np.matmul(transformToLink, ithTransform)
 
     return transformToLink
-
 
 def createDHTable(jointAngles):
     ''' Create DH Table for arm based on current position 
@@ -222,7 +244,6 @@ def createDHTable(jointAngles):
                         [0, 0, 155, jointAngles[5]]]) #253.125
     return DHTable
 
-
 def inverseKinematics(dhTable, targetPos):
     ''' Calculates joint angles based on desired EE position and DH-Table Paramters
 
@@ -239,13 +260,17 @@ def inverseKinematics(dhTable, targetPos):
     targetPos
         a numpy matrix that defines the desired EE positions
 
+    Exceptions
+    ----------
+    CannotReachTransform
+        when the target transformation is outside of the arms reach
+
     Returns
     -------
     array
         list of joint angles
     '''
 
-    
     # useful values from DH table
     d1 = dhTable[0][2]
     r2 = dhTable[1][0]
@@ -271,9 +296,8 @@ def inverseKinematics(dhTable, targetPos):
     cosTheta3Numerator = wristCenterX**2 + wristCenterY**2 + (wristCenterZ-d1)**2 - r2**2 - link3Hypotenuse**2
     cosTheta3 = cosTheta3Numerator/(2*r2*link3Hypotenuse)
 
-    if abs(cosTheta3) > 1:  # cos(x) cannot be greater than 1
+    if abs(cosTheta3) > 1:  # cos(x) cannot be greater than 1, so throw error
         raise CannotReachTransform
-        return [dhTable[0][3], dhTable[1][3], dhTable[2][3], dhTable[3][3], dhTable[4][3], dhTable[5][3]]
 
     # positive in front of square root assumes elbow up
     theta3 = math.atan2(cosTheta3, math.sqrt(1 - cosTheta3**2))
@@ -285,10 +309,10 @@ def inverseKinematics(dhTable, targetPos):
     # transform matrix from base to third link
     t03 = calculateTransformToLink(createDHTable([theta1, theta2, theta3Adjusted, 0, 0, 0]), 3)
 
-    # rotation matrix of third link
-    r03 = np.array([t03[0][:3], t03[1][:3], t03[2][:3]])
-    # rotation matrix from third link to EE
-    r36 = np.matmul(np.linalg.inv(r03), desiredWristRotation)
+    
+    r03 = np.array([t03[0][:3], t03[1][:3], t03[2][:3]]) # rotation matrix of third link
+    
+    r36 = np.matmul(np.linalg.inv(r03), desiredWristRotation) # rotation matrix from third link to EE
 
     theta5 = math.atan2(math.sqrt(1-r36[2][2]**2), r36[2][2])
 
