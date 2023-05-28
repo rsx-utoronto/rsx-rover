@@ -92,11 +92,13 @@ def read_pos_from_spark():
         dev_id = can_id & 0b00000000000000000000000111111
         api = (can_id >> 6) & 0b00000000000001111111111
 
-        if api != arm_can.CMD_API_STAT2:
+        if api == arm_can.CMD_API_STAT1:
             # Skip to the next iteration of the loop
+            current_val = arm_can.read_can_message(msg.data, api)
+            print(current_val)
             continue
         
-        else:
+        elif api == arm_can.CMD_API_STAT2:
             # Starting thread lock
             with lock:
                 index = dev_id - 11

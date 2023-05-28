@@ -108,7 +108,7 @@ def pos_to_sparkdata(f : float):
             0x00, 0x00, 0x00, 0x00]
 
 
-def sparkfixed_to_float(fixed : int, frac : int = 4):
+def sparkfixed_to_float(fixed : int, frac : int = 5):
 	"""
 	Returns floating point representation of the fixed point represenation of 
 	data received from SparkMAX
@@ -117,15 +117,8 @@ def sparkfixed_to_float(fixed : int, frac : int = 4):
 	fixed (int): Input fixed point number from SparkMAX
 	frac (int) (optional): Number of fractional bits
 	"""
-	c = abs(fixed)
-	sign = 1 
-	if fixed < 0:
-		# convert back from two's complement
-		c = fixed - 1 
-		c = ~c
-		sign = -1
-	f = (1.0 * c) / (2 ** frac)
-	f = f * sign
+	# Divide the received value by 2^(number of fractional bits)
+	f = fixed / (2 ** frac)
 	return f
 
 ### DEPRECATED ###
@@ -293,7 +286,9 @@ def read_can_message(data, api):
 		# motor current. We only need current
 		# ** NEEDS TO BE COMPLETED **
 		if api == CMD_API_STAT1:
-			curr_fix_point = (data[-1] << 4) | (data[-2] & 0x0F)
+			currVal_fixed = (data[-1] << 4) | ((data[-2] & 0xF0) >> 4)
+			currVal_float = sparkfixed_to_float(currVal_fixed)
+			return currVal_float
 			# **NEED TO FIGURE THIS PART OUT FOR CURRENT**
 			pass
 		
