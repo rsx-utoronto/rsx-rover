@@ -322,6 +322,19 @@ def read_can_message(data, api):
 		print("Invalid API ID")
 		return -1
 
+def sign(x : float):
+	'''
+	(float) -> (int)
+
+	Returns the sign of the given number
+
+	@parameters
+
+	x (float) = The number for which sign is needed
+	'''
+
+	return (x > 0) - (x < 0)
+
 
 ############################## MAIN ##############################
 

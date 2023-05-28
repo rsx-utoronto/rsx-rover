@@ -9,7 +9,7 @@ import GetManualJoystickFinal
 joy_input = GetManualJoystickFinal.GetManualJoystick()
 
 current_pos = [0,0,0,0,0,0,0,0]
-speed_limit = [1000/120, 1000/160, 4000/120, 2000/20, 1500/10, 1500/10, 10000/40]                    # Gear Ratio are after the /
+speed_limit = [1000/120, 1000/160, 4000/120, 2000/20, 1500/20, 1500/20, 10000/40]                    # Gear Ratio are after the /
 t = 0
 
 

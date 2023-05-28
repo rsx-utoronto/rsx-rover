@@ -8,11 +8,24 @@ import struct
 import rospy
 from std_msgs.msg import Float32MultiArray
 import threading
+from enum import Enum
+
+class Errors(Enum):
+    ERROR_NONE = 0
+    ERROR_EXCEEDING_POS = 1
+    ERROR_EXCEEDING_CURRENT = 2
+
 
 ########## GLOBAL VARIABLES ##########
 
 # Variable to store current position of arm motors
 CURR_POS = [0, 0, 0, 0, 0, 0, 0]
+MOTOR_CURR = [0, 0, 0, 0, 0, 0, 0]
+SKIP = [0, 0, 0, 0, 0, 0, 0]
+TIME = [0, 0, 0, 0, 0, 0, 0]
+FIRST = [True, True, True, True, True, True, True]
+REDUCTION = [120, 160, 120, 20, 20, 20, 40]
+
 
 
 # Shared lock variable
@@ -52,30 +65,17 @@ def generate_data_packet (data_list : list):
 
     for angle in data_list:
         joint_num += 1
-        
-        # Gear reduction
-        if joint_num == 1 or joint_num == 3: 
-            reduction = 120
-        
-        elif joint_num == 2:
-            reduction = 160
-        
-        elif joint_num == 4:
-            reduction = 20
-
-        elif joint_num == 7:
-            reduction = 40
-        
-        else:
-            reduction = 10
 
         # Converting the angle to spark data
-        angle = angle/360 * reduction
+        angle = angle/360 * REDUCTION[joint_num - 1]
         spark_data.append(arm_can.pos_to_sparkdata(angle))
 
-        if 5 == joint_num:
+        if 6 == joint_num:
+            #print(angle*360/REDUCTION[5])
             print(angle)
-    
+            print("CURR: {}      MOTOR_CURR: {}".format(CURR_POS[5], MOTOR_CURR[5]) )
+            print(SKIP[5])
+            pass
     return spark_data
 
 def read_pos_from_spark():
@@ -92,16 +92,17 @@ def read_pos_from_spark():
         dev_id = can_id & 0b00000000000000000000000111111
         api = (can_id >> 6) & 0b00000000000001111111111
 
+        index = dev_id - 11
+
         if api == arm_can.CMD_API_STAT1:
-            # Skip to the next iteration of the loop
-            current_val = arm_can.read_can_message(msg.data, api)
-            print(current_val)
-            continue
+            with lock:
+                # Skip to the next iteration of the loop
+                MOTOR_CURR[index] = arm_can.read_can_message(msg.data, api)
+                continue
         
         elif api == arm_can.CMD_API_STAT2:
             # Starting thread lock
             with lock:
-                index = dev_id - 11
                 CURR_POS[index] = arm_can.read_can_message(msg.data, api)
             # Ending thread lock    
              
@@ -118,37 +119,67 @@ def cmp_goal_curr_pos(spark_input : list, dt : float = 0.1):
     '''
 
     # Multiplying factors
-    factor = [0.6, 0.8, 0.15, 0.05, 1/30, 1/30, 1/50]
+    factor = [0.6, 0.8, 0.15, 0.05, 1/15, 1/15, 1/50]
 
-    # Starting thread lock
-    with lock:
+    # Checking if input is as long as CURR_POS
+    if len(spark_input) == len(CURR_POS):
 
-        # Checking if input is as long as CURR_POS
-        if len(spark_input) == len(CURR_POS):
-
-            for i in range(len(spark_input)):
-                
-                # Getting the float value from potential input
-                float_val = arm_can.read_can_message(spark_input[i], arm_can.CMD_API_STAT2)
+        for i in range(len(spark_input)):
+            
+            # Getting the float value from potential input
+            float_val = arm_can.read_can_message(spark_input[i], arm_can.CMD_API_STAT2)
+            
+            # Starting thread lock
+            with lock:
 
                 # Doing comparisons for safety
                 if float_val < (CURR_POS[i] - factor[i] * speed_limit[i] * dt) or float_val > (CURR_POS[i] + factor[i] * speed_limit[i] * dt):
 
-                    # Offset the input value
+                    #Offset the input value
                     offset = float_val - CURR_POS[i]
-                    float_val -= offset
-                    spark_input[i] = arm_can.pos_to_sparkdata(float_val)
+                    current_pos[i] -= offset * 360 / REDUCTION[i]
+                    spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
+                    SKIP[i] = Errors.ERROR_EXCEEDING_POS
 
                     # For debugging safety code, you can uncomment this
                     #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
+                #print("TIME:", TIME - time.time())
 
-            print("CURR:", CURR_POS[4])
-            print("Input:", arm_can.read_can_message(spark_input[4], arm_can.CMD_API_STAT2))
-            return spark_input
+                else:
+                    if SKIP[i] != Errors.ERROR_EXCEEDING_CURRENT:
+                        SKIP[i] = Errors.ERROR_NONE
+
+            if MOTOR_CURR[i] > 14:
+                if (abs(float_val) >= abs(CURR_POS[i])):
+                    if (arm_can.sign(float_val) == arm_can.sign(CURR_POS[i])):
+                        #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
+                        if SKIP[i] != Errors.ERROR_EXCEEDING_POS:
+                            SKIP[i] = Errors.ERROR_EXCEEDING_CURRENT
+                            if FIRST[i]:
+                                TIME[i] = time.time()
+                
+                else:
+                    if (arm_can.sign(float_val) == arm_can.sign(CURR_POS[i])):
+                        if SKIP[i] != Errors.ERROR_EXCEEDING_POS:
+                            SKIP[i] = Errors.ERROR_NONE
+                            FIRST[i] = True
+                            TIME[i] = 0
+            
+            elif MOTOR_CURR[i] < 14 and time.time() - TIME[i] > 0.01:
+                if SKIP[i] != Errors.ERROR_EXCEEDING_POS:
+                    SKIP[i] = Errors.ERROR_NONE
+                    FIRST[i] = True
+                    TIME[i] = 0
+
+                    
+
+            
+        #print("Input:", arm_can.read_can_message(spark_input[4], arm_can.CMD_API_STAT2))
+        return spark_input
         
-        else:
-            print('ERROR: "spark_input" is invalid, returning CURR_POS')
-            return CURR_POS
+    else:
+        print('ERROR: "spark_input" is invalid, returning CURR_POS')
+        return CURR_POS
 
                 
 
@@ -157,7 +188,7 @@ def cmp_goal_curr_pos(spark_input : list, dt : float = 0.1):
 ############################## MAIN ##############################
 
 if __name__=="__main__":
-    
+
     # Instantiating the CAN bus
     arm_can.initialize_bus()
 
@@ -185,6 +216,7 @@ if __name__=="__main__":
 
     # rospy.init_node("arm_CAN")
     # rospy.Subscriber("ik_angles", Float32MultiArray, read_ros_message)
+    ti=0
 
     # Variable to hold current configuration of servo, starting with 63 degrees always
     triggered = 0
@@ -201,23 +233,31 @@ if __name__=="__main__":
 
         # Converting received SparkMAX angles to SparkMAX data packets
         spark_input = generate_data_packet(input_angles[:7])
-
         # Comparison between spark_input and CURR_POS for safety
         spark_input = cmp_goal_curr_pos(spark_input)
+        # if MOTOR_CURR > 14:
+        #     print("motor current:", MOTOR_CURR)
+        #     print("Exceeding Max Current")
 
-        # Sending data packets one by one
-        for i in range(1, len(spark_input)+1):
-            
-            # Motor number corresponds with device ID of the SparkMAX
-            motor_num = 10 + i
+        #     for i in range(len(spark_input)):
+        #         spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
+        #     continue
 
-            if motor_num > 10 and motor_num < 18:
-                id = arm_can.generate_can_id(dev_id= motor_num, api= arm_can.CMD_API_POS_SET)
-                arm_can.send_can_message(can_id= id, data= spark_input[i - 1])
+        if SKIP.count(Errors.ERROR_NONE) == len(SKIP):
+
+            # Sending data packets one by one
+            for i in range(1, len(spark_input)+1):
+                
+                # Motor number corresponds with device ID of the SparkMAX
+                motor_num = 10 + i
+
+                if motor_num > 10 and motor_num < 18:
+                    id = arm_can.generate_can_id(dev_id= motor_num, api= arm_can.CMD_API_POS_SET)
+                    arm_can.send_can_message(can_id= id, data= spark_input[i - 1])
+                
+                else:
+                    break
             
-            else:
-                break
-        
         # Toggling End Effector configuration using servo
         
         # Going 63 degrees configuration if not in this configuration
@@ -232,6 +272,7 @@ if __name__=="__main__":
             #servo.write_servo_high_angle()
             print("Set high")
         #time.sleep(.2)
+        #print("loop time, MOT_CURR:", time.time() - ti, MOTOR_CURR[5])
 
 
-# rospy.spin()
+    # rospy.spin()
