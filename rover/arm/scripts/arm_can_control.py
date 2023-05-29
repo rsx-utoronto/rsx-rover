@@ -271,8 +271,8 @@ def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = F
 
 def read_can_message(data, api):
 	"""
-	Converts CAN data packets from hex to float decimal values. This function
-	is still a work in progress
+	Converts CAN data packets from hex to float decimal values based on which API is 
+	called
 
 	*******NEEDS TO BE COMPLETED*******
 	@parameters
@@ -282,15 +282,18 @@ def read_can_message(data, api):
 	"""
 	
 	if api:
-		# API: Status Message 1 - Gives us current motor velocity, motor voltage and
-		# motor current. We only need current
-		# ** NEEDS TO BE COMPLETED **
+		# API: Status Message 1 - Gives us motor velocity, motor voltage and
+		# motor current every 20ms. We only need current
 		if api == CMD_API_STAT1:
+
+			# Getting the motor current value stored as hexadecimals 
 			currVal_fixed = (data[-1] << 4) | ((data[-2] & 0xF0) >> 4)
+
+			# SparkMAX stores motor current value in fixed point format,
+			# need to convert it to float for reading
 			currVal_float = sparkfixed_to_float(currVal_fixed)
+
 			return currVal_float
-			# **NEED TO FIGURE THIS PART OUT FOR CURRENT**
-			pass
 		
 		# API: Status Message 2 - Gives us current position and comes every 20ms
 		elif api == CMD_API_STAT2:
@@ -332,7 +335,7 @@ def sign(x : float):
 
 	x (float) = The number for which sign is needed
 	'''
-
+	
 	return (x > 0) - (x < 0)
 
 

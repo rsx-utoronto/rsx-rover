@@ -10,6 +10,8 @@ from std_msgs.msg import Float32MultiArray
 import threading
 from enum import Enum
 
+############ ENUMERATIONS #############
+
 class Errors(Enum):
     ERROR_NONE = 0
     ERROR_EXCEEDING_POS = 1
@@ -21,12 +23,10 @@ class Errors(Enum):
 # Variable to store current position of arm motors
 CURR_POS = [0, 0, 0, 0, 0, 0, 0]
 MOTOR_CURR = [0, 0, 0, 0, 0, 0, 0]
-SKIP = [0, 0, 0, 0, 0, 0, 0]
+ERRORS = [0, 0, 0, 0, 0, 0, 0]
 TIME = [0, 0, 0, 0, 0, 0, 0]
 FIRST = [True, True, True, True, True, True, True]
 REDUCTION = [120, 160, 120, 20, 20, 20, 40]
-
-
 
 # Shared lock variable
 lock = threading.Lock()
@@ -70,12 +70,13 @@ def generate_data_packet (data_list : list):
         angle = angle/360 * REDUCTION[joint_num - 1]
         spark_data.append(arm_can.pos_to_sparkdata(angle))
 
-        if 6 == joint_num:
-            #print(angle*360/REDUCTION[5])
-            print(angle)
-            print("CURR: {}      MOTOR_CURR: {}".format(CURR_POS[5], MOTOR_CURR[5]) )
-            print(SKIP[5])
-            pass
+        # For debugging
+        # if 6 == joint_num:
+        #     #print(angle*360/REDUCTION[5])
+        #     print(angle)
+        #     print("CURR: {}      MOTOR_CURR: {}".format(CURR_POS[5], MOTOR_CURR[5]) )
+        #     print(ERRORS[5])
+        #     pass
     return spark_data
 
 def read_pos_from_spark():
@@ -95,10 +96,10 @@ def read_pos_from_spark():
         index = dev_id - 11
 
         if api == arm_can.CMD_API_STAT1:
+            # Starting thread lock
             with lock:
-                # Skip to the next iteration of the loop
                 MOTOR_CURR[index] = arm_can.read_can_message(msg.data, api)
-                continue
+            # Ending thread lock
         
         elif api == arm_can.CMD_API_STAT2:
             # Starting thread lock
@@ -106,19 +107,26 @@ def read_pos_from_spark():
                 CURR_POS[index] = arm_can.read_can_message(msg.data, api)
             # Ending thread lock    
              
-def cmp_goal_curr_pos(spark_input : list, dt : float = 0.1):
+def safety(spark_input : list, dt : float = 0.1):
     '''
     (list(int)) -> (list(int))
 
-    Compares the goal position with current position to see that the difference 
-    between them is not gigantic for safety. Updates the goal position if unsafe
+    Performs safety operations:
+    1) Compares the goal position with current position to see that the difference 
+    between them is not gigantic. If gigantic sets the error as for that motor as
+    Errors.ERROR_EXCEEDING_POS. Makes sure the motor doesn't jerk back to 0 
+    position in case computer loses power
+
+    2) Checks the maximum current being consumed by a motor. If the current is higher than
+    the expected max, sets the error for the particular motor as Errors.ERROR_EXCEEDING_CURRENT.
+    Helps us to know when too much torque is being applied
 
     @parameters
 
     spark_input (list(int)): Input positions for the motors
     '''
 
-    # Multiplying factors
+    # Multiplying factors for position safety
     factor = [0.6, 0.8, 0.15, 0.05, 1/15, 1/15, 1/50]
 
     # Checking if input is as long as CURR_POS
@@ -132,48 +140,73 @@ def cmp_goal_curr_pos(spark_input : list, dt : float = 0.1):
             # Starting thread lock
             with lock:
 
-                # Doing comparisons for safety
+                # Doing position comparisons for safety
                 if float_val < (CURR_POS[i] - factor[i] * speed_limit[i] * dt) or float_val > (CURR_POS[i] + factor[i] * speed_limit[i] * dt):
 
-                    #Offset the input value
+                    # Calculating the offset and applying it to controller input
                     offset = float_val - CURR_POS[i]
                     current_pos[i] -= offset * 360 / REDUCTION[i]
-                    spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
-                    SKIP[i] = Errors.ERROR_EXCEEDING_POS
+                    #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
+
+                    # Set the error for the motor
+                    ERRORS[i] = Errors.ERROR_EXCEEDING_POS
 
                     # For debugging safety code, you can uncomment this
                     #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
-                #print("TIME:", TIME - time.time())
 
+                # Remove the error if it is no longer there
+                # By design, the EXCEEDING_POS error should not be there after one 
+                # cycle of the main loop as the offset to controller input will bring
+                # the input back to a safe value.
                 else:
-                    if SKIP[i] != Errors.ERROR_EXCEEDING_CURRENT:
-                        SKIP[i] = Errors.ERROR_NONE
+                    if ERRORS[i] != Errors.ERROR_EXCEEDING_CURRENT:
+                        ERRORS[i] = Errors.ERROR_NONE
 
-            if MOTOR_CURR[i] > 14:
-                if (abs(float_val) >= abs(CURR_POS[i])):
-                    if (arm_can.sign(float_val) == arm_can.sign(CURR_POS[i])):
-                        #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
-                        if SKIP[i] != Errors.ERROR_EXCEEDING_POS:
-                            SKIP[i] = Errors.ERROR_EXCEEDING_CURRENT
-                            if FIRST[i]:
-                                TIME[i] = time.time()
-                
-                else:
-                    if (arm_can.sign(float_val) == arm_can.sign(CURR_POS[i])):
-                        if SKIP[i] != Errors.ERROR_EXCEEDING_POS:
-                            SKIP[i] = Errors.ERROR_NONE
-                            FIRST[i] = True
-                            TIME[i] = 0
-            
-            elif MOTOR_CURR[i] < 14 and time.time() - TIME[i] > 0.01:
-                if SKIP[i] != Errors.ERROR_EXCEEDING_POS:
-                    SKIP[i] = Errors.ERROR_NONE
-                    FIRST[i] = True
-                    TIME[i] = 0
+                # Checking maximum currents
+                if MOTOR_CURR[i] > 14:
 
+                    # Checking if the input from controller is making it go further into 
+                    # the direction that increases current
+                    if (abs(float_val) >= abs(CURR_POS[i])):
+                        if (arm_can.sign(float_val) == arm_can.sign(CURR_POS[i])):
+                            #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
+
+                            # Check if the motor has an associated with it already
+                            if ERRORS[i] != Errors.ERROR_EXCEEDING_POS:
+
+                                # Change the error associated with the motor to EXCEEDING_CURRENT
+                                ERRORS[i] = Errors.ERROR_EXCEEDING_CURRENT
+
+                                # Check if this is the first time this error is set 
+                                if FIRST[i]:
+
+                                    # Collect time stamp since the error was set
+                                    TIME[i] = time.time()
+                                    FIRST[i] = False
                     
+                    # If the controller input is in the direction that reduces the current
+                    else:
+                        if (arm_can.sign(float_val) == arm_can.sign(CURR_POS[i])):
 
-            
+                            # Check if the motor has an associated with it already
+                            if ERRORS[i] != Errors.ERROR_EXCEEDING_POS:
+
+                                # Remove the error and set TIME and FIRST back to original form
+                                ERRORS[i] = Errors.ERROR_NONE
+                                FIRST[i] = True
+                                TIME[i] = 0
+                
+                # Checking if the current has been under the max limit for more than 10 ms
+                elif MOTOR_CURR[i] < 14 and time.time() - TIME[i] > 0.01:
+
+                    # Check if the motor has an associated with it already
+                    if ERRORS[i] != Errors.ERROR_EXCEEDING_POS:
+
+                        # Remove the error and set TIME and FIRST back to original form
+                        ERRORS[i] = Errors.ERROR_NONE
+                        FIRST[i] = True
+                        TIME[i] = 0
+
         #print("Input:", arm_can.read_can_message(spark_input[4], arm_can.CMD_API_STAT2))
         return spark_input
         
@@ -216,7 +249,6 @@ if __name__=="__main__":
 
     # rospy.init_node("arm_CAN")
     # rospy.Subscriber("ik_angles", Float32MultiArray, read_ros_message)
-    ti=0
 
     # Variable to hold current configuration of servo, starting with 63 degrees always
     triggered = 0
@@ -234,7 +266,7 @@ if __name__=="__main__":
         # Converting received SparkMAX angles to SparkMAX data packets
         spark_input = generate_data_packet(input_angles[:7])
         # Comparison between spark_input and CURR_POS for safety
-        spark_input = cmp_goal_curr_pos(spark_input)
+        spark_input = safety(spark_input)
         # if MOTOR_CURR > 14:
         #     print("motor current:", MOTOR_CURR)
         #     print("Exceeding Max Current")
@@ -243,7 +275,8 @@ if __name__=="__main__":
         #         spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
         #     continue
 
-        if SKIP.count(Errors.ERROR_NONE) == len(SKIP):
+        # Move the motors only if there are no errors in any of them
+        if ERRORS.count(Errors.ERROR_NONE) == len(ERRORS):
 
             # Sending data packets one by one
             for i in range(1, len(spark_input)+1):
