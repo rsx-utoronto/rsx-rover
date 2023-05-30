@@ -90,9 +90,7 @@ def displayEndEffectorTransform(endEffectorPosition):
     t.transform.translation.x = posArray[3][0]
     t.transform.translation.y = posArray[3][1]
     t.transform.translation.z = posArray[3][2]
-    # q_old = tf_conversions.transformations.quaternion_from_euler(0,0,0)
-    q = tf_conversions.transformations.quaternion_from_euler(posArray[0], posArray[1], posArray[2], 'sxyz')
-    # q_new = tf_conversions.transformations.quaternion_multiply(q, q_old)
+    q = tf_conversions.transformations.quaternion_from_euler(posArray[0], posArray[1], posArray[2], 'rxyz')
     t.transform.rotation.x = q[0]
     t.transform.rotation.y = q[1]
     t.transform.rotation.z = q[2]

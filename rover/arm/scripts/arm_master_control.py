@@ -153,7 +153,6 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
         numpy matrix of new end effector position 
     '''
     global newTargetValues
-
     newTarget = copy.deepcopy(prevTargetValues)
     
     positionScale = 10
@@ -214,19 +213,16 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
             newZ += joystickAxis["R2"]*positionScale
         # control roll, pitch, yaw
         if joystickAxis["R-Right"] != 0:
-            newYaw = joystickAxis["R-Right"]*angleScale
-        # if joystickAxis["R-Down"] != 0:
-        #     newPitch -= joystickAxis["R-Down"]*scale2
-        if isButtonPressed["DOWN"]:
-            newPitch = -angleScale
-        elif isButtonPressed["UP"]:
-            newPitch = angleScale
+            newRoll = joystickAxis["R-Right"]*angleScale
+        if joystickAxis["R-Down"] != 0:
+            newPitch -= joystickAxis["R-Down"]*angleScale
         if isButtonPressed["L1"]:
-            newRoll = -angleScale
+            newYaw = -angleScale
         elif isButtonPressed["R1"]:
-            newRoll = angleScale
-
+            newYaw = angleScale
+        
         prevRotation = prevTargetTransform[:3, :3]
+        
         newRotation = np.matmul(prevRotation, ik.createRotationMatrix(newRoll, newPitch, newYaw, "ypr"))
         newTransformation = np.block([
                                         [newRotation, np.array([[newX, newY, newZ]]).transpose()],
@@ -373,7 +369,7 @@ def updateLiveArmSimulation(data):
 
     pass
 
-def updateDesiredArmSimulation(curArmAngles, newTargetValues):
+def updateDesiredArmSimulation(curArmAngles, newTargetValues, scriptMode):
     ''' Updates RViz simulation with desired arm position.
 
     Displays a tf2 transform of the end effector position.
@@ -386,29 +382,37 @@ def updateDesiredArmSimulation(curArmAngles, newTargetValues):
     global jointPublisher
     global gazeboPublisher
 
-    # the following is specific the URDF, you will have to change these values and maybe swap coordiantes if you change URDFs
-    tempTarget = copy.deepcopy(newTargetValues) # target transform scaled to rviz
-    tempX = tempTarget[3][0] # swap x and y coords
-    tempTarget[3][0] = tempTarget[3][1]
-    tempTarget[3][1] = tempX
+    if scriptMode == Mode.DEFAULT_IK:
+        # the following is specific the URDF, you will have to change these values and maybe swap coordiantes if you change URDFs
+        tempTarget = copy.deepcopy(newTargetValues) # target transform scaled to rviz
+        tempX = tempTarget[3][0] # swap x and y coords
+        tempTarget[3][0] = tempTarget[3][1]
+        tempTarget[3][1] = tempX
 
-    tempRoll = tempTarget[0] # swap roll and pitch
-    tempTarget[0] = 0#-tempTarget[1]
-    tempTarget[1] = tempRoll # should be 0 for default
-    # tempTarget[2] = 0 
+        tempRoll = tempTarget[0] # swap roll and pitch
+        tempTarget[0] = -tempTarget[1]
+        tempTarget[1] = tempRoll # should be 0 for default
 
-    # scale target transform
-    if tempTarget[3][0] >= 0:
-        tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0594
-    else:
-        tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0494
-    if tempTarget[3][1] >= 0:
-        tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.03
-    else:
-        tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.04
-    tempTarget[3][2] = (0.47/450)*tempTarget[3][2]
+        if scriptMode == Mode.DEFAULT_IK:
+            tempTarget[1] = 0 
 
-    sim.displayEndEffectorTransform(tempTarget) # display target transform
+        if abs(tempTarget[0]) >= pi/2:
+            print("yo")
+            tempTarget[1] -= pi
+            tempTarget[2] -= pi
+
+        # scale target transform
+        if tempTarget[3][0] >= 0:
+            tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0594
+        else:   
+            tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0494
+        if tempTarget[3][1] >= 0:
+            tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.03
+        else:
+            tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.04
+        tempTarget[3][2] = (0.47/450)*tempTarget[3][2]
+
+        sim.displayEndEffectorTransform(tempTarget) # display target transform
 
     curArmAngles.append(curArmAngles[6]) # make gripper angles equal
     if gazebo_on:
@@ -430,7 +434,6 @@ def main():
 
     global curArmAngles
     global scriptMode
-    global ikIteration
     global prevTargetTransform
     global prevTargetValues
     global newTargetValues
@@ -438,14 +441,14 @@ def main():
     isButtonPressed = getJoystickButtons()
     joystickAxes = getJoystickAxes()
 
-    # if isButtonPressed["LEFT"]: # changes mode in which code is running
-    #     print(scriptMode)
-    #     if (scriptMode.value + 1) > len(Mode):
-    #         scriptMode = list(Mode)[0]
-    #     else:
-    #         scriptMode = list(Mode)[scriptMode.value + 1]
+    if isButtonPressed["TRIANGLE"] == -1: # changes mode when button is released
+        if (scriptMode.value + 1) > len(Mode):
+            scriptMode = list(Mode)[0]
+        else:
+            scriptMode = list(Mode)[scriptMode.value]
+        print(scriptMode)
 
-    if scriptMode == Mode.RELATIVE_IK or scriptMode == Mode.RELATIVE_IK:
+    if scriptMode == Mode.DEFAULT_IK or scriptMode == Mode.RELATIVE_IK:
         dhTable = ik.createDHTable(curArmAngles)
 
         targetEEPos = controlEEPosition(isButtonPressed, joystickAxes, prevTargetValues, 
@@ -456,7 +459,7 @@ def main():
             targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
             
             publishNewAngles(targetAngles)
-            updateDesiredArmSimulation(targetAngles, newTargetValues)
+            updateDesiredArmSimulation(targetAngles, newTargetValues,scriptMode)
 
             curArmAngles = targetAngles
             prevTargetTransform = targetEEPos
@@ -476,8 +479,6 @@ if __name__ == "__main__":
                                                         prevTargetValues[2], prevTargetValues[3])
     initializeJoystick()
 
-    ikIteration = 0
-    
     # try:
     scriptMode = Mode.RELATIVE_IK
 
