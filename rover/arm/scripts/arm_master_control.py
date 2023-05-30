@@ -197,7 +197,45 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
         
         return ik.createEndEffectorTransform(newRoll, newPitch, newYaw, newTarget[3])
     elif scriptMode == Mode.GLOBAL_IK:
-        pass
+        newRoll = 0
+        newPitch = 0
+        newYaw = 0
+
+        if joystickAxis["L-Down"] != 0:
+            newX -= joystickAxis["L-Down"]*positionScale
+        if joystickAxis["L-Right"] != 0:
+            newY -= joystickAxis["L-Right"]*positionScale
+        if joystickAxis["L2"] != 0:
+            newZ -= joystickAxis["L2"]*positionScale
+        if joystickAxis["R2"] != 0:
+            newZ += joystickAxis["R2"]*positionScale
+        # control roll, pitch, yaw
+        if joystickAxis["R-Right"] != 0:
+            newRoll = joystickAxis["R-Right"]*angleScale
+        if joystickAxis["R-Down"] != 0:
+            newPitch -= joystickAxis["R-Down"]*angleScale
+        # if isButtonPressed["UP"]:
+        #     newPitch = -angleScale
+        # elif isButtonPressed["DOWN"]:
+        #     newPitch = angleScale
+        if isButtonPressed["L1"]:
+            newYaw = -angleScale
+        elif isButtonPressed["R1"]:
+            newYaw = angleScale
+        
+        prevRotation = prevTargetTransform[:3, :3]
+        
+        newRotation = np.dot(ik.createRotationMatrix(newRoll, newPitch, newYaw, "ypr"), prevRotation)
+        newTransformation = np.block([
+                                        [newRotation, np.array([[newX, newY, newZ]]).transpose()],
+                                        [0, 0, 0, 1]
+                                        ])
+        [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
+
+        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [newX, newY, newZ]]
+        print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", correctedRoll, " pitch: ", correctedPitch, " yaw: ", correctedYaw)
+        
+        return newTransformation
     elif scriptMode == Mode.RELATIVE_IK:
         newRoll = 0
         newPitch = 0
@@ -382,7 +420,7 @@ def updateDesiredArmSimulation(curArmAngles, newTargetValues, scriptMode):
     global jointPublisher
     global gazeboPublisher
 
-    if scriptMode == Mode.DEFAULT_IK:
+    if scriptMode != Mode.RELATIVE_IK:
         # the following is specific the URDF, you will have to change these values and maybe swap coordiantes if you change URDFs
         tempTarget = copy.deepcopy(newTargetValues) # target transform scaled to rviz
         tempX = tempTarget[3][0] # swap x and y coords
@@ -395,11 +433,13 @@ def updateDesiredArmSimulation(curArmAngles, newTargetValues, scriptMode):
 
         if scriptMode == Mode.DEFAULT_IK:
             tempTarget[1] = 0 
+        if scriptMode == Mode.GLOBAL_IK:
+            tempTarget[:3] = [0, 0, 0]
 
-        if abs(tempTarget[0]) >= pi/2:
-            print("yo")
-            tempTarget[1] -= pi
-            tempTarget[2] -= pi
+        # if abs(tempTarget[0]) >= pi/2:
+        #     print("yo")
+        #     tempTarget[1] -= pi
+        #     tempTarget[2] -= pi
 
         # scale target transform
         if tempTarget[3][0] >= 0:
@@ -448,7 +488,7 @@ def main():
             scriptMode = list(Mode)[scriptMode.value]
         print(scriptMode)
 
-    if scriptMode == Mode.DEFAULT_IK or scriptMode == Mode.RELATIVE_IK:
+    if scriptMode == Mode.DEFAULT_IK or scriptMode == Mode.RELATIVE_IK or scriptMode == Mode.GLOBAL_IK:
         dhTable = ik.createDHTable(curArmAngles)
 
         targetEEPos = controlEEPosition(isButtonPressed, joystickAxes, prevTargetValues, 
@@ -480,7 +520,7 @@ if __name__ == "__main__":
     initializeJoystick()
 
     # try:
-    scriptMode = Mode.RELATIVE_IK
+    scriptMode = Mode.GLOBAL_IK
 
     rospy.init_node("arm_master_control")
     gazebo_on = rospy.get_param("/gazebo_on")
