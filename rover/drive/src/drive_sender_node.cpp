@@ -75,12 +75,10 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	}
 	else if (posThrottle < 1)
 	{
-		ROS_INFO("in Pos throttle");
 		lin_vel = 255.0 - (posThrottle + 1) * 127.5;
 	}
 	else if (negThrottle < 1)
 	{
-		ROS_INFO("in neg throttle");
 		lin_vel = -1 * (255.0 - (negThrottle + 1) * 127.5);
 	}
 	else
