@@ -12,14 +12,17 @@ import json
 import copy
 from math import pi
 from enum import Enum
+import concurrent.futures
 
 # Enums
 
 class Mode(Enum):
-    DEFAULT_IK = 1
-    GLOBAL_IK = 2
-    RELATIVE_IK = 3
-    FORWARD_KIN = 4
+    DEFAULT_IK = 1 # moves relative to global xyz but frame rotation is input as rpy
+    GLOBAL_IK = 2 # moves and rotates relative to global xyz
+    ROT_RELATIVE_IK = 3 # moves globally but rotates relative to end effector
+    RELATIVE_IK = 4 # moves relative to camera (has same frame as end effector) but rotates relative to end effector (we lose)
+    CAM_RELATIVE_IK = 5 # Moves and rotates relative to camera, will have to change IK target to camera location
+    FORWARD_KIN = 6 # forward kinematics
 
 # Global Variables 
 
@@ -34,7 +37,7 @@ global prevTargetValues # [roll, pitch, yaw, [x, y, z]]
 global newTargetValues
 global jointPublisher
 global gazeboPublisher
-global armAngles
+global pubThreadPool
 
 movementSpeed = 1
 
@@ -59,6 +62,7 @@ def getJoystickButtons() -> dict: # setting up the buttons
     ''' Gets the Currently Pressed Buttons on Joystick
 
     If the value in the returned dictionary for a button is 
+        2: button was just pressed
         1: button is pressed
         0: button is not pressed
         -1: button was just released 
@@ -66,12 +70,14 @@ def getJoystickButtons() -> dict: # setting up the buttons
     Returns
     -------
     dictionary
-        dictionary with keys for buttons from BUTTON_NAMES, value is either 1, 0, or -1
+        dictionary with keys for buttons from BUTTON_NAMES, value is either 2, 1, 0, or -1
     
     '''
+    global buttonsPressed
+    global joystick
+
     pygame.event.pump() # allow pygame to handle internal actions, keep everything current
     
-    global buttonsPressed
     
     buttons = {"X": 0, "CIRCLE": 0, "TRIANGLE": 0, "SQUARE": 0 , "L1": 0, "R1": 0, "L2": 0, "R2": 0, "SELECT": 0, "START": 0, "PLAY_STATION": 0, 
         "L3": 0, "R3": 0,"UP": 0, "DOWN": 0, "LEFT": 0, "RIGHT": 0 } # 1 is pressed, 0 is not pressed, -1 is just released
@@ -81,8 +87,10 @@ def getJoystickButtons() -> dict: # setting up the buttons
         
         if buttonsPressed[BUTTON_NAMES[i]] == True and button == 0: # button just released
             button = -1
+        if buttonsPressed[BUTTON_NAMES[i]] == False and button == 1: # button just pressed
+            button = 2
 
-        if button != 1:
+        if button < 1:
             buttonsPressed[BUTTON_NAMES[i]] = False
         else:
             buttonsPressed[BUTTON_NAMES[i]] = True
@@ -192,7 +200,7 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
             newRoll += angleScale
 
         newTarget = [newRoll, newPitch, newYaw, [newX, newY, newZ]]
-        print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", newRoll, " pitch: ", newPitch, " yaw: ", newYaw)
+        # print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", newRoll, " pitch: ", newPitch, " yaw: ", newYaw)
         newTargetValues = newTarget
         
         return ik.createEndEffectorTransform(newRoll, newPitch, newYaw, newTarget[3])
@@ -211,9 +219,9 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
             newZ += joystickAxis["R2"]*positionScale
         # control roll, pitch, yaw
         if joystickAxis["R-Right"] != 0:
-            newRoll = joystickAxis["R-Right"]*angleScale
+            newRoll += joystickAxis["R-Right"]*angleScale
         if joystickAxis["R-Down"] != 0:
-            newPitch -= joystickAxis["R-Down"]*angleScale
+            newPitch += joystickAxis["R-Down"]*angleScale
         # if isButtonPressed["UP"]:
         #     newPitch = -angleScale
         # elif isButtonPressed["DOWN"]:
@@ -233,10 +241,10 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
         [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
 
         newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [newX, newY, newZ]]
-        print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", correctedRoll, " pitch: ", correctedPitch, " yaw: ", correctedYaw)
+        # print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", correctedRoll, " pitch: ", correctedPitch, " yaw: ", correctedYaw)
         
         return newTransformation
-    elif scriptMode == Mode.RELATIVE_IK:
+    elif scriptMode == Mode.ROT_RELATIVE_IK:
         newRoll = 0
         newPitch = 0
         newYaw = 0
@@ -251,9 +259,9 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
             newZ += joystickAxis["R2"]*positionScale
         # control roll, pitch, yaw
         if joystickAxis["R-Right"] != 0:
-            newRoll = joystickAxis["R-Right"]*angleScale
+            newRoll = -joystickAxis["R-Right"]*angleScale
         if joystickAxis["R-Down"] != 0:
-            newPitch -= joystickAxis["R-Down"]*angleScale
+            newPitch = joystickAxis["R-Down"]*angleScale
         if isButtonPressed["L1"]:
             newYaw = -angleScale
         elif isButtonPressed["R1"]:
@@ -269,13 +277,42 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
         [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
 
         newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [newX, newY, newZ]]
-        print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", correctedRoll, " pitch: ", correctedPitch, " yaw: ", correctedYaw)
-        
+
         return newTransformation
+    elif scriptMode == Mode.RELATIVE_IK:
+        [newRoll, newPitch, newYaw, newX, newY, newZ] = [0, 0, 0, 0, 0, 0]
+        
+        if joystickAxis["L-Down"] != 0:
+            newX = joystickAxis["L-Down"]*positionScale
+        if joystickAxis["L-Right"] != 0:
+            newY = -joystickAxis["L-Right"]*positionScale
+        if joystickAxis["L2"] != 0:
+            newZ = -joystickAxis["L2"]*positionScale
+        if joystickAxis["R2"] != 0:
+            newZ = joystickAxis["R2"]*positionScale
+        # control roll, pitch, yaw
+        if joystickAxis["R-Right"] != 0:
+            newRoll = -joystickAxis["R-Right"]*angleScale
+        if joystickAxis["R-Down"] != 0:
+            newPitch = joystickAxis["R-Down"]*angleScale
+        if isButtonPressed["L1"]:
+            newYaw = -angleScale
+        elif isButtonPressed["R1"]:
+            newYaw = angleScale
+        
+        relativePos = ik.createEndEffectorTransform(newRoll, newPitch, newYaw, [newX, newY, newZ])
+        newTransformation = np.matmul(prevTargetTransform, relativePos)
+
+        [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
+        [correctedX, correctedY, correctedZ] = [newTransformation[0][3], newTransformation[1][3], newTransformation[2][3]]
+        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [correctedX, correctedY, correctedZ]]
+
+        return newTransformation
+    elif scriptMode == Mode.CAM_RELATIVE_IK:
+        pass
     elif scriptMode == Mode.FORWARD_KIN:
         pass
 
-    
 def controlGripperAngle(isButtonPressed, curArmAngles):
     ''' Adjust the angle at which the gripper is open
 
@@ -393,67 +430,17 @@ def publishNewAngles(newJointAngles):
     armAngles.publish(ikAngles)
 
 def updateLiveArmSimulation(data):
-    ''' Updates RViz URDF simulation based on real arm angles
+    ''' Updates RViz URDF visulaztion based on arm angles
 
-    Should be used as the callback function of the subscriber. Runs code
-    from arm_simulation_control.py and updates global variable armAngles.
+    Should be used as the callback function of the subscriber. However, can
+    also be used as desired angle visualizer as well.
 
     Paramters
     ---------
     data
         data.data containts a list 32 bit floats that correspond to joint angles
     '''
-    global armAngles
-
-    pass
-
-def updateDesiredArmSimulation(curArmAngles, newTargetValues, scriptMode):
-    ''' Updates RViz simulation with desired arm position.
-
-    Displays a tf2 transform of the end effector position.
-    
-    Paramters
-    ---------
-    endEffectorTransform:
-        numpy matrix that corresponds to end effector transform 
-    '''
-    global jointPublisher
-    global gazeboPublisher
-
-    if scriptMode != Mode.RELATIVE_IK:
-        # the following is specific the URDF, you will have to change these values and maybe swap coordiantes if you change URDFs
-        tempTarget = copy.deepcopy(newTargetValues) # target transform scaled to rviz
-        tempX = tempTarget[3][0] # swap x and y coords
-        tempTarget[3][0] = tempTarget[3][1]
-        tempTarget[3][1] = tempX
-
-        tempRoll = tempTarget[0] # swap roll and pitch
-        tempTarget[0] = -tempTarget[1]
-        tempTarget[1] = tempRoll # should be 0 for default
-
-        if scriptMode == Mode.DEFAULT_IK:
-            tempTarget[1] = 0 
-        if scriptMode == Mode.GLOBAL_IK:
-            tempTarget[:3] = [0, 0, 0]
-
-        # if abs(tempTarget[0]) >= pi/2:
-        #     print("yo")
-        #     tempTarget[1] -= pi
-        #     tempTarget[2] -= pi
-
-        # scale target transform
-        if tempTarget[3][0] >= 0:
-            tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0594
-        else:   
-            tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0494
-        if tempTarget[3][1] >= 0:
-            tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.03
-        else:
-            tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.04
-        tempTarget[3][2] = (0.47/450)*tempTarget[3][2]
-
-        sim.displayEndEffectorTransform(tempTarget) # display target transform
-
+    curArmAngles = data
     curArmAngles.append(curArmAngles[6]) # make gripper angles equal
     if gazebo_on:
         curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
@@ -462,6 +449,54 @@ def updateDesiredArmSimulation(curArmAngles, newTargetValues, scriptMode):
         sim.moveInGazebo(gazeboPublisher, curArmAngles)
     else:
         sim.runNewJointState2(jointPublisher, curArmAngles)
+
+def updateDesiredEETransformation(newTargetValues, scriptMode):
+    ''' Updates tf2 transformation of desired end effector position.
+
+    Displays a tf2 transform of the end effector position.
+    
+    Paramters
+    ---------
+    newTargetValues:
+        [roll, pitch, yaw, [x, y, z]] of the position
+    scriptMode
+        the mode that the scriptp is in
+    '''
+    global jointPublisher
+    global gazeboPublisher
+
+    # the following is specific the URDF, you will have to change these values and maybe swap coordiantes if you change URDFs
+    tempTarget = copy.deepcopy(newTargetValues) # target transform scaled to rviz
+    tempX = tempTarget[3][0] # swap x and y coords
+    tempTarget[3][0] = tempTarget[3][1]
+    tempTarget[3][1] = tempX
+
+    # scale target transform
+    if tempTarget[3][0] >= 0:
+        tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0594
+    else:   
+        tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0494
+    if tempTarget[3][1] >= 0:
+        tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.03
+    else:
+        tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.04
+    tempTarget[3][2] = (0.47/450)*tempTarget[3][2]
+
+    tempRoll = tempTarget[0] # swap roll and pitch
+    tempTarget[0] = -tempTarget[1]
+    tempTarget[1] = tempRoll # should be 0 for default
+
+    referenceLink = "base_link" # link to base end effector transform off of
+
+    if scriptMode == Mode.DEFAULT_IK:
+        tempTarget[1] = 0 
+    if scriptMode == Mode.GLOBAL_IK:
+        tempTarget[:3] = [0, 0, 0]
+    if scriptMode == Mode.ROT_RELATIVE_IK or scriptMode == Mode.RELATIVE_IK:
+        tempTarget = [0, 0 , pi, [0, 0, 150*0.47/450]]
+        referenceLink = "Link_6"
+    
+    sim.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
 
 # Program Control
 
@@ -477,18 +512,19 @@ def main():
     global prevTargetTransform
     global prevTargetValues
     global newTargetValues
+    global pubThreadPool
     
     isButtonPressed = getJoystickButtons()
     joystickAxes = getJoystickAxes()
 
-    if isButtonPressed["TRIANGLE"] == -1: # changes mode when button is released
+    if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
         if (scriptMode.value + 1) > len(Mode):
             scriptMode = list(Mode)[0]
         else:
             scriptMode = list(Mode)[scriptMode.value]
-        print(scriptMode)
+        print(scriptMode.name)
 
-    if scriptMode == Mode.DEFAULT_IK or scriptMode == Mode.RELATIVE_IK or scriptMode == Mode.GLOBAL_IK:
+    if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
         dhTable = ik.createDHTable(curArmAngles)
 
         targetEEPos = controlEEPosition(isButtonPressed, joystickAxes, prevTargetValues, 
@@ -497,15 +533,18 @@ def main():
         try:
             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
             targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
-            
-            publishNewAngles(targetAngles)
-            updateDesiredArmSimulation(targetAngles, newTargetValues,scriptMode)
+
+            # publish on different threads to speed up processing time
+            pubThreadPool.submit(publishNewAngles, targetAngles)
+            pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
+            pubThreadPool.submit(updateLiveArmSimulation, targetAngles)
 
             curArmAngles = targetAngles
             prevTargetTransform = targetEEPos
             prevTargetValues = newTargetValues
         except ik.CannotReachTransform:
-            print("Cannot reach outside arm workspace")
+            print("Cannot reach outside of arm workspace")
+            pass
     elif scriptMode == Mode.FORWARD_KIN:
         pass
 
@@ -517,10 +556,14 @@ if __name__ == "__main__":
     newTargetValues = prevTargetValues
     prevTargetTransform = ik.createEndEffectorTransform(prevTargetValues[0], prevTargetValues[1],
                                                         prevTargetValues[2], prevTargetValues[3])
+    
     initializeJoystick()
+
+    pubThreadPool = concurrent.futures.ThreadPoolExecutor(max_workers=2) # create thread pool with three threads
 
     # try:
     scriptMode = Mode.GLOBAL_IK
+    print(scriptMode.name)
 
     rospy.init_node("arm_master_control")
     gazebo_on = rospy.get_param("/gazebo_on")

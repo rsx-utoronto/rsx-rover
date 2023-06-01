@@ -76,13 +76,13 @@ def runNewJointState(jointPublisherData):
         rate.sleep()  # Controls loop rate based on what is set in the rate variable
 
 
-def displayEndEffectorTransform(endEffectorPosition):
+def displayEndEffectorTransform(endEffectorPosition, referenceLink="base_link", quaternionAngles=None):
     '''
     Publishes a tf2 transform at the End Effector Position 
     '''
     br = tf2_ros.TransformBroadcaster()
     t = geometry_msgs.msg.TransformStamped()
-    t.header.frame_id = "base_link"
+    t.header.frame_id = referenceLink
     t.child_frame_id = "target_position"
 
     posArray = endEffectorPosition
@@ -90,13 +90,49 @@ def displayEndEffectorTransform(endEffectorPosition):
     t.transform.translation.x = posArray[3][0]
     t.transform.translation.y = posArray[3][1]
     t.transform.translation.z = posArray[3][2]
+    
     q = tf_conversions.transformations.quaternion_from_euler(posArray[0], posArray[1], posArray[2], 'sxyz')
-    t.transform.rotation.x = q[0]
-    t.transform.rotation.y = q[1]
-    t.transform.rotation.z = q[2]
-    t.transform.rotation.w = q[3]
+    if quaternionAngles != None:
+        q = quaternionAngles
+        t.transform.rotation.x = q.x
+        t.transform.rotation.y = q.y
+        t.transform.rotation.z = q.z
+        t.transform.rotation.w = q.w
+    else:
+        t.transform.rotation.x = q[0]
+        t.transform.rotation.y = q[1]
+        t.transform.rotation.z = q[2]
+        t.transform.rotation.w = q[3]
     br.sendTransform(t)
 
+def getFrameTransform(referenceFrame: str, targetFrame: str):
+    ''' Gets the transform of a tf frame to another
+
+    Gets the transform from referenceFrame to targetFrame. In other words,
+    the transformation of targetFrame to referenceFrame.
+
+    Paramters
+    ---------
+    referenceFrame
+        the name of the frame you are basing the transformation on (the targets transform is given relative to this frame)
+    targetFrame
+        the name of target
+
+    Returns
+    -------
+    targetTransform
+        a transform message with a .translation and a .rotation component, is none if target doesn't exist
+    '''
+    tfBuffer = tf2_ros.Buffer()
+    listener = tf2_ros.TransformListener(tfBuffer)
+    try:
+        tfBuffer.can_transform(referenceFrame, targetFrame, rospy.Time(), rospy.Duration(0.1))
+        trans = tfBuffer.lookup_transform(referenceFrame, targetFrame, rospy.Time())
+        return trans.transform
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as ex:
+        return None
+    except Exception as ex:
+        print(ex)
 
 def runNewJointState2(jointPublisherData, angles):
     '''
