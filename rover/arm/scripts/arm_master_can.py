@@ -71,27 +71,37 @@ def generate_data_packet (data_list : list):
         spark_data.append(arm_can.pos_to_sparkdata(angle))
 
         # For debugging
-        # if 6 == joint_num:
-        #     #print(angle*360/REDUCTION[5])
-        #     print(angle)
-        #     print("CURR: {}      MOTOR_CURR: {}".format(CURR_POS[5], MOTOR_CURR[5]) )
-        #     print(ERRORS[5])
-        #     pass
+        if 6 == joint_num:
+            #print(angle*360/REDUCTION[5])
+            # print(angle)
+            # print("CURR: {}      MOTOR_CURR: {}".format(CURR_POS[5], MOTOR_CURR[5]) )
+            # print(ERRORS[5])
+            pass
     return spark_data
 
-def read_pos_from_spark():
+def read_message_from_spark(init : bool = False):
     """
     (None) -> (None)
 
     Function that runs in a separate thread that constantly reads status message regarding
     position from all the motors and updates the global variable CURR_POS to store the values
     """
+
+    # Variable to hold the boolean whether each motor is read once or not
+    # For each motor connected, the corresponding motor_list element should be set to 0 
+    motor_read = [1, 1, 1, 1, 1, 0, 1]
+
     # Checking if SparkMAXes are powered on and sending status messages
     while 1:
         msg = arm_can.BUS.recv()
         can_id = msg.arbitration_id
         dev_id = can_id & 0b00000000000000000000000111111
         api = (can_id >> 6) & 0b00000000000001111111111
+        
+        # If every element in motor_list is True, it means this was for initialization 
+        # and we should break out of the loop
+        if not False in motor_read:
+            break
 
         index = dev_id - 11
 
@@ -102,6 +112,11 @@ def read_pos_from_spark():
             # Ending thread lock
         
         elif api == arm_can.CMD_API_STAT2:
+
+            # If this is for initialization, set the correseponding element in motor_list to be True
+            if init:
+                motor_read[index] = True
+
             # Starting thread lock
             with lock:
                 CURR_POS[index] = arm_can.read_can_message(msg.data, api)
@@ -139,13 +154,13 @@ def safety(spark_input : list, dt : float = 0.1):
             
             # Starting thread lock
             with lock:
-
+                #print(dt)
                 # Doing position comparisons for safety
-                if float_val < (CURR_POS[i] - factor[i] * speed_limit[i] * dt) or float_val > (CURR_POS[i] + factor[i] * speed_limit[i] * dt):
+                if float_val < (CURR_POS[i] - factor[i] * speed_limit[i] * 0.1) or float_val > (CURR_POS[i] + factor[i] * speed_limit[i] * 0.1):
 
                     # Calculating the offset and applying it to controller input
                     offset = float_val - CURR_POS[i]
-                    current_pos[i] -= offset * 360 / REDUCTION[i]
+                    controller_pos[i] -= offset * 360 / REDUCTION[i]
                     #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
 
                     # Set the error for the motor
@@ -240,8 +255,11 @@ if __name__=="__main__":
     task = arm_can.BUS.send_periodic(hb, 0.01)
     print("Heartbeat initiated")
 
+    # Initializing CURR_POS variable
+    read_message_from_spark(init= True)
+
     # Starting a thread to read current position of motors
-    curr_pos_thread = threading.Thread(target= read_pos_from_spark, args= (), daemon= True)
+    curr_pos_thread = threading.Thread(target= read_message_from_spark, args= (), daemon= True)
     curr_pos_thread.start()
 
     # Variable Declaration for input from motor controller
@@ -257,7 +275,7 @@ if __name__=="__main__":
     while 1:
         
         # Getting angles from the remote controller
-        input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), current_pos, speed_limit, t-time.time())
+        input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), controller_pos, speed_limit, t-time.time())
         t = time.time()
 
         # Printing input angles from remote controller for debugging
@@ -266,7 +284,7 @@ if __name__=="__main__":
         # Converting received SparkMAX angles to SparkMAX data packets
         spark_input = generate_data_packet(input_angles[:7])
         # Comparison between spark_input and CURR_POS for safety
-        spark_input = safety(spark_input)
+        spark_input = safety(spark_input, time.time()-GetManualJoystickFinal.time_event)
         # if MOTOR_CURR > 14:
         #     print("motor current:", MOTOR_CURR)
         #     print("Exceeding Max Current")
