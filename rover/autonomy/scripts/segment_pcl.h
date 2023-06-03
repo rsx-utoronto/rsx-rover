@@ -10,7 +10,18 @@
 
 #include "pcl_traversibility_score.h"
 
-void segment_pcl(const pcl::PointCloud<pcl::PointXYZ>::Ptr rover_cloud, int local_map_dim);
+typedef struct  {
+    double x_sz;
+    double y_sz;
+    double x_grid_sz;
+    double y_grid_sz;
+    double origin_x;
+    double origin_y;
+    std::vector<std::vector<double>> grid;
+} segmented_pcl;
+
+
+segmented_pcl segment_pcl(const pcl::PointCloud<pcl::PointXYZ>::Ptr rover_cloud, int local_map_dim);
 void translate_rover_to_local(pcl::PointCloud<pcl::PointXYZ> &rover_cloud, pcl::PointXYZ local_origin);
 
 
