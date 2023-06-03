@@ -24,10 +24,6 @@ private:
 	void networkCallback(const std_msgs::Bool::ConstPtr& net_stat);
 
 	ros::NodeHandle nh;
-	// double throttle_min = -1;
-	// double throttle_max = 1
-	// double turn_min = -1;
-	// double turn_max = 1;
 	double robot_radius = 0.8;
 	double MAX_LINEAR_SPEED = 2.5;
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
@@ -53,17 +49,16 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	// indexs for controller values
 	int R2 = 5;
 	int L2 = 2;
-	int LS = 0;
-	// int LS_y = 1;
+	int LS_x = 0;
+	int LS_y = 1;
 	int dec_speed = 4;
 	int inc_speed = 5;
 
 	// Values from Controller
 	double posThrottle = joy->axes[R2];
 	double negThrottle = joy->axes[L2];
-	// double turnFactor_x = static_cast<double>(joy->axes[LS_x]);
-	// double turnFactor_y = static_cast<double>(joy->axes[LS_y]);
-	double turnFactor = static_cast<double>(joy->axes[LS]);
+	double turnFactor_x = static_cast<double>(joy->axes[LS_x]);
+	double turnFactor_y = static_cast<double>(joy->axes[LS_y]);
 	double lin_vel;
 
 	double dispVal = 0;
@@ -141,8 +136,5 @@ int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "drive_sender_falcon");
 	TeleopRover drive_sender;
-	// while (ros::ok()){
-	// 	drive_sender.pubConstSpeed();
-	// }
 	ros::spin();
 }
