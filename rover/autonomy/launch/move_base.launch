@@ -21,20 +21,27 @@
    </node>
 
    <!--  ****** Maps *****  -->
-	<!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find teb_local_planner_tutorials)/maps/maze.yaml" output="screen">
+	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/atacama_desert_og.yaml" output="screen">
                 <param name="frame_id" value="map"/>
 	</node>
 
-	<node pkg="amcl" type="amcl" name="amcl" output="screen">
-		<rosparam file="$(find teb_local_planner_tutorials)/cfg/amcl_params.yaml" command="load" />
+   <arg name="use_map_topic" default="true"/>
+   <arg name="scan_topic" default="rrbot/laser/scan" />
 
-	        <param name="initial_pose_x"            value="2"/>
+   <node pkg="amcl" type="amcl" name="amcl">
+      <rosparam file="$(find rover)/rover/simulation/config/amcl_params.yaml" command="load" />
+      <remap from="scan" to="$(arg scan_topic)"/>    
+   </node>
+
+	<!--    <param name="initial_pose_x"            value="2"/>
 		<param name="initial_pose_y"            value="2"/>
 		<param name="initial_pose_a"            value="0"/>
-	</node>
  -->
+
 	  <!--  **************** Visualisation ****************  -->
-	  <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find teb_local_planner_tutorials)/cfg/rviz_navigation.rviz"/> -->
+   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/simulation/config/gmapping_config.rviz"/>
+
+   <node pkg="tf" type="static_transform_publisher" name="map_tf" args="0 0 0 0 0 0 base_link map 100" />
 
 
 </launch> 
