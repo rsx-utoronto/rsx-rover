@@ -13,5 +13,4 @@
   </node>
 
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/simulation/config/gmapping_config.rviz"/>
-
 </launch>
