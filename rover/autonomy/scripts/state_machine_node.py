@@ -93,3 +93,5 @@ class StateMachineNode:
             rospy.Subscriber(
                 self.node_dict[self.task_id_lst[0]], self.task_callback)
 
+
+
