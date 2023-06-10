@@ -68,7 +68,7 @@ class image_converter:
         # filtered_image = self.thresholding(image)
         filtered_image = self.colour_search_and_masking(image, (185, 185, 185), (195, 195, 195))
         res = image.copy()
-        res = cv2.undistort(image, K, D)
+        res = cv2.undistort(image, self.K, D)
         # image = cv2.rotate(image, cv2.ROTATE_180)
         print(res)
         
@@ -108,8 +108,8 @@ class image_converter:
     def get_coordinates(self, data):
 
         # print(data)
-        global K
-        K = [[0, 0, 0], [0, 0, 0], [0,0,0]]
+        
+        self.K = [[0, 0, 0], [0, 0, 0], [0,0,0]]
         K_raw = data.K
         i = 0
         while i < 3:
@@ -119,7 +119,7 @@ class image_converter:
 
         K = np.asarray(K)  
         # print(K)
-        global D
+        self.D = 0
         D = np.asarray(data.D)
         # print(D)
         # img = cv2.resize(img, (img.shape[1]//3, img.shape[0]//3))
