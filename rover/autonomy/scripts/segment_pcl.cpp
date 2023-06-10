@@ -16,7 +16,6 @@ segmented_pcl segment_pcl(const pcl::PointCloud<pcl::PointXYZ>::Ptr rover_cloud,
     double origin_x = min.x + (x_sz / 2);
     double origin_y = min.y + (y_sz / 2);
 
-    std::cout << "Cloud Max Point: " << max.x << ", " << max.y << "\n";
 
     // // Translate crop box up by 1
     // cropBoxFilter.setTranslation(Eigen::Vector3f(0, 1, 0));
