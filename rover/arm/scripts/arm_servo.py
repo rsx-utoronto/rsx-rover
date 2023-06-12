@@ -1,3 +1,4 @@
+# ENTIRE FILE MAYBE IN MANUAL NODE or in CONTROLLER NODE
 import serial
 import subprocess
 import time

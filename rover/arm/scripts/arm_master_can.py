@@ -12,6 +12,7 @@ from enum import Enum
 
 ############ ENUMERATIONS #############
 
+# Safety Node Only
 class Errors(Enum):
     ERROR_NONE = 0
     ERROR_EXCEEDING_POS = 1
@@ -21,11 +22,17 @@ class Errors(Enum):
 ########## GLOBAL VARIABLES ##########
 
 # Variable to store current position of arm motors
+# CURR_POS and MOTOR_CURR are populated by CAN Node as topics 
 CURR_POS = [0, 0, 0, 0, 0, 0, 0]
 MOTOR_CURR = [0, 0, 0, 0, 0, 0, 0]
+
+# ERRORS are populated by Safety Node as a topic
 ERRORS = [0, 0, 0, 0, 0, 0, 0]
+
 TIME = [0, 0, 0, 0, 0, 0, 0]
 FIRST = [True, True, True, True, True, True, True]
+
+# REDUCTION is used by CAN Node only as a global constant
 REDUCTION = [120, 160, 120, 20, 20, 20, 40]
 
 # Shared lock variable
@@ -45,6 +52,7 @@ def send_ros_message():
 	"""
 	pass
 
+# CAN Node only
 def generate_data_packet (data_list : list):
     """
     list(float) -> list(list(int))
@@ -79,6 +87,7 @@ def generate_data_packet (data_list : list):
             pass
     return spark_data
 
+# CAN Node only
 def read_message_from_spark(init : bool = False):
     """
     (None) -> (None)
@@ -121,7 +130,8 @@ def read_message_from_spark(init : bool = False):
             with lock:
                 CURR_POS[index] = arm_can.read_can_message(msg.data, api)
             # Ending thread lock    
-             
+
+# Safety Node only             
 def safety(spark_input : list, dt : float = 0.1):
     '''
     (list(int)) -> (list(int))
@@ -237,9 +247,11 @@ def safety(spark_input : list, dt : float = 0.1):
 
 if __name__=="__main__":
 
+    # CAN Node only
     # Instantiating the CAN bus
     arm_can.initialize_bus()
 
+    # CAN Node only
     # Creating the message packet for Heartbeat
     hb = arm_can.can.Message(
         arbitration_id= arm_can.generate_can_id(
@@ -251,6 +263,7 @@ if __name__=="__main__":
         is_error_frame = False
     )
 
+    # CAN Node only
     # Broadcasting the heartbeat
     task = arm_can.BUS.send_periodic(hb, 0.01)
     print("Heartbeat initiated")
@@ -275,6 +288,7 @@ if __name__=="__main__":
     while 1:
         
         # Getting angles from the remote controller
+        # Safety Node Only
         input_angles = MapJoystick(GetManualJoystickFinal.GetManualJoystick(), controller_pos, speed_limit, t-time.time())
         t = time.time()
 
@@ -282,8 +296,10 @@ if __name__=="__main__":
         #print(input_angles)
 
         # Converting received SparkMAX angles to SparkMAX data packets
+        # CAN Node only
         spark_input = generate_data_packet(input_angles[:7])
         # Comparison between spark_input and CURR_POS for safety
+        # Safety Node only
         spark_input = safety(spark_input, time.time()-GetManualJoystickFinal.time_event)
         # if MOTOR_CURR > 14:
         #     print("motor current:", MOTOR_CURR)
@@ -294,8 +310,9 @@ if __name__=="__main__":
         #     continue
 
         # Move the motors only if there are no errors in any of them
-        if ERRORS.count(Errors.ERROR_NONE) == len(ERRORS):
+        if ERRORS.count(Errors.ERROR_NONE) == len(ERRORS): # Safety Node only
 
+            # CAN Node only
             # Sending data packets one by one
             for i in range(1, len(spark_input)+1):
                 
@@ -311,6 +328,7 @@ if __name__=="__main__":
             
         # Toggling End Effector configuration using servo
         
+        # Manual/Controller Node only
         # Going 63 degrees configuration if not in this configuration
         if input_angles[7] == 0 and triggered != 0: 
             triggered = 0

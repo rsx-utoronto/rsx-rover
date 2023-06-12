@@ -61,6 +61,7 @@ CMD_API_PARAM_ACCESS = 0x300
 
 ########## HELPER FUNCTIONS ##########
 
+# CAN Node only
 def generate_can_id(dev_id : int, api : int, 
 					man_id = 0x05, dev_type = 0x2):
 	"""
@@ -87,7 +88,7 @@ def generate_can_id(dev_id : int, api : int,
 	can_id = (can_id | dev_id)
 	return can_id
 
-
+# CAN Node only
 def pos_to_sparkdata(f : float):
     """
     float -> list()
@@ -107,7 +108,7 @@ def pos_to_sparkdata(f : float):
             eval('0x'+input_hex[-6:-4]), eval('0x'+input_hex[-8:-6]),
             0x00, 0x00, 0x00, 0x00]
 
-
+# CAN Node only
 def sparkfixed_to_float(fixed : int, frac : int = 5):
 	"""
 	Returns floating point representation of the fixed point represenation of 
@@ -199,7 +200,7 @@ def sparkfixed_to_float(fixed : int, frac : int = 5):
 
 # 	return
 
-
+# CAN Node only
 def initialize_bus(channel= 'can0', interface= 'socketcan'):
 	"""
 	(str, str) -> (void)
@@ -223,7 +224,7 @@ def initialize_bus(channel= 'can0', interface= 'socketcan'):
 	print('BUS initialzed')
 	return
 
-
+# CAN Node only
 def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = False):
 	"""
 	(int, list(float), bool, bool, bool)
@@ -268,7 +269,7 @@ def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = F
 		pass
 	return
 
-
+# CAN Node only
 def read_can_message(data, api):
 	"""
 	Converts CAN data packets from hex to float decimal values based on which API is 
@@ -325,6 +326,7 @@ def read_can_message(data, api):
 		print("Invalid API ID")
 		return -1
 
+# Safety Node only
 def sign(x : float):
 	'''
 	(float) -> (int)
@@ -335,7 +337,7 @@ def sign(x : float):
 
 	x (float) = The number for which sign is needed
 	'''
-	
+
 	return (x > 0) - (x < 0)
 
 
