@@ -2,6 +2,6 @@
     <node pkg="rover" type="lidar_pcl_subscriber" name="oc_generator" output="screen" />
 
 
-    <node pkg="tf" type="static_transform_publisher" name="os_tf" args="0 0 0 0 0 0 map os_sensor 100" />
+    <node pkg="tf" type="static_transform_publisher" name="os_tf" args="0 0 0 0 0 0 1 map os_sensor 100" />
 
 </launch>

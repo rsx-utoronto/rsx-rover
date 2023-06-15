@@ -69,8 +69,8 @@
     <remap from="scan" to="/scan" />
   </node>
 
-  <node pkg="tf" type="static_transform_publisher" name="os_imu_tf" args="0 0 0 0 0 0 os_sensor os_imu 100" />
-  <node pkg="tf" type="static_transform_publisher" name="os_lidar_tf" args="0 0 0 0 0 0 os_sensor os_lidar 100" />
-  <!-- <node pkg="tf" type="static_transform_publisher" name="os_tf" args="0 0 0 0 0 0 map os_sensor 100" /> -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="os_imu_tf" args="0 0 0 0 0 0 os_sensor os_imu 100" />
+  <node pkg="tf" type="static_transform_publisher" name="os_lidar_tf" args="0 0 0 0 0 0 os_sensor os_lidar 100" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="os_tf" args="0 0 0 0 0 0 map os_sensor 100" />
 
 </launch>
