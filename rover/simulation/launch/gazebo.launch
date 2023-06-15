@@ -2,8 +2,8 @@
   <rosparam command="load" file="$(find rover)/rover/simulation/config/ekf.yaml" />
   <param name="robot_description" textfile="$(find rover)/rover/simulation/urdfs/rover.urdf" />  
   <include
-    file="$(find gazebo_ros)/launch/empty_world.launch" />
-    <!--  file="$(find gazebo_ros)/launch/atacama_desert.launch" /> -->
+    file="$(find gazebo_ros)/launch/atacama_desert.launch" />
+    <!-- file="$(find gazebo_ros)/launch/empty_world.launch" /> -->
   <node
     name="tf_footprint_base"
     pkg="tf"
@@ -22,6 +22,8 @@
   <node pkg="tf" type="static_transform_publisher" name="lidar_broadcaster" args="0.0 0 0.278189004081027 0 0 0 1 base_link lidar_link 100" />
   <node pkg="tf" type="static_transform_publisher" name="imu_broadcaster" args="0.0 0 0.278189004081027 0 0 0 1 base_link gps_link 100" />
   <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster" args="0 0 0 0.7071068, 0 0 0.7071068 base_link imu_link 100" />
+  <node pkg="tf" type="static_transform_publisher" name="map_tf" args="0 0 0 0 0 0 base_link map 100" />
+
   <!-- <node pkg="tf" type="static_transform_publisher" name="chassis_tf" args="0.280596630449412 0.391929398096866 0.497299040946044 0 0 0 base_link chassis 100" /> -->
 
 

@@ -21,18 +21,17 @@
    </node>
 
    <!--  ****** Maps *****  -->
-  <arg name="occupancy_grid" default="/ransac_grid"/>
+       <!-- <arg name="occupancy_grid" default="/ransac_grid"/>
   <node name="map_saver" pkg="map_server" type="map_saver" args="-f $(find rover)/rover/autonomy/maps/current_map">
         <remap from="/map" to="$(arg occupancy_grid)"/>
-  </node>
+  </node> -->
   
-	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/autonomy/maps/current_map.yaml" output="screen">
+	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/atacama_desert_og.yaml" output="screen">
                <param name="frame_id" value="map"/>
 	</node>
 
    <arg name="use_map_topic" default="true"/>
-   <!-- <arg name="scan_topic" default="rrbot/laser/scan" /> -->
-   <arg name="scan_topic" default="/scan" />
+   <arg name="scan_topic" default="rrbot/laser/scan" />
 
 
    <node pkg="amcl" type="amcl" name="amcl">
