@@ -3,7 +3,7 @@
 import rospy
 from nav_msgs.msg import OccupancyGrid
 
-
+########################################### NO NEED - USED A BASH SCRIPT INSTEAD ####################################################
 def callback(msg):
     map = msg.data
 

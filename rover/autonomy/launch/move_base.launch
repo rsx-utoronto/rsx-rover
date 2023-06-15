@@ -21,29 +21,27 @@
    </node>
 
    <!--  ****** Maps *****  -->
-  <arg name="occupancy_grid" default="/ransac_grid"/>
-  <node name="map_saver" pkg="map_server" type="map_saver" args="-f $(find rover)/rover/autonomy/maps/current_map">
-        <remap from="/map" to="$(arg occupancy_grid)"/>
-  </node>
+
+   <node pkg="rover" type="map_saver.sh" name="map_saver" output="screen"/>
   
 	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/autonomy/maps/current_map.yaml" output="screen">
                <param name="frame_id" value="map"/>
+               <remap from="/map" to="/cur_oc"/>
+               <remap from="/map_metadata" to="/cur_oc_metadata"/>
 	</node>
 
-   <arg name="use_map_topic" default="true"/>
+   <arg name="use_map_topic" default="/cur_oc"/>
    <!-- <arg name="scan_topic" default="rrbot/laser/scan" /> -->
    <arg name="scan_topic" default="/scan" />
 
-
    <node pkg="amcl" type="amcl" name="amcl">
       <rosparam file="$(find rover)/rover/simulation/config/amcl_params.yaml" command="load" />
-      <remap from="scan" to="$(arg scan_topic)"/>    
+      <remap from="scan" to="$(arg scan_topic)"/> 
+      <param name="initial_pose_x"            value="2"/>
+		<param name="initial_pose_y"            value="2"/>
+		<param name="initial_pose_a"            value="0"/>   
    </node>
 
-	<!--    <param name="initial_pose_x"            value="2"/>
-		<param name="initial_pose_y"            value="2"/>
-		<param name="initial_pose_a"            value="0"/>
- -->
 
 	  <!--  **************** Visualisation ****************  -->
    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/simulation/config/gmapping_config.rviz"/>
