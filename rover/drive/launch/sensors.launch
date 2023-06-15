@@ -3,6 +3,7 @@
     <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
         <arg name="infra_width"   value="640"/>
         <arg name="infra_height"  value="480"/>
+        <arg name="infra_fps"    value="30"/>
     </include>
     <!-- update with parameters -->
     <include file="$(find ouster_ros)/launch/sensor.launch">
