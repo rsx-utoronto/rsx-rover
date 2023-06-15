@@ -7,5 +7,5 @@
         <arg name="sensor_hostname" value="os-992120000585.local" />
         <arg name="metadata" value="meta.json" />
         <arg name="lidar_mode" value="2048x10" />
-    </include> -->
+    </include> 
 </launch>
