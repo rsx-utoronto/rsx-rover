@@ -1,0 +1,6 @@
+<launch>
+    <arg name="occupancy_grid" default="/ransac_grid"/>
+  <node name="map_saver" pkg="map_server" type="map_saver" args="-f $(find rover)/rover/autonomy/maps/current_map">
+        <remap from="/map" to="$(arg occupancy_grid)"/>
+  </node>
+</launch>

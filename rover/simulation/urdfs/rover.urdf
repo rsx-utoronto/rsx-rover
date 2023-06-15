@@ -702,7 +702,7 @@
           </ray>
       <plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_gpu_laser.so">
         <topicName>/rrbot/laser/scan</topicName>
-        <frameName>hokuyo_link</frameName>
+        <frameName>base_link</frameName>
       </plugin>
     </sensor>
 </gazebo>

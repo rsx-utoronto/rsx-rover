@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="rover" type="laserscan_to_pc.py" name="laserscan_to_pointcloud" output="screen"/>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/simulation/config/laserscan_to_pc.rviz"/>
+</launch>
