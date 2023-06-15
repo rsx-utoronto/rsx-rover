@@ -49,16 +49,14 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	// indexs for controller values
 	int R2 = 5;
 	int L2 = 2;
-	int LS_x = 0;
-	int LS_y = 1;
+	int LS = 0;
 	int dec_speed = 4;
 	int inc_speed = 5;
 
 	// Values from Controller
 	double posThrottle = joy->axes[R2];
 	double negThrottle = joy->axes[L2];
-	double turnFactor_x = static_cast<double>(joy->axes[LS_x]);
-	double turnFactor_y = static_cast<double>(joy->axes[LS_y]);
+	double turnFactor = static_cast<double>(joy->axes[LS]);
 	double lin_vel;
 
 	double dispVal = 0;
