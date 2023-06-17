@@ -86,6 +86,7 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	}
 
 	lin_vel = lin_vel * gear;
+	turnFactor_x = turnFactor_x * gear;
 	ROS_INFO("Linear velocity: %f", lin_vel);
 	twist.linear.x = static_cast<double>(lin_vel/(double)255.0)*MAX_LINEAR_SPEED; // Should be in range of -MAX_LINEAR_SPEED to +MAX_LINEAR_SPEED 
 	twist.angular.z = static_cast<double>(turnFactor_x)*MAX_ANGULAR_SPEED; // Should be in range of -MAX_ANGULAR_SPEED to +MAX_ANGULAR_SPEED 
