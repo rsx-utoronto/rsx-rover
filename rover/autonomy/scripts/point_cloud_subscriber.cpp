@@ -27,7 +27,8 @@ nav_msgs::OccupancyGrid pub_grid()
     ransac_grid.info.origin.position.x = -(p.x_sz)/2;
     ransac_grid.info.origin.position.y = -(p.y_sz)/2;
     ransac_grid.info.origin.position.z = 0.0000000;
-    
+
+    ransac_grid.header.frame_id = "os_sensor";    
     ransac_grid.data.resize(dim*dim);
 
     int n = 0;
