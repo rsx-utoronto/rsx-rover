@@ -49,37 +49,26 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	// indexs for controller values
 	int R2 = 5;
 	int L2 = 2;
-	int LS = 0;
+	int LS_x = 0; // x axis of joystick
+	int LS_y = 1; // y axis of joystick
 	int dec_speed = 4;
 	int inc_speed = 5;
 
 	// Values from Controller
 	double posThrottle = joy->axes[R2];
 	double negThrottle = joy->axes[L2];
-	double turnFactor = static_cast<double>(joy->axes[LS]);
+	double turnFactor_x = static_cast<double>(joy->axes[LS_x]);
+	double turnFactor_y = static_cast<double>(joy->axes[LS_y]);
 	double lin_vel;
 
-	double dispVal = 0;
+	// Encoding value from joystick 
 
-	// Encoding Values for Throttle
-	if (posThrottle < 1 && negThrottle < 1)
-	{
-		lin_vel = 0;
-	}
-	else if (posThrottle < 1)
-	{
-		lin_vel = 255.0 - (posThrottle + 1) * 127.5;
-	}
-	else if (negThrottle < 1)
-	{
-		lin_vel = -1 * (255.0 - (negThrottle + 1) * 127.5);
-	}
-	else
-	{
+	if (turnFactor_y != 0) {
+		lin_vel = 255.0 * turnFactor_y;
+	} else {
 		lin_vel = 0;
 	}
 
-	// Encoding turn values
 	// Encoding values for gear selection (range 0 - 1)
 	if (joy->buttons[dec_speed] == 1) // reduce
 	{
@@ -97,11 +86,13 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	}
 
 	lin_vel = lin_vel * gear;
+	turnFactor_x = turnFactor_x * gear;
 	ROS_INFO("Linear velocity: %f", lin_vel);
 	twist.linear.x = static_cast<double>(lin_vel/(double)255.0)*MAX_LINEAR_SPEED; // Should be in range of -MAX_LINEAR_SPEED to +MAX_LINEAR_SPEED 
-	twist.angular.z = static_cast<double>(turnFactor)*MAX_ANGULAR_SPEED; // Should be in range of -MAX_ANGULAR_SPEED to +MAX_ANGULAR_SPEED 
+	twist.angular.z = static_cast<double>(turnFactor_x)*MAX_ANGULAR_SPEED; // Should be in range of -MAX_ANGULAR_SPEED to +MAX_ANGULAR_SPEED 
 
-	ROS_INFO("Turn Factor %f", turnFactor);
+	ROS_INFO("Turn Factor X %f", turnFactor_x);
+	ROS_INFO("Turn Factor Y %f", turnFactor_y);
 	ROS_INFO("Motor Value %f", lin_vel);
 
 	drive_pub_.publish(twist);
