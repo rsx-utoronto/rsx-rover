@@ -60,13 +60,7 @@ rosrun rover drive_sender_node &
 
 # Start sensors
 echo "Launching sensors..."
-# roslaunch rover sensors.launch &
-
-# wheel odom node launch 
-
-# state est node launch 
-
-# tf tree launch 
+roslaunch rover sensors.launch &
 
 # tmux \
 #   new-session -s "drive" -n "control" \; \
