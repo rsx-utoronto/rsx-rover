@@ -1,7 +1,7 @@
 import can
 import rospy
 import time
-import _thread
+import thread
 import threading
 import struct
 
