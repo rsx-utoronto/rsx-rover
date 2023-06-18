@@ -23,12 +23,13 @@
    <!--  ****** Maps *****  -->
 
    <node pkg="rover" type="map_saver.sh" name="map_saver" output="screen"/>
-  
-	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/autonomy/maps/current_map.yaml" output="screen">
+   <node pkg="rover" type="map_server.sh" name="map_server" output="screen"/>
+
+	<!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/autonomy/maps/current_map.yaml" output="screen">
                <param name="frame_id" value="map"/>
                <remap from="/map" to="/cur_oc"/>
                <remap from="/map_metadata" to="/cur_oc_metadata"/>
-	</node>
+	</node> -->
 
    <arg name="use_map_topic" default="/cur_oc"/>
    <!-- <arg name="scan_topic" default="rrbot/laser/scan" /> -->
