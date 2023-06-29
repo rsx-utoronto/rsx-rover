@@ -38,8 +38,8 @@
    <node pkg="amcl" type="amcl" name="amcl">
       <rosparam file="$(find rover)/rover/simulation/config/amcl_params.yaml" command="load" />
       <remap from="scan" to="$(arg scan_topic)"/> 
-      <param name="initial_pose_x"            value="2"/>
-		<param name="initial_pose_y"            value="2"/>
+      <param name="initial_pose_x"            value="0"/>
+		<param name="initial_pose_y"            value="0"/>
 		<param name="initial_pose_a"            value="0"/>   
    </node>
 

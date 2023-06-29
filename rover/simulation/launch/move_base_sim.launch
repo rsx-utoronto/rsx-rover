@@ -1,30 +1,34 @@
 <launch>
-
-   <master auto="start"/>
-        
-         <param name="/use_sim_time" value="true"/>
+   <param name="/use_sim_time" value="true"/>
    
 <!--      ************** Stage Simulator ***************   -->
    <!-- <node pkg="stage_ros" type="stageros" name="stageros" args="$(find teb_local_planner_tutorials)/stage/maze_diff_drive.world">
 		<remap from="base_scan" to="scan"/>
   	</node> -->
 
+   <arg name="no_static_map" default="false" />
+   <arg name="command_velocity_topic" default="/robot_base_velocity_controller/cmd_vel" />
+
+
    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
-      <rosparam file="$(find rover)/rover/autonomy/config/costmap_common.yaml" command="load" ns="global_costmap" /> 
-      <rosparam file="$(find rover)/rover/autonomy/config/costmap_common.yaml" command="load" ns="local_costmap" />
-      <rosparam file="$(find rover)/rover/autonomy/config/local_costmap.yaml" command="load" />
-      <rosparam file="$(find rover)/rover/autonomy/config/global_costmap.yaml" command="load" /> 
-      <rosparam file="$(find rover)/rover/autonomy/config/base_local_planner.yaml" command="load" />
-      <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
-      <param name="controller_frequency" value="10.0" />
-      <rosparam file="$(find rover)/rover/autonomy/config/costmap_converter.yaml" command="load" />
+      <rosparam file="$(find rover)/rover/simulation/config/costmap_common.yaml" command="load" ns="global_costmap" /> 
+      <rosparam file="$(find rover)/rover/simulation/config/costmap_common.yaml" command="load" ns="local_costmap" />
+      <rosparam file="$(find rover)/rover/simulation/config/local_costmap.yaml" command="load" ns="local_costmap"/>
+      <rosparam file="$(find rover)/rover/simulation/config/global_costmap.yaml" command="load" ns="global_costmap" unless="$(arg no_static_map)"/> 
+      <rosparam file="$(find rover)/rover/simulation/config/move_base.yaml" command="load" />
+      
+      <param name="base_local_planner" value="navfn/NavfnROS" />
+      <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+
+      <param name="controller_frequency" value="5.0" />
+      <param name="controller_patience" value="15.0" />
+
+      <remap from="cmd_vel" to="$(arg command_velocity_topic)" />
+
+      <!-- <rosparam file="$(find rover)/rover/autonomy/config/costmap_converter.yaml" command="load" /> -->
    </node>
 
    <!--  ****** Maps *****  -->
-       <!-- <arg name="occupancy_grid" default="/ransac_grid"/>
-  <node name="map_saver" pkg="map_server" type="map_saver" args="-f $(find rover)/rover/autonomy/maps/current_map">
-        <remap from="/map" to="$(arg occupancy_grid)"/>
-  </node> -->
   
 	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/atacama_desert_og.yaml" output="screen">
                <param name="frame_id" value="map"/>
@@ -37,17 +41,13 @@
    <node pkg="amcl" type="amcl" name="amcl">
       <rosparam file="$(find rover)/rover/simulation/config/amcl_params.yaml" command="load" />
       <remap from="scan" to="$(arg scan_topic)"/>    
+      <param name="initial_pose_x"            value="0"/>
+		<param name="initial_pose_y"            value="0"/>
+		<param name="initial_pose_a"            value="0"/>
    </node>
 
-	<!--    <param name="initial_pose_x"            value="2"/>
-		<param name="initial_pose_y"            value="2"/>
-		<param name="initial_pose_a"            value="0"/>
- -->
 
 	  <!--  **************** Visualisation ****************  -->
-   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/simulation/config/gmapping_config.rviz"/>
-
-   <node pkg="tf" type="static_transform_publisher" name="map_tf" args="0 0 0 0 0 0 base_link map 100" />
-
+   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/simulation/config/move_base.rviz"/>
 
 </launch> 

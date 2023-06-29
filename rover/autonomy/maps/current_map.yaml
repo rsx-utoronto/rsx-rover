@@ -1,6 +1,6 @@
 image: /home/garvish/rsx_ws/src/rsx-rover/rover/autonomy/maps/current_map.pgm
-resolution: 1.505817
-origin: [-39.833893, -35.456940, 0.000000]
+resolution: 1.030106
+origin: [-24.371880, -27.133410, 0.000000]
 negate: 0
 occupied_thresh: 0.65
 free_thresh: 0.196

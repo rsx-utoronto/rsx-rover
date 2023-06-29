@@ -1,0 +1,11 @@
+global_frame: odom # sometimes '/odom' works but in documentation, it says that '/odom' is discontinued in noetic. Use 'odom'
+rolling_window: true # If the static_map parameter is set to true, this should be set to false 
+# Says that we don't want the local planner to be initialized from a static map
+track_unknown_space: true
+
+plugins:
+  - {name: obstacles_laser,           type: "costmap_2d::ObstacleLayer"}
+  - {name: inflation,                 type: "costmap_2d::InflationLayer"}
+
+width: 10
+height: 10

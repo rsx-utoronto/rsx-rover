@@ -1,0 +1,7 @@
+global_frame: map # sometimes '/map' works but in documentation, it says that '/map' is discontinued in noetic. Use 'map'
+rolling_window: true
+track_unknown_space: false
+
+plugins:
+  - {name: static,                  type: "costmap_2d::StaticLayer"}
+  - {name: inflation,               type: "costmap_2d::InflationLayer"}
