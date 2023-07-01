@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 import can
 import rospy
-import time
 import struct
-from enum import Enum
 from std_msgs.msg import Float32MultiArray
 
 ########## GLOBAL VARIABLES ##########
@@ -102,23 +100,23 @@ def generate_can_id(dev_id : int, api : int,
 
 # CAN Node only
 def pos_to_sparkdata(f : float):
-    """
-    float -> list()
+	"""
+	float -> list()
 
-    Takes in a float position value (number of rotations) and returns the data packet in the form that
-    SparkMAX requires
+	Takes in a float position value (number of rotations) and returns the data packet in the form that
+	SparkMAX requires
 
-    @parameters:
+	@parameters:
 
-    f (float): Float value that needs to be converted
-    """
-    input_hex =  hex(struct.unpack('<I', struct.pack('<f', f))[0])
-    if len(input_hex) != 10:
-        input_hex = input_hex[:2] + input_hex[2:] + (10-len(input_hex))*'0'
-    
-    return [eval('0x'+input_hex[-2:]), eval('0x'+input_hex[-4:-2]),
-            eval('0x'+input_hex[-6:-4]), eval('0x'+input_hex[-8:-6]),
-            0x00, 0x00, 0x00, 0x00]
+	f (float): Float value that needs to be converted
+	"""
+	input_hex =  hex(struct.unpack('<I', struct.pack('<f', f))[0])
+	if len(input_hex) != 10:
+		input_hex = input_hex[:2] + input_hex[2:] + (10-len(input_hex))*'0'
+	
+	return [eval('0x'+input_hex[-2:]), eval('0x'+input_hex[-4:-2]),
+			eval('0x'+input_hex[-6:-4]), eval('0x'+input_hex[-8:-6]),
+			0x00, 0x00, 0x00, 0x00]
 
 # CAN Node only
 def sparkfixed_to_float(fixed : int, frac : int = 5):
@@ -261,40 +259,74 @@ def read_can_message(data, api):
 		print("Invalid API ID")
 		return -1
 
+
+# TEMPORARY, I HAVE NO IDEA IF I UNDERSTAND THE DIFFERENTIAL SYSTEM RIGHT
+def calc_differential(d_pos, d_angle):
+	"""
+	(float), (float) --> list(float). In same units as safe_goal_pos
+
+	Given how much you want the arm(gear?)(joint?) to rotate about it's axis (d_angle) and
+	rotate as a big lever (d_pos), returns how much each of the two motors need to rotate
+
+	DIRECTION NEEDS TO BE CALIBRATED BASED ON MOTOR POSITIONS AND REFERENCE COORDINATES
+	"""
+
+
+	# 2:1 gear ratio (2 turns of small gear = 1 turn of big gear) (I think)
+	# Motor movement required to produce d_angle
+	gear_ratio = 2.0/1.0
+
+	d_angle_motor1 = d_angle * gear_ratio # assuming same gear ratios
+	d_angle_motor2 = -d_angle * gear_ratio
+
+	# Motor movement required to produce d_pos
+	# Moves the entire joint so gear ratio doesn't matter
+	d_angle_motor1 += d_pos
+	d_angle_motor2 += d_pos
+
+	
+	return d_angle_motor1, d_angle_motor2
+
+
 # CAN Node only
 def generate_data_packet (data_list : list):
-    """
-    list(float) -> list(list(int))
+	"""
+	list(float) -> list(list(int))
 
-    Takes in the goal position angles for each motor and converts them to bytearrays specific for
-    each motor
+	Takes in the goal position angles for each motor and converts them to bytearrays specific for
+	each motor
 
-    @parameters
+	@parameters
 
-    data_list (list(float)): List containing the anglular positions (in degrees) for each motor in the order
-    """
-    
-    # A variable to keep count of joint number
-    joint_num = 0
-    
-    # Sparkmax Data list
-    spark_data = []
+	data_list (list(float)): List containing the anglular positions (in degrees) for each motor in the order
+	"""
+	
+	# Angle conversion for differential system
+	# Assuming the last two angles specify the angle of the differential system,
+	# convert those two values to the required angles for motors 5 and 6
+	data_list[len(data_list)-2], data_list[len(data_list)-1] = calc_differential(data_list[len(data_list)-2], data_list[len(data_list)-1])
+	
+	# A variable to keep count of joint number
+	joint_num = 0
+	
+	# Sparkmax Data list
+	spark_data = []
 
-    for angle in data_list:
-        joint_num += 1
+	for angle in data_list:
+		joint_num += 1
 
-        # Converting the angle to spark data
-        angle = angle/360 * REDUCTION[joint_num - 1]
-        spark_data.append(pos_to_sparkdata(angle))
+		# Converting the angle to spark data
+		angle = angle/360 * REDUCTION[joint_num - 1]
+		spark_data.append(pos_to_sparkdata(angle))
 
-        # For debugging
-        if 6 == joint_num:
-            #print(angle*360/REDUCTION[5])
-            # print(angle)
-            # print("CURR: {}      MOTOR_CURT: {}".format(CURR_POS[5], MOTOR_CURT[5]) )
-            # print(ERRORS[5])
-            pass
-    return spark_data
+		# For debugging
+		if 6 == joint_num:
+			#print(angle*360/REDUCTION[5])
+			# print(angle)
+			# print("CURR: {}      MOTOR_CURT: {}".format(CURR_POS[5], MOTOR_CURT[5]) )
+			# print(ERRORS[5])
+			pass
+	return spark_data
 
 
 # CAN Node only
@@ -354,7 +386,7 @@ def CAN_node(): 	# Queue size & rate not calibrated
 	
 	while not rospy.is_shutdown():
 		# Send instructions to motor
-		# Convert SparkMAX angles to sparkMAX data packets
+		# Convert SparkMAX angles to SparkMAX data packets
 		spark_input = generate_data_packet(SAFE_GOAL_POS) # assuming data is safe
 		
 		# Send data packets
@@ -394,14 +426,14 @@ if __name__=="__main__":
 
 	# Broadcast heartbeat
 	hb = can.Message(
-        arbitration_id= generate_can_id(
-            dev_id= 0x0, 
-            api= CMD_API_NONRIO_HB), 
-        data= bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 
-        is_extended_id= True,
-        is_remote_frame = False, 
-        is_error_frame = False
-    )
+		arbitration_id= generate_can_id(
+			dev_id= 0x0, 
+			api= CMD_API_NONRIO_HB), 
+		data= bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 
+		is_extended_id= True,
+		is_remote_frame = False, 
+		is_error_frame = False
+	)
 	task = BUS.send_periodic(hb, 0.01)
 	print("Heartbeat initiated")
 
