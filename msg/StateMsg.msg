@@ -1,3 +1,4 @@
+string rover_mode
 rover/GPSMsg next_goal_gps
 string current_task
 bool goal_gps_found
