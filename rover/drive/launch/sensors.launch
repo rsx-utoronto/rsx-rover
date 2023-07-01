@@ -1,15 +1,16 @@
 <launch> 
+    <node pkg="tf" type="static_transform_publisher" name="base_link_to_lidar" args="0 0 0 0 0 0 1 os_sensor base_link 100" />
     <!-- <node pkg="inertial_sense_ros" type="inertial_sense_node" name="imu_ins_node" respawn="false" /> -->
-    <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
+    <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
         <arg name="infra_width"   value="640"/>
         <arg name="infra_height"  value="480"/>
         <arg name="infra_fps"    value="30"/>
-    </include>
+    </include> -->
     <!-- update with parameters -->
     <include file="$(find ouster_ros)/launch/sensor.launch">
         <arg name="sensor_hostname" value="os-992120000585.local" />
         <arg name="metadata" value="meta.json" />
-        <arg name="lidar_mode" value="2048x10" />
+        <arg name="lidar_mode" value="1024x20" />
         <arg name="viz" value="false"/>
     </include>
 </launch>
