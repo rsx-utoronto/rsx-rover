@@ -1,105 +1,120 @@
 #!/usr/bin/env python3
 import rospy
 import time
-from std_msgs.msg import Bool, Int64, Float64
+from std_msgs.msg import String
+from geometry_msgs.msg import Twist, PoseStamped
+#from rsx_rover.msg import GPSMsg, StateMsg
+from sensor_msgs.msg import Image
 from tkinter import *   
 import tkinter as tk
 
 
-class Label:
-    labels = [] # this is a list of the created labels
 
-    def __init__(self, queue, subType, initial, x, y) -> None:
+class Label:
+    def __init__(self, queue, subType, initial, txt, x, y) -> None:
         """
         queue is the subscriber queue this label should follow
         subType is the data type of the subscriber queue
         initial is the value we set the label to at the start
+        txt is the string function the incoming published msgs are formatted to
+        x,y are the location on the screen
         """
-        self.label = tk.Label(root, text=initial)
+        self.label = tk.Label(root, text=queue + " \n" + initial)
+        self.queue = queue
+        self.txt = txt
         self.subscriber = rospy.Subscriber(queue, subType, self.callback)
         self.label.place(x=x,y=y)
     
     def callback(self, data):
         # this updates the specific instance Label
-        self.label['text'] = data.data
+        self.label['text'] = self.queue + "\n" + self.txt(data)
 
-class Button():
-    def __init__(self, queue, pubType, varChoice1, varChoice2, x, y) -> None:
+def twistStr(data):
+    lin = "Linear Components: [x-%f, y-%f, z-%f]"%(data.linear.x, data.linear.y, data.linear.z)
+    ang = "Angular Components: [x-%f, y-%f, z-%f]"%(data.angular.x, data.angular.y, data.angular.z)
+    return lin + "\n" + ang
+
+def poseStr(data):
+    pos = "Positional Components: [x-%f, y-%f, z-%f]"%(data.pose.position.x, data.pose.position.y, data.pose.position.z)
+    orn = "Orientation Components: [x-%f, y-%f, z-%f, w-%f]"%(data.pose.orientation.x, data.pose.orientation.y, data.pose.orientation.z, data.pose.orientation.w)
+    return pos + "\n" + orn
+
+def stateStr(data):
+    st1 = "next_goal_gps: %f\ncurrent_task: %f\ngoal_gps_found: %f"%(data.next_goal_gps, data.current_task, data.goal_gps_found)
+    st2 = "MISSION_OVER: %f\ndetected_AR_IDs: %f\n"%(data.MISSION_OVER, data.detected_AR_IDs)
+    st3 = "curr_AR_IDs: %f\nbest_current_AR_ID: %f\n"%(data.curr_AR_IDs, data.best_current_AR_ID)
+    return st1 + "\n" + st2 + "\n" + st3
+
+def gpsStr(data):
+    return "latitude: " + data.latitude + '\nlongitude:' + data.longitude
+
+
+
+class DropDownPub():
+    def __init__(self, queue, pubType, initial, choices, x, y) -> None:
         """
-        The button publishes to queue with data type pubType and toggles between the list varChoice1/2.
-        The text displayed on the button is the current value being published.
+        queue is the name of the published topic
+        pubType is the data type of the publisher
+        choices are the options in the drop down
+        x,y are the location of the drop down on the screen
         """
         self.pub = rospy.Publisher(queue, pubType, queue_size=1)
-        self.var1 = pubType
-        self.var2 = pubType
-        self.curVar = pubType
-        self.var1 = varChoice1
-        self.var2 = varChoice2
-        self.curVar = varChoice1
-        self.btn = tk.Button(root, text = varChoice1, bd = '5', command = lambda: self.updatePublisher())
+        self.clicked = StringVar(root)
+        self.clicked.set(initial)
+        self.type = pubType
+        self.choices = choices
+        self.drop = OptionMenu(root, self.clicked, *self.choices, command=self.updatePublisher)
+        self.drop.place(x=x,y=y)
+        root.after(self.updatePublisher())
+
+    def updatePublisher(self, *args):
+        var = self.type()
+        var = self.clicked.get()
+        print(var)
+        print(type(var))
+        self.pub.publish(var)
+
+class Button():
+    def __init__(self, name, action, x, y) -> None:
+        """
+        queue is the name of the published topic
+        pubType is the data type of the publisher
+        choices are the options in the drop down
+        x,y are the location of the drop down on the screen
+        """
+        self.action = action
+        self.btn = tk.Button(root, text = name, bd = '5', command = self.updatePublisher)
         self.btn.place(x=x,y=y)
         self.updatePublisher()
 
     def updatePublisher(self):
-        if self.curVar == self.var1:
-            self.curVar = self.var2
-        else:
-            self.curVar = self.var1
-        self.pub.publish(self.curVar)
-        self.btn['text'] = self.curVar
+        pass
 
-class Slider():
-    def __init__(self, queue, pubType, val, res, min, max, orn, initial, x, y) -> None:
-        """
-        The slider publishes to queue with data type pubType and has a range from min to max. The 
-        orientation of the slider (orn) is either HORIZONTAL or VERTICAL. Sliders can have either
-        return values as IntVar, DoubleVar or StringVar which is set by val. The resolution step between 
-        options on the slider (0.2 would mean the scale has 6 value options from 0.0 to 1.0) and is set 
-        by the variable res. The starting value of the slider is initial
-        """
-        if orn == VERTICAL:
-            min, max = max, min
-        self.pub = rospy.Publisher(queue, pubType, queue_size=1)
-        self.type = val
-        self.scale = tk.Scale(root,from_=min,to=max,orient=orn,
-                              resolution=res)
-        self.scale.set(initial)   
-        self.var = initial
-        self.scale.bind("<ButtonRelease-1>", lambda x: self.updatePublisher())
-        self.scale.place(x=x, y=y)
-        self.updatePublisher()
 
-    def updatePublisher(self):
-        print('here')
-        print(self.var)
-        if self.type == float:
-            self.var = float(self.scale.get())
-        elif self.type == int:
-            self.var = int(self.scale.get())
-        else:
-            self.var = str(self.scale.get())
-        print(self.var)
-        self.pub.publish(self.var)
+
 
 def main():
     rospy.init_node("gui")
+
+    modes = ('AUTONOMY', 'MANUAL', 'IDLE')
     
     # create a tkinter window
     global root
     root = tk.Tk()             
     # Open window having dimension 100x100
-    root.geometry('500x500')
+    root.geometry('1000x1000')
 
-    # create all the labels
-    Label('publish', Int64, 0, 100, 100)
-    Label('publish2', Int64, 10000, 100, 150)
+    # create all the subscribers
+    #Label('rover_state', StateMsg, "N/A", stateStr, 100, 50)
+    #Label('rover_gps', GPSMsg, "N/A", gpsStr, 100, 150)
+    Label('cmd_vel', Twist, "N/A", twistStr, 100, 200)
+    Label('move_base_simple/goal', PoseStamped, "N/A", poseStr, 100, 250)
 
-    # create all the buttons
-    Button('gui', Bool, True, False, 100, 400)
+    # create all the publishers
+    DropDownPub('rover/launch', String, "IDLE", modes, 100, 400)
 
-    # create all the sliders
-    Slider('slider', Float64, float, 0.2, 0.0, 1.0, VERTICAL, 1.0, 300, 300)
-    Slider('slider2', Float64, float, 0.2, 0.0, 1.0, HORIZONTAL, 1.0, 330, 400)
+    # create terminal command
+    #Button("start ros bag", "rosbag record -a", 100, 600)
 
     root.mainloop()
 
