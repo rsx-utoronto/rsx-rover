@@ -19,18 +19,19 @@ class StateMachineNode():
 
         # State Machine States
         self.rover_idle = self.RoverIdle()
+        self.rover_manual = self.RoverManual()
         self.rover_initialize = self.RoverInitialize()
         self.rover_start = self.RoverStart()
         self.rover_gps_traverse = self.RoverGPSTraverse()
         self.rover_aruco_traverse = self.RoverARucoTraverse()
+        self.rover_scan = self.RoverScan()
+        self.rover_gps_checkpoint = self.RoverGPSCheckpoint()
+        self.rover_timeout = self.RoverTimeout()
+        self.rover_mission_over = self.RoverMissionOver()
 
     def state_callback(self, state_msg):
 
-        self.GPS_GOAL_REACHED = state_msg.GPS_GOAL_REACHED 
-
-    def mode_callback(self, request):
-        self.handle_launch()
-        return EmptyResponse()
+        self.GPS_GOAL_REACHED = state_msg.GPS_GOAL_REACHED
 
 
 class RoverIdle(smach.State):
@@ -53,7 +54,7 @@ class RoverIdle(smach.State):
 class RoverManual(smach.State):
 
     def __init__(self):
-        smach.State.__init__(self, outcomes=['MOVE_TO','outcome2'])
+        smach.State.__init__(self, outcomes=['MOVE_TO_IDLE','MOVE_TO_INTIALIZE'])
         self.counter = 0
         # Your state initialization goes here
 
@@ -142,50 +143,50 @@ class RoverGPSCheckpoint(smach.State):
         else:
             return 'outcome2'
     
-# class RoverScan(smach.State):
+class RoverScan(smach.State):
 
-#     def __init__(self):
-#         smach.State.__init__(self, outcomes=['outcome1','outcome2'])
-#         self.counter = 0
-#         # Your state initialization goes here
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['outcome1','outcome2'])
+        self.counter = 0
+        # Your state initialization goes here
 
-#     def execute(self, userdata):
-#         rospy.loginfo('Executing state FOO')
-#         # Your state execution goes here
-#         if xxxx:
-#             return 'outcome1'
-#         else:
-#             return 'outcome2'
+    def execute(self, userdata):
+        rospy.loginfo('Executing state FOO')
+        # Your state execution goes here
+        if xxxx:
+            return 'outcome1'
+        else:
+            return 'outcome2'
 
-# class RoverTimeout(smach.State):
+class RoverTimeout(smach.State):
 
-#     def __init__(self):
-#         smach.State.__init__(self, outcomes=['outcome1','outcome2'])
-#         self.counter = 0
-#         # Your state initialization goes here
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['outcome1','outcome2'])
+        self.counter = 0
+        # Your state initialization goes here
 
-#     def execute(self, userdata):
-#         rospy.loginfo('Executing state FOO')
-#         # Your state execution goes here
-#         if xxxx:
-#             return 'outcome1'
-#         else:
-#             return 'outcome2'
+    def execute(self, userdata):
+        rospy.loginfo('Executing state FOO')
+        # Your state execution goes here
+        if xxxx:
+            return 'outcome1'
+        else:
+            return 'outcome2'
 
-# class RoverMissionOver(smach.State):
+class RoverMissionOver(smach.State):
 
-#     def __init__(self):
-#         smach.State.__init__(self, outcomes=['outcome1','outcome2'])
-#         self.counter = 0
-#         # Your state initialization goes here
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['outcome1','outcome2'])
+        self.counter = 0
+        # Your state initialization goes here
 
-#     def execute(self, userdata):
-#         rospy.loginfo('Executing state FOO')
-#         # Your state execution goes here
-#         if xxxx:
-#             return 'outcome1'
-#         else:
-#             return 'outcome2'
+    def execute(self, userdata):
+        rospy.loginfo('Executing state FOO')
+        # Your state execution goes here
+        if xxxx:
+            return 'outcome1'
+        else:
+            return 'outcome2'
 
 def main(args):
     rospy.init_node('rsx_rover_state_machine')
@@ -198,24 +199,38 @@ def main(args):
     # Open the container
     with sm:
         # Add states to the container
-        smach.StateMachine.add('RoverIdle', state_machine_node.RoverIdle(),
+        smach.StateMachine.add('RoverIdle', state_machine_node.rover_idle(),
                                transitions={'STAY': 'RoverIdle',
                                             'MOVE_TO_INITIALIZE' : 'RoverInitialize'})
-        smach.StateMachine.add('RoverManual', state_machine_node.RoverManual(),
+        smach.StateMachine.add('RoverManual', state_machine_node.rover_manual(),
                                transitions={'STAY': 'RoverManual',
                                             'MOVE_TO_INITIALIZE' : 'RoverInitialize', 
                                             'MOVE_TO_IDLE' : 'RoverIdle'})
         smach.StateMachine.add('RoverInitialize', RoverInitialize(), 
                                transitions={'LOADING' : 'RoverInitialize',
                                             'LOAD_COMPLETE' : 'RoverStart'})
-        smach.StateMachine.add('RoverStart', state_machine_node.RoverStart(), 
+        smach.StateMachine.add('RoverStart', state_machine_node.rover_start(), 
                                transitions={'GPS_GOAL_QUEUED':'RoverGPSTraverse'})
-        smach.StateMachine.add('RoverGPSTraverse', state_machine_node.RoverGPSTraverse(), 
+        smach.StateMachine.add('RoverGPSTraverse', state_machine_node.rover_gps_traverse(), 
                                transitions={'GPS_GOAL_REACHED':'RoverARucoTraverse'})
-        smach.StateMachine.add('RoverGPSCheckpoint', state_machine_node.RoverGPSCheckpoint(),
-                               transitions={'GPS_GOAL_REACHED':'RoverARucoTraverse'})
-        smach.StateMachine.add('RoverARucoTraverse', state_machine_node.RoverARucoTraverse(),
-                               transitions={'ARUCO_FOUND':'RoverTransition', 
+        smach.StateMachine.add('RoverGPSCheckpoint', state_machine_node.rover_gps_checkpoint(),
+                               transitions={'ARUCO_FOUND':'RoverARucoTraverse', 
+                                            'START_SEARCH':'RoverScan'})
+        smach.StateMachine.add('RoverARucoTraverse', state_machine_node.rover_aruco_traverse(),
+                               transitions={'GOAL_REACHED':'RoverTransition',
+                                            'ARUCO_FOUND':'RoverARucoTraverse', 
+                                            'SEARCHING': 'RoverScan'})
+        smach.StateMachine.add('RoverScan', state_machine_node.rover_scan(),
+                               transitions={'ARUCO_FOUND':'RoverARucoTraverse', 
+                                            'SEARCHING': 'RoverScan'})
+        smach.StateMachine.add('RoverTransition', state_machine_node.rover_transition(),
+                               transitions={'ARUCO_FOUND':'RoverARucoTraverse', 
+                                            'SEARCHING': 'RoverScan'})
+        smach.StateMachine.add('RoverTimeout', state_machine_node.rover_timeout(),
+                               transitions={'ARUCO_FOUND':'RoverARucoTraverse', 
+                                            'SEARCHING': 'RoverScan'})
+        smach.StateMachine.add('RoverMissionOver', state_machine_node.rover_mission_over(),
+                               transitions={'ARUCO_FOUND':'RoverARucoTraverse', 
                                             'SEARCHING': 'RoverScan'})
 
     # Execute SMACH plan
