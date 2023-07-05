@@ -16,6 +16,7 @@ class StateMachineNode():
         self.MODE = "IDLE"
         self.GPS_GOALS = np.zeros(0,3)
         self.task_config = args.task_config
+        self.GPS_counter = 0
 
         # State Machine States
         self.rover_idle = self.RoverIdle()
@@ -145,6 +146,30 @@ class RoverGPSCheckpoint(smach.State):
         else:
             return 'outcome2'
     
+class RoverTransition(smach.State):
+
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['outcome1','outcome2'])
+        self.counter = 0
+        # Your state initialization goes here
+
+    def execute(self, userdata):
+        rospy.loginfo('Executing state FOO')
+        # Your state execution goes here
+
+        if self.GPS_counter == self.num_GPS_goals -1: 
+            # 
+
+        if self.GPS_counter == 2 and not self.gps_location_read:
+            # Move to node for determining GPS loc from heading and distance
+            return 'DETERMINE_REL_GPS_GOAL'
+        
+        else:
+            self.GPS_counter += 1
+            # Load the next GPS goal into the state 
+            # Move to RoverGPSTraverse
+            return 'MOVE_TO_GPS_TRAVERSE'
+
 class RoverScan(smach.State):
 
     def __init__(self):
@@ -227,7 +252,14 @@ def main(args):
                                             'SEARCHING': 'RoverScan'})
         smach.StateMachine.add('RoverTransition', state_machine_node.rover_transition(),
                                transitions={'ARUCO_FOUND':'RoverARucoTraverse', 
-                                            'SEARCHING': 'RoverScan'})
+                                            'SEARCHING': 'RoverScan',
+                                            'DETERMINE_REL_GPS_GOAL':'RoverReadGPSGoal',
+                                            'MOVE_TO_GPS_TRAVERSE': 'RoverGPSTraverse'})
+        smach.StateMachine.add('RoverReadGPSGoal', state_machine_node.rover_read_gps_goal(),
+                               transitions={'LOC_CONFIRMED':'RoverTransition', 
+                                            'SEARCHING': 'RoverScan',
+                                            'DETERMINE_REL_GPS_GOAL':'RoverReadGPSGoal',
+                                            'MOVE_TO_GPS_TRAVERSE': 'RoverGPSTraverse'})
         smach.StateMachine.add('RoverTimeout', state_machine_node.rover_timeout(),
                                transitions={'ARUCO_FOUND':'RoverARucoTraverse', 
                                             'SEARCHING': 'RoverScan'})
