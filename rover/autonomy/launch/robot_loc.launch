@@ -3,6 +3,9 @@
     <node pkg="tf" type="static_transform_publisher" name="imu_broadcaster" args="0.0 0 0.278189004081027 0 0 0 1 base_link ins_base_link 100" />
     <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster" args="0 0 0 0.7071068, 0, 0, 0.7071068 base_link ins_base_link 100" />
 
+    <!-- Launch LeGO LOAM (mapping and odometry node) -->    
+    <include file="$(find lego_loam)/LeGO-LOAM/launch/run.launch" />
+
     <node pkg="robot_localization" type="ekf_localization_node" name="ekf_odom_node" output="screen" >
 
         <!-- Basic parameters -->
@@ -42,12 +45,24 @@
                                        true, true, true]</rosparam>
         
         <!-- Lidar IMU config-->
-        <param name="imu0" value="/ouster/imu"/>
-        <param name="imu0_differential" value="false" />
-        <param name="imu0_relative" value="true" />
-        <param name="imu0_queue_size" value="10" />
-        <param name="imu0_remove_gravitational_acceleration" value="true" />
-        <rosparam param="imu0_config">[false,  false, false,
+        <param name="imu1" value="/ouster/imu"/>
+        <param name="imu1_differential" value="false" />
+        <param name="imu1_relative" value="true" />
+        <param name="imu1_queue_size" value="10" />
+        <param name="imu1_remove_gravitational_acceleration" value="true" />
+        <rosparam param="imu1_config">[false,  false, false,
+                                       false, false, false,
+                                       false, false, false,
+                                       true , true, true,
+                                       true, true, true]</rosparam>
+
+        <!-- Camera IMU config-->
+        <param name="imu2" value="/camera/imu"/>
+        <param name="imu2_differential" value="false" />
+        <param name="imu2_relative" value="true" />
+        <param name="imu2_queue_size" value="10" />
+        <param name="imu2_remove_gravitational_acceleration" value="true" />
+        <rosparam param="imu2_config">[false,  false, false,
                                        false, false, false,
                                        false, false, false,
                                        true , true, true,

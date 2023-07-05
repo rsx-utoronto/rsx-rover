@@ -1,12 +1,23 @@
 <launch> 
-    <node pkg="tf" type="static_transform_publisher" name="base_link_to_lidar" args="0 0 0 0 0 0 1 os_sensor base_link 100" />
-    <!-- <node pkg="inertial_sense_ros" type="inertial_sense_node" name="imu_ins_node" respawn="false" /> -->
-    <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
+    <!-- Define tf tree -->
+    <node pkg="tf" type="static_transform_publisher" name="lidar_broadcaster" args="0.0 0 0.278189004081027 0 0 0 1 base_link os_sensor 100" />
+    <node pkg="tf" type="static_transform_publisher" name="imu_broadcaster" args="0.0 0 0.278189004081027 0 0 0 1 base_link ins_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster" args="0 0 0 0.7071068, 0, 0, 0.7071068 base_link gps_link 100" />
+
+    <!-- Launch GPS and IMU drivers-->
+    <node pkg="inertial_sense_ros" type="inertial_sense_node" name="imu_ins_node" respawn="false" />
+
+    <!-- Launch Realsense driver -->
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
         <arg name="infra_width"   value="640"/>
         <arg name="infra_height"  value="480"/>
         <arg name="infra_fps"    value="30"/>
-    </include> -->
-    <!-- update with parameters -->
+        <arg name="enable_accel" value="true"/>
+        <arg name="enable_gyro"  value="true"/>
+        <arg name="unite_imu_method" value="true"/> 
+    </include>
+
+    <!-- Launch Ouster lidar driver -->
     <include file="$(find ouster_ros)/launch/sensor.launch">
         <arg name="sensor_hostname" value="os-992120000585.local" />
         <arg name="metadata" value="meta.json" />
