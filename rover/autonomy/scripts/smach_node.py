@@ -32,40 +32,40 @@ class StateMachineNode():
     def state_callback(self, state_msg):
 
         self.GPS_GOAL_REACHED = state_msg.GPS_GOAL_REACHED
+        self.MODE = state_msg.rover_mode
 
 
 class RoverIdle(smach.State):
 
     def __init__(self):
-        smach.State.__init__(self, outcomes=['outcome1','outcome2'])
-        self.counter = 0
+        smach.State.__init__(self, outcomes=["MOVE_TO_MANUAL","MOVE_TO_INTIALIZE", "STAY"])
 
     def execute(self, userdata):
         rospy.loginfo('Executing state IDLE')
 
         # Your state execution goes here
         if self.MODE == "IDLE":
-            return 'STAY'
+            return "STAY"
         elif self.MODE == "AUTONOMY":
-            return 'MOVE_TO_INTIALIZE'
+            return "MOVE_TO_INTIALIZE"
         elif self.MODE == "MANUAL":
-            return 'MOVE_TO_MANUAL'
+            return "MOVE_TO_MANUAL"
 
 class RoverManual(smach.State):
 
     def __init__(self):
-        smach.State.__init__(self, outcomes=['MOVE_TO_IDLE','MOVE_TO_INTIALIZE'])
+        smach.State.__init__(self, outcomes=['MOVE_TO_IDLE','MOVE_TO_INTIALIZE', 'STAY'])
         self.counter = 0
         # Your state initialization goes here
 
     def execute(self, userdata):
         rospy.loginfo('Executing state MANUAL')
         # Your state execution goes here
-        if self.STATE == 'MANUAL':
+        if self.MODE == 'MANUAL':
             return 'STAY'
-        elif self.STATE == 'AUTONOMY':
+        elif self.MODE == 'AUTONOMY':
             return 'MOVE_TO_INITIALIZE'
-        elif self.STATE == 'IDLE':
+        elif self.MODE == 'IDLE':
             return 'MOVE_TO_IDLE'
 
 class RoverInitialize(smach.State):
@@ -78,6 +78,8 @@ class RoverInitialize(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Executing state FOO')
         # Your state execution goes here
+
+        # Load the configuration file 
         if :
             return 'outcome1'
         else:
