@@ -7,6 +7,7 @@ from smach_ros import SimpleActionState
 from rsx_rover.msg import GPSMsg, StateMsg
 from std_srvs.srv import Empty, EmptyResponse
 import argparse
+import yaml
 
 class StateMachineNode():
 
@@ -81,6 +82,13 @@ class RoverInitialize(smach.State):
         # Your state execution goes here
 
         # Load the configuration file 
+
+        with open(userdata.task_config, "r") as stream:
+            try:
+                config = yaml.safe_load(stream)
+            except yaml.YAMLError as exc:
+                print(exc)
+
         if :
             return 'outcome1'
         else:
@@ -154,11 +162,12 @@ class RoverTransition(smach.State):
         # Your state initialization goes here
 
     def execute(self, userdata):
-        rospy.loginfo('Executing state FOO')
-        # Your state execution goes here
+        rospy.loginfo('Executing state Rovransition')
+        
 
-        if self.GPS_counter == self.num_GPS_goals -1: 
+        if self.GPS_counter == self.num_GPS_goals - 1: 
             # 
+            return "MOVE_TO_MISSION_OVER"
 
         if self.GPS_counter == 2 and not self.gps_location_read:
             # Move to node for determining GPS loc from heading and distance
