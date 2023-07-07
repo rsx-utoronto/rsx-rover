@@ -49,13 +49,10 @@ class Manual_Node():
 
         # preparing controller_pos values based on the state
         if self.state == "Manual":
-            self.getManualJoystick()
+            #self.getManualJoystick()
             self.MapJoystick(self.joypos, self.controller_pos, self.speed_limit, time.time() - self.t)
         if self.state == "Setup":
             self.setup()
-        
-
-
         
     def SetJointSpeed(self, joypos : list, controller_pos : list, speed_limit : list, dt : float) -> list:
         """
@@ -73,72 +70,26 @@ class Manual_Node():
         
         dt (float): Time since last call 
         """
-        return (speed_limit*(joypos)*dt) + controller_pos
+        # Calculate joint speed from speed limit, joypos, time taken, and controller pos
+        return ((speed_limit*(joypos)*dt) + controller_pos)
     
-    def getManualJoystick(self):
-        """
-        Update the joypos based on button presses/releases and analog
-        """
-        for game_event in pygame.event.get():
-            if game_event.type == pygame.QUIT:
-                # Stop running if quit input is recieved
-                running = False
-            elif game_event.type == pygame.KEYDOWN:
-                # Else, continue
-                pass
-            # Get dictionaries
-            buttons = getButtons()
-            axes = getJoystickAxes()
-            # Pressed buttons
-            # Double-check the mapping, not sure
-            if buttons["START"] == 1:
-                # Kill switch
-                self.joypos[29] = 1
-            if buttons["TRIANGLE"] == 1:
-                # Swaps (1 -> 0, 0 -> 1)
-                self.joypos[7] = not joypos[7]
-            if buttons["SQUARE"] == 1:
-                self.joypos[5] = -1
-            if buttons["L1"] == 1:
-                self.joypos[5] = 1
-            if buttons["CIRCLE"] == 1:
-                self.joypos[6] = 1
-            if buttons["X"] == 1:
-                self.joypos[6] = -1
-            # Released buttons
-            if (buttons["SQUARE"] == -1 or buttons["L1"] == -1):
-                self.joypos[5] = 0
-            if (buttons["CIRCLE"] == -1 or buttons["X"] == -1):
-                self.joypos[6] = 0
-            # Analog 
-            if axes["R-Down"] in (0, -1):
-                self.joypos[3] = -(axes["R-Down"])
-            if (self.joypos[3] < .18 and self.joypos[3] > -.18):
-                self.joypos[3] = 0
-            if axes["R-Right"] != 0:
-                self.joypos[2] = axes["R-Right"]
-            if (self.joypos[2] < .18 and self.joypos[2] > -.18 and axes["R-Right"] != 0):
-                self.joypos[2] = 0
-            if axes["L-Down"] != 0:
-                self.joypos[1] = axes["L-Down"]
-            if (self.joypos[1] < .18 and self.joypos[1] > -.18):
-                self.joypos[1] = 0
-            if axes["L-Right"]:
-                self.joypos[0] = axes["L-Right"]
-            if (self.joypos[0] < .18 and self.joypos[0] > -.18):
-                self.joypos[0] = 0
-            if axes["R2"] > -1:
-                self.joypos[4] = ((axes["R2"] + 1)/ 2)
-            elif (axes["L-Down"] > -1 and axes["L-Down"] != 0):
-                self.joypos[4] = -((axes["L-Down"] + 1)/ 2)
-            if (self.joypos[4] < .5 and self.joypos[4] > -.5):
-                self.joypos[4] = 0
-            
-            # Return joystick positions
-            return self.joypos
         
-    def MapJoystick(self, joypos, controller_pos, speed_limit, dt):   #takes in the joystick input(I), the current position of the motors (O), the speed limits (S)
+    def MapJoystick(self, joypos : list, controller_pos : list, speed_limit : list, dt : list):   
+        """
+        (list(float), list(float), list(float), float) -> list(float)
+        Takes in joypos, motor positions, and speed limits and updates motor positions
 
+        @parameters
+        joypos (list(float)): Buffer holding the input from controller
+        
+        controller_pos (list(float)): List containing the current angles (in degrees) of the motors
+        
+        speed_limit (list(float)): List containing tested out manually controlled speeds for each motor
+        
+        dt (float): Time since last call
+        """
+
+        # Set controller pos based on joint speed calculations/joypos
         controller_pos[0] = self.SetJointSpeed(joypos[0], controller_pos[0], speed_limit[0], dt)
         controller_pos[1] = self.SetJointSpeed(-joypos[1], controller_pos[1], speed_limit[1], dt)
         controller_pos[2] = self.SetJointSpeed(joypos[3], controller_pos[2], speed_limit[2], dt)
@@ -148,18 +99,109 @@ class Manual_Node():
         controller_pos[6] = self.SetJointSpeed(joypos[6], controller_pos[6], speed_limit[6], dt)
         controller_pos[7] = joypos[7]
 
+        # Measure time it takes to update controller pos
         self.t            = time.time()
         return controller_pos
     
     def setup(self):
+        # For each motor/controller pos...
         for i in range(len(self.controller_pos)):
+            # Send in a large value to hit limit switch
             self.controller_pos[i] = 10000000
-            # send controller_pos value, wait for limit switch
-            while LIMIT_SWITCH not in error:
+            # When error occurs (recieve from safety node), set it back to zero
+            # Currently assuming error messages will be str
+            while "LIMIT_SWITCH" not in self.error:
                 pass
             self.controller_pos[i] = 0
         pass
         #a variable correction value
+
+############################## MAIN ############################
+
+def main():
+    #rospy.init_node("Arm_Manual", anonymous= True)
+    
+    Node_Manual = Manual_Node()
+
+    #rospy.spin()
+
+    pass
+
+
+if __name__ == "__main__":
+
+    main()
+
+#initializeJoystick()
+    
+    # Joypos updates will be handled by controller
+
+    # def getManualJoystick(self):
+    #     """
+    #     Takes in buttons and analog inputs and updates joypos
+
+    #     @parameters
+
+    #     None
+    #     """
+    #     for game_event in pygame.event.get():
+    #         if game_event.type == pygame.QUIT:
+    #             # Stop running if quit input is recieved
+    #             running = False
+    #         elif game_event.type == pygame.KEYDOWN:
+    #             # Else, continue
+    #             pass
+    #         # Get dictionaries
+    #         buttons = getButtons()
+    #         axes = getJoystickAxes()
+    #         # Pressed buttons
+    #         # Double-check the mapping, not sure
+    #         if buttons["START"] == 1:
+    #             # Kill switch
+    #             self.joypos[29] = 1
+    #         if buttons["TRIANGLE"] == 1:
+    #             # Swaps (1 -> 0, 0 -> 1)
+    #             self.joypos[7] = not self.joypos[7]
+    #         if buttons["SQUARE"] == 1:
+    #             self.joypos[5] = -1
+    #         if buttons["L1"] == 1:
+    #             self.joypos[5] = 1
+    #         if buttons["CIRCLE"] == 1:
+    #             self.joypos[6] = 1
+    #         if buttons["X"] == 1:
+    #             self.joypos[6] = -1
+    #         # Released buttons
+    #         if (buttons["SQUARE"] == -1 or buttons["L1"] == -1):
+    #             self.joypos[5] = 0
+    #         if (buttons["CIRCLE"] == -1 or buttons["X"] == -1):
+    #             self.joypos[6] = 0
+    #         # Analog 
+    #         if axes["R-Down"] in (0, -1):
+    #             self.joypos[3] = -(axes["R-Down"])
+    #         if (self.joypos[3] < .18 and self.joypos[3] > -.18):
+    #             self.joypos[3] = 0
+    #         if axes["R-Right"] != 0:
+    #             self.joypos[2] = axes["R-Right"]
+    #         if (self.joypos[2] < .18 and self.joypos[2] > -.18 and axes["R-Right"] != 0):
+    #             self.joypos[2] = 0
+    #         if axes["L-Down"] != 0:
+    #             self.joypos[1] = axes["L-Down"]
+    #         if (self.joypos[1] < .18 and self.joypos[1] > -.18):
+    #             self.joypos[1] = 0
+    #         if axes["L-Right"]:
+    #             self.joypos[0] = axes["L-Right"]
+    #         if (self.joypos[0] < .18 and self.joypos[0] > -.18):
+    #             self.joypos[0] = 0
+    #         if axes["R2"] > -1:
+    #             self.joypos[4] = ((axes["R2"] + 1)/ 2)
+    #         elif (axes["L-Down"] > -1 and axes["L-Down"] != 0):
+    #             self.joypos[4] = -((axes["L-Down"] + 1)/ 2)
+    #         if (self.joypos[4] < .5 and self.joypos[4] > -.5):
+    #             self.joypos[4] = 0
+            
+    #         # Return joystick positions
+    #         return self.joypos
+    
 
 # Constants
 # BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", 
@@ -316,19 +358,3 @@ class Manual_Node():
 
 
 #     return controller_pos
-
-############################## MAIN ############################
-
-def main():
-    #rospy.init_node("Arm_Manual", anonymous= True)
-    
-    Node_Manual = Manual_Node()
-
-    #rospy.spin()
-
-    pass
-
-
-if __name__ == "__main__":
-    main()
-#initializeJoystick()
