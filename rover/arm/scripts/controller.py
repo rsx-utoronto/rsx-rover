@@ -3,8 +3,8 @@
 import rospy
 from sensor_msgs.msg import Joy
 from std_msgs.msg import String
-from rover.msg import ArmInputs
-from rover.srv import Corrections
+from rsx_rover.msg import ArmInputs
+#from rover.srv import Corrections
 
 '''
 publishes: arm_state, arm_inputs (joystick value)
@@ -26,6 +26,36 @@ def getROSJoy(data):
     '''
     rawAxes = data.axes
     rawButtons = data.buttons
+    values = ArmInputs()
+    values.l_horizontal = rawAxes[0]
+    values.l_vertical = rawAxes[1]
+    values.r_horizontal = rawAxes[3]
+    values.r_vertical = rawAxes[4]
+    values.l1r1 = abs(rawButtons[4] - rawButtons[5])
+    values.l2r2 = abs(-0.5*(rawAxes[2] - rawAxes[5]))
+    values.xo = abs(rawButtons[0] - rawButtons[1])
+    values.ps = rawButtons[10]
+
+    if rawAxes[7] == -1:
+        state = "Idle"
+    
+    elif rawAxes[7] == 1:
+        state = "Setup"
+    
+    elif rawAxes[6] == 1:
+        state = "Manual"
+
+    elif rawAxes[6] == -1:
+        state = "IK"
+
+    print(state)
+    statePublisher.publish(state)
+
+    if ~(rawAxes[0] | rawAxes[1] | rawAxes[3] | rawAxes[4]) and rawAxes[2] == 1 and rawAxes[5] == 1:
+        print(values)
+        inputPublisher.publish(values)
+
+
 
 def updateCorrections():
     ''' Update the Correction Values the IK node is using
@@ -52,11 +82,8 @@ if __name__ == "__main__":
 
         statePublisher = rospy.Publisher("arm_state", String, queue_size=10)
         inputPublisher = rospy.Publisher("arm_inputs", ArmInputs, queue_size=10)
-        while not rospy.is_shutdown():
-            newAngles = ArmInputs()
-            newAngles.r_right = 1
-            newAngles.r_down = 2
-            inputPublisher.publish(newAngles)
+
+        rospy.spin()
 
         
     except rospy.ROSInterruptException:

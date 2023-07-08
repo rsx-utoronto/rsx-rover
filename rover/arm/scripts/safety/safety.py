@@ -4,7 +4,7 @@ from MapManualJoystick import *
 #import arm_servo as servo
 import struct
 import rospy
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import *
 import threading
 from enum import Enum
 
@@ -51,9 +51,9 @@ class Safety_Node():
         self.Goal_sub        = rospy.Subscriber("GOAL_POS", Float32MultiArray, self.callback_Goal)
         self.MotorCurr_sub   = rospy.Subscriber("MOTOR_CURR", Float32MultiArray, self.callback_MotorCurr)
         self.CurrPos_sub     = rospy.Subscriber("CURR_POS", Float32MultiArray, self.callback_CurrPos)
-        self.LimitSwitch_sub = rospy.Subscriber("LIMIT_SWITCH", Float32MultiArray, self.callback_LimitSwitch)
+        self.LimitSwitch_sub = rospy.Subscriber("LIMIT_SWITCH", UInt8MultiArray, self.callback_LimitSwitch)
         self.SafePos_pub     = rospy.Publisher("SAFE_GOAL_POS", Float32MultiArray, queue_size= 10)
-        self.Error_pub       = rospy.Publisher("ERROR_MSG", Float32MultiArray, queue_size= 10)
+        self.Error_pub       = rospy.Publisher("ERROR_MSG", UInt8MultiArray, queue_size= 10)
 
     def callback_LimitSwitch(self, limitSwitch_data : list(int)) -> None:
         """
