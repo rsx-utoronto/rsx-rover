@@ -12,6 +12,9 @@ subscribes: Joy
 rosservice: correction
 '''
 
+global state
+state = "Idle"
+
 def getROSJoy(data):    
     ''' Gets joystick values from "Joy" Topic
 
@@ -24,7 +27,8 @@ def getROSJoy(data):
     data
         of type sensor_msgs.msg.Joy and automatically 
     '''
-    state = "Idle"
+    global state
+
     rawAxes = data.axes
     rawButtons = data.buttons
     values = ArmInputs()
@@ -37,24 +41,26 @@ def getROSJoy(data):
     values.xo = rawButtons[0] - rawButtons[1]
     values.ps = rawButtons[10]
 
-    if rawAxes[7] == -1:
-        state = "Idle"
-    
-    elif rawAxes[7] == 1:
-        state = "Setup"
-    
-    elif rawAxes[6] == 1:
-        state = "Manual"
+    if (not (rawAxes[0] or rawAxes[1] or rawAxes[3] or rawAxes[4])) and rawAxes[2] == 1 and rawAxes[5] == 1:
+        
+        if rawAxes[7] == -1:
+            state = "Idle"
+        
+        elif rawAxes[7] == 1:
+            state = "Setup"
+        
+        elif rawAxes[6] == 1:
+            state = "Manual"
 
-    elif rawAxes[6] == -1:
-        state = "IK"
+        elif rawAxes[6] == -1:
+            state = "IK"
 
     print(state)
     statePublisher.publish(state)
 
-    #if (not (rawAxes[0] or rawAxes[1] or rawAxes[3] or rawAxes[4])) and rawAxes[2] == 1 and rawAxes[5] == 1:
-    print(values)
-    inputPublisher.publish(values)
+    if state != "Idle" and state != "Setup":
+        print(values)
+        inputPublisher.publish(values)
 
 
 

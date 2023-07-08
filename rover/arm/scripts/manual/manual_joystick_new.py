@@ -1,12 +1,12 @@
 """New manual script"""
 
 # Imports
-import pygame
+#import pygame
 import os
 import numpy as np
 import time
 import rospy
-from rsx_rover.msg import ArmInputs
+from rover.msg import ArmInputs
 from std_msgs.msg import *
 
 # Refer to GetManualJoystickFinal, arm_master_control
@@ -59,8 +59,8 @@ class Manual_Node():
 
         # ROS topics: publishing and subscribing
         self.error               = rospy.Subscriber("error_msg", UInt8MultiArray, self.CallbackError)
-        self.state               = rospy.Subscriber("state", String, self.CallbackState)
-        self.input               = rospy.Subscriber("input", ArmInputs, self.CallbackInput)  
+        self.state               = rospy.Subscriber("arm_state", String, self.CallbackState)
+        self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)  
         self.goal                = rospy.Publisher("goal_pos", Float32MultiArray, queue_size=10)
 
     def CallbackError (self, errors: UInt8MultiArray) -> None:
@@ -94,21 +94,28 @@ class Manual_Node():
         """
 
         # Get joystick positions from controller
-        self.joypos = joystickpos.data
+        self.joypos[0] = joystickpos.l_horizontal
+        self.joypos[1] = joystickpos.l_vertical
+        self.joypos[2] = joystickpos.r_vertical
+        self.joypos[3] = joystickpos.r_horizontal
+        self.joypos[4] = joystickpos.l1r1
+        self.joypos[5] = joystickpos.l2r2
+        self.joypos[6] = joystickpos.xo
+        self.joypos[7] = joystickpos.ps
         print(self.joypos)
         
-        # Checking the state, only proceed if in manual
-        if self.state == "Manual":
-            #self.getManualJoystick()
-            # Checking to make sure the kill switch wasn't hit
-            if self.joypos[7] == 1:
-                self.status = "Idle"
+        # # Checking the state, only proceed if in manual
+        # if self.state == "Manual":
+        #     #self.getManualJoystick()
+        #     # Checking to make sure the kill switch wasn't hit
+        #     if self.joypos[7] == 1:
+        #         self.status = "Idle"
 
-            # If it wasn't, update controller poss and publish to ROS
-            else:
-                controller_pos = self.MapJoystick(self.joypos, self.controller_pos, 
-                                 self.speed_limit, (time.time() - self.t))
-                self.goal.publish(controller_pos)
+        #     # If it wasn't, update controller poss and publish to ROS
+        #     else:
+        #         controller_pos = self.MapJoystick(self.joypos, self.controller_pos, 
+        #                          self.speed_limit, (time.time() - self.t))
+        #         self.goal.publish(controller_pos)
 
         # if self.state == "Setup":
         #     self.setup()
@@ -178,11 +185,11 @@ class Manual_Node():
 ############################## MAIN ############################
 
 def main():
-    #rospy.init_node("Arm_Manual", anonymous=True)
+    rospy.init_node("Arm_Manual", anonymous=True)
     
     Node_Manual = Manual_Node()
 
-    #rospy.spin()
+    rospy.spin()
 
     pass
 
