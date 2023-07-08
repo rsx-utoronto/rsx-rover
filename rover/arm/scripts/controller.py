@@ -3,7 +3,7 @@
 import rospy
 from sensor_msgs.msg import Joy
 from std_msgs.msg import String
-from rsx_rover.msg import ArmInputs
+from rover.msg import ArmInputs
 #from rover.srv import Corrections
 
 '''
@@ -24,6 +24,7 @@ def getROSJoy(data):
     data
         of type sensor_msgs.msg.Joy and automatically 
     '''
+    state = "Idle"
     rawAxes = data.axes
     rawButtons = data.buttons
     values = ArmInputs()
@@ -31,9 +32,9 @@ def getROSJoy(data):
     values.l_vertical = rawAxes[1]
     values.r_horizontal = rawAxes[3]
     values.r_vertical = rawAxes[4]
-    values.l1r1 = abs(rawButtons[4] - rawButtons[5])
-    values.l2r2 = abs(-0.5*(rawAxes[2] - rawAxes[5]))
-    values.xo = abs(rawButtons[0] - rawButtons[1])
+    values.l1r1 = rawButtons[4] - rawButtons[5]
+    values.l2r2 = -0.5*(rawAxes[2] - rawAxes[5])
+    values.xo = rawButtons[0] - rawButtons[1]
     values.ps = rawButtons[10]
 
     if rawAxes[7] == -1:
@@ -51,9 +52,9 @@ def getROSJoy(data):
     print(state)
     statePublisher.publish(state)
 
-    if ~(rawAxes[0] | rawAxes[1] | rawAxes[3] | rawAxes[4]) and rawAxes[2] == 1 and rawAxes[5] == 1:
-        print(values)
-        inputPublisher.publish(values)
+    #if (not (rawAxes[0] or rawAxes[1] or rawAxes[3] or rawAxes[4])) and rawAxes[2] == 1 and rawAxes[5] == 1:
+    print(values)
+    inputPublisher.publish(values)
 
 
 
@@ -78,7 +79,7 @@ if __name__ == "__main__":
     try:
         rospy.init_node("controller")
         
-        rospy.Subscriber("Joy", Joy, getROSJoy)
+        rospy.Subscriber("joy", Joy, getROSJoy)
 
         statePublisher = rospy.Publisher("arm_state", String, queue_size=10)
         inputPublisher = rospy.Publisher("arm_inputs", ArmInputs, queue_size=10)
