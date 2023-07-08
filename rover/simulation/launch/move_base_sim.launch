@@ -8,6 +8,9 @@
 
    <arg name="no_static_map" default="false" />
    <arg name="command_velocity_topic" default="/robot_base_velocity_controller/cmd_vel" />
+   <arg name="odom_topic" default="/robot_base_velocity_controller/odom" />
+   <!-- <node pkg="tf" type="static_transform_publisher" name="base_link_to_map" args="0 0 0 0 0 0 map base_link 100" /> -->
+
 
 
    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
@@ -17,20 +20,21 @@
       <rosparam file="$(find rover)/rover/simulation/config/global_costmap.yaml" command="load" ns="global_costmap" unless="$(arg no_static_map)"/> 
       <rosparam file="$(find rover)/rover/simulation/config/move_base.yaml" command="load" />
       
-      <param name="base_local_planner" value="navfn/NavfnROS" />
+      <param name="base_global_planner" value="navfn/NavfnROS" />
       <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
 
       <param name="controller_frequency" value="5.0" />
       <param name="controller_patience" value="15.0" />
 
       <remap from="cmd_vel" to="$(arg command_velocity_topic)" />
+      <remap from="odom" to="$(arg odom_topic)" />
 
       <!-- <rosparam file="$(find rover)/rover/autonomy/config/costmap_converter.yaml" command="load" /> -->
    </node>
 
    <!--  ****** Maps *****  -->
   
-	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/atacama_desert_og.yaml" output="screen">
+	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/white.yaml" output="screen">
                <param name="frame_id" value="map"/>
 	</node>
 

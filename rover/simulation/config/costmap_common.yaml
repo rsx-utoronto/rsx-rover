@@ -1,9 +1,9 @@
-footprint: [[-0.33, -0.25], [-0.33, 0.25], [0.33, 0.25], [0.33, -0.25]]
+footprint: [[-0.585325281230279, -0.124635699999999], [-0.569418798760428, 0.1316347], [0.566011190291999, 0.1316352], [0.550522165589643, -0.128635200000009]]
 footprint_padding: 0.01
 
 robot_base_frame: base_link
-update_frequency: 0.2
-publish_frequency: 3.0
+update_frequency: 2.0 # default 0.2
+publish_frequency: 2.0
 transform_tolerance: 0.5
 
 resolution: 0.05
