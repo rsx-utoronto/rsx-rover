@@ -6,6 +6,8 @@ import os
 import numpy as np
 import time
 import rospy
+from rsx_rover.msg import ArmInputs
+from std_msgs.msg import *
 
 # Refer to GetManualJoystickFinal, arm_master_control
 
@@ -28,10 +30,18 @@ class Manual_Node():
         self.JOYSTICK_AXES_NAMES = ["L-Right", "L-Down", "L2", "R-Right", "R-Down", "R2"]
 
         # Buffer to hold joypos (will get from ROS)
-        self.joypos              = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        # 0 - Left analog horizonal
+        # 1 - Left analog vertical
+        # 2 - Right analog horizonal
+        # 3 - Right analog vertical
+        # 4 - L1 / R1 
+        # 5 - L2 / R2 (analog)
+        # 6 - X / circle
+        # 7 - PlayStation (killswitch)
+        self.joypos              = [0, 0, 0, 0, 0, 0, 0, 0]
 
         # List containing controller pos that needs to be published on ROS
-        self.controller_pos      = [0, 0, 0, 0, 0, 0, 0, 0]
+        self.controller_pos      = [0, 0, 0, 0, 0, 0, 0]
 
         # Manual Speed limits, values are given by trial and error
         self.speed_limit         = [1000/120, 1000/160, 4000/120, 2000/20, 1500/20, 1500/20, 10000/40] # Gear Ratio are after the /
@@ -39,16 +49,16 @@ class Manual_Node():
         # Variable for time
         self.t                   = 0
 
-        # Variable for the status 
-        self.status = "Idle"
+        # Variable for the status, start at idle
+        self.status              = "Idle"
 
         # ROS topics: publishing and subscribing
-        #self.error               = rospy.Subscriber("error_msg", data type, self.CallbackError)
-        #self.state               = rospy.Subscriber("state", data type, self.CallbackState)
-        #self.input               = rospy.Subscriber("input", data type, self.CallbackInput)  
-        self.goal                = rospy.Publisher("goal_pos", list)
+        self.error               = rospy.Subscriber("error_msg", UInt8MultiArray, self.CallbackError)
+        self.state               = rospy.Subscriber("state", String, self.CallbackState)
+        self.input               = rospy.Subscriber("input", ArmInputs, self.CallbackInput)  
+        self.goal                = rospy.Publisher("goal_pos", Float32MultiArray, queue_size=10)
 
-    def CallbackError (self, errors: datatype) -> None:
+    def CallbackError (self, errors: UInt8MultiArray) -> None:
         """
         datatype -> None
 
@@ -58,17 +68,20 @@ class Manual_Node():
         # Store errors
         self.error_messages = errors.data
     
-    def CallbackState (self, status: str) -> None:
+    def CallbackState (self, status: String) -> None:
         """
-        str -> None
+        datatype -> None
 
-        Recieves and stores state
+        Recieves and stores state (idle, manual, etc.) from controller (??)
         """
+
+        # 
 
         # Store state
         self.state = status.data
+        print(self.state)
 
-    def CallbackInput (self, joystickpos: datatype) -> None:
+    def CallbackInput (self, joystickpos: ArmInputs) -> None:
         """
         datatype  -> None
 
@@ -79,12 +92,13 @@ class Manual_Node():
 
         # Get joystick positions from controller
         self.joypos = joystickpos.data
+        print(self.joypos)
         
         # Checking the state, only proceed if in manual
         if self.state == "Manual":
             #self.getManualJoystick()
             # Checking to make sure the kill switch wasn't hit
-            if self.joypos[15] == -1:
+            if self.joypos[7] == 1:
                 self.status = "Idle"
 
             # If it wasn't, update controller poss and publish to ROS
@@ -119,7 +133,7 @@ class Manual_Node():
         controller_pos[4] = self.SetJointSpeed(joypos[4], controller_pos[4], speed_limit[4], dt)
         controller_pos[5] = self.SetJointSpeed(joypos[5], controller_pos[5], speed_limit[5], dt)
         controller_pos[6] = self.SetJointSpeed(joypos[6], controller_pos[6], speed_limit[6], dt)
-        controller_pos[7] = joypos[7]
+        # controller_pos[7] = joypos[7]
 
         # Measure time it takes to update controller pos
         self.t            = time.time()
