@@ -2,7 +2,7 @@
 import can
 import rospy
 import struct
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, Int8MultiArray
 
 ########## GLOBAL VARIABLES ##########
 
@@ -63,6 +63,7 @@ CURR_POS = [0, 0, 0, 0, 0, 0, 0]
 MOTOR_CURT = [0, 0, 0, 0, 0, 0, 0]
 
 SAFE_GOAL_POS = [0, 0, 0, 0, 0, 0, 0]
+LIMIT_SWITCH = [0, 0, 0, 0, 0, 0, 0] # 1 bool for each d.o.f?
 
 # REDUCTION is used by CAN Node only as a global constant
 REDUCTION = [120, 160, 120, 20, 20, 20, 40]
@@ -216,9 +217,21 @@ def read_can_message(data, api):
 	"""
 	
 	if api:
+		# API: Status Message 1 - Gives us information on limit switches
+		if api == CMD_API_STAT0:
+			# 132 for forward and 68 for reverse
+			ls_bools = data & 0x000000C0000000000
+
+			# Return 0 if no limit switches are pressed
+			if ls_bools > 0:
+				return 0
+			# Return 1 if either forward or reverse limit switches are pressed
+			else:
+				return 1
+
 		# API: Status Message 1 - Gives us motor velocity, motor voltage and
 		# motor current every 20ms. We only need current
-		if api == CMD_API_STAT1:
+		elif api == CMD_API_STAT1:
 
 			# Getting the motor current value stored as hexadecimals 
 			currVal_fixed = (data[-1] << 4) | ((data[-2] & 0xF0) >> 4)
@@ -279,13 +292,17 @@ def calc_differential(d_pos, d_angle):
 	d_angle_motor1 = d_angle * gear_ratio # assuming same gear ratios
 	d_angle_motor2 = -d_angle * gear_ratio
 
+	# correction through the gripper motor to stop the gripper from opening and closing
+	d_gripper_motor = -d_angle # rotate the nut in the opposite direction same amount (no gear ratios)
+
+
 	# Motor movement required to produce d_pos
 	# Moves the entire joint so gear ratio doesn't matter
 	d_angle_motor1 += d_pos
 	d_angle_motor2 += d_pos
 
 	
-	return d_angle_motor1, d_angle_motor2
+	return d_angle_motor1, d_angle_motor2, d_gripper_motor
 
 
 # CAN Node only
@@ -304,8 +321,9 @@ def generate_data_packet (data_list : list):
 	# Angle conversion for differential system
 	# Assuming the last two angles specify the angle of the differential system,
 	# convert those two values to the required angles for motors 5 and 6
-	data_list[len(data_list)-2], data_list[len(data_list)-1] = calc_differential(data_list[len(data_list)-2], data_list[len(data_list)-1])
-	
+	data_list[-3], data_list[-2], correction = calc_differential(data_list[len(data_list)-2], data_list[len(data_list)-1])
+	data_list[-1] += correction # correction for roll
+
 	# A variable to keep count of joint number
 	joint_num = 0
 	
@@ -362,6 +380,7 @@ def read_message_from_spark(init= False):
 		
 		MOTOR_CURT[index] = read_can_message(msg.data, CMD_API_STAT1)
 		CURR_POS[index] = read_can_message(msg.data, CMD_API_STAT2)
+		LIMIT_SWITCH[index] = read_can_message(msg.data, CMD_API_STAT0)
 
 
 def callback(data):
@@ -371,9 +390,10 @@ def callback(data):
 
 def CAN_node(): 	# Queue size & rate not calibrated
 	# Setup ROS node
-	# Publisher to angle position and motor current topics
-	angles_pub = rospy.Publisher('curr_angles', Float32MultiArray, queue_size=10)
-	motor_pub = rospy.Publisher('motor_curt', Float32MultiArray, queue_size=10)
+	# Publisher to angle position, motor current, and limit switch topics
+	angles_pub = rospy.Publisher('CURR_POS', Float32MultiArray, queue_size=10)
+	motor_pub = rospy.Publisher('MOTOR_CURT', Float32MultiArray, queue_size=10)
+	lms_pub = rospy.Publisher('LIMIT_SWITCH', Int8MultiArray, queue_size=10)
 
 	# Create node
 	rospy.init_node('CAN', anonymous=True)
@@ -382,7 +402,7 @@ def CAN_node(): 	# Queue size & rate not calibrated
 	rate = rospy.Rate(10)
 
 	# Subscribe to safe goal position topic
-	safe_goal_sub = rospy.Subscriber('safe_goal_pos', Float32MultiArray, callback) # should callback whenever there is new message
+	safe_goal_sub = rospy.Subscriber('SAFE_GOAL_POS', Float32MultiArray, callback) # should callback whenever there is new message
 	
 	while not rospy.is_shutdown():
 		# Send instructions to motor
@@ -408,13 +428,16 @@ def CAN_node(): 	# Queue size & rate not calibrated
 		# Create ROS messages and intialize value
 		curr_angles_msg = Float32MultiArray()
 		motor_curt_msg = Float32MultiArray()
+		limit_switch_msg = Float32MultiArray()
 
 		curr_angles_msg.data = CURR_POS
 		motor_curt_msg.data = MOTOR_CURT
+		limit_switch_msg.data = LIMIT_SWITCH
 
 		# Publish current angles and motor current
 		angles_pub.publish(curr_angles_msg)
 		motor_pub.publish(motor_curt_msg)
+		lms_pub.publish(limit_switch_msg.data)
 
 		# Control rate
 		rate.sleep()
