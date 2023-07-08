@@ -1,12 +1,11 @@
-"""New manual joystick script
-Remaking GetManualJoystickFinal"""
+"""New manual script"""
 
 # Imports
 import pygame
 import os
 import numpy as np
 import time
-#import rospy
+import rospy
 
 # Refer to GetManualJoystickFinal, arm_master_control
 
@@ -16,8 +15,10 @@ class Manual_Node():
     """
     (None)
     
-    A class that initializes the manual node and connects it to different topics for publishing and subscribing
+    Initializes the manual node and connects it to 
+    different topics for publishing and subscribing
     """
+
     def __init__(self):
 
         # List of buttons and axes for manual control
@@ -26,53 +27,74 @@ class Manual_Node():
                                     "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"]
         self.JOYSTICK_AXES_NAMES = ["L-Right", "L-Down", "L2", "R-Right", "R-Down", "R2"]
 
-        # Buffer to hold input from Ros Topic
+        # Buffer to hold joypos (will get from ROS)
         self.joypos              = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-        # List containing goal_pos that needs to be published on the ROs topic
+        # List containing controller pos that needs to be published on ROS
         self.controller_pos      = [0, 0, 0, 0, 0, 0, 0, 0]
 
         # Manual Speed limits, values are given by trial and error
         self.speed_limit         = [1000/120, 1000/160, 4000/120, 2000/20, 1500/20, 1500/20, 10000/40] # Gear Ratio are after the /
 
-        # Variable to hold time
+        # Variable for time
         self.t                   = 0
 
-        # Variable to hold the status 
+        # Variable for the status 
         self.status = "Idle"
 
-        # Connecting to Ros topics by subsribing or publishing
-        #self.error               = rospy.Subscriber("Error_msg", daa type, )
-        #self.input               = rospy.Subscriber("Input", daa type, )
-        #self.state               = rospy.Subscriber("State", daa type, )
-        #self.goal                = rospy.Publisher("Goal_pos", )
+        # ROS topics: publishing and subscribing
+        #self.error               = rospy.Subscriber("error_msg", data type, self.CallbackError)
+        #self.state               = rospy.Subscriber("state", data type, self.CallbackState)
+        #self.input               = rospy.Subscriber("input", data type, self.CallbackInput)  
+        self.goal                = rospy.Publisher("goal_pos", list)
 
-        # preparing controller_pos values based on the state
+    def CallbackError (self, errors: datatype) -> None:
+        """
+        datatype -> None
+
+        Recieves and stores error messages from safety
+        """
+
+        # Store errors
+        self.error_messages = errors.data
+    
+    def CallbackState (self, status: str) -> None:
+        """
+        str -> None
+
+        Recieves and stores state
+        """
+
+        # Store state
+        self.state = status.data
+
+    def CallbackInput (self, joystickpos: datatype) -> None:
+        """
+        datatype  -> None
+
+        Recieves joystick positions, and if state is Manual
+        get controller pos and publish them
+        Also contains kill switch (check for joypos 15)
+        """
+
+        # Get joystick positions from controller
+        self.joypos = joystickpos.data
+        
+        # Checking the state, only proceed if in manual
         if self.state == "Manual":
             #self.getManualJoystick()
-            self.MapJoystick(self.joypos, self.controller_pos, self.speed_limit, time.time() - self.t)
-        if self.state == "Setup":
-            self.setup()
-        
-    def SetJointSpeed(self, joypos : list, controller_pos : list, speed_limit : list, dt : float) -> list:
-        """
-        (list(float), list(float), list(float), float) -> list(float)
+            # Checking to make sure the kill switch wasn't hit
+            if self.joypos[15] == -1:
+                self.status = "Idle"
 
-        Takes in controller inputs and updates the controller angles (in degrees)
+            # If it wasn't, update controller poss and publish to ROS
+            else:
+                controller_pos = self.MapJoystick(self.joypos, self.controller_pos, 
+                                 self.speed_limit, (time.time() - self.t))
+                self.goal.publish(controller_pos)
 
-        @parameters
-
-        joypos (list(float)): Buffer holding the input from controller
-        
-        controller_pos (list(float)): List containing the current angles (in degrees) of the motors
-        
-        speed_limit (list(float)): List containing tested out manually controlled speeds for each motor
-        
-        dt (float): Time since last call 
-        """
-        # Calculate joint speed from speed limit, joypos, time taken, and controller pos
-        return ((speed_limit*(joypos)*dt) + controller_pos)
-    
+        # if self.state == "Setup":
+        #     self.setup()
         
     def MapJoystick(self, joypos : list, controller_pos : list, speed_limit : list, dt : list):   
         """
@@ -102,24 +124,44 @@ class Manual_Node():
         # Measure time it takes to update controller pos
         self.t            = time.time()
         return controller_pos
+
+    def SetJointSpeed(self, joypos : list, controller_pos : list, speed_limit : list, dt : float) -> list:
+        """
+        (list(float), list(float), list(float), float) -> list(float)
+
+        Takes in controller inputs and updates the controller angles (in degrees)
+
+        @parameters
+
+        joypos (list(float)): Buffer holding the input from controller
+        
+        controller_pos (list(float)): List containing the current angles (in degrees) of the motors
+        
+        speed_limit (list(float)): List containing tested out manually controlled speeds for each motor
+        
+        dt (float): Time since last call 
+        """
+
+        # Calculate joint speed from speed limit, joypos, time taken, and controller pos
+        return ((speed_limit*(joypos)*dt) + controller_pos)
     
-    def setup(self):
-        # For each motor/controller pos...
-        for i in range(len(self.controller_pos)):
-            # Send in a large value to hit limit switch
-            self.controller_pos[i] = 10000000
-            # When error occurs (recieve from safety node), set it back to zero
-            # Currently assuming error messages will be str
-            while "LIMIT_SWITCH" not in self.error:
-                pass
-            self.controller_pos[i] = 0
-        pass
-        #a variable correction value
+    # def setup(self):
+    #     # For each motor/controller pos...
+    #     for i in range(len(self.controller_pos)):
+    #         # Send in a large value to hit limit switch
+    #         self.controller_pos[i] = 10000000
+    #         # When error occurs (recieve from safety node), set it back to zero
+    #         # Currently assuming error messages will be str
+    #         while "LIMIT_SWITCH" not in self.error:
+    #             pass
+    #         self.controller_pos[i] = 0
+    #     pass
+    #     #a variable correction value
 
 ############################## MAIN ############################
 
 def main():
-    #rospy.init_node("Arm_Manual", anonymous= True)
+    #rospy.init_node("Arm_Manual", anonymous=True)
     
     Node_Manual = Manual_Node()
 
