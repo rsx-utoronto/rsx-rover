@@ -21,6 +21,11 @@ class Manual_Node():
     different topics for publishing and subscribing
     """
 
+    # 1 -> 0
+    # -1 -> 1
+    # -0.5x + 0.5
+    # where x = initial and y = final
+
     def __init__(self):
 
         # List of buttons and axes for manual control
@@ -74,8 +79,6 @@ class Manual_Node():
 
         Recieves and stores state (idle, manual, etc.) from controller (??)
         """
-
-        # 
 
         # Store state
         self.state = status.data
