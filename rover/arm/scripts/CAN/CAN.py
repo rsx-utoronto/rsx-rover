@@ -79,10 +79,10 @@ class CAN_Node():
 		self.LIMIT_SWITCH 		= [0, 0, 0, 0, 0, 0, 0]
 
 		# Variables for ROS publishers and subscribers
-		self.SafePos_sub 		= rospy.Subscriber("SAFE_GOAL_POS", Float32MultiArray, self.callback_SafePos)
-		self.Angles_pub 		= rospy.Publisher('CURR_POS', Float32MultiArray, queue_size=10)
-		self.Motor_pub 			= rospy.Publisher('MOTOR_CURT', Float32MultiArray, queue_size=10)
-		self.LMS_pub 			= rospy.Publisher('LIMIT_SWITCH', UInt8MultiArray, queue_size=10)
+		self.SafePos_sub 		= rospy.Subscriber("safe_goal_pos", Float32MultiArray, self.callback_SafePos)
+		self.Angles_pub 		= rospy.Publisher('curr_pos', Float32MultiArray, queue_size=10)
+		self.Motor_pub 			= rospy.Publisher('motor_curr', Float32MultiArray, queue_size=10)
+		self.LMS_pub 			= rospy.Publisher('limit_switch', UInt8MultiArray, queue_size=10)
 
 		# ROS
 		try:

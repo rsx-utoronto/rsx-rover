@@ -104,21 +104,23 @@ class Manual_Node():
         self.joypos[7] = joystickpos.ps
         print(self.joypos)
         
-        # # Checking the state, only proceed if in manual
-        # if self.state == "Manual":
-        #     #self.getManualJoystick()
-        #     # Checking to make sure the kill switch wasn't hit
-        #     if self.joypos[7] == 1:
-        #         self.status = "Idle"
+        # Checking the state, only proceed if in manual
+        if self.state == "Manual":
+            #self.getManualJoystick()
+            # Checking to make sure the kill switch wasn't hit
+            if self.joypos[7] == 1:
+                self.status = "Idle"
 
-        #     # If it wasn't, update controller poss and publish to ROS
-        #     else:
-        #         controller_pos = self.MapJoystick(self.joypos, self.controller_pos, 
-        #                          self.speed_limit, (time.time() - self.t))
-        #         self.goal.publish(controller_pos)
+            # If it wasn't, update controller poss and publish to ROS
+            else:
+                controller_pos = self.MapJoystick(self.joypos, self.controller_pos, 
+                                 self.speed_limit, (time.time() - self.t))
+                goal_pos_data = Float32MultiArray()
+                goal_pos_data.data = controller_pos
+                self.goal.publish(goal_pos_data)
 
-        # if self.state == "Setup":
-        #     self.setup()
+        if self.state == "Setup":
+            self.setup()
         
     def MapJoystick(self, joypos : list, controller_pos : list, speed_limit : list, dt : list):   
         """
