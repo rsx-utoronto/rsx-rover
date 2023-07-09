@@ -17,29 +17,21 @@ class image_converter:
         self.image_pub = rospy.Publisher("/camera/infra1/image_rect_raw_new",Image, queue_size=1)
 
         self.bridge = CvBridge()
-        self.info_sub = rospy.Subscriber("/camera/infra1/camera_info", CameraInfo ,self.get_coordinates)        
-        self.image_sub = rospy.Subscriber("/camera/infra1/image_rect_raw",Image,self.brightest_spot)
+        self.info_sub = rospy.Subscriber("/camera/infra1/camera_info", CameraInfo, self.get_coordinates)        
+        self.image_sub = rospy.Subscriber("/camera/infra1/image_rect_raw", Image, self.brightest_spot)
+        self.depth_sub = rospy.Subscriber("/camera/depth/image_rect_raw", Image, self.depth_callback)
 
 
-
-    def callback(self,data):
+    # Not being used for now
+    def depth_callback(self,data):
         try:
-            cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            cv_image = self.bridge.imgmsg_to_cv2(data, desired_encoding="passthrough")
         except CvBridgeError as e:
             print(e)
 
-        (rows,cols,channels) = cv_image.shape
-        if cols > 60 and rows > 60 :
-            cv2.circle(cv_image, (50,50), 10, 255)
-   
-        cv2.imshow("Image window", cv_image)
-        cv2.waitKey(3)
-   
-        try:
-            self.image_pub.publish(self.bridge.cv2_to_imgmsg(cv_image, "bgr8"))
-        except CvBridgeError as e:
-            print(e)
+        self.depth_image = cv_image
 
+    
     def thresholding(self, img):
         ret,th1 = cv2.threshold(img,240,255,cv2.THRESH_BINARY)
         # th2 = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,11,2)
@@ -48,6 +40,7 @@ class image_converter:
         # images = [img, th1, th2, th3]
         return th1
     
+    # This method filters out the amber areas in the image to make it easier to detect the amber spot
     def colour_search_and_masking(self, img, lower_bound, upper_bound):
         mask = cv2.inRange(img, lower_bound, upper_bound)
         
@@ -68,22 +61,34 @@ class image_converter:
         orig = image.copy()
         # filtered_image = self.thresholding(image)
         filtered_image = self.colour_search_and_masking(image, (185, 185, 185), (195, 195, 195))
+        
+        ## Undistorting the image. No need for now
         res = image.copy()
         res = cv2.undistort(image, self.K, self.D)
-        # image = cv2.rotate(image, cv2.ROTATE_180)
-        print("result = ", res)
+        undistorted_image = self.bridge.cv2_to_imgmsg(res, encoding='bgr8')
+        # print("result = ", res)
+        # print("undistorted_image = ", undistorted_image)
         
-        # load the image and convert it to grayscale
+        
+        ## load the image and convert it to grayscale
         
         gray = cv2.cvtColor(filtered_image, cv2.COLOR_BGR2GRAY)  # For a coloured image
         # perform a naive attempt to find the (x, y) coordinates of
         # the area of the image with the largest intensity value
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
-        cv2.circle(image, maxLoc, radius, (255, 0, 0), 2) # (0, 191, 255) is the code for amber colour
+        max_x = maxLoc[1]
+        max_y = maxLoc[0]
+        # print("maxLoc = ", maxLoc)
+        # print("undistorted point = ", undistorted_image(maxLoc))
+        amber_spot_depth = self.depth_image[max_x, max_y]
+        print("Depth of the light beacon:", amber_spot_depth)
+        cv2.circle(image, maxLoc, radius, (255, 0, 0), 2) # (0, 191, 255) is the colour code for amber colour
         # display the results of the naive attempt
         cv2.imshow("Amber Spot", image)
         cv2.imshow("Original", orig)
         cv2.imshow("Filtered", filtered_image)
+
+        # cv2.imshow("Undistorted", res)
 
 
 
@@ -108,7 +113,7 @@ class image_converter:
    
     def get_coordinates(self, data):
 
-        print(data)
+        # print(data)
         # Converting the subscribed K into the desired format for the undistort function
         self.K = [[0, 0, 0], [0, 0, 0], [0,0,0]]
         K_raw = data.K
