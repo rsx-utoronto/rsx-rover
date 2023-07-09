@@ -17,9 +17,10 @@ class image_converter:
         self.image_pub = rospy.Publisher("/camera/infra1/image_rect_raw_new",Image, queue_size=1)
 
         self.bridge = CvBridge()
+        self.info_sub = rospy.Subscriber("/camera/infra1/camera_info", CameraInfo ,self.get_coordinates)        
         self.image_sub = rospy.Subscriber("/camera/infra1/image_rect_raw",Image,self.brightest_spot)
 
-        self.info_sub = rospy.Subscriber("/camera/infra1/camera_info", CameraInfo ,self.get_coordinates)
+
 
     def callback(self,data):
         try:
@@ -68,9 +69,9 @@ class image_converter:
         # filtered_image = self.thresholding(image)
         filtered_image = self.colour_search_and_masking(image, (185, 185, 185), (195, 195, 195))
         res = image.copy()
-        res = cv2.undistort(image, self.K, D)
+        res = cv2.undistort(image, self.K, self.D)
         # image = cv2.rotate(image, cv2.ROTATE_180)
-        print(res)
+        print("result = ", res)
         
         # load the image and convert it to grayscale
         
@@ -107,21 +108,21 @@ class image_converter:
    
     def get_coordinates(self, data):
 
-        # print(data)
-        
+        print(data)
+        # Converting the subscribed K into the desired format for the undistort function
         self.K = [[0, 0, 0], [0, 0, 0], [0,0,0]]
         K_raw = data.K
-        i = 0
-        while i < 3:
+        count = 0
+        for i in range(3):
             for j in range(3):
-                K[i][j] = K_raw[i]
-            i+=1 
+                self.K[i][j] = K_raw[count]
+                count+=1
 
-        K = np.asarray(K)  
-        # print(K)
-        self.D = 0
-        D = np.asarray(data.D)
-        # print(D)
+        self.K = np.asarray(self.K)  
+        # print("K = ", self.K)
+        self.D = np.asarray(data.D)
+        # print("D = ", self.D)
+
         # img = cv2.resize(img, (img.shape[1]//3, img.shape[0]//3))
         """ self.glob_img = cv2.undistort(self.glob_img, K, D)
         self.glob_img = cv2.rotate(self.glob_img, cv2.ROTATE_180)
