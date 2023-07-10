@@ -129,6 +129,8 @@ class Manual():
                 # Update goal positions
                 self.goal_pos_data = self.update_pos(self.controller_input, self.goal_pos_data, 
                                                      self.SPEED_LIMIT)
+                
+                # Creating and publishing the ROS message for publishing goal positions 
                 goal_pos           = Float32MultiArray()
                 goal_pos.data      = self.goal_pos_data
                 self.goal.publish(goal_pos)
