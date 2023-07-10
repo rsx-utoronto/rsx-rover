@@ -57,10 +57,10 @@ class Manual_Node():
         self.status              = "Idle"
 
         # ROS topics: publishing and subscribing
-        self.error               = rospy.Subscriber("error_msg", UInt8MultiArray, self.CallbackError)
+        self.error               = rospy.Subscriber("arm_error_msg", UInt8MultiArray, self.CallbackError)
         self.state               = rospy.Subscriber("arm_state", String, self.CallbackState)
         self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)  
-        self.goal                = rospy.Publisher("goal_pos", Float32MultiArray, queue_size=10)
+        self.goal                = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
 
     def CallbackError (self, errors: UInt8MultiArray) -> None:
         """
