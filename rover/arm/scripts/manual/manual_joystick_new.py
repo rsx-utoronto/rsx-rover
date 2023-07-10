@@ -50,14 +50,14 @@ class Manual():
         # 3 -> Hitting Limit Switch
         self.error_messages      = [0, 0, 0, 0, 0, 0, 0]
 
-        # Constant Speed limits, values are chosen by trial and error (Need to do this trial and error)
+        ## Constant Speed limits, values are chosen by trial and error (Need to do this trial and error)
         self.SPEED_LIMIT         = [0.001, 0.001, 0.001, 0.001, 
                                     0.001, 0.001, 0.001]
 
-        # Variable for the status, start at idle
+        ## Variable for the status, start at idle
         self.status              = "Idle"
 
-        # ROS topics: publishing and subscribing
+        ## ROS topics: publishing and subscribing
         self.error               = rospy.Subscriber("arm_error_msg", UInt8MultiArray, self.CallbackError)
         self.state               = rospy.Subscriber("arm_state", String, self.CallbackState)
         self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)  
@@ -127,9 +127,10 @@ class Manual():
 
             else:
 
-                # Update goal positions and publish them
+                # Update goal positions and print/publish them
                 self.goal_pos.data = self.update_pos(self.controller_input, self.goal_pos.data, 
                                                      self.SPEED_LIMIT)
+                print(self.goal_pos.data)
                 self.goal.publish(self.goal_pos)
 
         elif self.state == "Setup":
@@ -170,13 +171,16 @@ class Manual():
 ############################## MAIN ############################
 
 def main():
-    rospy.init_node("Arm_Manual", anonymous=True)
-    
-    Manual_Node = Manual()
 
-    rospy.spin()
+    try:
+        rospy.init_node("Arm_Manual", anonymous=True)
+        
+        Manual_Node = Manual()
 
-    pass
+        rospy.spin()
+
+    except rospy.ROSInterruptException:
+        pass
 
 if __name__ == "__main__":
 
