@@ -5,7 +5,7 @@ import sys
 import time
 import rospy
 import cv2
-from std_msgs.msg import String
+from std_msgs.msg import Float32
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
@@ -15,6 +15,7 @@ class image_converter:
 
     def __init__(self):
         self.image_pub = rospy.Publisher("/camera/infra1/image_rect_raw_new",Image, queue_size=1)
+        self.spot_pub = rospy.Publisher("/beacon_spot_depth", Float32, queue_size=1)
 
         self.bridge = CvBridge()
         self.info_sub = rospy.Subscriber("/camera/infra1/camera_info", CameraInfo, self.get_coordinates)        
@@ -28,7 +29,6 @@ class image_converter:
             cv_image = self.bridge.imgmsg_to_cv2(data, desired_encoding="passthrough")
         except CvBridgeError as e:
             print(e)
-
         self.depth_image = cv_image
 
     
@@ -60,7 +60,9 @@ class image_converter:
         radius = int(41)
         orig = image.copy()
         # filtered_image = self.thresholding(image)
-        filtered_image = self.colour_search_and_masking(image, (185, 185, 185), (195, 195, 195))
+        lower_bound = 188
+        upper_bound = 190
+        filtered_image = self.colour_search_and_masking(image, (lower_bound, lower_bound, lower_bound), (upper_bound, upper_bound, upper_bound)) # amber colour in greyscale is (189, 189, 189) 
         
         ## Undistorting the image. No need for now
         res = image.copy()
@@ -76,20 +78,20 @@ class image_converter:
         # perform a naive attempt to find the (x, y) coordinates of
         # the area of the image with the largest intensity value
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
-        max_x = maxLoc[1]
-        max_y = maxLoc[0]
+        max_y = maxLoc[1]
+        max_x = maxLoc[0]
         # print("maxLoc = ", maxLoc)
         # print("undistorted point = ", undistorted_image(maxLoc))
-        amber_spot_depth = self.depth_image[max_x, max_y]
-        print("Depth of the light beacon:", amber_spot_depth)
+        amber_spot_depth = Float32()
+        amber_spot_depth = self.depth_image[max_y, max_x] # This is the depth of the amber spot in mm
+        self.spot_pub.publish(amber_spot_depth)
+        # print("Depth of the light beacon(in mm):", amber_spot_depth)
+
         cv2.circle(image, maxLoc, radius, (255, 0, 0), 2) # (0, 191, 255) is the colour code for amber colour
         # display the results of the naive attempt
         cv2.imshow("Amber Spot", image)
         cv2.imshow("Original", orig)
         cv2.imshow("Filtered", filtered_image)
-
-        # cv2.imshow("Undistorted", res)
-
 
 
         """
@@ -138,7 +140,7 @@ class image_converter:
 
     def main(args):
         ic = image_converter()
-        rospy.init_node('image_converter', anonymous=True)
+        rospy.init_node('amber_spot_finder', anonymous=True)
         try:
             rospy.spin()
         except KeyboardInterrupt:
