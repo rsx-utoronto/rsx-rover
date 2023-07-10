@@ -39,7 +39,8 @@ class Manual():
         # 4 - Motor 15 (Wrist 1)
         # 5 - Motor 16 (Wrist 2)
         # 6 - Motor 17 (End Effector Open/Close)
-        self.goal_pos_data       = [0, 0, 0, 0, 0, 0, 0]
+        self.goal_pos            = Float32MultiArray()
+        self.goal_pos.data       = [0, 0, 0, 0, 0, 0, 0]
 
         ## Buffer to hold error messages
         # Message Descriptions:
@@ -126,14 +127,10 @@ class Manual():
 
             else:
 
-                # Update goal positions
-                self.goal_pos_data = self.update_pos(self.controller_input, self.goal_pos_data, 
+                # Update goal positions and publish them
+                self.goal_pos.data = self.update_pos(self.controller_input, self.goal_pos.data, 
                                                      self.SPEED_LIMIT)
-                
-                # Creating and publishing the ROS message for publishing goal positions 
-                goal_pos           = Float32MultiArray()
-                goal_pos.data      = self.goal_pos_data
-                self.goal.publish(goal_pos)
+                self.goal.publish(self.goal_pos)
 
         elif self.state == "Setup":
             self.setup()
