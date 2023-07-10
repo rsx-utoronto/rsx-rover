@@ -50,7 +50,7 @@ class Manual():
         # 3 -> Hitting Limit Switch
         self.error_messages      = [0, 0, 0, 0, 0, 0, 0]
 
-        ## Constant Speed limits, values are chosen by trial and error (Need to do this trial and error)
+        ## Constant Speed limits, values are chosen by trial and error #TODO
         self.SPEED_LIMIT         = [0.001, 0.001, 0.001, 0.001, 
                                     0.001, 0.001, 0.001]
 
