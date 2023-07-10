@@ -8,7 +8,7 @@ from std_msgs.msg import *
 
 ######################## CLASSES ##########################
 
-class Manual_Node():
+class Manual():
     """
     (None)
     
@@ -173,7 +173,7 @@ class Manual_Node():
 def main():
     rospy.init_node("Arm_Manual", anonymous=True)
     
-    Node_Manual = Manual_Node()
+    Manual_Node = Manual()
 
     rospy.spin()
 
