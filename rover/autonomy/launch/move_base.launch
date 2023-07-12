@@ -10,9 +10,13 @@
    <!-- <node pkg="tf" type="static_transform_publisher" name="base_link_to_map" args="0 0 0 0 0 0 map base_link 100" /> -->
 
    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
-      <remap from="cloud_in" to="/ouster/points" />
-       <remap from="scan" to="/scan" />
+      <remap from="/ouster/points" to="cloud_in" />
+      <remap from="/scan" to="scan" />
    </node>
+   <!-- <remap from="cloud_in" to="/ouster/points" /> -->
+
+
+   <node pkg="tf" type="static_transform_publisher" name="base_link_to_map" args="0 0 0 0 0 0 map base_link 100" />
 
 
    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">

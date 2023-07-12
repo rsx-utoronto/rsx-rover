@@ -6,7 +6,7 @@ plugins:
   - {name: static,                  type: "costmap_2d::StaticLayer"}
   - {name: inflation,               type: "costmap_2d::InflationLayer"}
 
-update_frequency: 10.0
+update_frequency: 2.0
 width: 200
 height: 200
 

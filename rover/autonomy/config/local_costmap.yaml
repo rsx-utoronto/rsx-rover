@@ -1,4 +1,4 @@
-global_frame: odom # sometimes '/odom' works but in documentation, it says that '/odom' is discontinued in noetic. Use 'odom'
+global_frame: laser_odom # sometimes '/odom' works but in documentation, it says that '/odom' is discontinued in noetic. Use 'odom'
 rolling_window: true # If the static_map parameter is set to true, this should be set to false 
 # Says that we don't want the local planner to be initialized from a static map
 track_unknown_space: true
