@@ -1,3 +1,4 @@
+# ENTIRE FILE MAYBE IN MANUAL NODE or in CONTROLLER NODE
 import subprocess
 
 #arduino serial port name on linux
