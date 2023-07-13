@@ -73,8 +73,12 @@ class image_converter:
         
         
         ## load the image and convert it to grayscale
-        
         gray = cv2.cvtColor(filtered_image, cv2.COLOR_BGR2GRAY)  # For a coloured image
+    
+        ## For adaptive thresholding
+        # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # For a coloured image
+        # filtered_image = self.thresholding(gray)
+
         # perform a naive attempt to find the (x, y) coordinates of
         # the area of the image with the largest intensity value
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)

@@ -14,7 +14,7 @@ import numpy as np
 class image_converter:
 
     def __init__(self):
-        self.image_pub = rospy.Publisher("/camera/infra2/image_rect_raw_new",Image, queue_size=1)
+        self.image_pub = rospy.Publisher("/camera/color/image_raw_new",Image, queue_size=1)
         self.spot_pub = rospy.Publisher("/beacon_spot_depth", Float32, queue_size=1)
 
         self.bridge = CvBridge()
@@ -61,10 +61,10 @@ class image_converter:
 
         radius = int(41)
         orig = image.copy()
-        filtered_image = self.thresholding(image)
+        # filtered_image = self.thresholding(image)
         lower_bound = 253
         upper_bound = 254
-        # filtered_image = self.colour_search_and_masking(image, (0, 185, 253), (10, 195, 255))
+        filtered_image = self.colour_search_and_masking(image, (0, 155, 225), (0, 195, 255))
         # filtered_image = self.colour_search_and_masking(image, (lower_bound, lower_bound, lower_bound), (upper_bound, upper_bound, upper_bound)) # amber colour in greyscale is (189, 189, 189) 
         
         ## Undistorting the image. No need for now
@@ -77,14 +77,14 @@ class image_converter:
         
         ## load the image and convert it to grayscale
         
-        gray = cv2.cvtColor(filtered_image, cv2.COLOR_BGR2GRAY)  # For a coloured image
+        gray = cv2.cvtColor(filtered_image, cv2.COLOR_RGB2GRAY)  # For a coloured image
         # filtered_image = self.colour_search_and_masking(gray, (lower_bound, lower_bound, lower_bound), (upper_bound, upper_bound, upper_bound)) # amber colour in greyscale is (189, 189, 189) 
 
         # perform a naive attempt to find the (x, y) coordinates of
         # the area of the image with the largest intensity value
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
-        max_y = maxLoc[0]
-        max_x = maxLoc[1]
+        max_y = maxLoc[1]
+        max_x = maxLoc[0]
         # print("maxLoc = ", maxLoc)
         # print("undistorted point = ", undistorted_image(maxLoc))
         amber_spot_depth = Float32()

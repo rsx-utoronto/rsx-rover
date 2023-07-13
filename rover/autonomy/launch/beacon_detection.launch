@@ -1,5 +1,5 @@
 <launch>
     <node pkg="rover" type="beacon_detection.py" name="amber_spot_finder" output="screen"/>
     <node pkg="rover" type="beacon_coordinates.py" name="beacon_gps" output="screen"/>
-
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rover)/rover/autonomy/config/camera_config.rviz" output="screen"/>
 </launch>
