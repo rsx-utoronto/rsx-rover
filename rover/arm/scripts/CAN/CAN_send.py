@@ -3,12 +3,16 @@
 import can
 import rospy
 import struct
+import threading
 from std_msgs.msg import Float32MultiArray, UInt8MultiArray
 
 ########## GLOBAL VARIABLES ##########
 
 # CAN bus instance
 global BUS
+
+# Shared lock variable
+lock = threading.Lock()
 
 # CANSpark APIs
 CMD_API_SETPNT_SET = 0x001
@@ -80,17 +84,19 @@ class CAN_Node():
 		self.LIMIT_SWITCH 		= [0, 0, 0, 0, 0, 0, 0]
 
 		# Variables for ROS publishers and subscribers
-		self.SafePos_sub 		= rospy.Subscriber("safe_goal_pos", Float32MultiArray, self.callback_SafePos)
-		self.Angles_pub 		= rospy.Publisher('curr_pos', Float32MultiArray, queue_size=10)
-		self.Motor_pub 			= rospy.Publisher('motor_curr', Float32MultiArray, queue_size=10)
-		self.LMS_pub 			= rospy.Publisher('limit_switch', UInt8MultiArray, queue_size=10)
+		self.SafePos_sub 		= rospy.Subscriber("arm_safe_goal_pos", Float32MultiArray, self.callback_SafePos)
+		self.Angles_pub 		= rospy.Publisher('arm_curr_pos', Float32MultiArray, queue_size=10)
+		self.Motor_pub 			= rospy.Publisher('arm_motor_curr', Float32MultiArray, queue_size=10)
+		self.LMS_pub 			= rospy.Publisher('arm_limit_switch', UInt8MultiArray, queue_size=10)
 
 		# ROS
 		try:
+			print("here")
 			self.CAN_node()
 		except rospy.ROSInterruptException:
 			print("Exception Occured")
 			pass
+		
 
 
 	def callback_SafePos(self, data):
@@ -244,7 +250,7 @@ class CAN_Node():
 			# API: Status Message 1 - Gives us information on limit switches
 			if api == CMD_API_STAT0:
 				# 132 for forward and 68 for reverse
-				ls_bools = data & 0x000000C0000000000
+				ls_bools = data[3] & 0xC0
 
 				# Return 0 if no limit switches are pressed
 				if ls_bools > 0:
@@ -382,29 +388,36 @@ class CAN_Node():
 
 		# Variable to hold the boolean whether each motor is read once or not
 		# For each motor connected, the corresponding motor_list element should be set to 0 
-		motor_read = [1, 1, 1, 1, 1, 0, 1]
+		#motor_read = [1, 1, 1, 1, 1, 0, 1]
 
 		# Checking if SparkMAXes are powered on and sending status messages
 		while 1:
+			print("infintie")
 			msg = BUS.recv()
 			can_id = msg.arbitration_id
 			dev_id = can_id & 0b00000000000000000000000111111
-			#api = (can_id >> 6) & 0b00000000000001111111111
+			api = (can_id >> 6) & 0b00000000000001111111111
 			
 			# If every element in motor_list is True, it means this was for initialization 
 			# and we should break out of the loop
-			if not False in motor_read:
-				break
+			# if not False in motor_read:
+			# 	break
 			
 			index = dev_id - 11
 
 			# If this is for initialization, set the correseponding element in motor_list to be True
-			if init:
-				motor_read[index] = True
+			# if init:
+			# 	motor_read[index] = True
+			if api == CMD_API_STAT0:
+				with lock:
+					self.LIMIT_SWITCH[index] = self.read_can_message(msg.data, CMD_API_STAT0)
+			elif api == CMD_API_STAT1:
+				with lock:
+					self.MOTOR_CURT[index] = self.read_can_message(msg.data, CMD_API_STAT1)
+			elif api == CMD_API_STAT2:
+				with lock:
+					self.CURR_POS[index] = self.read_can_message(msg.data, CMD_API_STAT2)
 			
-			self.MOTOR_CURT[index] = self.read_can_message(msg.data, CMD_API_STAT1)
-			self.CURR_POS[index] = self.read_can_message(msg.data, CMD_API_STAT2)
-			self.LIMIT_SWITCH[index] = self.read_can_message(msg.data, CMD_API_STAT0)
 
 
 	def CAN_node(self): 	# Queue size & rate not calibrated
@@ -425,15 +438,17 @@ class CAN_Node():
 		print("Heartbeat initiated")
 
 		# Initialize CURR_POS variable
-		self.read_message_from_spark(init= True)
-
+		curr_pos_thread = self.read_message_from_spark(init= True)
+		curr_pos_thread.start()
 		# Set publishing rate to 10hz
 		rate = rospy.Rate(self.pub_rate)
 
+		print("here as well")
 		while not rospy.is_shutdown():
 			# Send instructions to motor
 			# Convert SparkMAX angles to SparkMAX data packets
 			spark_input = self.generate_data_packet(self.SAFE_GOAL_POS) # assuming data is safe
+			print(spark_input)
 			
 			# Send data packets
 			for i in range(1, len(spark_input)+1):

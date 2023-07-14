@@ -33,28 +33,28 @@ class Safety_Node():
     def __init__(self):
 
         # Attributes to hold data from subscribed topics
-        self.GOAL_POS        = [0, 0, 0, 0, 0, 0, 0]
-        self.CURR_POS        = [0, 0, 0, 0, 0, 0, 0]
-        self.MOTOR_CURR      = [0, 0, 0, 0, 0, 0, 0]
-        self.LIMIT_SWITCH    = [False, False, False, False, False, False, False]
+        self.GOAL_POS             = [0, 0, 0, 0, 0, 0, 0]
+        self.CURR_POS             = [0, 0, 0, 0, 0, 0, 0]
+        self.MOTOR_CURR           = [0, 0, 0, 0, 0, 0, 0]
+        self.LIMIT_SWITCH         = [False, False, False, False, False, False, False]
 
         # Attributes to hold data for publishing to topics
-        self.ERRORS          = UInt8MultiArray()
-        self.ERRORS.data     = [0, 0, 0, 0, 0, 0, 0]
-        self.SAFE_GOAL_POS   = Float32MultiArray()
-        self.SAFE_GOAL_POS   = [0, 0, 0, 0, 0, 0, 0]
+        self.ERRORS               = UInt8MultiArray()
+        self.ERRORS.data          = [0, 0, 0, 0, 0, 0, 0]
+        self.SAFE_GOAL_POS        = Float32MultiArray()
+        self.SAFE_GOAL_POS.data   = [0, 0, 0, 0, 0, 0, 0]
 
         # Attributes needed for detecting whether motor current is exceeding
-        self.TIME            = [0, 0, 0, 0, 0, 0, 0]
-        self.FIRST           = [True, True, True, True, True, True, True]
+        self.TIME                 = [0, 0, 0, 0, 0, 0, 0]
+        self.FIRST                = [True, True, True, True, True, True, True]
 
         # Variables for ROS publishers and subscribers
-        self.Goal_sub        = rospy.Subscriber("goal_pos", Float32MultiArray, self.callback_Goal)
-        self.MotorCurr_sub   = rospy.Subscriber("motor_curr", Float32MultiArray, self.callback_MotorCurr)
-        self.CurrPos_sub     = rospy.Subscriber("curr_pos", Float32MultiArray, self.callback_CurrPos)
-        self.LimitSwitch_sub = rospy.Subscriber("limit_switch", UInt8MultiArray, self.callback_LimitSwitch)
-        self.SafePos_pub     = rospy.Publisher("safe_goal_pos", Float32MultiArray, queue_size= 10)
-        self.Error_pub       = rospy.Publisher("error_msg", UInt8MultiArray, queue_size= 10)
+        self.Goal_sub             = rospy.Subscriber("arm_goal_pos", Float32MultiArray, self.callback_Goal)
+        self.MotorCurr_sub        = rospy.Subscriber("arm_motor_curr", Float32MultiArray, self.callback_MotorCurr)
+        self.CurrPos_sub          = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.callback_CurrPos)
+        self.LimitSwitch_sub      = rospy.Subscriber("arm_limit_switch", UInt8MultiArray, self.callback_LimitSwitch)
+        self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 10)
+        self.Error_pub            = rospy.Publisher("arm_error_msg", UInt8MultiArray, queue_size= 10)
 
     def callback_LimitSwitch(self, limitSwitch_data : UInt8MultiArray) -> None:
         """
@@ -152,7 +152,7 @@ class Safety_Node():
 
         # Going through each element of GOAL_POS
         for i in range(len(self.GOAL_POS)):
-            
+        #for i in [2]:    
             # Doing position comparisons for safety
             if (self.GOAL_POS[i] < (self.CURR_POS[i] - limit[i]) or 
                 self.GOAL_POS[i] > (self.CURR_POS[i] + limit[i])):

@@ -4,7 +4,7 @@ import rospy
 from sensor_msgs.msg import Joy
 from std_msgs.msg import String
 from rover.msg import ArmInputs
-import arm_servo
+#import arm_servo
 #from rover.srv import Corrections
 
 '''
@@ -45,7 +45,7 @@ class Controller():
         self.servo               = 0
 
         ## Variables for ROS publishers and subscrives
-        self.joy_sub             = rospy.Subscriber("joy", Joy, getROSJoy)
+        self.joy_sub             = rospy.Subscriber("joy", Joy, self.getROSJoy)
         self.state_pub           = rospy.Publisher("arm_state", String, queue_size=10)
         self.input_pub           = rospy.Publisher("arm_inputs", ArmInputs, queue_size=10)
 
@@ -125,17 +125,17 @@ class Controller():
         print("State:", self.state)
         self.state_pub.publish(self.state)
 
-        # If square is pressed, flip the servo configuration
-        if rawButtons[3] == 1:
-            self.servo = not self.servo
+        # # If square is pressed, flip the servo configuration
+        # if rawButtons[3] == 1:
+        #     self.servo = not self.servo
             
-            if self.servo:
-                arm_servo.write_servo_high_angle()
-                print("Servo going to 84 degrees configuration")
+        #     if self.servo:
+        #         arm_servo.write_servo_high_angle()
+        #         print("Servo going to 84 degrees configuration")
             
-            else:
-                arm_servo.write_servo_low_angle()
-                print("Servo going to 63 degrees configuration")
+        #     else:
+        #         arm_servo.write_servo_low_angle()
+        #         print("Servo going to 63 degrees configuration")
 
         # Print/Publish the inputs if state is neither Idle or Setup
         if self.state != "Idle" and self.state != "Setup":

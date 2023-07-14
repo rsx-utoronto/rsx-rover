@@ -128,7 +128,7 @@ class Manual():
             else:
 
                 # Update goal positions and print/publish them
-                self.goal_pos.data = self.update_pos(self.controller_input, self.goal_pos.data, 
+                self.goal_pos.data = self.update_pos(self.controller_input[:-1], self.goal_pos.data, 
                                                      self.SPEED_LIMIT)
                 print(self.goal_pos.data)
                 self.goal.publish(self.goal_pos)
@@ -136,7 +136,7 @@ class Manual():
         elif self.state == "Setup":
             self.setup()
         
-    def update_pos(self, joy_input : list(float), curr_goal_pos : list(float), speed_limit : list(float)) -> list(float):   
+    def update_pos(self, joy_input : list, curr_goal_pos : list, speed_limit : list) -> list:   
         """
         (list(float), list(float), list(float)) -> list(float)
 
