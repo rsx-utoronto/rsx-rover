@@ -1,0 +1,23 @@
+<launch>
+    <rosparam subst_value="True">
+
+        inertial_sense_node: {
+        frame_id: "imu_link",
+        baud: 921600,
+        navigation_dt_ms: 10,
+        stream_INS: true,
+        stream_IMU: true,
+        stream_GPS1: true,
+        stream_GPS_info: true,
+        stream_mag: true,
+        <!-- stream_NavSatFix: true, -->
+        <!-- stream_covariance: true, -->
+        <!-- stream_odom_ins_enu: true, -->
+        <!-- RTK_rover: true,
+        RTK_server_IP: 100.66.65.213,
+        RTK_server_port: 2101, -->
+        }
+    </rosparam>
+    <node name="inertial_sense_node" pkg="inertial_sense_ros" type="inertial_sense_node"
+        output="screen" />
+</launch>
