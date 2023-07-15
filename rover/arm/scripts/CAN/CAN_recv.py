@@ -1,4 +1,5 @@
 from CAN_utilities import *
+import rospy
 
 
 class CAN_Recv_Node():
