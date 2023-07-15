@@ -15,7 +15,7 @@ class CannotReachTransform(Exception):
 
 # IK Code
 
-def createXYZRotationMatrix(roll: float, pitch: float, yaw: float):
+def createRotationMatrix(roll: float, pitch: float, yaw: float, order: str = "ypr"):
     ''' Creates a rotation matrix based on XYZ euler angles (Roll, Pitch, Yaw)
 
     Paramaters (euler angles)
@@ -26,6 +26,8 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float):
         angle y-axis rotates (float)
     yaw (gamma)
         angle z-axis rotates (float)
+    order
+        the order in which the rotations are applied, defaults to ypr
 
     Returns
     -------
@@ -72,8 +74,10 @@ def createXYZRotationMatrix(roll: float, pitch: float, yaw: float):
                             [0, sRoll, cRoll]
                             ])
 
-    rotationMatrix = np.matmul(np.matmul(yawRotation, pitchRotation), rollRotation)
+    rotMatrices = {"r": rollRotation, "p": pitchRotation, "y": yawRotation}
 
+    rotationMatrix = np.matmul(np.matmul(rotMatrices[order[0]], rotMatrices[order[1]]), rotMatrices[order[2]])
+    
     # Returns matrix
 
     return rotationMatrix
@@ -111,7 +115,7 @@ def calculateRotationAngles(transformationMatrix):
 def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position):
     ''' Creates the matrix that defines the transform of the end effector based on target
 
-    Uses createXYZRotationMatrix() to define rotation portion of matrix.
+    Uses createRotationMatrix() to define rotation portion of matrix.
 
     Paramaters
     ----------
@@ -132,18 +136,18 @@ def createEndEffectorTransform(roll: float, pitch: float, yaw: float, position):
     '''
     # define exception - outOfWorkspace
 
-    # Raised when end effector coordinates are out of arm's range
+    # Raised when end effector coordinates are out of arm's range   
 
     # checks for out of workspace
 
     positionArray = np.array([position])
-
+    
     # create 4x4 block matrix
     # | (rotation matrx) (position) |
     # |   0      0       0       1  |
 
     endEffectorTransform = np.block([
-                                    [createXYZRotationMatrix(roll, pitch, yaw), np.transpose(positionArray)],
+                                    [createRotationMatrix(roll, pitch, yaw), np.transpose(positionArray)],
                                     [0, 0, 0, 1]
                                     ])
 
