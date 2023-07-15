@@ -10,11 +10,11 @@ class CAN_Recv_Node():
     """
 
     def __init__(self):
-        self.pub_rate = 0
+        self.pub_rate           = 0
 
         # Attributes to hold data from publishers or to publish
         self.CURR_POS 			= [0, 0, 0, 0, 0, 0, 0]
-        self.MOTOR_CURT 		= [0, 0, 0, 0, 0, 0, 0]
+        self.MOTOR_CURR 		= [0, 0, 0, 0, 0, 0, 0]
         self.LIMIT_SWITCH 		= [0, 0, 0, 0, 0, 0, 0]
 
         # Variables for ROS publishers and subscribers
@@ -35,7 +35,7 @@ class CAN_Recv_Node():
         (None) -> (None)
 
         Function that reads status message regarding position and current 
-        from all motors and updates the global variable CURR_POS and MOTOR_CURT to store the values
+        from all motors and updates the global variable CURR_POS and MOTOR_CURR to store the values
         """
 
         # Variable to hold the boolean whether each motor is read once or not
@@ -44,17 +44,17 @@ class CAN_Recv_Node():
 
         # Checking if SparkMAXes are powered on and sending status messages
         while 1:
-            msg = BUS.recv()
-            can_id = msg.arbitration_id
-            dev_id = can_id & 0b00000000000000000000000111111
-            api = (can_id >> 6) & 0b00000000000001111111111
+            msg     = BUS.recv()
+            can_id  = msg.arbitration_id
+            dev_id  = can_id & 0b00000000000000000000000111111
+            api     = (can_id >> 6) & 0b00000000000001111111111
             
             # If every element in motor_list is True, it means this was for initialization 
             # and we should break out of the loop
             # if not False in motor_read:
             # 	break
             
-            index = dev_id - 11
+            index   = dev_id - 11
 
             # If this is for initialization, set the correseponding element in motor_list to be True
             # if init:
@@ -62,27 +62,27 @@ class CAN_Recv_Node():
             if api == CMD_API_STAT0:
                 self.LIMIT_SWITCH[index] = read_can_message(msg.data, CMD_API_STAT0)
             elif api == CMD_API_STAT1:
-                self.MOTOR_CURT[index] = read_can_message(msg.data, CMD_API_STAT1)
+                self.MOTOR_CURR[index]   = read_can_message(msg.data, CMD_API_STAT1)
             elif api == CMD_API_STAT2:
-                self.CURR_POS[index] = read_can_message(msg.data, CMD_API_STAT2)
+                self.CURR_POS[index]     = read_can_message(msg.data, CMD_API_STAT2)
 
 
     def CAN_recv_node(self): 	# Queue size & rate not calibrated
-        # Instantiate CAN bus
-        initialize_bus()
+        # # Instantiate CAN bus
+        # initialize_bus()
 
-        # Broadcast heartbeat
-        hb = can.Message(
-            arbitration_id= generate_can_id(
-                dev_id= 0x0, 
-                api= CMD_API_NONRIO_HB), 
-            data= bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 
-            is_extended_id= True,
-            is_remote_frame = False, 
-            is_error_frame = False
-        )
-        task = BUS.send_periodic(hb, 0.01)
-        print("Heartbeat initiated")
+        # # Broadcast heartbeat
+        # hb = can.Message(
+        #     arbitration_id= generate_can_id(
+        #         dev_id= 0x0, 
+        #         api= CMD_API_NONRIO_HB), 
+        #     data= bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 
+        #     is_extended_id= True,
+        #     is_remote_frame = False, 
+        #     is_error_frame = False
+        # )
+        # task = BUS.send_periodic(hb, 0.01)
+        # print("Heartbeat initiated")
         
         # Set publishing rate to 10hz
         rate = rospy.Rate(self.pub_rate)
@@ -105,12 +105,12 @@ class CAN_Recv_Node():
                 self.LMS_pub.publish(limit_switch_msg)
 
             elif api == CMD_API_STAT1:
-                self.MOTOR_CURT[index] = read_can_message(msg.data, CMD_API_STAT1)
+                self.MOTOR_CURR[index] = read_can_message(msg.data, CMD_API_STAT1)
 
                 # Publish data
-                motor_curt_msg = Float32MultiArray()
-                motor_curt_msg.data = self.MOTOR_CURT
-                self.Motor_pub.publish(motor_curt_msg)
+                MOTOR_CURR_msg = Float32MultiArray()
+                MOTOR_CURR_msg.data = self.MOTOR_CURR
+                self.Motor_pub.publish(MOTOR_CURR_msg)
                 
             elif api == CMD_API_STAT2:
                 self.CURR_POS[index] = read_can_message(msg.data, CMD_API_STAT2)

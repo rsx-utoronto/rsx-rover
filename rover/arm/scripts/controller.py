@@ -139,8 +139,11 @@ class Controller():
 
         # Print/Publish the inputs if state is neither Idle or Setup
         if self.state != "Idle" and self.state != "Setup":
-            print(self.values)
-            self.input_pub.publish(self.values)
+
+            while ((not (rawAxes[0] or rawAxes[1] or rawAxes[3] or rawAxes[4])) 
+                   and (rawAxes[2] == 1 and rawAxes[5] == 1) and (1 not in rawButtons)):
+                print(self.values)
+                self.input_pub.publish(self.values)
 
 
 
