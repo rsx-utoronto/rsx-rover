@@ -198,7 +198,7 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-catkin_install_python(PROGRAMS rover/arm/scripts/controller.py rover/arm/scripts/manual/manual.py rover/arm/scripts/safety/safety.py rover/arm/scripts/CAN/CAN.py
+catkin_install_python(PROGRAMS rover/arm/scripts/controller.py rover/arm/scripts/manual/manual.py rover/arm/scripts/safety/safety.py rover/arm/scripts/CAN/CAN_send.py rover/arm/scripts/safety/safety.py rover/arm/scripts/CAN/CAN_recv.py
 DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
