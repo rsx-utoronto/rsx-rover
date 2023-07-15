@@ -49,6 +49,35 @@ class Controller():
         self.state_pub           = rospy.Publisher("arm_state", String, queue_size=10)
         self.input_pub           = rospy.Publisher("arm_inputs", ArmInputs, queue_size=10)
 
+        # # Printing state on the console and publishing it
+        # print("State:", self.state)
+        # self.state_pub.publish(self.state)
+
+        # # If square is pressed, flip the servo configuration
+        # if rawButtons[3] == 1:
+        #     self.servo = not self.servo
+            
+        #     if self.servo:
+        #         arm_servo.write_servo_high_angle()
+        #         print("Servo going to 84 degrees configuration")
+            
+        #     else:
+        #         arm_servo.write_servo_low_angle()
+        #         print("Servo going to 63 degrees configuration")
+        self.rate = rospy.Rate(1000)
+
+        while not rospy.is_shutdown():
+        # Print/Publish the inputs if state is neither Idle or Setup
+            if self.state != "Idle" and self.state != "Setup":
+
+                while (abs(self.values.l_horizontal) >= 0.05 or abs(self.values.l_vertical) >= 0.05 or 
+                    abs(self.values.r_horizontal) >= 0.05 or abs(self.values.r_vertical) >= 0.05 or 
+                    self.values.l1r1 or self.values.l2r2 or self.values.xo or self.values.ps):
+                    print(self.values)
+                    self.input_pub.publish(self.values)
+
+            self.rate.sleep()
+
     def getROSJoy(self, joy_input : Joy) -> None:    
         ''' 
         (Joy) -> (None)
@@ -63,6 +92,7 @@ class Controller():
     
         joy_input (Joy): Stores the received joystick inputs from "Joy" topic 
         '''
+
         ## Getting the joystick inputs
         # Axes Mapping (note: max absolute value = 1)
         # Idx : Button on PS4 (direction)
@@ -125,25 +155,25 @@ class Controller():
         print("State:", self.state)
         self.state_pub.publish(self.state)
 
-        # # If square is pressed, flip the servo configuration
-        # if rawButtons[3] == 1:
-        #     self.servo = not self.servo
+        # # # If square is pressed, flip the servo configuration
+        # # if rawButtons[3] == 1:
+        # #     self.servo = not self.servo
             
-        #     if self.servo:
-        #         arm_servo.write_servo_high_angle()
-        #         print("Servo going to 84 degrees configuration")
+        # #     if self.servo:
+        # #         arm_servo.write_servo_high_angle()
+        # #         print("Servo going to 84 degrees configuration")
             
-        #     else:
-        #         arm_servo.write_servo_low_angle()
-        #         print("Servo going to 63 degrees configuration")
+        # #     else:
+        # #         arm_servo.write_servo_low_angle()
+        # #         print("Servo going to 63 degrees configuration")
 
-        # Print/Publish the inputs if state is neither Idle or Setup
-        if self.state != "Idle" and self.state != "Setup":
+        # # Print/Publish the inputs if state is neither Idle or Setup
+        # if self.state != "Idle" and self.state != "Setup":
 
-            while ((not (rawAxes[0] or rawAxes[1] or rawAxes[3] or rawAxes[4])) 
-                   and (rawAxes[2] == 1 and rawAxes[5] == 1) and (1 not in rawButtons)):
-                print(self.values)
-                self.input_pub.publish(self.values)
+        #     while ((rawAxes[0] or rawAxes[1] or rawAxes[3] or rawAxes[4]) 
+        #            or (self.values.l2r2 != 0) or (1 in rawButtons)):
+        #         print(self.values)
+        #         self.input_pub.publish(self.values)
 
 
 

@@ -1,5 +1,8 @@
-from CAN_utilities import *
+#!usr/bin/env python3
 
+from CAN_utilities import *
+import rospy
+from std_msgs.msg import Float32MultiArray, UInt8MultiArray
 
 class CAN_Send_Node():
 	"""
@@ -10,7 +13,7 @@ class CAN_Send_Node():
 	"""
 
 	def __init__(self):
-		self.pub_rate = 0
+		self.pub_rate = 10
 
 		# Subscriber
 		self.SAFE_GOAL_POS	 	= [0, 0, 0, 0, 0, 0, 0]
