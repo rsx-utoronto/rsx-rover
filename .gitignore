@@ -1,2 +1,3 @@
 .vscode
 bryan-docker
+/rsx-rover/rover/arm/scripts/__pycache__/
