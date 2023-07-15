@@ -157,14 +157,17 @@ class Manual():
     
     # def setup(self):
     #     # For each motor/controller pos...
+    #     # subscribe to current angles
     #     for i in range(len(self.controller_pos)):
+    #         current = self.controller_pos[i] 
     #         # Send in a large value to hit limit switch
     #         self.controller_pos[i] = 10000000
     #         # When error occurs (recieve from safety node), set it back to zero
     #         # Currently assuming error messages will be str
-    #         while "LIMIT_SWITCH" not in self.error:
+    #         while "LIMIT_SWITCH" not in self.error[i]:
     #             pass
-    #         self.controller_pos[i] = 0
+    #         # detect current angle via corrections from safety
+    #         self.controller_pos[i] = current
     #     pass
     #     #a variable correction value
 

@@ -251,6 +251,20 @@ class Safety_Node():
                 if self.LIMIT_SWITCH[i] == True:
                     self.ERRORS.data[i] = Errors.ERROR_LIMIT_SWITCH.value
 
+    def setup(self):
+        # For each motor...
+        for i in range(len(self.SAFE_GOAL_POS) - 1):
+            # Store current angles
+            current = self.CURR_POS[i]
+            # Send in a large value to hit limit switch
+            self.SAFE_GOAL_POS[i] = 10000000
+            # When an error occurs, check again and reverse angle change
+            while Errors.ERRORS_LIMIT_SWITCH.value != self.ERRORS.data[i]:
+                pass
+            final = self.CURR_POS[i]
+            self.CURR_POS[i] = final - (final - current)
+
+
 
 ############## FUNCTIONS ##############
 
