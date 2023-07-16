@@ -10,6 +10,7 @@ from std_msgs.msg import Header
 from std_msgs.msg import Float32MultiArray
 import json
 import copy
+import CAN_utilities as CAN; print(dir(CAN))
 
 # Global Variables 
 

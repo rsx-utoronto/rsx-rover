@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
 import can
-import rospy
 import struct
-import threading
-from std_msgs.msg import Float32MultiArray, UInt8MultiArray
 
 ########## GLOBAL VARIABLES ##########
 
