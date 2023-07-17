@@ -23,6 +23,8 @@ class TeleopRover {
 		double l_scale_, a_scale_;
 		ros::Publisher drive_pub_;
 		ros::Subscriber joy_sub_;
+
+		// Add service handler to enable manual control and stop manual control
 };
 
 TeleopRover::TeleopRover():

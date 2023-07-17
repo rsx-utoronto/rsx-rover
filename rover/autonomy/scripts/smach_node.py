@@ -23,7 +23,6 @@ class StateMachineNode():
         self.rover_idle = self.RoverIdle()
         self.rover_manual = self.RoverManual()
         self.rover_initialize = self.RoverInitialize()
-        self.rover_start = self.RoverStart()
         self.rover_gps_traverse = self.RoverGPSTraverse()
         self.rover_aruco_traverse = self.RoverARucoTraverse()
         self.rover_scan = self.RoverScan()
@@ -35,7 +34,6 @@ class StateMachineNode():
 
         self.GPS_GOAL_REACHED = state_msg.GPS_GOAL_REACHED
         self.MODE = state_msg.rover_mode
-
 
 class RoverIdle(smach.State):
 
@@ -58,30 +56,35 @@ class RoverManual(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['MOVE_TO_IDLE','MOVE_TO_INTIALIZE', 'STAY'])
         self.counter = 0
-        # Your state initialization goes here
 
     def execute(self, userdata):
         rospy.loginfo('Executing state MANUAL')
-        # Your state execution goes here
         if self.MODE == 'MANUAL':
+            rospy.info("Entering manual control mode")
+
+            # Publish something to enable manual control mode
+            
             return 'STAY'
+        
         elif self.MODE == 'AUTONOMY':
+            rospy.info("Initializing autonomy...")
             return 'MOVE_TO_INITIALIZE'
+        
         elif self.MODE == 'IDLE':
+            rospy.info("Entering idle mode...")
             return 'MOVE_TO_IDLE'
 
 class RoverInitialize(smach.State):
 
     def __init__(self):
-        smach.State.__init__(self, outcomes=['outcome1','outcome2'])
+        smach.State.__init__(self, outcomes=['MOVE_TO_START','Getting goal'])
         self.counter = 0
         # Your state initialization goes here
 
     def execute(self, userdata):
-        rospy.loginfo('Executing state FOO')
-        # Your state execution goes here
-
-        # Load the configuration file 
+        rospy.loginfo('Executing state INITIALIZE')
+        
+        # Prompt the user for the next waypoint
 
         with open(userdata.task_config, "r") as stream:
             try:
@@ -94,20 +97,20 @@ class RoverInitialize(smach.State):
         else:
             return 'outcome2'
 
-class RoverStart(smach.State):
+# class RoverStart(smach.State):
 
-    def __init__(self):
-        smach.State.__init__(self, outcomes=['outcome1','outcome2'])
-        self.counter = 0
-        # Your state initialization goes here
+#     def __init__(self):
+#         smach.State.__init__(self, outcomes=['outcome1','outcome2'])
+#         self.counter = 0
+#         # Your state initialization goes here
 
-    def execute(self, userdata):
-        rospy.loginfo('Executing state FOO')
-        # Your state execution goes here
-        if xxxx:
-            return 'outcome1'
-        else:
-            return 'outcome2'
+#     def execute(self, userdata):
+#         rospy.loginfo('Executing state FOO')
+#         # Your state execution goes here
+#         if xxxx:
+#             return 'outcome1'
+#         else:
+#             return 'outcome2'
     
 class RoverGPSTraverse(smach.State):
 
@@ -117,8 +120,10 @@ class RoverGPSTraverse(smach.State):
         # Your state initialization goes here
 
     def execute(self, userdata):
-        rospy.loginfo('Executing state FOO')
-        # Your state execution goes here
+        rospy.loginfo('Executing state GPSTraverse')
+        
+        
+
         if xxxx:
             return 'outcome1'
         else:
