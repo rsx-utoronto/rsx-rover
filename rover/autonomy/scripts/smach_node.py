@@ -14,8 +14,9 @@ class StateMachineNode():
     def __init__(self, args):
 
         self.state_subscriber = rospy.Subscriber(StateMsg, self.state_callback)
+        self.state_publisher = rospy.Publisher('/rover_state', StateMsg, queue_size=10)
         self.MODE = "IDLE"
-        self.GPS_GOALS = np.zeros(0,3)
+        self.GPS_goals = np.zeros(0,3)
         self.task_config = args.task_config
         self.GPS_counter = 0
 
@@ -31,9 +32,14 @@ class StateMachineNode():
         self.rover_mission_over = self.RoverMissionOver()
 
     def state_callback(self, state_msg):
-
+        self.state_msg_raw = state_msg
         self.GPS_GOAL_REACHED = state_msg.GPS_GOAL_REACHED
         self.MODE = state_msg.rover_mode
+        self.GPS_GOALS = state_msg.GPS_goals
+        self.ar_tag_detected = state_msg.AR_TAG_DETECTED
+        self.curr_ar_tag = self.curr_AR_ID
+        self.MISSION_OVER = self.MISSION_OVER
+
 
 class RoverIdle(smach.State):
 
@@ -60,18 +66,18 @@ class RoverManual(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Executing state MANUAL')
         if self.MODE == 'MANUAL':
-            rospy.info("Entering manual control mode")
-
-            # Publish something to enable manual control mode
-            
+            rospy.info("Enabling manual control mode")
+            self.state_msg_raw.MANUAL_ENABLED = True
             return 'STAY'
         
         elif self.MODE == 'AUTONOMY':
             rospy.info("Initializing autonomy...")
+            self.state_msg_raw.MANUAL_ENABLED = False
             return 'MOVE_TO_INITIALIZE'
         
         elif self.MODE == 'IDLE':
             rospy.info("Entering idle mode...")
+            self.state_msg_raw.MANUAL_ENABLED = False
             return 'MOVE_TO_IDLE'
 
 class RoverInitialize(smach.State):
@@ -170,16 +176,16 @@ class RoverTransition(smach.State):
         rospy.loginfo('Executing state Rovransition')
         
 
-        if self.GPS_counter == self.num_GPS_goals - 1: 
+        if userdata.GPS_counter == userdata.num_GPS_goals - 1: 
             # 
             return "MOVE_TO_MISSION_OVER"
 
-        if self.GPS_counter == 2 and not self.gps_location_read:
+        if userdata.GPS_counter == 2 and not userdata.gps_location_read:
             # Move to node for determining GPS loc from heading and distance
             return 'DETERMINE_REL_GPS_GOAL'
         
         else:
-            self.GPS_counter += 1
+            userdata.GPS_counter += 1
             # Load the next GPS goal into the state 
             # Move to RoverGPSTraverse
             return 'MOVE_TO_GPS_TRAVERSE'
@@ -236,6 +242,8 @@ def main(args):
 
     # Create a SMACH state machine
     sm = smach.StateMachine(outcomes=['MISSION_OVER', 'MISSION_ABORTED'])
+
+    sm.userdata.
 
     # Open the container
     with sm:

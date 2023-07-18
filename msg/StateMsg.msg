@@ -1,8 +1,7 @@
 string rover_mode
-rover/GPSMsg [] GPS_goals
-bool curr_goal_gps_found
+sensor_msgs/NavSatFix[] GPS_goals
+bool GPS_GOAL_REACHED
 bool MISSION_OVER
-bool ar_tag_detected
-uint16[] detected_AR_IDs
-uint16[] curr_AR_IDs
-uint16 best_current_AR_ID
+bool AR_TAG_DETECTED
+uint16 curr_AR_ID
+bool MANUAL_ENABLED
