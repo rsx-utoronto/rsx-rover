@@ -2,6 +2,7 @@
 #include <geometry_msgs/Twist.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Bool.h>
 #include <signal.h>
 #include <termios.h>
 #include <stdio.h>
@@ -9,12 +10,13 @@
 #include <sensor_msgs/Joy.h>
 
 
+
 class TeleopRover {
 	public:
 		TeleopRover();
-		void publishDrive();
 	private:
 		void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
+		void networkCallback(const std_msgs::Bool::ConstPtr& net_stat);
 
 		ros::NodeHandle nh_;
 		float MAX_ANGULAR_SPEED = 0.4;
@@ -22,7 +24,9 @@ class TeleopRover {
 		int linear_, angular_, right_left_, forward_backward_, yaw_; 
 		double l_scale_, a_scale_;
 		ros::Publisher drive_pub_;
-		ros::Subscriber joy_sub_;
+		ros::Subscriber joy_sub;
+		ros::Subscriber net_sub;
+		bool network_status;
 
 		// Add service handler to enable manual control and stop manual control
 };
@@ -31,13 +35,15 @@ TeleopRover::TeleopRover():
 	linear_(1),
 	angular_(2)
 {
+	network_status = false;
 	nh_.param("axis_linear", linear_, linear_);
 	nh_.param("axis_angular", angular_, angular_);
 	nh_.param("scale_angular", a_scale_, a_scale_);
 	nh_.param("scale_linear", l_scale_, l_scale_);
 
 	drive_pub_ = nh_.advertise<geometry_msgs::Twist>("drive", 1);
-	joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &TeleopRover::joyCallback, this);
+	joy_sub = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &TeleopRover::joyCallback, this);
+	net_sub = nh_.subscribe("network_status", 1, &TeleopRover::networkCallback, this);
 }
 
 void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
@@ -83,27 +89,26 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 	drive_pub_.publish(twist);
 }
 
-void TeleopRover::publishDrive(){
-	geometry_msgs::Twist twist;
-	// if (cnt < 100000)
-	// 	twist.linear.x = 0.3;
-	// if ( cnt > 100000 && cnt < 200000)
-	// 	twist.linear.x = 0.0;
-	// if (cnt == 200000)
-	// 	cnt = 0;
-	twist.linear.x = 0.5;
-	twist.angular.z = 0.0;
+void TeleopRover::networkCallback(const std_msgs::Bool::ConstPtr& net_stat){
+	if (net_stat->data == false){
+		TeleopRover::network_status = false;
+		geometry_msgs::Twist twist;
+		twist.linear.x = 0; 
+		twist.linear.y = 0;
+		twist.linear.z = 0;
+		twist.angular.x = 0;
+		twist.angular.y = 0;
+		twist.angular.z = 0;
+		drive_pub_.publish(twist);
+	} else {
+		TeleopRover::network_status = true;
+	}
 
-	drive_pub_.publish(twist);
 }
-
 
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "drive_sender_falcon");
 	TeleopRover drive_sender;
-	// while (ros::ok()){
-	// 	drive_sender.publishDrive();
-	// }
 	ros::spin();
 }
