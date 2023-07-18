@@ -8,8 +8,8 @@
 # Setup environment 
 cd ~/catkin_ws
 source devel/setup.bash
-export ROS_MASTER_URI=http://192.168.0.250:11311
-export ROS_IP=192.168.0.250
+# export ROS_MASTER_URI=http://192.168.0.250:11311
+# export ROS_IP=192.168.0.250
 
 # Do not start roscore unless specified
 core=0
@@ -52,50 +52,44 @@ fi
 
 # Start up motors 
 echo "Starting up falcons..."
-roslaunch rover ../rover/drive/launch/falcons.launch &
+roslaunch rover falcons.launch &
 
 # Start drrover drive_sender
 echo "Starting drive_sender..."
-rosrun rover drive_sender_falcons &
+rosrun rover drive_sender_node &
 
 # Start sensors
 echo "Launching sensors..."
 roslaunch rover sensors.launch &
 
-# wheel odom node launch 
-
-# state est node launch 
-
-# tf tree launch 
-
-tmux \
-  new-session -s "drive" -n "control" \; \
-  send-keys "rostopic echo drive" C-m \; \
-  split-window -h -p 50 \; \
-  send-keys "rostopic echo joy" C-m \; \
-  new-window -n "motors" \; \
-  send-keys "rostopic echo /front_left/status" C-m \; \
-  split-window -v -p 33 \; \
-  send-keys "rostopic echo /mid_left/status" C-m \; \
-  split-window -v -p 33 \; \
-  send-keys "rostopic echo /back_left/status" C-m \; \
-  select-layout even-vertical \; \
-  select-pane -t 0 \; \
-  split-window -h\; \
-  send-keys "rostopic echo /front_right/status" C-m \; \
-  select-pane -t 2 \; \
-  split-window -h \; \
-  send-keys "rostopic echo /mid_right/status" C-m \; \
-  select-pane -t 4 \; \
-  split-window -h \; \
-  send-keys "rostopic echo /back_right/status" C-m \; \
-  new-window -n "sensors" \; \
-  send-keys "rostopic echo /fix" C-m \; \
-  split-window -h \; \
-  send-keys "rostopic echo /imu" C-m \;
-  select-pane -t 0 \; \ 
-  split-window -v \; \
-  send-keys "rostopic hz /zed/zed_node/rgb/image_rect_color" C-m \; \ 
-  select-pane -t 2 \; \
-  split-window -v \; \ 
-  send-keys "rostopic hz /os_cloud_node/points" C-m \;
+# tmux \
+#   new-session -s "drive" -n "control" \; \
+#   send-keys "rostopic echo drive" C-m \; \
+#   split-window -h -p 50 \; \
+#   send-keys "rostopic echo joy" C-m \; \
+#   new-window -n "motors" \; \
+#   send-keys "rostopic echo /front_left/status" C-m \; \
+#   split-window -v -p 33 \; \
+#   send-keys "rostopic echo /mid_left/status" C-m \; \
+#   split-window -v -p 33 \; \
+#   send-keys "rostopic echo /back_left/status" C-m \; \
+#   select-layout even-vertical \; \
+#   select-pane -t 0 \; \
+#   split-window -h\; \
+#   send-keys "rostopic echo /front_right/status" C-m \; \
+#   select-pane -t 2 \; \
+#   split-window -h \; \
+#   send-keys "rostopic echo /mid_right/status" C-m \; \
+#   select-pane -t 4 \; \
+#   split-window -h \; \
+#   send-keys "rostopic echo /back_right/status" C-m \; \
+#   new-window -n "sensors" \; \
+#   send-keys "rostopic echo /fix" C-m \; \
+#   split-window -h \; \
+#   send-keys "rostopic echo /imu" C-m \;
+#   select-pane -t 0 \; \ 
+#   split-window -v \; \
+#   send-keys "rostopic hz /zed/zed_node/rgb/image_rect_color" C-m \; \ 
+#   select-pane -t 2 \; \
+#   split-window -v \; \ 
+#   send-keys "rostopic hz /os_cloud_node/points" C-m \;
