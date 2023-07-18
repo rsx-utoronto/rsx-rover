@@ -64,7 +64,7 @@ class Controller():
         #     else:
         #         arm_servo.write_servo_low_angle()
         #         print("Servo going to 63 degrees configuration")
-        self.rate = rospy.Rate(100000000)
+        #self.rate = rospy.Rate(100000000)
 
         while not rospy.is_shutdown():
         # Print/Publish the inputs if state is neither Idle or Setup
@@ -76,7 +76,7 @@ class Controller():
                     print(self.values)
                     self.input_pub.publish(self.values)
 
-            self.rate.sleep()
+            #self.rate.sleep()
 
     def getROSJoy(self, joy_input : Joy) -> None:    
         ''' 

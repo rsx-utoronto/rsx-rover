@@ -51,8 +51,8 @@ class Manual():
         self.error_messages      = [0, 0, 0, 0, 0, 0, 0]
 
         ## Constant Speed limits, values are chosen by trial and error #TODO
-        self.SPEED_LIMIT         = [1, 1, 1, 1, 
-                                    1, 0.1, 1]
+        self.SPEED_LIMIT         = [0.001, 1, 1, 1, 
+                                    1, 0.001, 1]
 
         ## Variable for the status, start at idle
         self.status              = "Idle"
