@@ -1,9 +1,10 @@
-#!/usr/bin/env python
-import roslib
-roslib.load_manifest('sensor_msgs')
+#!/usr/bin/env python3
+
+# import roslib
+# roslib.load_manifest('sensor_msgs')
+import rospy
 import sys
 import time
-import rospy
 import cv2
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Image, CameraInfo
@@ -59,10 +60,10 @@ class image_converter:
 
         radius = int(41)
         orig = image.copy()
-        filtered_image = self.thresholding(image)
+        # filtered_image = self.thresholding(image)
         lower_bound = 188
         upper_bound = 190
-        # filtered_image = self.colour_search_and_masking(image, (lower_bound, lower_bound, lower_bound), (upper_bound, upper_bound, upper_bound)) # amber colour in greyscale is (189, 189, 189) 
+        filtered_image = self.colour_search_and_masking(image, (lower_bound, lower_bound, lower_bound), (upper_bound, upper_bound, upper_bound)) # amber colour in greyscale is (189, 189, 189) 
         
         ## Undistorting the image. No need for now
         res = image.copy()
