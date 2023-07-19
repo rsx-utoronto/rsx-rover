@@ -94,8 +94,8 @@ class Safety_Node():
         self.GOAL_POS = list(goal_data.data)
 
         # Check if the goal position is safe and publish the errors
-        self.postion_check()
-        self.Error_pub.publish(self.ERRORS)
+        #self.postion_check()
+        #self.Error_pub.publish(self.ERRORS)
 
         # Check if there are any other errors
         if self.ERRORS.data.count(Errors.ERROR_NONE.value) == len(self.ERRORS.data):

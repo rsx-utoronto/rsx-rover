@@ -51,7 +51,7 @@ class Manual():
         self.error_messages      = [0, 0, 0, 0, 0, 0, 0]
 
         ## Constant Speed limits, values are chosen by trial and error #TODO
-        self.SPEED_LIMIT         = [0.001, 1, 1, 1, 
+        self.SPEED_LIMIT         = [0.0005, 0.0005, 0.0005, 1, 
                                     1, 0.001, 1]
 
         ## Variable for the status, start at idle
@@ -61,7 +61,8 @@ class Manual():
         self.error               = rospy.Subscriber("arm_error_msg", UInt8MultiArray, self.CallbackError)
         self.state               = rospy.Subscriber("arm_state", String, self.CallbackState)
         self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)  
-        self.goal                = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
+        self.goal                = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=1000)
+        self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 1000)
 
     def CallbackError (self, errors: UInt8MultiArray) -> None:
         """
@@ -116,7 +117,7 @@ class Manual():
         self.controller_input[7] = inputs.ps
 
         # Print Statement for console view
-        print("State:", self.status)
+        #print("State:", self.status)
         
         # Checking the state, only proceed if in manual
         if self.status == "Manual":
@@ -130,8 +131,8 @@ class Manual():
                 # Update goal positions and print/publish them
                 self.goal_pos.data = self.update_pos(self.controller_input[:-1], self.goal_pos.data, 
                                                      self.SPEED_LIMIT)
-                print(self.goal_pos.data)
-                self.goal.publish(self.goal_pos)
+                print(self.goal_pos.data[2])
+                self.SafePos_pub.publish(self.goal_pos)
 
         elif self.state == "Setup":
             self.setup()

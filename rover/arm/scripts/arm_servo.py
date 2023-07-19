@@ -1,14 +1,13 @@
 # ENTIRE FILE MAYBE IN MANUAL NODE or in CONTROLLER NODE
 import serial
 import subprocess
-import time
 
 #arduino serial port name on linux
-port_name = '/dev/ttyACM0'
+port_name = '/dev/ttyUSB0'
 
 #angles to toggle
-angle_low = "63"
-angle_high = "84"
+angle_low = "63 "
+angle_high = "84 "
 
 #initializing serial port with baudrate 9600
 arduino_port = serial.Serial(port_name, 9600)
