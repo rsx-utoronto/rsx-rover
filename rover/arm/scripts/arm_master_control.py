@@ -540,9 +540,11 @@ def main():
         print(scriptMode.name)
 
     if isButtonPressed["START"] == 2:
-        movementSpeed += 0.5
+        movementSpeed += 0.1
     if isButtonPressed["SELECT"] == 2:
-        movementSpeed -= 0.5
+        movementSpeed -= 0.1
+        if movementSpeed < 0:
+            movementSpeed = 0
 
     if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
         dhTable = ik.createDHTable(curArmAngles)
