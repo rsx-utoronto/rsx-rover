@@ -143,7 +143,7 @@ def runNewJointState2(jointPublisherData, angles):
     newJointState = JointState()
     newJointState.header = Header()
     newJointState.header.stamp = rospy.Time.now()
-    newJointState.name = ["Joint_1", "Joint_2", "Joint_3", "Joint_4", "Joint_5", "Joint_6", "Joint_7", "Joint_8"]
+    newJointState.name = ["Joint_1", "Joint_2", "Joint_3", "Joint_4", "Joint_5", "Joint_6", "Joint_7", "Joint_8", "Joint_9"]
     # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
     newJointState.position = angles
     jointPublisherData.publish(newJointState)  # send data to be published

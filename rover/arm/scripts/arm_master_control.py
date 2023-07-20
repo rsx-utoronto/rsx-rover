@@ -332,7 +332,7 @@ def controlGripperAngle(isButtonPressed, curArmAngles):
     '''
     gripperAngle = curArmAngles[6]
     # Tune amount that angle is changed with each cycle
-    angleIncrement = 0.001
+    angleIncrement = 0.1
 
     # If both buttons are pressed at the same time, angle will not change
     if isButtonPressed["SQUARE"] == 1 and isButtonPressed["X"] != 1:
@@ -341,10 +341,10 @@ def controlGripperAngle(isButtonPressed, curArmAngles):
     if isButtonPressed["X"] == 1 and isButtonPressed["SQUARE"] != 1:
         gripperAngle -= angleIncrement
 
-    if gripperAngle < -0.04:
-        gripperAngle = -0.04
-    if gripperAngle > 0:
-        gripperAngle = 0
+    # if gripperAngle < -0.04:
+    #     gripperAngle = -0.04
+    # if gripperAngle > 0:
+    #     gripperAngle = 0
 
     return gripperAngle
 
@@ -441,6 +441,7 @@ def updateLiveArmSimulation(data):
         data.data containts a list 32 bit floats that correspond to joint angles
     '''
     curArmAngles = data
+    curArmAngles.append(curArmAngles[6]) # make gripper angles equal
     curArmAngles.append(curArmAngles[6]) # make gripper angles equal
     if gazebo_on:
         curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
