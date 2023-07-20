@@ -46,8 +46,8 @@ class Controller():
 
         ## Variables for ROS publishers and subscrives
         self.joy_sub             = rospy.Subscriber("joy", Joy, self.getROSJoy)
-        self.state_pub           = rospy.Publisher("arm_state", String, queue_size=1000)
-        self.input_pub           = rospy.Publisher("arm_inputs", ArmInputs, queue_size=1000)
+        self.state_pub           = rospy.Publisher("arm_state", String, queue_size=0)
+        self.input_pub           = rospy.Publisher("arm_inputs", ArmInputs, queue_size=0)
 
         # # Printing state on the console and publishing it
         # print("State:", self.state)
@@ -64,14 +64,15 @@ class Controller():
         #     else:
         #         arm_servo.write_servo_low_angle()
         #         print("Servo going to 63 degrees configuration")
-        #self.rate = rospy.Rate(100000000)
+        self.rate = rospy.Rate(2000)
 
         triggered = 0
         while not rospy.is_shutdown():
+
         # Print/Publish the inputs if state is neither Idle or Setup
             if self.state != "Idle" and self.state != "Setup":
 
-                while (abs(self.values.l_horizontal) >= 0.05 or abs(self.values.l_vertical) >= 0.05 or 
+                if (abs(self.values.l_horizontal) >= 0.05 or abs(self.values.l_vertical) >= 0.05 or 
                     abs(self.values.r_horizontal) >= 0.05 or abs(self.values.r_vertical) >= 0.05 or 
                     self.values.l1r1 or self.values.l2r2 or self.values.xo or self.values.ps):
                     print(self.values)
@@ -87,7 +88,7 @@ class Controller():
                     arm_servo.write_servo_low_angle()
                     print("Servo going to 63 degrees configuration")
                     triggered = 0
-                #self.rate.sleep()
+                self.rate.sleep()
 
     def getROSJoy(self, joy_input : Joy) -> None:    
         ''' 

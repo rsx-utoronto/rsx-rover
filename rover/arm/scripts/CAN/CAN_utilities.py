@@ -307,8 +307,8 @@ def generate_data_packet(data_list : list):
     # Angle conversion for differential system
     # Assuming the last two angles specify the angle of the differential system,
     # convert those two values to the required angles for motors 5 and 6
-    data_list[-3], data_list[-2], correction = calc_differential(data_list[len(data_list)-2], data_list[len(data_list)-1])
-    data_list[-1] += correction # correction for roll
+    #data_list[-3], data_list[-2], correction = calc_differential(data_list[len(data_list)-2], data_list[len(data_list)-1])
+    #data_list[-1] += correction # correction for roll
 
     # A variable to keep count of joint number
     joint_num = 0

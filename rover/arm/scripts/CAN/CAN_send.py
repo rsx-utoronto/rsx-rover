@@ -336,7 +336,7 @@ class CAN_Send_Node():
 	"""
 
 	def __init__(self):
-		self.pub_rate = 1000
+		self.pub_rate = 2000
 
 		# Subscriber
 		self.SAFE_GOAL_POS	 	= [0, 0, 0, 0, 0, 0, 0]
@@ -354,7 +354,6 @@ class CAN_Send_Node():
 
 	def callback_SafePos(self, data):
 		self.SAFE_GOAL_POS = list(data.data)
-
 	
 	def CAN_send_node(self): 	# Queue size & rate not calibrated
 		# # Instantiate CAN bus
@@ -375,13 +374,12 @@ class CAN_Send_Node():
 		
 		# Set publishing rate to 10hz
 		rate = rospy.Rate(self.pub_rate)
-		t = time.time()
 
 		while not rospy.is_shutdown():
 			# Send instructions to motor
 			# Convert SparkMAX angles to SparkMAX data packets
 			spark_input = generate_data_packet(self.SAFE_GOAL_POS) # assuming data is safe
-			print(self.SAFE_GOAL_POS[2], time.time() - t)
+			print(self.SAFE_GOAL_POS)
 			
 			# Send data packets
 			for i in range(1, len(spark_input)+1):
