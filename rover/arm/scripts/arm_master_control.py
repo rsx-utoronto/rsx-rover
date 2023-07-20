@@ -161,10 +161,12 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
         numpy matrix of new end effector position 
     '''
     global newTargetValues
+    global movementSpeed
+
     newTarget = copy.deepcopy(prevTargetValues)
     
-    positionScale = 10
-    angleScale = 0.1
+    positionScale = 10*movementSpeed
+    angleScale = 0.1*movementSpeed
 
     newRoll = newTarget[0]
     newPitch = newTarget[1]
@@ -280,6 +282,7 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
 
         return newTransformation
     elif scriptMode == Mode.RELATIVE_IK:
+        global curArmAngles
         [newRoll, newPitch, newYaw, newX, newY, newZ] = [0, 0, 0, 0, 0, 0]
         
         if joystickAxis["L-Down"] != 0:
@@ -300,8 +303,18 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
         elif isButtonPressed["R1"]:
             newYaw = angleScale
         
-        relativePos = ik.createEndEffectorTransform(newRoll, newPitch, newYaw, [newX, newY, newZ])
-        newTransformation = np.matmul(prevTargetTransform, relativePos)
+        t05 = ik.calculateTransformToLink(ik.createDHTable(curArmAngles), 5) # transform to link 5
+        r05 = t05[:3, :3] # rotation matrix of third link
+        relativeXYZ = np.matmul(r05, np.transpose([np.array([newX, newY, newZ ])]))
+        targetXYZ = relativeXYZ+np.transpose([prevTargetTransform[:3, 3]])
+
+        prevRotation = prevTargetTransform[:3, :3]
+        newRotation = np.matmul(prevRotation, ik.createRotationMatrix(newRoll, newPitch, newYaw, "ypr"))
+
+        newTransformation = np.block([
+                                        [newRotation, targetXYZ],
+                                        [0, 0, 0, 1]
+                                        ])
 
         [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
         [correctedX, correctedY, correctedZ] = [newTransformation[0][3], newTransformation[1][3], newTransformation[2][3]]
@@ -327,12 +340,12 @@ def controlGripperAngle(isButtonPressed, curArmAngles):
     -------
     float
         a float containing the angle at which the gripper is open.
-    
-    
     '''
+    global movementSpeed
+
     gripperAngle = curArmAngles[6]
     # Tune amount that angle is changed with each cycle
-    angleIncrement = 0.1
+    angleIncrement = 0.1*movementSpeed
 
     # If both buttons are pressed at the same time, angle will not change
     if isButtonPressed["SQUARE"] == 1 and isButtonPressed["X"] != 1:
@@ -494,7 +507,7 @@ def updateDesiredEETransformation(newTargetValues, scriptMode):
     if scriptMode == Mode.GLOBAL_IK:
         tempTarget[:3] = [0, 0, 0]
     if scriptMode == Mode.ROT_RELATIVE_IK or scriptMode == Mode.RELATIVE_IK:
-        tempTarget = [0, 0 , pi, [0, 0, 150*0.47/450]]
+        tempTarget = [0, 0 , pi, [0, 0, 198*0.47/450]]
         referenceLink = "Link_6"
     
     sim.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
@@ -514,7 +527,8 @@ def main():
     global prevTargetValues
     global newTargetValues
     global pubThreadPool
-    
+    global movementSpeed
+
     isButtonPressed = getJoystickButtons()
     joystickAxes = getJoystickAxes()
 
@@ -524,6 +538,11 @@ def main():
         else:
             scriptMode = list(Mode)[scriptMode.value]
         print(scriptMode.name)
+
+    if isButtonPressed["START"] == 2:
+        movementSpeed += 0.5
+    if isButtonPressed["SELECT"] == 2:
+        movementSpeed -= 0.5
 
     if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
         dhTable = ik.createDHTable(curArmAngles)
@@ -563,7 +582,7 @@ if __name__ == "__main__":
     pubThreadPool = concurrent.futures.ThreadPoolExecutor(max_workers=2) # create thread pool with three threads
 
     # try:
-    scriptMode = Mode.GLOBAL_IK
+    scriptMode = Mode.ROT_RELATIVE_IK
     print(scriptMode.name)
 
     rospy.init_node("arm_master_control")
