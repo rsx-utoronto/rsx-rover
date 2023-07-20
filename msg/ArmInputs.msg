@@ -1,0 +1,2 @@
+float32 r_right
+float32 r_down
