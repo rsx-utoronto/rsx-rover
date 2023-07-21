@@ -4,6 +4,7 @@ import rospy
 from std_msgs.msg import *
 from enum import Enum
 import time
+import numpy as np
 import os
 
 ############ ENUMERATIONS #############
@@ -38,6 +39,8 @@ class Safety_Node():
         self.ERRORS.data          = [0, 0, 0, 0, 0, 0, 0]
         self.SAFE_GOAL_POS        = Float32MultiArray()
         self.SAFE_GOAL_POS.data   = [0, 0, 0, 0, 0, 0, 0]
+        self.ERROR_OFFSET         = Float32MultiArray()
+        self.ERROR_OFFSET.data    = [0, 0, 0, 0, 0, 0, 0]
 
         # Attributes needed for detecting whether motor current is exceeding
         self.TIME                 = [0, 0, 0, 0, 0, 0, 0]
@@ -48,9 +51,10 @@ class Safety_Node():
         self.MotorCurr_sub        = rospy.Subscriber("arm_motor_curr", Float32MultiArray, self.callback_MotorCurr)
         self.CurrPos_sub          = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.callback_CurrPos)
         self.LimitSwitch_sub      = rospy.Subscriber("arm_limit_switch", UInt8MultiArray, self.callback_LimitSwitch)
-        self.KillSwitch_sub       = ropsy.Subscriber("arm_killswitch", UInt8, self.callback_KillSwitch)
+        self.KillSwitch_sub       = rospy.Subscriber("arm_killswitch", UInt8, self.callback_KillSwitch)
         self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 0)
         self.Error_pub            = rospy.Publisher("arm_error_msg", UInt8MultiArray, queue_size= 0)
+        self.Offset_pub           = rospy.Publisher("arm_error_offset", Float32MultiArray, queue_size= 0)
 
     def callback_KillSwitch(self, data : UInt8):
         """
@@ -69,7 +73,6 @@ class Safety_Node():
 
         if killswitch:
             self.SAFE_GOAL_POS.data = self.CURR_POS
-            print(self.SAFE_GOAL_POS)
             self.SafePos_pub.publish(self.SAFE_GOAL_POS)
             rospy.sleep(0.001)
             os.system("rosnode kill "+ "CAN_Send")
@@ -94,6 +97,7 @@ class Safety_Node():
 
         # Store the received limit switch data
         self.LIMIT_SWITCH = limitSwitch_data.data
+        #print(self.LIMIT_SWITCH)
 
         # Updating the ERRORS attribute if needed and publishing it
         self.limitSwitch_check()
@@ -125,8 +129,14 @@ class Safety_Node():
 
             # Print/Publish the position to SAFE_GOAL_POS topic
             self.SAFE_GOAL_POS.data = self.GOAL_POS
-            print(self.SAFE_GOAL_POS)
             self.SafePos_pub.publish(self.SAFE_GOAL_POS)
+        
+        # If there are any errors, publish the error offsets and reset them
+        else:
+            self.Offset_pub.publish(self.ERROR_OFFSET)
+
+            #self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
+
     
     def callback_MotorCurr(self, MotorCurr_data : Float32MultiArray) -> None:
         """
@@ -171,18 +181,18 @@ class Safety_Node():
         '''
         # TODO
         # Limits for position safety (Need to test these values)
-        limit = [100, 100, 100, 100, 100, 100000000, 100]
+        limit = [1, 1, 1, 1, 1, 1, 1]
 
         # Going through each element of GOAL_POS
         #for i in range(len(self.GOAL_POS)):
-        for i in [5]:    
+        for i in [0, 1, 2]:    
             # Doing position comparisons for safety
             if (self.GOAL_POS[i] < (self.CURR_POS[i] - limit[i]) or 
                 self.GOAL_POS[i] > (self.CURR_POS[i] + limit[i])):
 
-                # Calculating the offset and applying it to goal position
-                offset                  = self.GOAL_POS[i] - self.CURR_POS[i]
-                self.GOAL_POS[i]       -= offset
+                # Calculating the offset, applying it to goal position and storing it
+                offset                  = list(np.array(self.GOAL_POS) - np.array(self.CURR_POS))
+                self.ERROR_OFFSET.data  = offset
                 #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
 
                 # Set the error for the motor
@@ -226,6 +236,10 @@ class Safety_Node():
                         # Change the error associated with the motor to EXCEEDING_CURRENT
                         self.ERRORS.data[i] = Errors.ERROR_EXCEEDING_CURRENT.value
 
+                        # Calculating the offset, applying it to goal position and storing it
+                        offset                  = list(np.array(self.GOAL_POS) - np.array(self.CURR_POS))
+                        self.ERROR_OFFSET.data  = offset
+
                         # Check if this is the first time this error is set 
                         if self.FIRST[i]:
 
@@ -248,7 +262,8 @@ class Safety_Node():
             elif self.MOTOR_CURR[i] < max_current[i] and time.time() - self.TIME[i] > 0.01:
 
                 # Check if the motor has an error associated with it already
-                if self.ERRORS.data[i] != Errors.ERROR_EXCEEDING_POS.value:
+                if (self.ERRORS.data[i] == Errors.ERROR_EXCEEDING_CURRENT.value or
+                    self.ERRORS.data[i] == Errors.ERROR_NONE.value):
 
                     # Remove the error and set TIME and FIRST back to original form
                     self.ERRORS.data[i] = Errors.ERROR_NONE.value
@@ -265,14 +280,23 @@ class Safety_Node():
         # Going through each limit switch input
         for i in range(len(self.LIMIT_SWITCH)):
 
-            # Checking if any other error is set already
-            if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
-                self.ERRORS.data[i] == Errors.ERROR_LIMIT_SWITCH.value):
+            # Checking if limit switch is being pressed, 
+            # if yes then change the error status for the motor
+            if self.LIMIT_SWITCH[i] == True:
+                self.ERRORS.data[i]     = Errors.ERROR_LIMIT_SWITCH.value
 
-                # Checking if limit switch is being pressed, 
-                # if yes then change the error status for the motor
-                if self.LIMIT_SWITCH[i] == True:
-                    self.ERRORS.data[i] = Errors.ERROR_LIMIT_SWITCH.value
+                # Calculating the offset, applying it to goal position and storing it
+                offset                  = list(np.array(self.GOAL_POS) - np.array(self.CURR_POS))
+                print(self.GOAL_POS[2], self.CURR_POS[2], offset[2])
+                self.ERROR_OFFSET.data  = offset
+
+            else:
+
+                # Checking if any other error is set already, if not then change it back no error
+                if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
+                    self.ERRORS.data[i] == Errors.ERROR_LIMIT_SWITCH.value):
+
+                    self.ERRORS.data[i] = Errors.ERROR_NONE.value
 
     def setup(self):
         # For each motor...
@@ -315,7 +339,7 @@ def main() -> None:
 
     try:
         # Initialize a ROS node
-        rospy.init_node("Arm_Safety", anonymous= True)
+        rospy.init_node("Arm_Safety")
 
         # Set all the publishers and subscribers of the node
         Safety = Safety_Node()

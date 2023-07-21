@@ -27,8 +27,7 @@ class Manual():
         # 4 - L1 / R1 
         # 5 - L2 / R2 (analog)
         # 6 - X / circle
-        # 7 - PlayStation (killswitch)
-        self.controller_input    = [0, 0, 0, 0, 0, 0, 0, 0]
+        self.controller_input    = [0, 0, 0, 0, 0, 0, 0]
 
         ## Buffer for storing and publishing goal position
         # Idx - Associated Motor:
@@ -42,17 +41,18 @@ class Manual():
         self.goal_pos            = Float32MultiArray()
         self.goal_pos.data       = [0, 0, 0, 0, 0, 0, 0]
 
-        ## Buffer to hold error messages
+        ## Buffer to hold error messages and offsets
         # Message Descriptions:
         # 0 -> No Error
         # 1 -> Faraway position
         # 2 -> Exceeding Max Current
         # 3 -> Hitting Limit Switch
         self.error_messages      = [0, 0, 0, 0, 0, 0, 0]
+        self.error_offsets       = [0, 0, 0, 0, 0, 0, 0]
 
         ## Constant Speed limits, values are chosen by trial and error #TODO
-        self.SPEED_LIMIT         = [0.005, 0.0005, 0.0005, 1, 
-                                    1, 0.001, 0.075]
+        self.SPEED_LIMIT         = [0.005, 0.005, 0.005, 0.075, 
+                                    0.001, 0.001, 0.075]
 
         ## Variable for the status, start at idle
         self.status              = "Idle"
@@ -60,15 +60,16 @@ class Manual():
         ## ROS topics: publishing and subscribing
         self.error               = rospy.Subscriber("arm_error_msg", UInt8MultiArray, self.CallbackError)
         self.state               = rospy.Subscriber("arm_state", String, self.CallbackState)
-        self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)  
+        self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)
+        self.err_offset          = rospy.Subscriber("arm_error_offset", Float32MultiArray, self.CallbackErrOffset)
         self.goal                = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=0)
-        self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 0)
+        #self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 0)
 
     def CallbackError (self, errors: UInt8MultiArray) -> None:
         """
         (UInt8MultiArray) -> (None)
 
-        Recieves and stores error messages from safety node. Uses them during setup process
+        Recieves and stores error messages from safety node
 
         @parameters
 
@@ -77,6 +78,23 @@ class Manual():
 
         # Updates errors
         self.error_messages = errors.data
+
+    def CallbackErrOffset(self, offsets : Float32MultiArray) -> None:
+        """
+        (Float32MultiArray) -> (None)
+
+        Recieves and stores error offsets from safety node. Uses them for correcting controller input
+
+        @parameters
+
+        offsets (Float32MultiArray): stores error offsets received from ROS topic
+        """
+
+        # Update offsets
+        self.err_offset         = offsets.data
+        print("before and offset" ,self.goal_pos.data[2], self.err_offset[2])
+        self.goal_pos.data      = list(np.array(self.goal_pos.data) - np.array(self.err_offset))
+        print("after" ,self.goal_pos.data[2])
     
     def CallbackState (self, status: String) -> None:
         """
@@ -114,7 +132,6 @@ class Manual():
         self.controller_input[4] = inputs.l1r1
         self.controller_input[5] = inputs.l2r2
         self.controller_input[6] = inputs.xo
-        self.controller_input[7] = inputs.ps
 
         # Print Statement for console view
         #print("State:", self.status)
@@ -122,17 +139,12 @@ class Manual():
         # Checking the state, only proceed if in manual
         if self.status == "Manual":
 
-            # Checking to make sure the kill switch wasn't hit
-            if self.controller_input[7] == 1:
-                self.status        = "Idle"
-
-            else:
-
+            if self.error_messages.count(0) == len(self.error_messages):
                 # Update goal positions and print/publish them
-                self.goal_pos.data = self.update_pos(self.controller_input[:-1], self.goal_pos.data, 
-                                                     self.SPEED_LIMIT)
-                print(self.goal_pos.data[6])
-                self.SafePos_pub.publish(self.goal_pos)
+                self.goal_pos.data = self.update_pos(self.controller_input, self.goal_pos.data, 
+                                                    self.SPEED_LIMIT)
+                print(self.goal_pos.data)
+                self.goal.publish(self.goal_pos)
 
         elif self.state == "Setup":
             self.setup()
@@ -177,7 +189,7 @@ class Manual():
 def main():
 
     try:
-        rospy.init_node("Arm_Manual", anonymous=True)
+        rospy.init_node("arm_manual")
         
         Manual_Node = Manual()
 

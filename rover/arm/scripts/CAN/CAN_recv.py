@@ -79,7 +79,7 @@ class CAN_Recv():
         elif api == CMD_API_STAT2:
 
             # Update the CURR_POS data
-            self.CURR_POS[index]     = read_can_message(msg.data, CMD_API_STAT2)
+            self.CURR_POS[index]     = read_can_message(msg.data, CMD_API_STAT2, index)
 
 
     def read_msgs(self):
@@ -136,7 +136,7 @@ if __name__=="__main__":
     # print("Heartbeat initiated")
 
     # Initialize node
-    rospy.init_node('CAN_Recv', anonymous=True)
+    rospy.init_node('CAN_Recv')
 
     # Setup and run node
     CAN_Recv_node = CAN_Recv()

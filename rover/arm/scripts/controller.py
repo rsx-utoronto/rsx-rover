@@ -2,7 +2,7 @@
 
 import rospy
 from sensor_msgs.msg import Joy
-from std_msgs.msg import String
+from std_msgs.msg import String, UInt8
 from rover.msg import ArmInputs
 import arm_servo
 #from rover.srv import Corrections
@@ -27,6 +27,9 @@ class Controller():
         # Attribute to publish state
         self.state               = "Idle"
 
+        # Attribute to store/publish killswitch value
+        self.killswitch          = 0
+
         # Attribute to publish arm inputs (with initialized values)
         self.values              = ArmInputs()
         self.values.l_horizontal = 0
@@ -36,7 +39,6 @@ class Controller():
         self.values.l1r1         = 0
         self.values.l2r2         = 0
         self.values.xo           = 0
-        self.values.ps           = 0
 
         ## Attribute to store servo state
         # state -> angle:
@@ -48,6 +50,7 @@ class Controller():
         self.joy_sub             = rospy.Subscriber("joy", Joy, self.getROSJoy)
         self.state_pub           = rospy.Publisher("arm_state", String, queue_size=0)
         self.input_pub           = rospy.Publisher("arm_inputs", ArmInputs, queue_size=0)
+        self.killswitch_pub      = rospy.Publisher('arm_killswitch', UInt8, queue_size=0)
 
         # # Printing state on the console and publishing it
         # print("State:", self.state)
@@ -74,7 +77,7 @@ class Controller():
 
                 if (abs(self.values.l_horizontal) >= 0.05 or abs(self.values.l_vertical) >= 0.05 or 
                     abs(self.values.r_horizontal) >= 0.05 or abs(self.values.r_vertical) >= 0.05 or 
-                    self.values.l1r1 or self.values.l2r2 or self.values.xo or self.values.ps):
+                    self.values.l1r1 or self.values.l2r2 or self.values.xo):
                     print(self.values)
                     self.input_pub.publish(self.values)
             
@@ -143,13 +146,13 @@ class Controller():
         self.values.l1r1            = rawButtons[4] - rawButtons[5]
         self.values.l2r2            = -0.5*(rawAxes[2] - rawAxes[5])
         self.values.xo              = rawButtons[0] - rawButtons[1]
-        self.values.ps              = rawButtons[10]
 
         # Check if analog sticks are not moving and triggers are not pressed 
         # and any other buttons are not pressed. If any of them is false, then do not
         # change the state
         if ((not (rawAxes[0] or rawAxes[1] or rawAxes[3] or rawAxes[4])) 
-            and (rawAxes[2] == 1 and rawAxes[5] == 1) and (1 not in rawButtons)):
+            and (rawAxes[2] == 1 and rawAxes[5] == 1) and (1 not in rawButtons)
+            and self.killswitch == 0):
             
             if rawAxes[7] == -1:
                 self.state = "Idle"
@@ -163,13 +166,25 @@ class Controller():
             elif rawAxes[6] == -1:
                 self.state = "IK"
 
-        # Printing state on the console and publishing it
-        print("State:", self.state)
-        self.state_pub.publish(self.state)
-
         # If square is pressed, flip the servo configuration
         if rawButtons[3] == 1:
             self.servo = not self.servo
+
+        # If PS button is pressed and killswitch was not activated, activate killswitch
+        if rawButtons[10] == 1 and self.killswitch == 0:
+            self.killswitch = 1
+            self.killswitch_pub.publish(self.killswitch)
+
+            # Set the state to "Idle"
+            self.state      = "Idle"
+        # If PS button is pressed and killswitch was already activated, deactivate it
+        elif rawButtons [10] == 1 and self.killswitch == 1:
+            self.killswitch = 0
+            self.killswitch_pub.publish(self.killswitch)
+        
+        # Printing state on the console and publishing it
+        print("State:", self.state, "\t killswitch:", bool(self.killswitch))
+        self.state_pub.publish(self.state)
             
         # #     if self.servo:
         # #         arm_servo.write_servo_high_angle()

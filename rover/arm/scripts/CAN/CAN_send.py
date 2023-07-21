@@ -13,15 +13,18 @@ class CAN_Send():
 	"""
 
 	def __init__(self):
+
+		# Vatiables to store publishing rate and trigger for node inittiation
 		self.pub_rate = 2000
+		self.triggered = 0
 
 		# Subscriber buffers
-		self.SAFE_GOAL_POS	 	= [0, 0, 0, 0, 0, 0, 0]
-		# self.CURR_POS			= [0, 0, 0, 0, 0, 0, 0]
+		self.CURR_POS			= [0, 0, 0, 0, 0, 0, 0]
+		self.SAFE_GOAL_POS	 	= [0, 0, 0, 0, 0, 0, 0]	
 
 		# Variables for ROS publishers and subscribers
 		self.SafePos_sub 		= rospy.Subscriber("arm_safe_goal_pos", Float32MultiArray, self.callback_SafePos)
-		# self.CurrPos_sub		= rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.callback_CurrPos)
+		self.CurrPos_sub		= rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.callback_CurrPos)
 
 		# ROS
 		try:
@@ -30,19 +33,20 @@ class CAN_Send():
 			print("Exception Occured")
 			pass
 	
-	# def callback_CurrPos(self, data : Float32MultiArray):
-	# 	"""
-	# 	(Float32MultiArray) -> (None)
+	def callback_CurrPos(self, data : Float32MultiArray):
+		"""
+		(Float32MultiArray) -> (None)
 
-	# 	Callback funtion for receving CURR_POS data and updating the CURR_POS variable
+		Callback funtion for receving CURR_POS data and updating the CURR_POS variable
 
-	# 	@parameters
+		@parameters
 
-	# 	data (Float32MultiArray) : The data from the topic is stored in this parameter
-	# 	"""
+		data (Float32MultiArray) : The data from the topic is stored in this parameter
+		"""
 		
-	# 	# Save the data from the topic into our buffer
-	# 	self.CURR_POS = list(data.data)
+		# Save the data from the topic into our buffer and set the trigger to 1
+		self.CURR_POS = list(data.data)
+		self.triggered = 1
 
 	def callback_SafePos(self, data : Float32MultiArray):
 		"""
@@ -62,6 +66,12 @@ class CAN_Send():
 		
 		# Set publishing rate to self.pub_rate
 		rate = rospy.Rate(self.pub_rate)
+
+		# Get the CURR_POS value at the very start
+		while True:
+			if self.triggered:
+				self.SAFE_GOAL_POS = self.CURR_POS
+				break
 
 		# Start the infinite loop
 		while not rospy.is_shutdown():
@@ -94,7 +104,7 @@ if __name__=="__main__":
 	# initialize_bus()
 	
 	# Initialize node
-	rospy.init_node('CAN_Send', anonymous=True)
+	rospy.init_node('CAN_Send')
 
 	# Setup and run node
 	CAN_Send_Node = CAN_Send()

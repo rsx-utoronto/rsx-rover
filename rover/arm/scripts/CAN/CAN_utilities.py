@@ -191,7 +191,7 @@ def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = F
     return
 
 
-def read_can_message(data, api):
+def read_can_message(data, api, motor_num : int = 0):
     """
     Converts CAN data packets from hex to float decimal values based on which API is 
     called
@@ -200,7 +200,8 @@ def read_can_message(data, api):
     @parameters
 
     data (bytearray) = The CAN data packet containing just the payload. 
-    api (int) = The API you want the payload of.
+    api (int) = The API you want the payload of
+    motor_num (int) (optional) = The motor number that can be used for indexing lists
     """
     
     if api:
@@ -209,12 +210,12 @@ def read_can_message(data, api):
             # 132 for forward and 68 for reverse
             ls_bools = data[3] & 0xC0
 
-            # Return 0 if no limit switches are pressed
+            # Return 1 if no limit switches are pressed
             if ls_bools > 0:
-                return 0
-            # Return 1 if either forward or reverse limit switches are pressed
-            else:
                 return 1
+            # Return 0 if either forward or reverse limit switches are pressed
+            else:
+                return 0
 
         # API: Status Message 1 - Gives us motor velocity, motor voltage and
         # motor current every 20ms. We only need current
@@ -252,7 +253,8 @@ def read_can_message(data, api):
             # Converting the hex representation to floating point decimal value
             pos_float = struct.unpack('!f', bytes.fromhex(pos_hex[2:]))[0]
 
-            return pos_float
+            # Returning the shaft angle in degrees
+            return pos_float * 360 / REDUCTION[motor_num]
 
     else:
         # Error Message, invalid API
