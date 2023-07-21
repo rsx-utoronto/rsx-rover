@@ -61,7 +61,7 @@ REDUCTION = [120, 160, 120, 20, 20, 20, 40]
 ########## SHARED FUNCTIONS ##########
 
 def generate_can_id(dev_id : int, api : int, 
-						man_id = 0x05, dev_type = 0x2):
+					man_id = 0x05, dev_type = 0x2) -> int:
 		"""
 		(int, int, int, int, int) -> (int)
 
@@ -87,9 +87,9 @@ def generate_can_id(dev_id : int, api : int,
 		return can_id
 
 
-def pos_to_sparkdata(f : float):
+def pos_to_sparkdata(f : float) -> list[int]:
     """
-    float -> list()
+    float -> list(int)
 
     Takes in a float position value (number of rotations) and returns the data packet in the form that
     SparkMAX requires
@@ -107,8 +107,9 @@ def pos_to_sparkdata(f : float):
             0x00, 0x00, 0x00, 0x00]
 
 
-def sparkfixed_to_float(fixed : int, frac : int = 5):
+def sparkfixed_to_float(fixed : int, frac : int = 5) -> float:
     """
+    (int, int) -> (float)
     Returns floating point representation of the fixed point represenation of 
     data received from SparkMAX
 
@@ -122,9 +123,9 @@ def sparkfixed_to_float(fixed : int, frac : int = 5):
 
 
 
-def initialize_bus(channel= 'can0', interface= 'socketcan'):
+def initialize_bus(channel= 'can0', interface= 'socketcan') -> None:
     """
-    (str, str) -> (void)
+    (str, str) -> (None)
 
     Creates an instance of the CAN bus for sending and receiving
     CAN messages. By defaul, the network it searches for is named 'can0'
@@ -146,9 +147,9 @@ def initialize_bus(channel= 'can0', interface= 'socketcan'):
     return
 
 
-def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = False):
+def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = False) -> None:
     """
-    (int, list(float), bool, bool, bool)
+    (int, list(float), bool, bool, bool) -> (None)
 
     Forms and sends the complete CAN packet with the given data and can_id
 
@@ -191,12 +192,13 @@ def send_can_message(can_id : int, data = None, ext = True, err = False, rtr = F
     return
 
 
-def read_can_message(data, api, motor_num : int = 0):
+def read_can_message(data, api, motor_num : int = 0) -> float:
     """
+    (bytearray, int, int) -> (float)
+
     Converts CAN data packets from hex to float decimal values based on which API is 
     called
 
-    *******NEEDS TO BE COMPLETED*******
     @parameters
 
     data (bytearray) = The CAN data packet containing just the payload. 
@@ -263,9 +265,9 @@ def read_can_message(data, api, motor_num : int = 0):
 
 
 # NEEDS CALIBRATION
-def calc_differential(d_pos, d_angle):
+def calc_differential(d_pos : float, d_angle : float) -> tuple(float):
     """
-    (float), (float) --> list(float). In same units as safe_goal_pos
+    (float), (float) --> tuple(float)
 
     Given how much you want the arm(gear?)(joint?) to rotate about it's axis (d_angle) and
     rotate as a big lever (d_pos), returns how much each of the two motors need to rotate
@@ -294,7 +296,7 @@ def calc_differential(d_pos, d_angle):
     return d_angle_motor1, d_angle_motor2, d_gripper_motor
 
 
-def generate_data_packet(data_list : list):
+def generate_data_packet(data_list : list) -> list[list[int]]:
     """
     list(float) -> list(list(int))
 

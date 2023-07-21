@@ -121,8 +121,8 @@ class Safety_Node():
         self.GOAL_POS = list(goal_data.data)
 
         # Check if the goal position is safe and publish the errors
-        #self.postion_check()
-        #self.Error_pub.publish(self.ERRORS)
+        self.postion_check()
+        self.Error_pub.publish(self.ERRORS)
 
         # Check if there are any other errors
         if self.ERRORS.data.count(Errors.ERROR_NONE.value) == len(self.ERRORS.data):
@@ -187,8 +187,7 @@ class Safety_Node():
         #for i in range(len(self.GOAL_POS)):
         for i in [0, 1, 2]:    
             # Doing position comparisons for safety
-            if (self.GOAL_POS[i] < (self.CURR_POS[i] - limit[i]) or 
-                self.GOAL_POS[i] > (self.CURR_POS[i] + limit[i])):
+            if (abs(self.GOAL_POS[i] - self.CURR_POS[i]) > limit[i]):
 
                 # Calculating the offset, applying it to goal position and storing it
                 offset                  = list(np.array(self.GOAL_POS) - np.array(self.CURR_POS))
@@ -236,9 +235,9 @@ class Safety_Node():
                         # Change the error associated with the motor to EXCEEDING_CURRENT
                         self.ERRORS.data[i] = Errors.ERROR_EXCEEDING_CURRENT.value
 
-                        # Calculating the offset, applying it to goal position and storing it
-                        offset                  = list(np.array(self.GOAL_POS) - np.array(self.CURR_POS))
-                        self.ERROR_OFFSET.data  = offset
+                        # # Calculating the offset, applying it to goal position and storing it
+                        # offset                  = list(np.array(self.GOAL_POS) - np.array(self.CURR_POS))
+                        # self.ERROR_OFFSET.data  = offset
 
                         # Check if this is the first time this error is set 
                         if self.FIRST[i]:
@@ -279,23 +278,22 @@ class Safety_Node():
         '''
         # Going through each limit switch input
         for i in range(len(self.LIMIT_SWITCH)):
+            
+            # Checking if any other error is set already
+            if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
+                self.ERRORS.data[i] == Errors.ERROR_LIMIT_SWITCH.value):
 
-            # Checking if limit switch is being pressed, 
-            # if yes then change the error status for the motor
-            if self.LIMIT_SWITCH[i] == True:
-                self.ERRORS.data[i]     = Errors.ERROR_LIMIT_SWITCH.value
+                # Checking if limit switch is being pressed, 
+                # if yes then change the error status for the motor
+                if self.LIMIT_SWITCH[i] == True:
+                    self.ERRORS.data[i]     = Errors.ERROR_LIMIT_SWITCH.value
 
-                # Calculating the offset, applying it to goal position and storing it
-                offset                  = list(np.array(self.GOAL_POS) - np.array(self.CURR_POS))
-                print(self.GOAL_POS[2], self.CURR_POS[2], offset[2])
-                self.ERROR_OFFSET.data  = offset
+                    # # Calculating the offset, applying it to goal position and storing it
+                    # offset                  = list(np.array(self.GOAL_POS) - np.array(self.CURR_POS))
+                    # print(self.GOAL_POS[2], self.CURR_POS[2], offset[2])
+                    # self.ERROR_OFFSET.data  = offset
 
-            else:
-
-                # Checking if any other error is set already, if not then change it back no error
-                if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
-                    self.ERRORS.data[i] == Errors.ERROR_LIMIT_SWITCH.value):
-
+                else:
                     self.ERRORS.data[i] = Errors.ERROR_NONE.value
 
     def setup(self):
