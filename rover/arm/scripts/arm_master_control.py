@@ -34,6 +34,7 @@ global gazebo_on
 global curArmAngles
 global liveArmAngles
 global scriptMode
+global goToPosValues # [isSrvCalled, [posAngles]]
 global prevTargetTransform
 global prevTargetValues # [roll, pitch, yaw, [x, y, z]]
 global newTargetValues
@@ -298,7 +299,7 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
             newZ = joystickAxis["R2"]*positionScale
         # control roll, pitch, yaw
         if joystickAxis["R-Right"] != 0:
-            newRoll = -joystickAxis["R-Right"]*angleScale
+            newRoll = joystickAxis["R-Right"]*angleScale
         if joystickAxis["R-Down"] != 0:
             newPitch = joystickAxis["R-Down"]*angleScale
         if isButtonPressed["L1"]:
@@ -369,13 +370,21 @@ def savePosition(posName):
 
     Uses global variable curArmAngles and saves angles to file. Asks for name
     of position before saving (preferable a GUI).
+
+    Paramters
+    ---------
+    posName
+        the input message of SaveArmPos.srv, or the name to give the position
+    
+    Returns
     '''
-    global curArmAngles
 
     # (Placeholders for angles 1-5)
 
     # positionName = input("Enter Position Name: ")
     try:
+        global curArmAngles
+
         positionName = posName.positionName
         print(positionName)
 
@@ -418,7 +427,7 @@ def goToPosition(posName):
     Paramters
     ---------
     posName
-        the input data message from GoToArmPos.srv
+        the input data message from GoToArmPos.srv, or the name of the saved position
 
     Returns
     -------
@@ -426,29 +435,34 @@ def goToPosition(posName):
         has the service been completed sucessfully
     '''
     try:
+        global scriptMode
+        global goToPosValues
+
         # retrievePos = input("Enter Position Name to Retrieve: ")
         retrievePos = posName.positionName
-        print(retrievePos)
+        tempAngles = [0, 0, 0, 0, 0, 0, 0]
 
         with open('arm_positions.json','r') as file:
             found = False
             savedPos = json.load(file)
-        # Checks to see if position names match request
+            # Checks to see if position names match request
             for x in range(len(savedPos["position_names"])):
                 if savedPos["position_names"][x]["title"] == retrievePos: # if found, changes current angles to requested position
                     found = True
-                    curArmAngles[0] = savedPos["position_names"][x]["angle0"]
-                    curArmAngles[1] = savedPos["position_names"][x]["angle1"]
-                    curArmAngles[2] = savedPos["position_names"][x]["angle2"]
-                    curArmAngles[3] = savedPos["position_names"][x]["angle3"]
-                    curArmAngles[4] = savedPos["position_names"][x]["angle4"]
-                    curArmAngles[5] = savedPos["position_names"][x]["angle5"]
-                    curArmAngles[6] = savedPos["position_names"][x]["gripperAngle"]
+                    tempAngles[0] = savedPos["position_names"][x]["angle0"]
+                    tempAngles[1] = savedPos["position_names"][x]["angle1"]
+                    tempAngles[2] = savedPos["position_names"][x]["angle2"]
+                    tempAngles[3] = savedPos["position_names"][x]["angle3"]
+                    tempAngles[4] = savedPos["position_names"][x]["angle4"]
+                    tempAngles[5] = savedPos["position_names"][x]["angle5"]
+                    tempAngles[6] = savedPos["position_names"][x]["gripperAngle"]
 
             if not found:
                 print("Position name '"+retrievePos+"' not found") # if not found, prints message
                 return GoToArmPosResponse(False)
-            
+
+            goToPosValues[0] = True # sets the goTO arm position value true a
+            goToPosValues[1] = tempAngles
             return GoToArmPosResponse(True)
     except Exception as ex:
         print("The following error has occured: ")
@@ -600,6 +614,7 @@ def main():
     global newTargetValues
     global pubThreadPool
     global movementSpeed
+    global goToPosValues
 
     isButtonPressed = getJoystickButtons()
     joystickAxes = getJoystickAxes()
@@ -639,6 +654,20 @@ def main():
             prevTargetValues = newTargetValues
         except ik.CannotReachTransform:
             print("Cannot reach outside of arm workspace")
+
+        if goToPosValues[0]: # if the service flag to go to a saved position has been called
+            goToPosValues[0] = False
+            curArmAngles = goToPosValues[1]
+
+            dhTable = ik.createDHTable(curArmAngles)
+            prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
+
+            [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
+            newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
+            prevTargetValues = newTargetValues
+
+            pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
+            pubThreadPool.submit(updateDesiredArmSimulation, curArmAngles)
     elif scriptMode == Mode.FORWARD_KIN: # update the values IK mode uses when not in IK mode
         curArmAngles = liveArmAngles
         dhTable = ik.createDHTable(curArmAngles)
@@ -650,7 +679,6 @@ def main():
 
         pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
         pubThreadPool.submit(updateDesiredArmSimulation, curArmAngles)
-
 # Main Area
 
 if __name__ == "__main__":
@@ -661,40 +689,41 @@ if __name__ == "__main__":
     newTargetValues = prevTargetValues
     prevTargetTransform = ik.createEndEffectorTransform(prevTargetValues[0], prevTargetValues[1],
                                                         prevTargetValues[2], prevTargetValues[3])
-    
+    goToPosValues = [False, [0, 0, 0, 0, 0, 0, 0]]
+
     initializeJoystick()
 
     pubThreadPool = concurrent.futures.ThreadPoolExecutor(max_workers=2) # create thread pool with two threads
 
-    # try:
-    scriptMode = Mode.FORWARD_KIN
-    print(scriptMode.name)
+    try:
+        scriptMode = Mode.GLOBAL_IK
+        print(scriptMode.name)
 
-    rospy.init_node("arm_master_control")
-    gazebo_on = rospy.get_param("/gazebo_on")
-    rate = rospy.Rate(10) # run at 10Hz
+        rospy.init_node("arm_master_control")
+        gazebo_on = rospy.get_param("/gazebo_on")
+        rate = rospy.Rate(10) # run at 10Hz
 
-    armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
-    rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
+        armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
+        rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
 
-    if gazebo_on:
-        gazeboPublisher = sim.startGazeboJointControllers(9)
-    else:
-        jointPublisher = sim.startJointPublisher()
+        if gazebo_on:
+            gazeboPublisher = sim.startGazeboJointControllers(9)
+        else:
+            jointPublisher = sim.startJointPublisher()
 
-    # sets start target position equal to curArmAngles after they have been updated
-    # while curArmAngles == [0, 0, 0, 0, 0, 0]:
-    #     tempDHTable = ik.createDHTable(curArmAngles)
-    #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
+        # sets start target position equal to curArmAngles after they have been updated
+        # while curArmAngles == [0, 0, 0, 0, 0, 0]:
+        #     tempDHTable = ik.createDHTable(curArmAngles)
+        #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
 
-    correctionsService = rospy.Service('update_arm_corrections', Corrections, updateAngleCorrections)
-    goToArmPosService = rospy.Service('move_arm_to', GoToArmPos, goToPosition)
-    saveArmPosService = rospy.Service('save_arm_pos_as', SaveArmPos, savePosition)
+        correctionsService = rospy.Service('update_arm_corrections', Corrections, updateAngleCorrections)
+        goToArmPosService = rospy.Service('move_arm_to', GoToArmPos, goToPosition)
+        saveArmPosService = rospy.Service('save_arm_pos_as', SaveArmPos, savePosition)
 
-    while not rospy.is_shutdown():
-        main()
-        rate.sleep()
+        while not rospy.is_shutdown():
+            main()
+            rate.sleep()
 
-    # except Exception as ex:
-    #     print("The following error has occured: ")
-    #     print(ex)
+    except Exception as ex:
+        print("The following error has occured: ")
+        print(ex)
