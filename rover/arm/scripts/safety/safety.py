@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
 
-#import arm_can_control as arm_can
-#from GetManualJoystickFinal import *
-#from MapManualJoystick import *
-#import arm_servo as servo
-#import struct
 import rospy
 from std_msgs.msg import *
-#import threading
 from enum import Enum
 import time
+import os
 
 ############ ENUMERATIONS #############
 
@@ -53,12 +48,40 @@ class Safety_Node():
         self.MotorCurr_sub        = rospy.Subscriber("arm_motor_curr", Float32MultiArray, self.callback_MotorCurr)
         self.CurrPos_sub          = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.callback_CurrPos)
         self.LimitSwitch_sub      = rospy.Subscriber("arm_limit_switch", UInt8MultiArray, self.callback_LimitSwitch)
-        self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 10)
-        self.Error_pub            = rospy.Publisher("arm_error_msg", UInt8MultiArray, queue_size= 10)
+        self.KillSwitch_sub       = ropsy.Subscriber("arm_killswitch", UInt8, self.callback_KillSwitch)
+        self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 0)
+        self.Error_pub            = rospy.Publisher("arm_error_msg", UInt8MultiArray, queue_size= 0)
+
+    def callback_KillSwitch(self, data : UInt8):
+        """
+        (UInt8) -> (None)
+        
+        Receives and stores killswitch input from the controller node. If pressed, we shut down CAN_Send node
+        after sending the curr_pos as the latest position.
+
+        @parameters
+
+        data (UInt8): Input indicating whether killswitch is pressed or not
+        """
+        
+        # Storing the boolean value
+        killswitch = data.data
+
+        if killswitch:
+            self.SAFE_GOAL_POS.data = self.CURR_POS
+            print(self.SAFE_GOAL_POS)
+            self.SafePos_pub.publish(self.SAFE_GOAL_POS)
+            rospy.sleep(0.001)
+            os.system("rosnode kill "+ "CAN_Send")
+        
+        else:
+            os.system("rosrun rover "+ "CAN_send.py")
+            self.SAFE_GOAL_POS.data = self.CURR_POS
+
 
     def callback_LimitSwitch(self, limitSwitch_data : UInt8MultiArray) -> None:
         """
-        UInt8MultiArray -> (None)
+        (UInt8MultiArray) -> (None)
         
         Receives and stores limit switch inputs from SparkMax through the LIMIT_SWITCH topic
         into LIMIT_SWITCH attribute. Also updates the ERRORS attribute if needed and publishes it on 
@@ -66,7 +89,7 @@ class Safety_Node():
 
         @parameters
 
-        limitSwitch_data (list(int)): List containing limit switch inputs from SparkMax
+        limitSwitch_data (UInt8MultiArray): List containing limit switch inputs from SparkMax
         """
 
         # Store the received limit switch data
