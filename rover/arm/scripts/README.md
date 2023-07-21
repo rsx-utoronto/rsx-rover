@@ -39,6 +39,8 @@ cd ~/rover_ws # or whatever you named the ros workspace
 chmod +x src/rsx-rover/rover/arm/scripts/arm_master_control.py # makes file executable, only need to run the first time
 ```
 
+In addition you may want to edit the `goToPosition()` and `savePosition()` in arm_master_control.py to specify the whole path of arm_positions.json.
+
 ### For use with Real Arm
 ``` 
 cd ~/rover_ws
