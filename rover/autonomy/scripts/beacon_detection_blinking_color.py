@@ -5,10 +5,13 @@ import sys
 import time
 import rospy
 import cv2
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Bool
 from sensor_msgs.msg import Image, CameraInfo
+from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
+from std_srvs.srv import Empty, EmptyResponse # you import the service message python classes generated from Empty.srv.
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import numpy as np
 import tf2_ros
 
@@ -119,15 +122,15 @@ class image_converter:
             odom_x = trans.transform.translation.x + maxLoc_base_link[0] + set_dist
             odom_y = trans.transform.translation.y + maxLoc_base_link[1] + set_dist
             odom_z = trans.transform.translation.z + maxLoc_base_link[2] + set_dist
-        target_pose = Odometry()
-        target_pose.pose.pose.position.x = odom_x
-        target_pose.pose.pose.position.y = odom_y
-        target_pose.pose.pose.position.z = odom_z
-        self.pose_pub.publish(target_pose)
+            target_pose = Odometry()
+            target_pose.pose.pose.position.x = odom_x
+            target_pose.pose.pose.position.y = odom_y
+            target_pose.pose.pose.position.z = odom_z
+            self.pose_pub.publish(target_pose)
 
         
-        print("maxLoc_camera_frame = ", maxLoc_camera)
-        print("maxLoc_base_link_frame = ", maxLoc_base_link)
+        # print("maxLoc_camera_frame = ", maxLoc_camera)
+        # print("maxLoc_base_link_frame = ", maxLoc_base_link)
         
         max_y = maxLoc[1]
         max_x = maxLoc[0]
@@ -135,6 +138,7 @@ class image_converter:
         # print("undistorted point = ", undistorted_image(maxLoc))
         amber_spot_depth = Float32()
         amber_spot_depth = self.depth_image[max_y, max_x] # This is the depth of the amber spot in mm
+        self.maxVal = maxVal
         if maxVal > 200:
             self.spot_pub.publish(amber_spot_depth)
 
@@ -198,16 +202,80 @@ class image_converter:
 
     def main(args):
         ic = image_converter()
-        rospy.init_node('amber_spot_finder', anonymous=True)
+        
         try:
             rospy.spin()
         except KeyboardInterrupt:
             print("Shutting down")
         cv2.destroyAllWindows()
+
+
+class CircleService():
+    def __init__(self):
+        rospy.init_node('amber_spot_finder', anonymous=True)
+        self.vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
+        self.detect_pub = rospy.Publisher("/beacon_detected", Bool, queue_size=1)
+        self.rate = rospy.Rate(1)
+        self.odom_sub = rospy.Subscriber("/aft_mapped_to_int", Odometry, self.odom_callback)
+        rospy.loginfo("Service /rotate_rover Ready")
+        self.my_service = rospy.Service('/rotate_rover', Empty, self.callback)
+        rospy.spin() # maintain the service open.
+
+    def odom_callback(self, msg):
+        self.x = msg.pose.pose.position.x
+        self.y = msg.pose.pose.position.y
+
+        orientation_q = msg.pose.pose.orientation
+        orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
+        (self.roll, self.pitch, self.yaw) = euler_from_quaternion(orientation_list)   
+
+    def callback(self, request):
+        rospy.loginfo("The rotation service has been called")
+        init_yaw = self.yaw
+
+        move = Twist()
+        move.linear.x = 0.0
+        move.angular.z = 0.0
+        self.vel_pub.publish(move)
+
+        while abs(init_yaw - self.yaw) < 3.14: # full rotation
+            while abs(init_yaw - self.yaw) < 0.524: # 30 degrees
+                move.linear.x = 0.0
+                move.angular.z = 0.2
+                self.vel_pub.publish(move)
+                self.rate.sleep()
+                cur_yaw = self.yaw
+                print("angle moved = ", abs(cur_yaw - self.yaw))
+            
+            move.angular.z = 0.0
+            self.vel_pub.publish(move)
+            rospy.loginfo("The rotation has paused")
+            time.sleep(5)
+            ic = image_converter()
+            rospy.loginfo("Beacon detection has started/resumed")
+            i = 0
+            while i < 5:
+                if ic.maxVal > 200:
+                    time.sleep(2)
+                    i+=1
+                    rospy.loginfo("Checking Again...")
+                else:
+                    break
+            if i ==5:
+                rospy.loginfo("Beacon detected")
+                self.detect_pub.publish(True)
+                break
+        
+        
+        
+        
+
+
+        return EmptyResponse()
+
+        
    
 if __name__ == '__main__':
     while not rospy.is_shutdown():
-        image_converter.main(sys.argv)
-        # image_converter.get_coordinates()
-        # image_converter.brightest_spot()
+        CircleService()
 

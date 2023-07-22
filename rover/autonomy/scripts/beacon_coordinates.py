@@ -6,6 +6,8 @@ from nav_msgs.msg import Odometry
 import math
 import numpy as np
 
+
+# INCOMPLETE - NO NEED FOR THIS RIGHT NOW. USING TRANSFORMS INSTEAD
 def odom_callback(msg):
     rospy.loginfo("odom_callback")
     global rover_orientation, rover_position
