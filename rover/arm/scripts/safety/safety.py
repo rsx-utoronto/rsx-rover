@@ -139,28 +139,8 @@ class Safety_Node():
         # Store the received goal postion
         self.GOAL_POS = list(goal_data.data)
 
-        # if self.STATE == "IK":
-        #     final_pos = self.GOAL_POS
-        #     self.GOAL_POS = self.CURR_POS + self.SPEED_LIMIT
-
-        # Check if the goal position is safe and publish the errors
-        self.postion_check()
-        self.Error_pub.publish(self.ERRORS)
-
-        # Check if there are any other errors
-        if self.ERRORS.data.count(Errors.ERROR_NONE.value) == len(self.ERRORS.data):
-
-            # Print/Publish the position to SAFE_GOAL_POS topic
-            self.SAFE_GOAL_POS.data = self.GOAL_POS
-            self.SafePos_pub.publish(self.SAFE_GOAL_POS)
-
-            #if self.STATE == 'IK' and abs(self.CURR_POS)
-        
-        # If there are any errors, publish the error offsets and reset them
-        else:
-            self.Offset_pub.publish(self.ERROR_OFFSET)
-
-            #self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
+        # Update the SAFE_GOAL_POS and publish if the received position is safe
+        self.update_safe_goal_pos(self.GOAL_POS)
 
     
     def callback_MotorCurr(self, MotorCurr_data : Float32MultiArray) -> None:
@@ -183,6 +163,61 @@ class Safety_Node():
         self.current_check()
         self.Error_pub.publish(self.ERRORS)
     
+    def update_safe_goal_pos(self, final_pos : list) -> None:
+        """
+        (list(float)) -> (None)
+
+        Does checks on the received data and publishes them to arm_safe_goal_pos topic if the checks pass.
+        Becomes a recursive function for IK while a single loop function for manual
+
+        @parameters
+
+        final_pos (list(float)): POS values to be checked and published if safe
+        """
+        
+        # Check if we are in IK state
+        if self.STATE == "IK":
+
+            # Speed Limits
+            SPEED_LIMIT = [0.005, 0.003, 0.01, 0.075, 
+                                    0.075, 0.075, 0.075]
+
+            # Update the final pos according to direction we are going in
+            direction = [1, 1, 1, 1, 1, 1, 1]
+
+            for i in range(len(self.GOAL_POS)):
+                direction[i] = sign(self.GOAL_POS[i] - self.CURR_POS[i])
+            
+            final_pos = list(np.array(final_pos) + np.array(direction) * np.array(SPEED_LIMIT))
+
+            # Do position check on this final_pos
+            self.postion_check(pos= final_pos)
+        
+        if self.STATE == "Manual":
+            
+            # Check if the goal position is safe 
+            self.postion_check()
+
+        # Publish the errors
+        self.Error_pub.publish(self.ERRORS)
+
+        # Check if there are any errors
+        if self.ERRORS.data.count(Errors.ERROR_NONE.value) == len(self.ERRORS.data):
+
+            # Print/Publish the position to SAFE_GOAL_POS topic
+            self.SAFE_GOAL_POS.data = self.GOAL_POS
+            self.SafePos_pub.publish(self.SAFE_GOAL_POS)
+        
+        # If there are any errors, publish the error offsets and reset them
+        else:
+            self.Offset_pub.publish(self.ERROR_OFFSET)
+
+            #self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
+        
+        # Repeat the function if needed in 'IK' mode
+        if self.STATE == "IK" and max(abs(np.array(self.GOAL_POS) - np.array(self.CURR_POS))):
+            self.update_safe_goal_pos(self.GOAL_POS)
+    
     def callback_CurrPos(self, CurrPos_data : Float32MultiArray) -> None:
         """
         (Float32MultiArray) -> (None)
@@ -195,28 +230,35 @@ class Safety_Node():
         """
         self.CURR_POS = CurrPos_data.data
     
-    def postion_check(self) -> None:
+    def postion_check(self, pos : list = None) -> None:
         '''
-        (float) -> (None)
+        (lsit(float)) -> (None)
 
         Compares the goal position with current position to see that the difference 
         between them is not gigantic. If gigantic sets the error as for that motor as
         Errors.ERROR_EXCEEDING_POS. Makes sure the motor doesn't jerk back to 0 
         position in case computer loses power
+
+        @parameters
+
+        pos (list(int)) (optional): POS values to be checked. Only fill it for IK mode, otherwise keep it None
         '''
         # TODO
         # Limits for position safety (Need to test these values)
         #limit = [1.25, 1.25, 1.25, 20, 1.25, 1.25, 1.25]
         limit = [1250000, 1250000, 1250000, 200000, 1250000, 1250000, 1250000]
 
+        if not pos:
+            pos = self.GOAL_POS
+
         # Going through each element of GOAL_POS
         #for i in range(len(self.GOAL_POS)):
         for i in [0, 1, 2]:    
             # Doing position comparisons for safety
-            if (abs(self.GOAL_POS[i] - self.CURR_POS[i]) > limit[i]):
+            if (abs(pos[i] - self.CURR_POS[i]) > limit[i]):
 
                 # Calculating the offset, applying it to goal position and storing it
-                offset                  = list(np.array(self.GOAL_POS) - np.array(self.CURR_POS))
+                offset                  = list(np.array(pos) - np.array(self.CURR_POS))
                 self.ERROR_OFFSET.data  = offset
                 #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
 

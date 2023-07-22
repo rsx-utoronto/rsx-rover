@@ -51,7 +51,7 @@ class Manual():
         self.error_offsets       = [0, 0, 0, 0, 0, 0, 0]
 
         ## Constant Speed limits, values are chosen by trial and error #TODO
-        self.SPEED_LIMIT         = [0.005, 0.001, 0.01, 0.075, 
+        self.SPEED_LIMIT         = [0.005, 0.003, 0.01, 0.075, 
                                     0.075, 0.075, 0.075]
 
         ## Variable for the status, start at idle
