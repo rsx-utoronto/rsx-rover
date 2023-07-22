@@ -23,8 +23,8 @@ int main(int argc, char** argv) {
     ros::Subscriber sub = nh.subscribe("/grid_map_filter_demo/filtered_map", 1, gridmap_callback);
     
     // Create costmap2d.
-    costmap_2d::Costmap2D costmap;
-    this->costmap2dConverter_.initializeFromGridMap(this->gridMap_, costmap);
+    // costmap_2d::Costmap2D costmap;
+    // this->costmap2dConverter_.initializeFromGridMap(this->gridMap_, costmap);
     
     ros::spin();
 
