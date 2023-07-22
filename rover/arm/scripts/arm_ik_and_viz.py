@@ -351,10 +351,10 @@ def controlGripperAngle(isButtonPressed, curArmAngles):
 
     # If both buttons are pressed at the same time, angle will not change
     if isButtonPressed["SQUARE"] == 1 and isButtonPressed["X"] != 1:
-        gripperAngle += angleIncrement
+        gripperAngle -= angleIncrement
 
     if isButtonPressed["X"] == 1 and isButtonPressed["SQUARE"] != 1:
-        gripperAngle -= angleIncrement
+        gripperAngle += angleIncrement
 
     # if gripperAngle < -0.04:
     #     gripperAngle = -0.04
