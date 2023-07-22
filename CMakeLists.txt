@@ -63,12 +63,11 @@ add_message_files(
   StateMsg.msg
 )
 
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+# Generate services in the 'srv' folder
+add_service_files(
+  FILES
+  AddGoal.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -118,7 +117,7 @@ catkin_package(
     #INCLUDE_DIRS include
     #LIBRARIES Rover
     CATKIN_DEPENDS roscpp rospy std_msgs message_runtime message_filters
-    DEPENDS system_lib
+    DEPENDS
 )
 
 ###########
@@ -210,9 +209,9 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-catkin_install_python(PROGRAMS rover/autonomy/scripts/state_machine_node.py
-DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+# catkin_install_python(PROGRAMS rover/autonomy/scripts/state_machine_node.py
+# DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
 add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
 target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
