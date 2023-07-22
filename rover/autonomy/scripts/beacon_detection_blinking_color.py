@@ -7,8 +7,10 @@ import rospy
 import cv2
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Image, CameraInfo
+from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
+import tf2_ros
 
 
 class image_converter:
@@ -16,6 +18,7 @@ class image_converter:
     def __init__(self):
         self.image_pub = rospy.Publisher("/camera/color/image_raw_new",Image, queue_size=1)
         self.spot_pub = rospy.Publisher("/beacon_spot_depth", Float32, queue_size=1)
+        self.pose_pub = rospy.Publisher("/beacon_pose", Odometry, queue_size=1)
 
         self.bridge = CvBridge()
         self.info_sub = rospy.Subscriber("/camera/color/camera_info", CameraInfo, self.get_coordinates)        
@@ -23,6 +26,7 @@ class image_converter:
         self.depth_sub = rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", Image, self.depth_callback)        
         self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.brightest_spot)
         self.first_image = True
+        self.count = 0
 
 
 
@@ -51,6 +55,22 @@ class image_converter:
         # cv2.imshow("red color detection", detected_output)
         return detected_output
     
+    def tf_rotation(self, alpha):
+        rot_x = np.array([[1, 0, 0], [0, np.cos((np.pi)/2), -np.sin((np.pi)/2)], [0, np.sin((np.pi)/2), np.cos((np.pi)/2)]])
+        rot_z = np.array([[np.cos((np.pi)/2), -np.sin((np.pi)/2), 0], [np.sin((np.pi)/2), np.cos((np.pi)/2), 0], [0, 0, 1]]) 
+        beta = rot_x.dot(alpha)
+        beta = rot_z.dot(beta)
+        return beta
+    def tf_baselink_to_odom(self):
+        tfBuffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tfBuffer)
+        try:
+            trans = tfBuffer.lookup_transform('odom', 'base_link', rospy.Time(0))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            return None
+        return trans
+
+
     def brightest_spot(self, data):
 
         try:
@@ -65,22 +85,16 @@ class image_converter:
         except CvBridgeError as e:
             print(e)
         
-        image = cv_image
-
+        image = self.curr_img
         radius = int(41)
-        orig = image.copy()
-        filtered_image = self.thresholding(image)
+        orig = self.curr_img.copy()
+        diff = cv2.absdiff(self.curr_img, self.prev_img)
+        filtered_image = diff # self.thresholding(diff)
+        # print("filtered_image = ", filtered_image)
         lower_bound = 253
         upper_bound = 254
         # filtered_image = self.colour_search_and_masking(image, (0, 155, 225), (0, 195, 255))
         # filtered_image = self.colour_search_and_masking(image, (lower_bound, lower_bound, lower_bound), (upper_bound, upper_bound, upper_bound)) # amber colour in greyscale is (189, 189, 189) 
-        
-        ## Undistorting the image. No need for now
-        res = image.copy()
-        res = cv2.undistort(image, self.K, self.D)
-        undistorted_image = self.bridge.cv2_to_imgmsg(res, encoding='bgr8')
-        # print("result = ", res)
-        # print("undistorted_image = ", undistorted_image)
         
         
         ## load the image and convert it to grayscale
@@ -91,17 +105,45 @@ class image_converter:
         # perform a naive attempt to find the (x, y) coordinates of
         # the area of the image with the largest intensity value
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
+
+        # Transforming the maxLoc from the pixel coordinates to the base_link frame
+        maxLoc_camera = (np.linalg.inv(self.K)).dot(np.array([maxLoc[0], maxLoc[1], 1]))
+        maxLoc_base_link = self.tf_rotation(maxLoc_camera)
+        x = 0.1
+        y = 0
+        z = 0.1
+        set_dist = 5
+        maxLoc_base_link = np.array([x, y, z]) + maxLoc_base_link
+        if self.tf_baselink_to_odom() is not None:
+            trans = self.tf_baselink_to_odom()
+            odom_x = trans.transform.translation.x + maxLoc_base_link[0] + set_dist
+            odom_y = trans.transform.translation.y + maxLoc_base_link[1] + set_dist
+            odom_z = trans.transform.translation.z + maxLoc_base_link[2] + set_dist
+        target_pose = Odometry()
+        target_pose.pose.pose.position.x = odom_x
+        target_pose.pose.pose.position.y = odom_y
+        target_pose.pose.pose.position.z = odom_z
+        self.pose_pub.publish(target_pose)
+
+        
+        print("maxLoc_camera_frame = ", maxLoc_camera)
+        print("maxLoc_base_link_frame = ", maxLoc_base_link)
+        
         max_y = maxLoc[1]
         max_x = maxLoc[0]
-        print("maxVal = ", maxVal)
         # print("maxLoc = ", maxLoc)
         # print("undistorted point = ", undistorted_image(maxLoc))
         amber_spot_depth = Float32()
         amber_spot_depth = self.depth_image[max_y, max_x] # This is the depth of the amber spot in mm
-        self.spot_pub.publish(amber_spot_depth)
-        # print("Depth of the light beacon(in mm):", amber_spot_depth)
+        if maxVal > 200:
+            self.spot_pub.publish(amber_spot_depth)
 
-        cv2.circle(image, maxLoc, radius, (255, 0, 0), 2) # (0, 191, 255) is the colour code for amber colour
+            # print("Depth of the light beacon(in mm):", amber_spot_depth)
+
+            cv2.circle(image, maxLoc, radius, (255, 0, 0), 2) # (0, 191, 255) is the colour code for amber colour
+            self.count += 1
+            print(str(self.count) + ". maxVal = ", maxVal)
+
         # display the results of the naive attempt
         cv2.imshow("Amber Spot", image)
         cv2.imshow("Original", orig)
@@ -169,96 +211,3 @@ if __name__ == '__main__':
         # image_converter.get_coordinates()
         # image_converter.brightest_spot()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-""" import rospy
-from nav_msgs.msg import Image
-from cv_bridge import CvBridge
-bridge = CvBridge()
-
-sub = rospy.Subscriber("/camera/infra1/image_rect_raw", Image, newOdom)
-
-cv_image = bridge.imgmsg_to_cv2("/camera/infra1/image_rect_raw", desired_encoding='passthrough') """
-
-
-""" # import the necessary packages
-import numpy as np
-import argparse
-import cv2
-# construct the argument parse and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--image", help = "path to the image file")
-ap.add_argument("-r", "--radius", type = int,
-	help = "radius of Gaussian blur; must be odd")
-args = vars(ap.parse_args())
-# load the image and convert it to grayscale
-image = cv2.imread(args["image"])
-orig = image.copy()
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-# perform a naive attempt to find the (x, y) coordinates of
-# the area of the image with the largest intensity value
-(minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
-cv2.circle(image, maxLoc, 5, (255, 0, 0), 2)
-# display the results of the naive attempt
-cv2.imshow("Naive", image)
-# apply a Gaussian blur to the image then find the brightest
-# region
-gray = cv2.GaussianBlur(gray, (args["radius"], args["radius"]), 0)
-(minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
-image = orig.copy()
-cv2.circle(image, maxLoc, args["radius"], (255, 0, 0), 2)
-# display the results of our newly improved method
-cv2.imshow("Robust", image)
-cv2.waitKey(0)
-
-# endregion """
-
-""" 
-
-K = np.asarray([[334.94030171, 0, 280.0627713], 
-                [0, 595.99313333, 245.316628], 
-                [0, 0, 1]])
-
-D = np.asarray([-0.36600591, 0.20973317, -0.00181088, 0.0010202208, -0.07504754])
-
-def repub_images():
-    rospy.init_node("imx219_pub")
-    image_pub= rospy.Publisher("imx219_image", Image, queue_size=10)
-    bridge=CvBridge()
-    rate=rospy.Rate(10)
-
-    cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)540, height=(int)540,format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink")
-    if not cap.isOpened():
-        print("Error")
-        return
-    while not rospy.is_shutdown():
-        ret,frame = cap.read()
-        if not ret:
-            print("Error")
-            break
-        # frame = cv2.resize(frame, (frame.shape[1]//3, frame.shape[0]//3))
-        frame = cv2.undistort(frame, K, D)
-        frame = cv2.rotate(frame, cv2.ROTATE_180)
-        image_msg = bridge.cv2_to_imgmsg(frame, encoding='bgr8')
-        image_msg.header.stamp = rospy.Time.now()
-        image_pub.publish(image_msg)
-
-
-        rate.sleep()
-
-    cap.release()
-    cv2.destroyAllWindows()
-
- """
