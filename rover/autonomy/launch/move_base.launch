@@ -7,6 +7,7 @@
    <arg name="no_static_map" default="false" />
    <arg name="command_velocity_topic" default="/drive" />
    <arg name="odom_topic" default="/aft_mapped_to_int" />
+   <arg name="pose_topic" default="/ekf_pose" />
    <!-- <node pkg="tf" type="static_transform_publisher" name="base_link_to_map" args="0 0 0 0 0 0 map base_link 100" /> -->
 
    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
@@ -34,6 +35,7 @@
 
       <remap from="cmd_vel" to="$(arg command_velocity_topic)" />
       <remap from="odom" to="$(arg odom_topic)" />
+      <remap from="/amcl_pose" to="/ekf_pose" />
 
       <!-- <rosparam file="$(find rover)/rover/autonomy/config/costmap_converter.yaml" command="load" /> -->
    </node>
@@ -47,7 +49,7 @@
    <arg name="use_map_topic" default="true"/>
    <arg name="scan_topic" default="/scan" />
 
-
+   <include file="$(find rover)/rover/autonomy/launch/robot_loc.launch"/>
    <node pkg="amcl" type="amcl" name="amcl">
       <rosparam file="$(find rover)/rover/simulation/config/amcl_params.yaml" command="load" />
       <remap from="scan" to="$(arg scan_topic)"/>    
