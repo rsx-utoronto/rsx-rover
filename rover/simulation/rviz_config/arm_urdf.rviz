@@ -10,7 +10,7 @@ Panels:
         - /TF1
         - /TF1/Frames1
         - /Image1
-      Splitter Ratio: 0.5
+      Splitter Ratio: 0.4676470458507538
     Tree Height: 355
   - Class: rviz/Selection
     Name: Selection
@@ -115,6 +115,56 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        Real_Camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_6:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_7:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_8:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_9:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         base_link:
           Alpha: 1
           Show Axes: false
@@ -153,10 +203,28 @@ Visualization Manager:
           Value: false
         Link_9:
           Value: false
+        Real_Camera_link:
+          Value: false
+        Real_Link_1:
+          Value: false
+        Real_Link_2:
+          Value: false
+        Real_Link_3:
+          Value: false
+        Real_Link_4:
+          Value: false
+        Real_Link_5:
+          Value: false
+        Real_Link_6:
+          Value: false
+        Real_Link_7:
+          Value: false
+        Real_Link_8:
+          Value: false
+        Real_Link_9:
+          Value: false
         base_link:
           Value: false
-        target_position:
-          Value: true
       Marker Alpha: 1
       Marker Scale: 0.5
       Name: TF
@@ -179,7 +247,19 @@ Visualization Manager:
                         {}
                       Link_9:
                         {}
-                      target_position:
+          Real_Link_1:
+            Real_Link_2:
+              Real_Link_3:
+                Real_Link_4:
+                  Real_Link_5:
+                    Real_Camera_link:
+                      {}
+                    Real_Link_6:
+                      Real_Link_7:
+                        {}
+                      Real_Link_8:
+                        {}
+                      Real_Link_9:
                         {}
       Update Interval: 0
       Value: true

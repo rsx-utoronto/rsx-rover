@@ -547,7 +547,7 @@ def updateLiveArmSimulation(data):
     tempAngles.append(tempAngles[6]) # make gripper angles equal
     tempAngles.append(tempAngles[6]) # make gripper angles equal
 
-    sim.runNewJointState2(jointPublisher, tempAngles)
+    sim.runNewJointState3(jointPublisher, tempAngles)
 
 def updateDesiredEETransformation(newTargetValues, scriptMode):
     ''' Updates tf2 transformation of desired end effector position.

@@ -150,6 +150,23 @@ def runNewJointState2(jointPublisherData, angles):
     # positionArray = framePosition() # Display End Effector position with a transform
     # displayEndEffectorTransform(positionArray)
 
+def runNewJointState3(jointPublisherData, angles):
+    '''
+    Publishes the newJointState header, stamp, and name for the real arm values 
+    '''
+
+    # data to be published
+    newJointState = JointState()
+    newJointState.header = Header()
+    newJointState.header.stamp = rospy.Time.now()
+    newJointState.name = ["Real_Joint_1", "Real_Joint_2", "Real_Joint_3", "Real_Joint_4", "Real_Joint_5", 
+                          "Real_Joint_6", "Real_Joint_7", "Real_Joint_8", "Real_Joint_9"]
+    # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
+    newJointState.position = angles
+    jointPublisherData.publish(newJointState)  # send data to be published
+
+
+
 def moveInGazebo(jointControllerPublishers, angles):
     ''' Moves arm in Gazebo based on IK angles
     
