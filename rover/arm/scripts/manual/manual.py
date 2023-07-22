@@ -51,8 +51,8 @@ class Manual():
         self.error_offsets       = [0, 0, 0, 0, 0, 0, 0]
 
         ## Constant Speed limits, values are chosen by trial and error #TODO
-        self.SPEED_LIMIT         = [0.005, 0.005, 0.005, 0.075, 
-                                    0.001, 0.001, 0.075]
+        self.SPEED_LIMIT         = [0.005, 0.001, 0.01, 0.075, 
+                                    0.075, 0.075, 0.075]
 
         ## Variable for the status, start at idle
         self.status              = "Idle"
@@ -92,9 +92,9 @@ class Manual():
 
         # Update offsets
         self.err_offset         = offsets.data
-        print("before and offset" ,self.goal_pos.data[2], self.err_offset[2])
+        #print("before and offset" ,self.goal_pos.data[2], self.err_offset[2])
         self.goal_pos.data      = list(np.array(self.goal_pos.data) - np.array(self.err_offset))
-        print("after" ,self.goal_pos.data[2])
+        #print("after" ,self.goal_pos.data[2])
     
     def CallbackState (self, status: String) -> None:
         """
@@ -139,15 +139,11 @@ class Manual():
         # Checking the state, only proceed if in manual
         if self.status == "Manual":
 
-            if self.error_messages.count(0) == len(self.error_messages):
-                # Update goal positions and print/publish them
-                self.goal_pos.data = self.update_pos(self.controller_input, self.goal_pos.data, 
-                                                    self.SPEED_LIMIT)
-                print(self.goal_pos.data)
-                self.goal.publish(self.goal_pos)
-
-        elif self.state == "Setup":
-            self.setup()
+            # Update goal positions and print/publish them
+            self.goal_pos.data = self.update_pos(self.controller_input, self.goal_pos.data, 
+                                                self.SPEED_LIMIT)
+            print(self.goal_pos.data)
+            self.goal.publish(self.goal_pos)
         
     def update_pos(self, joy_input : list, curr_goal_pos : list, speed_limit : list) -> list:   
         """
@@ -167,22 +163,6 @@ class Manual():
 
         # Set controller pos based on joint speed calculations/joypos
         return list(np.array(joy_input) * np.array(speed_limit) + np.array(curr_goal_pos))
-    
-    # def setup(self):
-    #     # For each motor/controller pos...
-    #     # subscribe to current angles
-    #     for i in range(len(self.controller_pos)):
-    #         current = self.controller_pos[i] 
-    #         # Send in a large value to hit limit switch
-    #         self.controller_pos[i] = 10000000
-    #         # When error occurs (recieve from safety node), set it back to zero
-    #         # Currently assuming error messages will be str
-    #         while "LIMIT_SWITCH" not in self.error[i]:
-    #             pass
-    #         # detect current angle via corrections from safety
-    #         self.controller_pos[i] = current
-    #     pass
-    #     #a variable correction value
 
 ############################## MAIN ############################
 

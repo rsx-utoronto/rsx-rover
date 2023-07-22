@@ -87,7 +87,7 @@ def generate_can_id(dev_id : int, api : int,
 		return can_id
 
 
-def pos_to_sparkdata(f : float) -> list[int]:
+def pos_to_sparkdata(f : float) -> list:
     """
     float -> list(int)
 
@@ -265,7 +265,7 @@ def read_can_message(data, api, motor_num : int = 0) -> float:
 
 
 # NEEDS CALIBRATION
-def calc_differential(d_pos : float, d_angle : float) -> tuple(float):
+def calc_differential(d_pos : float, d_angle : float) -> tuple:
     """
     (float), (float) --> tuple(float)
 
@@ -296,7 +296,7 @@ def calc_differential(d_pos : float, d_angle : float) -> tuple(float):
     return d_angle_motor1, d_angle_motor2, d_gripper_motor
 
 
-def generate_data_packet(data_list : list) -> list[list[int]]:
+def generate_data_packet(data_list : list) -> list:
     """
     list(float) -> list(list(int))
 
