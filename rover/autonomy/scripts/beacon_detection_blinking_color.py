@@ -216,7 +216,7 @@ class CircleService():
         self.vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
         self.detect_pub = rospy.Publisher("/beacon_detected", Bool, queue_size=1)
         self.rate = rospy.Rate(1)
-        self.odom_sub = rospy.Subscriber("/aft_mapped_to_int", Odometry, self.odom_callback)
+        self.odom_sub = rospy.Subscriber("/aft_mapped_to_init", Odometry, self.odom_callback)
         rospy.loginfo("Service /rotate_rover Ready")
         self.my_service = rospy.Service('/rotate_rover', Empty, self.callback)
         rospy.spin() # maintain the service open.
@@ -224,7 +224,7 @@ class CircleService():
     def odom_callback(self, msg):
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
-
+        # rospy.loginfo("Odom Callback")
         orientation_q = msg.pose.pose.orientation
         orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
         (self.roll, self.pitch, self.yaw) = euler_from_quaternion(orientation_list)   
