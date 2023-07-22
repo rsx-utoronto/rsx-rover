@@ -1,3 +1,5 @@
 .vscode
 bryan-docker
-/rsx-rover/rover/arm/scripts/__pycache__/
+rover/autonomy/tests/lidar.bag
+rover/autonomy/tests/icsens-visual-inertial-lidar-dataset-1.bag
+rover/arm/scripts/__pycache__/

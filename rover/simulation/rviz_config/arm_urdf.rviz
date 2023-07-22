@@ -10,7 +10,7 @@ Panels:
         - /TF1
         - /TF1/Frames1
         - /Image1
-      Splitter Ratio: 0.5
+      Splitter Ratio: 0.4676470458507538
     Tree Height: 355
   - Class: rviz/Selection
     Name: Selection
@@ -29,7 +29,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: Image
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -55,12 +55,17 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Alpha: 0.800000011920929
+    - Alpha: 0.4000000059604645
       Class: rviz/RobotModel
       Collision Enabled: false
       Enabled: true
       Links:
         All Links Enabled: true
+        Camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
@@ -105,24 +110,66 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        Link_9:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_6:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_7:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_8:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        Real_Link_9:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         base_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_optical:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -136,6 +183,8 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        Camera_link:
+          Value: true
         Link_1:
           Value: false
         Link_2:
@@ -152,35 +201,65 @@ Visualization Manager:
           Value: false
         Link_8:
           Value: false
+        Link_9:
+          Value: false
+        Real_Camera_link:
+          Value: false
+        Real_Link_1:
+          Value: false
+        Real_Link_2:
+          Value: false
+        Real_Link_3:
+          Value: false
+        Real_Link_4:
+          Value: false
+        Real_Link_5:
+          Value: false
+        Real_Link_6:
+          Value: false
+        Real_Link_7:
+          Value: false
+        Real_Link_8:
+          Value: false
+        Real_Link_9:
+          Value: false
         base_link:
           Value: false
-        camera_link:
-          Value: true
-        camera_optical:
-          Value: true
-        world:
-          Value: true
-      Marker Alpha: 0.800000011920929
+      Marker Alpha: 1
       Marker Scale: 0.5
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        world:
-          base_link:
-            Link_1:
-              Link_2:
-                Link_3:
-                  Link_4:
-                    Link_5:
-                      Link_6:
-                        Link_7:
-                          {}
-                        Link_8:
-                          {}
-                    camera_link:
-                      camera_optical:
+        base_link:
+          Link_1:
+            Link_2:
+              Link_3:
+                Link_4:
+                  Link_5:
+                    Camera_link:
+                      {}
+                    Link_6:
+                      Link_7:
+                        {}
+                      Link_8:
+                        {}
+                      Link_9:
+                        {}
+          Real_Link_1:
+            Real_Link_2:
+              Real_Link_3:
+                Real_Link_4:
+                  Real_Link_5:
+                    Real_Camera_link:
+                      {}
+                    Real_Link_6:
+                      Real_Link_7:
+                        {}
+                      Real_Link_8:
+                        {}
+                      Real_Link_9:
                         {}
       Update Interval: 0
       Value: true
@@ -224,7 +303,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.0940089225769043
+      Distance: 2.9045920372009277
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -232,17 +311,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.16105464100837708
-        Y: 0.14625586569309235
-        Z: 0.1555856317281723
+        X: -0.25581178069114685
+        Y: 0.7445798516273499
+        Z: 0.06737399101257324
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.00039809197187423706
+      Pitch: 0.37020349502563477
       Target Frame: <Fixed Frame>
-      Yaw: 5.113581657409668
+      Yaw: 6.183579444885254
     Saved:
       - Class: rviz/Orbit
         Distance: 1.0940089225769043
