@@ -13,18 +13,18 @@
 
 
 
-   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+   <node pkg="mbf_costmap_nav" type="mbf_costmap_nav" respawn="false" name="move_base_flex" output="screen">
       <rosparam file="$(find rover)/rover/simulation/config/costmap_common.yaml" command="load" ns="global_costmap" /> 
       <rosparam file="$(find rover)/rover/simulation/config/costmap_common.yaml" command="load" ns="local_costmap" />
       <rosparam file="$(find rover)/rover/simulation/config/local_costmap.yaml" command="load" ns="local_costmap"/>
       <rosparam file="$(find rover)/rover/simulation/config/global_costmap.yaml" command="load" ns="global_costmap" unless="$(arg no_static_map)"/> 
-      <rosparam file="$(find rover)/rover/simulation/config/move_base.yaml" command="load" />
+      <rosparam file="$(find rover)/rover/simulation/config/move_base_mbf.yaml" command="load" />
       
-      <param name="base_global_planner" value="navfn/NavfnROS" />
+      <!-- <param name="base_global_planner" value="navfn/NavfnROS" />
       <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
 
       <param name="controller_frequency" value="5.0" />
-      <param name="controller_patience" value="15.0" />
+      <param name="controller_patience" value="15.0" /> -->
 
       <remap from="cmd_vel" to="$(arg command_velocity_topic)" />
       <remap from="odom" to="$(arg odom_topic)" />
