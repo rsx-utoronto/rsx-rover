@@ -68,7 +68,9 @@ class image_converter:
         tfBuffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tfBuffer)
         try:
-            trans = tfBuffer.lookup_transform('odom', 'base_link', rospy.Time(0))
+            tfBuffer.waitForTransform('laser_odom', 'base_link', rospy.Time(0), rospy.Duration(4))
+            trans = tfBuffer.lookup_transform('laser_odom', 'base_link', rospy.Time(0))
+            
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             return None
         return trans
@@ -118,6 +120,7 @@ class image_converter:
         set_dist = 5
         maxLoc_base_link = np.array([x, y, z]) + maxLoc_base_link
         if self.tf_baselink_to_odom() is not None:
+            rospy.loginfo("odom tf")
             trans = self.tf_baselink_to_odom()
             odom_x = trans.transform.translation.x + maxLoc_base_link[0] + set_dist
             odom_y = trans.transform.translation.y + maxLoc_base_link[1] + set_dist
@@ -217,8 +220,10 @@ class CircleService():
         self.detect_pub = rospy.Publisher("/beacon_detected", Bool, queue_size=1)
         self.rate = rospy.Rate(1)
         self.odom_sub = rospy.Subscriber("/aft_mapped_to_init", Odometry, self.odom_callback)
-        rospy.loginfo("Service /rotate_rover Ready")
-        self.my_service = rospy.Service('/rotate_rover', Empty, self.callback)
+        rospy.loginfo("Service /light_beacon_rotate Ready")
+        self.my_service = rospy.Service('/light_beacon_rotate', Empty, self.callback)
+        ic = image_converter()
+
         rospy.spin() # maintain the service open.
 
     def odom_callback(self, msg):
