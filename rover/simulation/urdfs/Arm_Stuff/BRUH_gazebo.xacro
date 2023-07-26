@@ -1,0 +1,278 @@
+<?xml version="1.0" ?>
+<robot name="BRUH" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<!-- <xacro:include filename="$(find rover)/urdf/materials.xacro" />
+<xacro:include filename="$(find rover)/urdf/BRUH.trans" />
+<xacro:include filename="$(find rover)/urdf/BRUH.gazebo" /> -->
+<link name="base_link">
+  <inertial>
+    <origin xyz="0.049999999999908465 0.03732491617294113 0.003125" rpy="0 0 0"/>
+    <mass value="0.3438852516301944"/>
+    <inertia ixx="0.000173" iyy="0.000307" izz="0.000477" ixy="0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LINK1_1">
+  <inertial>
+    <origin xyz="0.02500000000000001 -3.469446951953614e-17 0.18750000000000036" rpy="0 0 0"/>
+    <mass value="1.9066669876353899"/>
+    <inertia ixx="0.028446" iyy="0.028422" izz="0.00141" ixy="0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.025 -0.043125 -0.0875" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/LINK1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.025 -0.043125 -0.0875" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/LINK1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component3_1">
+  <inertial>
+    <origin xyz="0.03430362109974345 -0.04944582134444816 0.014912670037228792" rpy="0 0 0"/>
+    <mass value="0.4940349563853918"/>
+    <inertia ixx="0.000813" iyy="0.000699" izz="0.001065" ixy="2e-06" iyz="0.000148" ixz="-1e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.025 -0.043125 -0.4625" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/Component3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.025 -0.043125 -0.4625" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/Component3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component4_1">
+  <inertial>
+    <origin xyz="-7.868329075064878e-05 4.85722573273506e-17 0.19765089570473438" rpy="0 0 0"/>
+    <mass value="1.9294963540078034"/>
+    <inertia ixx="0.028758" iyy="0.028194" izz="0.002163" ixy="0.0" iyz="-0.0" ixz="-1.2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.059375 0.026425 -0.5075" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/Component4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.059375 0.026425 -0.5075" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/Component4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component5_1">
+  <inertial>
+    <origin xyz="-0.00732499999999995 0.029675000000000396 5.551115123125783e-16" rpy="0 0 0"/>
+    <mass value="0.6776848594164601"/>
+    <inertia ixx="0.00032" iyy="0.000352" izz="0.000352" ixy="-0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.0667 0.0561 -0.910625" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/Component5_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.0667 0.0561 -0.910625" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/Component5_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component6_1">
+  <inertial>
+    <origin xyz="0.002342295771168623 -0.0013510302871900769 0.10686648641093843" rpy="0 0 0"/>
+    <mass value="0.6213154428464627"/>
+    <inertia ixx="0.003333" iyy="0.003355" izz="0.000702" ixy="1.9e-05" iyz="7e-06" ixz="-1.3e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.059375 0.026425 -0.935625" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/Component6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.059375 0.026425 -0.935625" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/Component6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="turntable_1">
+  <inertial>
+    <origin xyz="-8.21703816100694e-14 -0.00019647994583754658 0.036488404975619185" rpy="0 0 0"/>
+    <mass value="0.3830463821666405"/>
+    <inertia ixx="0.000547" iyy="0.000653" izz="0.000329" ixy="0.0" iyz="3e-06" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.05 -0.04 -0.00625" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/turntable_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.05 -0.04 -0.00625" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/meshes/BRUH/turntable_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="Joint_1" type="continuous">
+  <origin xyz="0.05 0.04 0.00625" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="turntable_1"/>
+  <axis xyz="0.0 0.0 1.0"/>
+</joint>
+
+<joint name="Joint_2" type="continuous">
+  <origin xyz="-0.025 0.003125 0.08125" rpy="-1.57 0 0"/>
+  <parent link="turntable_1"/>
+  <child link="LINK1_1"/>
+  <axis xyz="1.0 0.0 -0.0"/>
+</joint>
+
+<joint name="Joint_3" type="continuous">
+  <origin xyz="0.0 0.0 0.375" rpy="0 0 0"/>
+  <parent link="LINK1_1"/>
+  <child link="Component3_1"/>
+  <axis xyz="1.0 -0.0 0.0"/>
+</joint>
+
+<joint name="Joint_4" type="continuous">
+  <origin xyz="0.034375 -0.06955 0.045" rpy="0 0 -1.57"/>
+  <parent link="Component3_1"/>
+  <child link="Component4_1"/>
+  <axis xyz="0.0 0.0 1.0"/>
+</joint>
+
+<joint name="Joint_5" type="continuous">
+  <origin xyz="0.007325 -0.029675 0.403125" rpy="0 0 0"/>
+  <parent link="Component4_1"/>
+  <child link="Component5_1"/>
+  <axis xyz="-0.0 1.0 -0.0"/>
+</joint>
+
+<joint name="Joint_6" type="continuous">
+  <origin xyz="-0.007325 0.029675 0.025" rpy="0 0 0"/>
+  <parent link="Component5_1"/>
+  <child link="Component6_1"/>
+  <axis xyz="-0.0 0.0 1.0"/>
+</joint>
+
+<!-- URDF Transmissions-->
+<transmission name="tran1">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_1">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor1">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran2">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_2">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor2">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran3">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_3">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor3">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran4">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_4">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor4">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran5">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_5">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor5">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran6">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_6">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor6">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<!-- Fix arm in place -->
+<link name="world"/>
+
+<joint name="fixed" type="fixed">
+  <parent link="world"/>
+  <child link="base_link"/>
+</joint>
+
+<!-- Gazebo Plugin -->
+<gazebo>
+  <plugin name ="gazebo_ros_control" filename="libgazebo_ros_control.so">
+    <robotNamespace>/arm</robotNamespace>
+  </plugin>
+</gazebo>
+
+</robot>
