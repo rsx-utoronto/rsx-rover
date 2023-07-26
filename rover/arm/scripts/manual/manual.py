@@ -52,7 +52,7 @@ class Manual():
 
         ## Constant Speed limits, values are chosen by trial and error #TODO
         self.SPEED_LIMIT         = [0.005, 0.003, 0.01, 0.075, 
-                                    0.075, 0.075, 0.075]
+                                    0.075, 0.075, 0.04]
 
         ## Variable for the status, start at idle
         self.status              = "Idle"

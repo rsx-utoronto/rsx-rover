@@ -142,7 +142,8 @@ def initialize_bus(channel= 'can0', interface= 'socketcan') -> None:
     global BUS
 
     # Initializing the global BUS
-    BUS = can.ThreadSafeBus(channel= channel, interface= interface, receive_own_messages= False)
+    #BUS = can.ThreadSafeBus(channel= channel, interface= interface, receive_own_messages= False)
+    BUS = can.Bus(channel= channel, interface= interface, receive_own_messages= False)
     print('BUS initialzed')
     return
 
@@ -279,9 +280,9 @@ def calc_differential(d_pos : float, d_angle : float) -> tuple:
     # 2:1 gear ratio (2 turns of small gear = 1 turn of big gear) (I think)
     # Motor movement required to produce d_angle
     gear_ratio = 2.0/1.0
-
-    d_angle_motor1 = d_angle * gear_ratio # assuming same gear ratios
-    d_angle_motor2 = -d_angle * gear_ratio
+    #print(d_angle)
+    d_angle_motor1 = d_angle * gear_ratio + d_pos # assuming same gear ratios
+    d_angle_motor2 = -d_angle * gear_ratio + d_pos
 
     # correction through the gripper motor to stop the gripper from opening and closing
     d_gripper_motor = -d_angle # rotate the nut in the opposite direction same amount (no gear ratios)
@@ -289,8 +290,10 @@ def calc_differential(d_pos : float, d_angle : float) -> tuple:
 
     # Motor movement required to produce d_pos
     # Moves the entire joint so gear ratio doesn't matter
-    d_angle_motor1 += d_pos
-    d_angle_motor2 += d_pos
+    # d_angle_motor1 = d_pos
+    # d_angle_motor2 = d_pos
+
+    #print(d_angle_motor1, d_angle_motor2)
 
     
     return d_angle_motor1, d_angle_motor2, d_gripper_motor
@@ -311,7 +314,7 @@ def generate_data_packet(data_list : list) -> list:
     # Angle conversion for differential system
     # Assuming the last two angles specify the angle of the differential system,
     # convert those two values to the required angles for motors 5 and 6
-    #data_list[-3], data_list[-2], correction = calc_differential(data_list[len(data_list)-2], data_list[len(data_list)-1])
+    wristmotor1_angle, wristmotor2_angle, correction = calc_differential(data_list[-3], data_list[-2])
     #data_list[-1] += correction # correction for roll
 
     # A variable to keep count of joint number
@@ -320,8 +323,16 @@ def generate_data_packet(data_list : list) -> list:
     # Sparkmax Data list
     spark_data = []
 
-    for angle in data_list:
+    for i in range(len(data_list)):
         joint_num += 1
+
+        if joint_num == 5:
+             angle = wristmotor1_angle
+             
+        elif joint_num == 6:
+             angle = wristmotor2_angle
+        else:
+             angle = data_list[i]
 
         # Converting the angle to spark data
         angle = angle/360 * REDUCTION[joint_num - 1]
