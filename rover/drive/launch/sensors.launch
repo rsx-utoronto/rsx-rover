@@ -5,7 +5,7 @@
     <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster" args="0 0 0 0.7071068, 0, 0, 0.7071068 base_link gps_link 100" />
 
     <!-- Launch GPS and IMU drivers-->
-    <node pkg="inertial_sense_ros" type="inertial_sense_node" name="imu_ins_node" respawn="false">
+    <!-- <node pkg="inertial_sense_ros" type="inertial_sense_node" name="imu_ins_node" respawn="false">
         <arg name="frame_id" value="imu_link"/>
         <arg name="stream_odom_ins_enu" value="true"/>
         <arg name="stream_covariance" value="true"/>
@@ -14,7 +14,7 @@
         <arg name="stream_GPS1" value="true"/>
         <arg name="stream_NavSatFix" value="true"/>
         <arg name="publishTf" value="true"/>
-    </node>
+    </node> -->
 
     <!-- Launch Realsense driver -->
     <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
@@ -23,10 +23,10 @@
         <arg name="enable_infra2"  value="true"/>
         <arg name="depth_width"   value="640"/>
         <arg name="depth_height"  value="480"/> 
-        <arg name="depth_fps"    value="30"/>       
+        <arg name="depth_fps"    value="15"/>       
         <arg name="infra_width"   value="640"/>
         <arg name="infra_height"  value="480"/>
-        <arg name="infra_fps"    value="30"/>
+        <arg name="infra_fps"    value="15"/>
         <arg name="infra_rgb"   value="false"/>
         <arg name="enable_sync" value="true"/>
         <arg name="align_depth" value="true"/>
@@ -35,11 +35,11 @@
         <arg name="unite_imu_method" value="true"/> 
     </include>
 
-    <!-- Launch Ouster lidar driver -->
+    <!-- Launch Ouster lidar driver
     <include file="$(find ouster_ros)/launch/sensor.launch">
         <arg name="sensor_hostname" value="os-992120000585.local" />
         <arg name="metadata" value="meta.json" />
         <arg name="lidar_mode" value="1024x20" />
         <arg name="viz" value="false"/>
-    </include>
+    </include> -->
 </launch>
