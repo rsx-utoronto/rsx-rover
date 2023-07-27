@@ -266,7 +266,7 @@ def read_can_message(data, api, motor_num : int = 0) -> float:
 
 
 # NEEDS CALIBRATION
-def calc_differential(d_pos : float, d_angle : float) -> tuple:
+def calc_differential(d_angle : float, d_pos : float) -> tuple:
     """
     (float), (float) --> tuple(float)
 
@@ -282,7 +282,7 @@ def calc_differential(d_pos : float, d_angle : float) -> tuple:
     gear_ratio = 2.0/1.0
     #print(d_angle)
     d_angle_motor1 = d_angle * gear_ratio + d_pos # assuming same gear ratios
-    d_angle_motor2 = -d_angle * gear_ratio + d_pos
+    d_angle_motor2 = d_angle * gear_ratio - d_pos
 
     # correction through the gripper motor to stop the gripper from opening and closing
     d_gripper_motor = -d_angle # rotate the nut in the opposite direction same amount (no gear ratios)
@@ -328,7 +328,7 @@ def generate_data_packet(data_list : list) -> list:
 
         if joint_num == 5:
              angle = wristmotor1_angle
-             
+
         elif joint_num == 6:
              angle = wristmotor2_angle
         else:
