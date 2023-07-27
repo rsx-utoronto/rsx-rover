@@ -9,54 +9,55 @@ import struct
 global BUS
 
 # CANSpark APIs
-CMD_API_SETPNT_SET = 0x001
-CMD_API_DC_SET = 0x002
-CMD_API_SPD_SET = 0x012
-CMD_API_SMART_VEL_SET = 0x013
-CMD_API_POS_SET = 0x032
-CMD_API_VOLT_SET = 0x042 
-CMD_API_CURRENT_SET = 0x043
+CMD_API_SETPNT_SET      = 0x001
+CMD_API_DC_SET          = 0x002
+CMD_API_SPD_SET         = 0x012
+CMD_API_SMART_VEL_SET   = 0x013
+CMD_API_POS_SET         = 0x032
+CMD_API_VOLT_SET        = 0x042 
+CMD_API_CURRENT_SET     = 0x043
 CMD_API_SMARTMOTION_SET = 0x052
-CMD_API_STAT0 = 0x060
-CMD_API_STAT1 = 0x061
-CMD_API_STAT2 = 0x062
-CMD_API_STAT3 = 0x063
-CMD_API_STAT4 = 0x064
-CMD_API_STAT5 = 0x065
-CMD_API_STAT6 = 0x066
-CMD_API_CLEAR_FAULTS = 0x06E
-CMD_API_DRV_STAT = 0x06A
-CMD_API_BURN_FLASH = 0x072
-CMD_API_SET_FOLLOWER = 0x073
+CMD_API_STAT0           = 0x060
+CMD_API_STAT1           = 0x061
+CMD_API_STAT2           = 0x062
+CMD_API_STAT3           = 0x063
+CMD_API_STAT4           = 0x064
+CMD_API_STAT5           = 0x065
+CMD_API_STAT6           = 0x066
+CMD_API_CLEAR_FAULTS    = 0x06E
+CMD_API_DRV_STAT        = 0x06A
+CMD_API_BURN_FLASH      = 0x072
+CMD_API_SET_FOLLOWER    = 0x073
 CMD_API_FACTORY_DEFAULT = 0x074
-CMD_API_FACTORY_RESET = 0x075
-CMD_API_IDENTIFY = 0x076
-CMD_API_NACK = 0x080
-CMD_API_ACK = 0x081
-CMD_API_BROADCAST = 0x090
-CMD_API_HEARTBEAT = 0x092
-CMD_API_SYNC = 0x093
-CMD_API_ID_QUERY = 0x094
-CMD_API_ID_ASSIGN = 0x095
-CMD_API_FIRMWARE = 0x098
-CMD_API_ENUM = 0x099
-CMD_API_LOCK = 0x09B
-CMD_API_LOCKB = 0x0B1
-CMD_API_NONRIO_HB = 0x0B2
+CMD_API_FACTORY_RESET   = 0x075
+CMD_API_IDENTIFY        = 0x076
+CMD_API_NACK            = 0x080
+CMD_API_ACK             = 0x081
+CMD_API_BROADCAST       = 0x090
+CMD_API_HEARTBEAT       = 0x092
+CMD_API_SYNC            = 0x093
+CMD_API_ID_QUERY        = 0x094
+CMD_API_ID_ASSIGN       = 0x095
+CMD_API_FIRMWARE        = 0x098
+CMD_API_ENUM            = 0x099
+CMD_API_LOCK            = 0x09B
+CMD_API_LOCKB           = 0x0B1
+CMD_API_NONRIO_HB       = 0x0B2
 
 CMD_API_SWDL_BOOTLOADER = 0x1FF
-CMD_API_SWDL_DATA = 0x09C
-CMD_API_SWDL_CHKSUM = 0x09D
+CMD_API_SWDL_DATA       = 0x09C
+CMD_API_SWDL_CHKSUM     = 0x09D
 CMD_API_SWDL_RETRANSMIT = 0x09E
 
-CMD_API_MECH_POS = 0x0A0
-CMD_API_I_ACCUM = 0x0A2
-CMD_API_ANALOG_POS = 0x0A3
-CMD_API_ALT_ENC_POS = 0x0A4
-CMD_API_PARAM_ACCESS = 0x300
+CMD_API_MECH_POS        = 0x0A0
+CMD_API_I_ACCUM         = 0x0A2
+CMD_API_ANALOG_POS      = 0x0A3
+CMD_API_ALT_ENC_POS     = 0x0A4
+CMD_API_PARAM_ACCESS    = 0x300
 
-# REDUCTION is used by CAN Node only as a global constant
-REDUCTION = [120, 160, 120, 20, 20, 20, 40]
+# REDUCTION Ratios
+REDUCTION               = [120, 160, 120, 20, 20, 20, 40]
+WRIST_RATIO             = 2
 
 ########## SHARED FUNCTIONS ##########
 
@@ -211,12 +212,13 @@ def read_can_message(data, api, motor_num : int = 0) -> float:
         # API: Status Message 1 - Gives us information on limit switches
         if api == CMD_API_STAT0:
             # 132 for forward and 68 for reverse
-            ls_bools = data[3] & 0xC0
+            limitswitch_pressed = data[3] & 0xC0
 
-            # Return 1 if no limit switches are pressed
-            if ls_bools > 0:
+            # Return 1 if limit switches are pressed
+            if limitswitch_pressed > 0:
                 return 1
-            # Return 0 if either forward or reverse limit switches are pressed
+            
+            # Return 0 if no limit switches are pressed
             else:
                 return 0
 
@@ -266,37 +268,28 @@ def read_can_message(data, api, motor_num : int = 0) -> float:
 
 
 # NEEDS CALIBRATION
-def calc_differential(d_angle : float, d_pos : float) -> tuple:
+def calc_differential(roll : float, pitch : float) -> tuple:
     """
-    (float), (float) --> tuple(float)
+    (float, (float) --> tuple(float)
 
-    Given how much you want the arm(gear?)(joint?) to rotate about it's axis (d_angle) and
-    rotate as a big lever (d_pos), returns how much each of the two motors need to rotate
+    Calculates the motor angle (in degrees) for wrist motors based on the provided roll and
+    pitch angles (in degrees)
 
-    DIRECTION NEEDS TO BE CALIBRATED BASED ON MOTOR POSITIONS AND REFERENCE COORDINATES
+    @parameters
+
+    roll (float): roll angle for the gripper (in degrees)
+    pitch (float): pitch angle for the gripper (in degrees)
     """
 
-
-    # 2:1 gear ratio (2 turns of small gear = 1 turn of big gear) (I think)
-    # Motor movement required to produce d_angle
-    gear_ratio = 2.0/1.0
-    #print(d_angle)
-    d_angle_motor1 = d_angle * gear_ratio + d_pos # assuming same gear ratios
-    d_angle_motor2 = d_angle * gear_ratio - d_pos
+    # Motor movement required to produce roll
+    wrist_motor1 = roll * WRIST_RATIO + pitch
+    wrist_motor2 = roll * WRIST_RATIO - pitch
 
     # correction through the gripper motor to stop the gripper from opening and closing
-    d_gripper_motor = -d_angle # rotate the nut in the opposite direction same amount (no gear ratios)
+    gripper_correction = -roll # rotate the nut in the opposite direction same amount (no gear ratios)
 
-
-    # Motor movement required to produce d_pos
-    # Moves the entire joint so gear ratio doesn't matter
-    # d_angle_motor1 = d_pos
-    # d_angle_motor2 = d_pos
-
-    #print(d_angle_motor1, d_angle_motor2)
-
-    
-    return d_angle_motor1, d_angle_motor2, d_gripper_motor
+    #print(roll_motor1, roll_motor2)
+    return wrist_motor1, wrist_motor2, gripper_correction
 
 
 def generate_data_packet(data_list : list) -> list:
@@ -314,28 +307,31 @@ def generate_data_packet(data_list : list) -> list:
     # Angle conversion for differential system
     # Assuming the last two angles specify the angle of the differential system,
     # convert those two values to the required angles for motors 5 and 6
-    wristmotor1_angle, wristmotor2_angle, correction = calc_differential(data_list[-3], data_list[-2])
-    #data_list[-1] += correction # correction for roll
-
-    # A variable to keep count of joint number
-    joint_num = 0
+    wrist_motor1, wrist_motor2, gripper_correction = calc_differential(data_list[-3], data_list[-2])
     
     # Sparkmax Data list
     spark_data = []
 
     for i in range(len(data_list)):
-        joint_num += 1
 
-        if joint_num == 5:
-             angle = wristmotor1_angle
+        # Specific angle for wrist motor 1
+        if i + 1 == 5:
+             angle = wrist_motor1
 
-        elif joint_num == 6:
-             angle = wristmotor2_angle
+        # Specific angle for wrist motor 2
+        elif i + 1 == 6:
+             angle = wrist_motor2
+
+        # Specific angle for gripper
+        elif i + 1 == 7:
+             angle = data_list[i] + gripper_correction
+
+        # For any other motor
         else:
              angle = data_list[i]
 
         # Converting the angle to spark data
-        angle = angle/360 * REDUCTION[joint_num - 1]
+        angle = angle/360 * REDUCTION[i]
         spark_data.append(pos_to_sparkdata(angle))
 
     return spark_data

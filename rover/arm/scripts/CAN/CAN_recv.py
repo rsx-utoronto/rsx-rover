@@ -81,6 +81,14 @@ class CAN_Recv():
             # Update the CURR_POS data
             self.CURR_POS[index]     = read_can_message(msg.data, CMD_API_STAT2, index)
 
+            # Check if we updated wrist motors and apply the conversions
+            if index == 4 or index == 5:
+                roll_angle       = self.CURR_POS[4]
+                pitch_angle      = self.CURR_POS[5]
+                self.CURR_POS[4] = (roll_angle + pitch_angle) / (2 * WRIST_RATIO)
+                self.CURR_POS[5] = (roll_angle - pitch_angle) / 2
+
+
 
     def read_msgs(self):
         # Set publishing rate to 10hz
@@ -115,6 +123,9 @@ class CAN_Recv():
 
             # Control rate
             #rate.sleep()
+        
+        # Stop the heartbeat when ROS is killed
+        task.stop()
 
 
 if __name__=="__main__":
