@@ -29,6 +29,7 @@ class StateMachineNode:
         self.rover_manual = self.RoverManual()
         self.rover_initialize = self.RoverInitialize()
         self.rover_traverse = self.RoverTraverse()
+        self.rover_gps_checkpoint = self.RoverGPSCheckpoint()
         self.rover_scan = self.RoverScan()
         self.rover_transition = self.RoverTransition()
 
@@ -65,7 +66,7 @@ class StateMachineNode:
         elif goal_type == "radio_beacon":
             # Convert to a goal in metres in the odom frame
             self.state_msg_raw.RADIO_BEACON_DETECTED = True
-            goal = convertGPSToOdom(goal_coords)
+            goal = get_gps.convertGPSToOdom(goal_coords)
             if goal == False: 
                 return "Invalid coordinate format provided"
         
@@ -80,7 +81,7 @@ class StateMachineNode:
         elif goal_type == "sign":
             
             self.state_msg_raw.SIGN_DETECTED = True
-            goal = convertSignToOdom(goal_coords)
+            goal = get_gps.convertSignToOdom(goal_coords)
             if goal == False: 
                 return "Invalid coordinate format provided"
         
@@ -100,7 +101,7 @@ class StateMachineNode:
     class RoverIdle(smach.State):
 
         def __init__(self):
-            smach.State.__init__(self, outcomes=["MOVE_TO_MANUAL","MOVE_TO_INTIALIZE", "STAY"])
+            smach.State.__init__(self, outcomes=["MOVE_TO_MANUAL","MOVE_TO_INITIALIZE", "STAY"])
 
         def execute(self, userdata):
             rospy.loginfo('Executing state IDLE')
@@ -116,7 +117,7 @@ class StateMachineNode:
     class RoverManual(smach.State):
 
         def __init__(self):
-            smach.State.__init__(self, outcomes=['MOVE_TO_IDLE', 'MOVE_TO_INTIALIZE', 'STAY'])
+            smach.State.__init__(self, outcomes=['MOVE_TO_IDLE', 'MOVE_TO_INITIALIZE', 'STAY'])
             self.counter = 0
 
         def execute(self, userdata):
@@ -158,12 +159,15 @@ class StateMachineNode:
     class RoverTransition(smach.State):
 
         def __init__(self):
-            smach.State.__init__(self, outcomes=['ARUCO_FOUND','SEARCHING'])
+            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL', 'ARUCO_FOUND','SEARCHING'])
             self.counter = 0
             # Your state initialization goes here
 
         def execute(self, userdata):
             rospy.loginfo('Executing state RoverTransition')
+
+            if self.MODE == "MANUAL":
+                return "MOVE_TO_MANUAL"
             
             # Check if the expected number of GPS goals has been visited
             if userdata.GPS_counter == userdata.num_GPS_goals - 1: 
@@ -215,28 +219,34 @@ class StateMachineNode:
     class RoverGPSCheckpoint(smach.State):
 
         def __init__(self):
-            smach.State.__init__(self, outcomes=['outcome1','outcome2'])
+            smach.State.__init__(self, outcomes=['ARUCO_FOUND','SEARCHING'])
             self.counter = 0
             # Your state initialization goes here
 
         def execute(self, userdata):
-            rospy.loginfo('Executing state FOO')
+            rospy.loginfo('Executing state RoverGPSCheckpoint')
             # Your state execution goes here
-            if xxxx:
-                return 'outcome1'
-            else:
-                return 'outcome2'
+            if self.MODE == "MANUAL":
+                return "MOVE_TO_MANUAL"
+            
+            if self.ar_tag_detected == True:
+                return "ARUCO_FOUND"
+            
+            if self.ar_tag_detected == False:
+                return "SEARCHING"
         
     class RoverTransition(smach.State):
 
         def __init__(self):
-            smach.State.__init__(self, outcomes=['outcome1','outcome2'])
+            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL','MISSION_OVER', "MOVE_TO_TRAVERSE"])
             self.counter = 0
             # Your state initialization goes here
 
         def execute(self, userdata):
             rospy.loginfo('Executing state RoverTransition')
             
+            if self.MODE == "MANUAL":
+                return "MOVE_TO_MANUAL"
             # Check if the expected number of GPS goals has been visited
             if userdata.GPS_counter == userdata.num_GPS_goals - 1: 
                 return "MISSION_OVER"
@@ -269,7 +279,6 @@ def main(args):
     rospy.init_node('rsx_rover_state_machine')
 
     state_machine_node = StateMachineNode(args.n)
-    rover_idle_state = state_machine_node.rover_idle()
 
     # Create a SMACH state machine
     sm = smach.StateMachine(outcomes=['MISSION_OVER', 'MISSION_ABORTED'])
@@ -277,27 +286,27 @@ def main(args):
     # Open the container
     with sm:
         # Add states to the container
-        smach.StateMachine.add('RoverIdle', rover_idle_state(),
+        smach.StateMachine.add('RoverIdle', state_machine_node.rover_idle,
                                transitions={'STAY': 'RoverIdle',
                                             'MOVE_TO_INITIALIZE' : 'RoverInitialize', 
                                             'MOVE_TO_MANUAL': 'RoverManual'})
-        smach.StateMachine.add('RoverManual', state_machine_node.rover_manual(),
+        smach.StateMachine.add('RoverManual', state_machine_node.rover_manual,
                                transitions={'STAY': 'RoverManual',
                                             'MOVE_TO_INITIALIZE' : 'RoverInitialize', 
                                             'MOVE_TO_IDLE' : 'RoverIdle'})
-        smach.StateMachine.add('RoverInitialize', state_machine_node.rover_initialize(), 
+        smach.StateMachine.add('RoverInitialize', state_machine_node.rover_initialize, 
                                transitions={'STAY' : 'RoverInitialize',
                                             'MOVE_TO_TRANSITION' : 'RoverTransition',
                                             'MOVE_TO_MANUAL': 'RoverManual'})
-        smach.StateMachine.add('RoverTraverse', state_machine_node.rover_gps_traverse(), 
+        smach.StateMachine.add('RoverTraverse', state_machine_node.rover_traverse, 
                                transitions={'GPS_GOAL_REACHED':'RoverGPSCheckpoint'})
-        smach.StateMachine.add('RoverGPSCheckpoint', state_machine_node.rover_gps_checkpoint(),
+        smach.StateMachine.add('RoverGPSCheckpoint', state_machine_node.rover_gps_checkpoint,
                                transitions={'ARUCO_FOUND':'RoverTransition', 
                                             'START_SEARCH':'RoverScan'})
-        smach.StateMachine.add('RoverScan', state_machine_node.rover_scan(),
+        smach.StateMachine.add('RoverScan', state_machine_node.rover_scan,
                                transitions={'ARUCO_FOUND':'RoverTraverse', 
                                             'SEARCHING': 'RoverScan'})
-        smach.StateMachine.add('RoverTransition', state_machine_node.rover_transition(),
+        smach.StateMachine.add('RoverTransition', state_machine_node.rover_transition,
                                transitions={'ARUCO_FOUND':'RoverTraverse', 
                                             'SEARCHING': 'RoverScan'})
 
@@ -313,5 +322,4 @@ if __name__ == '__main__':
     parser.add_argument("--n", '-num_gps_goals', metavar='n', default=7,
                          help='Input the number of GPS goals expected (in total)')
     args = parser.parse_args()
-    print(args)
     main(args)
