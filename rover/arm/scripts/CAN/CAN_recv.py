@@ -17,6 +17,7 @@ class CAN_Recv():
 
         # Attributes to hold data from publishers or to publish
         self.CURR_POS 			= [0, 0, 0, 0, 0, 0, 0]
+        self.CURR_ANGLE         = [0, 0, 0, 0, 0, 0, 0]
         self.MOTOR_CURR 		= [0, 0, 0, 0, 0, 0, 0]
         self.LIMIT_SWITCH 		= [0, 0, 0, 0, 0, 0, 0]
 
@@ -83,10 +84,13 @@ class CAN_Recv():
 
             # Check if we updated wrist motors and apply the conversions
             if index == 4 or index == 5:
-                roll_angle       = self.CURR_POS[4]
-                pitch_angle      = self.CURR_POS[5]
-                self.CURR_POS[4] = (roll_angle + pitch_angle) / (2 * WRIST_RATIO)
-                self.CURR_POS[5] = (roll_angle - pitch_angle) / 2
+                wrist1_angle       = self.CURR_POS[4]
+                wrist2_angle       = self.CURR_POS[5]
+                self.CURR_ANGLE[4] = (wrist1_angle + wrist2_angle) / (2 * WRIST_RATIO)
+                self.CURR_ANGLE[5] = (wrist1_angle - wrist2_angle) / 2
+            
+            else:
+                self.CURR_ANGLE[index] = self.CURR_POS[index]
 
 
 
@@ -98,27 +102,28 @@ class CAN_Recv():
         while not rospy.is_shutdown():
 
             # Read and process messages
-            msg                     = BUS.recv()
-            self.read_message_from_spark(msg= msg)
+            msg                     = BUS.recv(timeout= 1)
+            if msg:
+                self.read_message_from_spark(msg= msg)
 
-            # Publish most recent limit switch data
-            limit_switch_msg        = UInt8MultiArray()
-            limit_switch_msg.data   = self.LIMIT_SWITCH
-            self.LMS_pub.publish(limit_switch_msg)
+                # Publish most recent limit switch data
+                limit_switch_msg        = UInt8MultiArray()
+                limit_switch_msg.data   = self.LIMIT_SWITCH
+                self.LMS_pub.publish(limit_switch_msg)
 
-        
-
-            # Publish most recent motor current position data
-            MOTOR_CURR_msg          = Float32MultiArray()
-            MOTOR_CURR_msg.data     = self.MOTOR_CURR
-            self.Motor_pub.publish(MOTOR_CURR_msg)
             
-        
 
-            # Publish most recent current position data
-            curr_angles_msg         = Float32MultiArray() 
-            curr_angles_msg.data    = self.CURR_POS
-            self.Angles_pub.publish(curr_angles_msg)
+                # Publish most recent motor current position data
+                MOTOR_CURR_msg          = Float32MultiArray()
+                MOTOR_CURR_msg.data     = self.MOTOR_CURR
+                self.Motor_pub.publish(MOTOR_CURR_msg)
+                
+            
+
+                # Publish most recent current position data
+                curr_angles_msg         = Float32MultiArray() 
+                curr_angles_msg.data    = self.CURR_ANGLE
+                self.Angles_pub.publish(curr_angles_msg)
 
 
             # Control rate

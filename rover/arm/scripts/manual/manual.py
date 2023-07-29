@@ -62,7 +62,7 @@ class Manual():
         self.state               = rospy.Subscriber("arm_state", String, self.CallbackState)
         self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)
         self.err_offset          = rospy.Subscriber("arm_error_offset", Float32MultiArray, self.CallbackErrOffset)
-        self.goal                = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=0)
+        self.goal                = rospy.Publisher("arm_goal_pos", Float32MultiArray)
         #self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 0)
 
     def CallbackError (self, errors: UInt8MultiArray) -> None:
@@ -91,10 +91,10 @@ class Manual():
         """
 
         # Update offsets
-        self.err_offset         = offsets.data
-        #print("before and offset" ,self.goal_pos.data[2], self.err_offset[2])
-        self.goal_pos.data      = list(np.array(self.goal_pos.data) - np.array(self.err_offset))
-        #print("after" ,self.goal_pos.data[2])
+        self.error_offsets         = list(offsets.data)
+        # print("before and offset" ,self.goal_pos.data[6], self.error_offset[6])
+        self.goal_pos.data      = list(np.array(self.goal_pos.data) - np.array(self.error_offsets))
+        # print("after" ,self.goal_pos.data[6])
     
     def CallbackState (self, status: String) -> None:
         """
@@ -135,6 +135,9 @@ class Manual():
 
         # Print Statement for console view
         #print("State:", self.status)
+
+        # Apply amy offsets as necessary
+        #self.goal_pos.data      = list(np.array(self.goal_pos.data) - np.array(self.error_offsets))
         
         # Checking the state, only proceed if in manual
         if self.status == "Manual":

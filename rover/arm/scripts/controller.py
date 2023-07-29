@@ -4,7 +4,7 @@ import rospy
 from sensor_msgs.msg import Joy
 from std_msgs.msg import String, UInt8
 from rover.msg import ArmInputs
-import arm_servo
+#import arm_servo
 #from rover.srv import Corrections
 
 '''
@@ -67,7 +67,7 @@ class Controller():
         #     else:
         #         arm_servo.write_servo_low_angle()
         #         print("Servo going to 63 degrees configuration")
-        self.rate = rospy.Rate(2000)
+        self.rate = rospy.Rate(1000)
 
         triggered = 0
         while not rospy.is_shutdown():
@@ -81,16 +81,28 @@ class Controller():
                     print(self.values)
                     self.input_pub.publish(self.values)
             
-                # If square is pressed, flip the servo configuration
-                if self.servo and not triggered:
-                    arm_servo.write_servo_high_angle()
-                    print("Servo going to 84 degrees configuration")
-                    triggered = 1
+                ## If square is pressed, flip the servo configuration
 
-                elif not self.servo and triggered:
-                    arm_servo.write_servo_low_angle()
-                    print("Servo going to 63 degrees configuration")
-                    triggered = 0
+                # # Open the Arduino port
+                # arm_servo.open_arduino_port()
+
+                # # If Arduino port is properly opened, flip servo configurations
+                # if arm_servo.arduino_port:
+
+                #     if self.servo and not triggered:
+                #         arm_servo.write_servo_high_angle()
+                #         print("Servo going to 84 degrees configuration")
+                #         triggered = 1
+
+                #     elif not self.servo and triggered:
+                #         arm_servo.write_servo_low_angle()
+                #         print("Servo going to 63 degrees configuration")
+                #         triggered = 0
+                    
+                #     # Close the Arduino port since it was properly opened                    
+                #     arm_servo.close_arduino_port()
+                
+                # Control rate sleep
                 self.rate.sleep()
 
     def getROSJoy(self, joy_input : Joy) -> None:    
