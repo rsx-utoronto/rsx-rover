@@ -29,6 +29,7 @@ class Mode(Enum):
 
 BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SELECT", "START", "PLAY_STATION", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"]
 JOYSTICK_AXES_NAMES = ["L-Right", "L-Down", "L2", "R-Right", "R-Down", "R2"]
+LIMIT_SWITCH_ANGLES = [0, 0, 0, 0, 0, 0, 0]
 
 global gazebo_on
 global curArmAngles
@@ -504,8 +505,13 @@ def publishNewAngles(newJointAngles):
         an array of the new angles (7 elements)
 
     '''
+    global angleCorrections
+
     ikAngles = Float32MultiArray()
-    ikAngles.data = newJointAngles
+    adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
+    for i in range(7):
+        adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i]
+    ikAngles.data = adjustedAngles
     armAngles.publish(ikAngles)
 
 def updateDesiredArmSimulation(armAngles):
