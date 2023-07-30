@@ -373,6 +373,12 @@ def limitAngleSpeed(newArmAngles, curArmAngles):
 
     jointSpeeds = [0, 0, 0, 0, 0, 0, 0]
     angleDelta = list(np.subtract(np.array(newArmAngles), np.array(curArmAngles)))
+    slowedDownAngles = copy.deepcopy(newArmAngles)
+
+    for i in range(7):
+        if abs(angleDelta[i]) > jointSpeeds[i]:
+            # exit, which tells ik to half distance of delta vector and try again until all joints can move there within the time frame
+            pass
 
 
 def incrementTargetAngles(newArmAngles, curArmAngles):
