@@ -4,7 +4,7 @@ import rospy
 from sensor_msgs.msg import Joy
 from std_msgs.msg import String, UInt8
 from rover.msg import ArmInputs
-#import arm_servo
+import arm_servo
 #from rover.srv import Corrections
 
 '''
@@ -80,31 +80,42 @@ class Controller():
 
                 if (abs(self.values.l_horizontal) >= 0.05 or abs(self.values.l_vertical) >= 0.05 or 
                     abs(self.values.r_horizontal) >= 0.05 or abs(self.values.r_vertical) >= 0.05 or 
-                    (self.values.l1 - self.values.r1) or (self.values.l2 - self.values.r2) or 
-                    (self.values.x - self.values.o)):
+                    self.values.l1 or self.values.r1 or self.values.l2 or self.values.r2 or 
+                    self.values.x or self.values.o or self.values.triangle or self.values.share
+                    or self.values.options):
                     print(self.values)
                     self.input_pub.publish(self.values)
             
-                ## If square is pressed, flip the servo configuration
+                # If square is pressed, flip the servo configuration
+                if self.servo and not triggered:
 
-                # # Open the Arduino port
-                # arm_servo.open_arduino_port()
+                    # Open the Arduino port
+                    arm_servo.open_arduino_port()
 
-                # # If Arduino port is properly opened, flip servo configurations
-                # if arm_servo.arduino_port:
+                    # If Arduino port is properly opened, flip servo configurations
+                    if arm_servo.arduino_port:
 
-                #     if self.servo and not triggered:
-                #         arm_servo.write_servo_high_angle()
-                #         print("Servo going to 84 degrees configuration")
-                #         triggered = 1
+                        arm_servo.write_servo_high_angle()
+                        print("Servo going to 84 degrees configuration")
+                        triggered = 1
 
-                #     elif not self.servo and triggered:
-                #         arm_servo.write_servo_low_angle()
-                #         print("Servo going to 63 degrees configuration")
-                #         triggered = 0
-                    
-                #     # Close the Arduino port since it was properly opened                    
-                #     arm_servo.close_arduino_port()
+                        # Close the Arduino port since it was properly opened                    
+                        arm_servo.close_arduino_port()
+
+                elif not self.servo and triggered:
+
+                    # Open the Arduino port
+                    arm_servo.open_arduino_port()
+
+                    # If Arduino port is properly opened, flip servo configurations
+                    if arm_servo.arduino_port:
+
+                        arm_servo.write_servo_low_angle()
+                        print("Servo going to 63 degrees configuration")
+                        triggered = 0
+                
+                        # Close the Arduino port since it was properly opened                    
+                        arm_servo.close_arduino_port()
                 
                 # Control rate sleep
                 self.rate.sleep()
@@ -165,6 +176,8 @@ class Controller():
         self.values.r2              = -0.5 * rawAxes[5] + 0.5
         self.values.x               = rawButtons[0]
         self.values.o               = rawButtons[1]
+        self.values.share           = rawButtons[8]
+        self.values.options         = rawButtons[9]
 
         # Check if analog sticks are not moving and triggers are not pressed 
         # and any other buttons are not pressed. If any of them is false, then do not
@@ -200,6 +213,7 @@ class Controller():
 
             # Set the state to "Idle"
             self.state      = "Idle"
+
         # If PS button is pressed and killswitch was already activated, deactivate it
         elif rawButtons [10] == 1 and self.killswitch == 1:
             self.killswitch = 0
