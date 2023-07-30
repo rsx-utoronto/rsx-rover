@@ -192,32 +192,31 @@ class Safety_Node():
         final_pos (list(float)): POS values to be checked and published if safe
         """
 
-        # Check if we are in IK state
-        if self.STATE == "IK":
+        # # Check if we are in IK state
+        # if self.STATE == "IK":
 
-            # Speed Limits
-            SPEED_LIMIT = [0.005, 0.003, 0.01, 0.075, 
-                                    0.075, 0.075, 0.075]
+        #     # Speed Limits
+        #     SPEED_LIMIT = [0.005, 0.003, 0.01, 0.075, 
+        #                             0.075, 0.075, 0.075]
 
-            # Update the final pos according to direction we are going in
-            direction = [1, 1, 1, 1, 1, 1, 1]
+        #     # Update the final pos according to direction we are going in
+        #     direction = [1, 1, 1, 1, 1, 1, 1]
 
-            for i in range(len(self.GOAL_POS)):
-                direction[i] = sign(self.GOAL_POS[i] - self.CURR_POS[i])
+        #     for i in range(len(self.GOAL_POS)):
+        #         direction[i] = sign(self.GOAL_POS[i] - self.CURR_POS[i])
             
-            final_pos = list(np.array(self.CURR_POS) + np.array(direction) * np.array(SPEED_LIMIT))
+        #     final_pos = list(np.array(self.CURR_POS) + np.array(direction) * np.array(SPEED_LIMIT))
             
-            # Do position check on this final_pos as well as all the other checks
-            self.postion_check(pos= final_pos)
-            self.current_check(pos= final_pos)
-            self.limitSwitch_check(pos= final_pos)
+        #     # Do position check on this final_pos as well as all the other checks
+        #     self.postion_check(pos= final_pos)
+        #     self.current_check(pos= final_pos)
+        #     self.limitSwitch_check(pos= final_pos)
         
-        elif self.STATE == "Manual":
+        if self.STATE == "Manual" or self.STATE == "IK":
             
             # Check if the goal position is safe 
             #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
             self.postion_check()
-
             self.current_check()
             self.limitSwitch_check()
             #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
@@ -228,7 +227,7 @@ class Safety_Node():
         # Publish the errors
         self.Error_pub.publish(self.ERRORS)
 
-        print("goal: {}, error: {}".format(final_pos[1], self.ERRORS.data[1]))
+        print("goal: {}, error: {}".format(final_pos, self.ERRORS.data))
 
         # Check if there are any errors
         if self.ERRORS.data.count(Errors.ERROR_NONE.value) == len(self.ERRORS.data):
@@ -246,9 +245,9 @@ class Safety_Node():
             #pass
             #self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
         
-        # Repeat the function if needed in 'IK' mode
-        if self.STATE == "IK" and max(abs(np.array(self.GOAL_POS) - np.array(self.CURR_POS))):
-            self.update_safe_goal_pos(self.GOAL_POS)
+        # # Repeat the function if needed in 'IK' mode
+        # if self.STATE == "IK" and max(abs(np.array(self.GOAL_POS) - np.array(self.CURR_POS))):
+        #     self.update_safe_goal_pos(self.GOAL_POS)
     
     def postion_check(self, pos : list = None) -> None:
         '''
