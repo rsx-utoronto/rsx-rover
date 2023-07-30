@@ -129,9 +129,9 @@ class Manual():
         self.controller_input[1] = inputs.l_vertical
         self.controller_input[2] = inputs.r_vertical
         self.controller_input[3] = inputs.r_horizontal
-        self.controller_input[4] = inputs.l1r1
-        self.controller_input[5] = inputs.l2r2
-        self.controller_input[6] = inputs.xo
+        self.controller_input[4] = inputs.l1 - inputs.r1
+        self.controller_input[5] = inputs.l2 - inputs.r2
+        self.controller_input[6] = inputs.x - inputs.o
 
         # Print Statement for console view
         #print("State:", self.status)

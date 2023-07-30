@@ -36,9 +36,12 @@ class Controller():
         self.values.l_vertical   = 0
         self.values.r_horizontal = 0
         self.values.r_vertical   = 0
-        self.values.l1r1         = 0
-        self.values.l2r2         = 0
-        self.values.xo           = 0
+        self.values.l1           = 0
+        self.values.r1           = 0
+        self.values.l2           = 0
+        self.values.r2           = 0
+        self.values.x            = 0
+        self.values.o            = 0
 
         ## Attribute to store servo state
         # state -> angle:
@@ -77,7 +80,8 @@ class Controller():
 
                 if (abs(self.values.l_horizontal) >= 0.05 or abs(self.values.l_vertical) >= 0.05 or 
                     abs(self.values.r_horizontal) >= 0.05 or abs(self.values.r_vertical) >= 0.05 or 
-                    self.values.l1r1 or self.values.l2r2 or self.values.xo):
+                    (self.values.l1 - self.values.r1) or (self.values.l2 - self.values.r2) or 
+                    (self.values.x - self.values.o)):
                     print(self.values)
                     self.input_pub.publish(self.values)
             
@@ -155,9 +159,12 @@ class Controller():
         self.values.l_vertical      = rawAxes[1]
         self.values.r_horizontal    = rawAxes[3]
         self.values.r_vertical      = rawAxes[4]
-        self.values.l1r1            = rawButtons[4] - rawButtons[5]
-        self.values.l2r2            = -0.5*(rawAxes[2] - rawAxes[5])
-        self.values.xo              = rawButtons[0] - rawButtons[1]
+        self.values.l1              = rawButtons[4]
+        self.values.r1              = rawButtons[5]
+        self.values.l2              = -0.5 * rawAxes[2] + 0.5
+        self.values.r2              = -0.5 * rawAxes[5] + 0.5
+        self.values.x               = rawButtons[0]
+        self.values.o               = rawButtons[1]
 
         # Check if analog sticks are not moving and triggers are not pressed 
         # and any other buttons are not pressed. If any of them is false, then do not
@@ -181,6 +188,10 @@ class Controller():
         # If square is pressed, flip the servo configuration
         if rawButtons[3] == 1:
             self.servo = not self.servo
+
+        # If triangle is pressed, change IK state if in overall state is IK
+        if rawButtons[2] == 1 and self.state == "IK":
+            self.values.triangle = 1
 
         # If PS button is pressed and killswitch was not activated, activate killswitch
         if rawButtons[10] == 1 and self.killswitch == 0:
