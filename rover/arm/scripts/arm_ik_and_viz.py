@@ -364,6 +364,37 @@ def controlGripperAngle(isButtonPressed, curArmAngles):
 
     return gripperAngle
 
+def limitAngleSpeed(newArmAngles, curArmAngles):
+    ''' Limits the rate at which the end effector targert changes
+
+    Helps arm joints move in sync (ish)
+
+    '''
+
+    jointSpeeds = [0, 0, 0, 0, 0, 0, 0]
+    angleDelta = list(np.subtract(np.array(newArmAngles), np.array(curArmAngles)))
+    slowedDownAngles = copy.deepcopy(newArmAngles)
+
+    for i in range(7):
+        if abs(angleDelta[i]) > jointSpeeds[i]:
+            # exit, which tells ik to half distance of delta vector and try again until all joints can move there within the time frame
+            pass
+
+
+def incrementTargetAngles(newArmAngles, curArmAngles):
+    ''' Increments the current angle to the desired angle
+    
+    '''
+    jointSpeeds = [0, 0, 0, 0, 0, 0, 0]
+    angleDelta = list(np.subtract(np.array(newArmAngles), np.array(curArmAngles)))
+    slowedDownAngles = copy.deepcopy(newArmAngles)
+
+    for i in range(7):
+        if abs(angleDelta[i]) > jointSpeeds[i]:
+            slowedDownAngles[i] = curArmAngles[i] + jointSpeeds[i]
+
+    return slowedDownAngles
+
 # ROS Stuff
 
 def savePosition(posName):
@@ -549,8 +580,8 @@ def updateLiveArmSimulation(data):
     '''
     global liveArmAngles
 
-    liveArmAngles = data.data
-    tempAngles = data.data
+    liveArmAngles = list(data.data)
+    tempAngles = list(data.data)
     tempAngles.append(tempAngles[6]) # make gripper angles equal
     tempAngles.append(tempAngles[6]) # make gripper angles equal
 
@@ -651,6 +682,8 @@ def main():
             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
             targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
 
+            
+
             # publish on different threads to speed up processing time
             pubThreadPool.submit(publishNewAngles, targetAngles)
             pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
@@ -686,6 +719,7 @@ def main():
 
         pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
         pubThreadPool.submit(updateDesiredArmSimulation, curArmAngles)
+
 # Main Area
 
 if __name__ == "__main__":
@@ -706,12 +740,12 @@ if __name__ == "__main__":
         scriptMode = Mode.GLOBAL_IK
         print(scriptMode.name)
 
-        rospy.init_node("arm_master_control")
+        rospy.init_node("arm_ik_and_viz")
         gazebo_on = rospy.get_param("/gazebo_on")
         rate = rospy.Rate(10) # run at 10Hz
 
         armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
-        rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
+        rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateLiveArmSimulation)
 
         if gazebo_on:
             gazeboPublisher = sim.startGazeboJointControllers(9)
