@@ -24,8 +24,8 @@ def newOdom(msg):
 
 rospy.init_node("speed_controller")
 
-sub = rospy.Subscriber("/odom/ekf/enc_imu", Odometry, newOdom)
-pub = rospy.Publisher("/drive", Twist, queue_size = 1)
+sub = rospy.Subscriber("/robot_base_velocity_controller/odom", Odometry, newOdom)
+pub = rospy.Publisher("/robot_base_velocity_controller/cmd_vel", Twist, queue_size = 1)
 pub_error = rospy.Publisher("/robot_base_velocity_controller/error", Float32, queue_size = 1)
 
 speed = Twist()
@@ -33,8 +33,8 @@ speed = Twist()
 r = rospy.Rate(10)
 
 goal = Point()
-goal.x = 1
-goal.y = 2
+goal.x = 3
+goal.y = 5
 
 pos_integral = 0
 Kpp = 0.1
@@ -43,9 +43,9 @@ Kip = 0.001
 previous_pos_error = 0
 
 angle_integral = 0
-Kpa = 0.01
-Kda = 0.005
-Kia = 0.0001
+Kpa = 0.1
+Kda = 0.05
+Kia = 0.001
 previous_angle_error = 0
 
 
@@ -74,29 +74,35 @@ while not rospy.is_shutdown():
     previous_pos_error = pos_error
     previous_angle_error = angle_error
 
-    if abs(angle_error) < 0.5:
-        if pos_error < 0.4:
-            if abs(angle_error) < 0.1: 
-                speed.angular.z = 0.0
-            else: 
-                speed.angular.z = max(0.5, (angle_correction))
+    if abs(angle_error) < 0.1:
+        if pos_error <= 0.05:
             speed.linear.x = 0.0
+            pub.publish(speed)
+            if abs(angle_error) < 0.025: 
+                speed.angular.z = 0.0
+                pub.publish(speed)
+            else: 
+                speed.angular.z = (angle_correction)
+                pub.publish(speed)
+
+
             
             
         else:
-                    #if you have gone past: 
-        #1. make speed negative and oscillate 
-        #2. don't do pos_correction 
-
+            #if you have gone past: 
+            #1. make speed negative and oscillate 
+            #2. don't do pos_correction 
             speed.angular.z = 0.0
-            speed.linear.x = max(0.5, P*(0.02 + pos_correction))
+            speed.linear.x = P*(0.02 + pos_correction)
+            pub.publish(speed)
     else:
-
-        speed.angular.z = max(0.5, (0.2 + angle_correction))
+        speed.angular.z = angle_correction
         speed.linear.x = 0.0
+        pub.publish(speed)
+
     
     
     print("Speed: ", speed)
-    pub.publish(speed)
+    # pub.publish(speed)
     pub_error.publish(pos_error)
     r.sleep() 
