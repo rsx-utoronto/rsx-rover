@@ -737,7 +737,7 @@ if __name__ == "__main__":
     pubThreadPool = concurrent.futures.ThreadPoolExecutor(max_workers=2) # create thread pool with two threads
 
     try:
-        scriptMode = Mode.GLOBAL_IK
+        scriptMode = Mode.DEFAULT_IK
         print(scriptMode.name)
 
         rospy.init_node("arm_ik_and_viz")

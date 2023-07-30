@@ -6,8 +6,8 @@ import subprocess
 arduino_port = 0
 
 #angles to toggle
-angle_low = "63 "
-angle_high = "84 "
+angle_low = "0 "
+angle_high = "100 "
 
 def open_arduino_port():
     """
@@ -59,9 +59,10 @@ def write_servo_high_angle():
     (None) -> (None)
     Tell servo to go to high angle (angle_high)
     """
+    global arduino_port
 
     # Write servo value to Arduino port
-    arduino_port.write((str(angle_high)).encode('utf-8'))
+    arduino_port.write(angle_high.encode('utf-8'))
 
 
 def write_servo_low_angle():
@@ -69,9 +70,10 @@ def write_servo_low_angle():
     (None) -> (None)
     Tell servo to go to low angle (angle_low)
     """
+    global arduino_port
 
     # Write servo value to Arduino port
-    arduino_port.write((str(angle_low)).encode('utf-8'))
+    arduino_port.write(angle_low.encode('utf-8'))
 
 def set_permissions():
     """
@@ -88,6 +90,7 @@ def close_arduino_port():
     (None) -> (None)
     Closes arduino port 
     """
+    global arduino_port
 
     # Close the Arduino port and set arduino_port global back to 0
     arduino_port.close()

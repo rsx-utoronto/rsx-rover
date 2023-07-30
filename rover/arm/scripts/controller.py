@@ -96,7 +96,7 @@ class Controller():
                     if arm_servo.arduino_port:
 
                         arm_servo.write_servo_high_angle()
-                        print("Servo going to 84 degrees configuration")
+                        print("Servo going to "+ arm_servo.angle_high + "degrees configuration")
                         triggered = 1
 
                         # Close the Arduino port since it was properly opened                    
@@ -111,7 +111,7 @@ class Controller():
                     if arm_servo.arduino_port:
 
                         arm_servo.write_servo_low_angle()
-                        print("Servo going to 63 degrees configuration")
+                        print("Servo going to "+ arm_servo.angle_low + "degrees configuration")
                         triggered = 0
                 
                         # Close the Arduino port since it was properly opened                    
