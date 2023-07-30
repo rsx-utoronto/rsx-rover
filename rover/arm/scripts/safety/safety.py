@@ -96,7 +96,7 @@ class Safety_Node():
 
         # Update the state
         self.STATE = status.data
-
+        
         # If state is setup, do setup
         if self.STATE == 'Setup':
             self.setup()
@@ -138,8 +138,11 @@ class Safety_Node():
 
         # Store the received goal postion
         self.GOAL_POS = list(goal_data.data)
+
+        if self.STATE == 'IK':
+            self.GOAL_POS[1] *= -1
         # self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
-        print("Received inputs:", self.GOAL_POS[0])
+        #print("Received inputs:", self.GOAL_POS[0])
 
         # Update the SAFE_GOAL_POS and publish if the received position is safe
         self.update_safe_goal_pos(self.GOAL_POS)
@@ -188,7 +191,7 @@ class Safety_Node():
 
         final_pos (list(float)): POS values to be checked and published if safe
         """
-        
+
         # Check if we are in IK state
         if self.STATE == "IK":
 
@@ -202,14 +205,14 @@ class Safety_Node():
             for i in range(len(self.GOAL_POS)):
                 direction[i] = sign(self.GOAL_POS[i] - self.CURR_POS[i])
             
-            final_pos = list(np.array(final_pos) + np.array(direction) * np.array(SPEED_LIMIT))
-
+            final_pos = list(np.array(self.CURR_POS) + np.array(direction) * np.array(SPEED_LIMIT))
+            
             # Do position check on this final_pos as well as all the other checks
             self.postion_check(pos= final_pos)
             self.current_check(pos= final_pos)
             self.limitSwitch_check(pos= final_pos)
         
-        if self.STATE == "Manual":
+        elif self.STATE == "Manual":
             
             # Check if the goal position is safe 
             #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
@@ -219,10 +222,13 @@ class Safety_Node():
             self.limitSwitch_check()
             #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
 
+        else:
+            return
+
         # Publish the errors
         self.Error_pub.publish(self.ERRORS)
 
-        print("goal: {}, error: {}, offset: {}".format(self.GOAL_POS[0], self.ERRORS.data[0], self.ERROR_OFFSET.data[0]))
+        print("goal: {}, error: {}".format(final_pos[1], self.ERRORS.data[1]))
 
         # Check if there are any errors
         if self.ERRORS.data.count(Errors.ERROR_NONE.value) == len(self.ERRORS.data):

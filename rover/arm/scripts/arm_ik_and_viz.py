@@ -511,6 +511,7 @@ def publishNewAngles(newJointAngles):
     adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
     for i in range(7):
         adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i]
+        adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
     ikAngles.data = adjustedAngles
     armAngles.publish(ikAngles)
 
@@ -709,7 +710,7 @@ if __name__ == "__main__":
         gazebo_on = rospy.get_param("/gazebo_on")
         rate = rospy.Rate(10) # run at 10Hz
 
-        armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
+        armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
         rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
 
         if gazebo_on:

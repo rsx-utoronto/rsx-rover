@@ -286,7 +286,7 @@ def calc_differential(roll : float, pitch : float) -> tuple:
     wrist_motor2 = roll * WRIST_RATIO - pitch
 
     # correction through the gripper motor to stop the gripper from opening and closing
-    gripper_correction = -roll # rotate the nut in the opposite direction same amount (no gear ratios)
+    gripper_correction = roll # rotate the nut in the opposite direction same amount (no gear ratios)
 
     #print(roll_motor1, roll_motor2)
     return wrist_motor1, wrist_motor2, gripper_correction
@@ -325,7 +325,7 @@ def generate_data_packet(data_list : list) -> list:
         # Specific angle for gripper
         elif i + 1 == 7:
              angle = data_list[i] + gripper_correction
-
+             print(angle)
         # For any other motor
         else:
              angle = data_list[i]
