@@ -4,8 +4,10 @@
   <include
     file="$(find gazebo_ros)/launch/empty_world.launch" />
 
+    <!-- file="$(find gazebo_ros)/launch/atacama_desert.launch" />   -->
+
     <!-- file="$(find gazebo_ros)/launch/willowgarage_world.launch" /> -->
-    <!-- file="$(find gazebo_ros)/launch/atacama_desert.launch" /> -->  
+    
 
 
   <node

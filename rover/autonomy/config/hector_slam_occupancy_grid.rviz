@@ -91,27 +91,11 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        camera_aligned_depth_to_color_frame:
-          Value: true
-        camera_color_frame:
-          Value: true
-        camera_color_optical_frame:
-          Value: true
-        camera_depth_frame:
-          Value: true
-        camera_depth_optical_frame:
-          Value: true
-        camera_link:
-          Value: true
         map:
           Value: true
-        os_imu:
-          Value: true
-        os_lidar:
-          Value: true
-        os_sensor:
-          Value: true
         scanmatcher_frame:
+          Value: true
+        velodyne:
           Value: true
       Marker Alpha: 1
       Marker Scale: 1
@@ -120,22 +104,10 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        camera_link:
-          camera_aligned_depth_to_color_frame:
-            camera_color_optical_frame:
-              {}
-          camera_color_frame:
-            {}
-          camera_depth_frame:
-            camera_depth_optical_frame:
-              {}
         map:
-          os_sensor:
-            os_imu:
-              {}
-            os_lidar:
-              {}
           scanmatcher_frame:
+            {}
+          velodyne:
             {}
       Update Interval: 0
       Value: true
@@ -172,7 +144,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.009999999776482582
       Style: Flat Squares
-      Topic: /ouster/points
+      Topic: /velodyne_points
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -181,7 +153,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: os_sensor
+    Fixed Frame: velodyne
     Frame Rate: 30
   Name: root
   Tools:
@@ -205,7 +177,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 30.2310733795166
+      Distance: 26.872556686401367
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -213,17 +185,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
+        X: -0.737714946269989
+        Y: 1.7652418613433838
+        Z: -5.576674461364746
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.055401086807251
+      Pitch: 0.3354015350341797
       Target Frame: <Fixed Frame>
-      Yaw: 3.610426425933838
+      Yaw: 2.0054216384887695
     Saved: ~
 Window Geometry:
   Displays:

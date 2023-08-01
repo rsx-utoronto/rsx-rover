@@ -11,7 +11,7 @@
    <arg name="odom_topic" default="/robot_base_velocity_controller/odom" />
    <!-- <node pkg="tf" type="static_transform_publisher" name="base_link_to_map" args="0 0 0 0 0 0 map base_link 100" /> -->
 
-
+   <include file="$(find rover)/rover/simulation/launch/hector_slam_occupancy_grid_sim.launch" />
 
    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
       <rosparam file="$(find rover)/rover/simulation/config/costmap_common.yaml" command="load" ns="global_costmap" /> 
@@ -40,6 +40,7 @@
 
    <arg name="use_map_topic" default="true"/>
    <arg name="scan_topic" default="rrbot/laser/scan" />
+   <arg name="map_topic" default="map" />
 
 
    <node pkg="amcl" type="amcl" name="amcl">
@@ -52,6 +53,6 @@
 
 
 	  <!--  **************** Visualisation ****************  -->
-   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/simulation/config/move_base.rviz"/>
+   <node name="rviz_move_base" pkg="rviz" type="rviz" args="-d $(find rover)/rover/simulation/config/move_base.rviz"/>
 
 </launch> 

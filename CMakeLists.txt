@@ -12,6 +12,10 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_filters
+  message_generation
+  grid_map_core
+  grid_map_pcl
+  grid_map_ros
 )
 
 
@@ -60,18 +64,16 @@ add_definitions(${PCL_DEFINITIONS})
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES 
+  ArmInputs.msg
+)
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  Corrections.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -81,10 +83,10 @@ add_definitions(${PCL_DEFINITIONS})
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -118,7 +120,7 @@ add_definitions(${PCL_DEFINITIONS})
 catkin_package(
     #INCLUDE_DIRS include
     #LIBRARIES Rover
-    CATKIN_DEPENDS roscpp rospy std_msgs message_filters
+    CATKIN_DEPENDS roscpp rospy std_msgs message_filters message_runtime
     DEPENDS system_lib
 )
 
@@ -216,6 +218,12 @@ include_directories(
 
 add_executable(lidar_pcl_subscriber rover/autonomy/scripts/point_cloud_subscriber.cpp rover/autonomy/scripts/pcl_traversibility_score.cpp rover/autonomy/scripts/segment_pcl.cpp)
 target_link_libraries(lidar_pcl_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(pcd_writer_subscriber rover/autonomy/scripts/pcd_writer_node.cc)
+target_link_libraries(pcd_writer_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(grid_map_subscriber rover/autonomy/scripts/grid_map_node.cc)
+target_link_libraries(grid_map_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${G})
 
 catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
