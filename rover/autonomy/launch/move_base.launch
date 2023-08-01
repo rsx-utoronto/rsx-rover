@@ -6,13 +6,13 @@
 
    <arg name="no_static_map" default="false" />
    <arg name="command_velocity_topic" default="/drive" />
-   <arg name="odom_topic" default="/aft_mapped_to_int" />
+   <arg name="odom_topic" default="/aft_mapped_to_init" />
    <!-- <node pkg="tf" type="static_transform_publisher" name="base_link_to_map" args="0 0 0 0 0 0 map base_link 100" /> -->
 
-   <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+   <!-- <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
       <remap from="/ouster/points" to="cloud_in" />
       <remap from="/scan" to="scan" />
-   </node>
+   </node> -->
    <!-- <remap from="cloud_in" to="/ouster/points" /> -->
 
 
@@ -34,15 +34,16 @@
 
       <remap from="cmd_vel" to="$(arg command_velocity_topic)" />
       <remap from="odom" to="$(arg odom_topic)" />
+      <remap from="" to="$(arg odom_topic)" />
 
       <!-- <rosparam file="$(find rover)/rover/autonomy/config/costmap_converter.yaml" command="load" /> -->
    </node>
 
    <!--  ****** Maps *****  -->
   
-	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/white.yaml" output="screen">
+	<!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/white.yaml" output="screen">
                <param name="frame_id" value="map"/>
-	</node>
+	</node> -->
 
    <arg name="use_map_topic" default="true"/>
    <arg name="scan_topic" default="/scan" />

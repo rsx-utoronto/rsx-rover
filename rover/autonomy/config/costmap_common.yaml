@@ -18,7 +18,8 @@ static:
 
 obstacles_laser:
     observation_sources: point_cloud_sensor
-    point_cloud_sensor: {sensor_frame: lidar_link, data_type: PointCloud2, topic: /ouster/points, marking: true, clearing: true} # lidar topic
+    point_cloud_sensor: {sensor_frame: velodyne, data_type: PointCloud2, topic: /velodyne_points, marking: true, clearing: true} # lidar topic
+    laser_scan_sensor: {sensor_frame: velodyne, data_type: LaserScan, topic: /scan, marking: true, clearing: true} # scan topic
 
 inflation:
     inflation_radius: 1.0
