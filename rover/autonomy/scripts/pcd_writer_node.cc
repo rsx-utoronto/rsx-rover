@@ -16,9 +16,10 @@ int main(int argc, char** argv) {
     ros::init (argc, argv, "pcd_writer");
     ros::NodeHandle nh;
 
-    // ros::Subscriber sub = nh.subscribe("/velodyne_points", 1, cloud_cb);
+    ros::Subscriber sub = nh.subscribe("/velodyne_points", 1, cloud_cb);
+    // ros::Subscriber sub = nh.subscribe("/registered_cloud", 1, cloud_cb);
     // ros::Subscriber sub = nh.subscribe("/ouster/points", 1, cloud_cb);
-    ros::Subscriber sub = nh.subscribe("/recent_cloud", 1, cloud_cb);
+    // ros::Subscriber sub = nh.subscribe("/recent_cloud", 1, cloud_cb);
     
     ros::spin();
 
@@ -38,7 +39,8 @@ void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg) {
     // Measure time elapsed for conversion 
     auto start = std::chrono::high_resolution_clock::now();
 
-    pcl::io::savePCDFileASCII ("/home/arwin/rover_ws/src/rsx-rover/rover/autonomy/tests/pcd/test_pcd.pcd", *cloud);
+    // pcl::io::savePCDFileASCII ("/home/garvish/rsx_ws/src/rsx-rover/rover/autonomy/tests/pcd/test_pcd.pcd", *cloud);
+    pcl::io::savePCDFileASCII ("/home/garvish/rsx_ws/src/grid_map/grid_map_pcl/data/test_pcd2.pcd", *cloud);
 
     auto end = std::chrono::high_resolution_clock::now();
 

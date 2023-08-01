@@ -60,6 +60,6 @@
 
 
 	  <!--  **************** Visualisation ****************  -->
-   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/simulation/config/move_base.rviz"/>
+   <node name="rviz_move_base" pkg="rviz" type="rviz" args="-d $(find rover)/rover/simulation/config/move_base.rviz"/>
 
 </launch> 
