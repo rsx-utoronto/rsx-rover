@@ -13,7 +13,9 @@ import yaml
 import json
 
 class StateMachineNode:
-
+    """
+    Class for the RSX rover state machine
+    """
     def __init__(self, num_gps_goals):
 
         self.state_subscriber = rospy.Subscriber('/rover_state', StateMsg, self.state_callback)
@@ -34,6 +36,9 @@ class StateMachineNode:
         self.rover_transition = self.RoverTransition()
 
     def state_callback(self, state_msg):
+        """
+        Callback for "/rover_state" topic 
+        """
         self.state_msg_raw = state_msg
         self.GPS_GOAL_REACHED = state_msg.GPS_GOAL_REACHED
         self.MODE = state_msg.rover_mode
@@ -43,7 +48,9 @@ class StateMachineNode:
         self.MISSION_OVER = self.MISSION_OVER
     
     def handle_add_goal(self, req):
-
+        """
+        Handler for adding goals to the state machine
+        """
         goal_type = req.type 
         goal_coords = json.loads(req.coordinates)
         give_priority = req.give_priority # If True, cue this as the next goal
@@ -71,7 +78,6 @@ class StateMachineNode:
                 return "Invalid coordinate format provided"
         
         elif goal_type == "odom":
-
             # Add goal to queue
             try:
                 goal = np.asarray[goal_coords.x, goal_coords.y, goal_coords.w]
@@ -99,9 +105,11 @@ class StateMachineNode:
 
 
     class RoverIdle(smach.State):
-
+        """
+        Initial state of the rover - must enter into a new mode
+        """
         def __init__(self):
-            smach.State.__init__(self, outcomes=["MOVE_TO_MANUAL","MOVE_TO_INITIALIZE", "STAY"])
+            smach.State.__init__(self, outcomes=["MOVE_TO_MANUAL","MOVE_TO_IDLE", "MOVE_TO_INITIALIZE", "STAY"])
 
         def execute(self, userdata):
             rospy.loginfo('Executing state IDLE')
@@ -113,9 +121,13 @@ class StateMachineNode:
                 return "MOVE_TO_INTIALIZE"
             elif self.MODE == "MANUAL":
                 return "MOVE_TO_MANUAL"
+            elif self.MODE == "IDLE":
+                return "MOVE_TO_IDLE"
 
     class RoverManual(smach.State):
-
+        """
+        Manual mode of the rover
+        """
         def __init__(self):
             smach.State.__init__(self, outcomes=['MOVE_TO_IDLE', 'MOVE_TO_INITIALIZE', 'STAY'])
             self.counter = 0
@@ -138,9 +150,13 @@ class StateMachineNode:
                 return 'MOVE_TO_IDLE'
 
     class RoverInitialize(smach.State):
-
+        """
+        Initialization of autonomy mode
+            1. Load any pre-determined gps goals 
+            2. 
+        """
         def __init__(self):
-            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL', 'MOVE_TO_TRANSITION','STAY'])
+            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL', 'MOVE_TO_IDLE', 'MOVE_TO_TRAVERSE','STAY'])
 
         def execute(self, userdata):
             rospy.loginfo('Executing state INITIALIZE')
@@ -149,19 +165,24 @@ class StateMachineNode:
             rospy.info("Please load any provided GPS waypoints using the AddGoal service")
             result = input("When you are done inputting the waypoints, please type [Y]. Any other input will leave the rover in initialize mode.")
             if result == "Y":
-                return "MOVE_TO_TRANSITION"
+                return "MOVE_TO_TRAVERSE"
             else:
                 if self.MODE == "MANUAL":
                     return 'MOVE_TO_MANUAL'
+                elif self.MODE == "IDLE":
+                    return "MOVE_TO_IDLE"
                 else:
                     return "STAY"
 
     class RoverTransition(smach.State):
-
+        """
+        The mode is entered after the Aruco tag has been detected 
+        Transition to traversal or aruco tag detection
+            1. If coming from RoverInitialize, 
+        """
         def __init__(self):
-            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL', 'ARUCO_FOUND','SEARCHING'])
+            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL', 'MOVE_TO_IDLE', 'ARUCO_FOUND','SEARCHING', 'MISSION_OVER'])
             self.counter = 0
-            # Your state initialization goes here
 
         def execute(self, userdata):
             rospy.loginfo('Executing state RoverTransition')
@@ -169,16 +190,23 @@ class StateMachineNode:
             if self.MODE == "MANUAL":
                 return "MOVE_TO_MANUAL"
             
+            if self.MODE == "IDLE":
+                return "MOVE_TO_IDLE"
+            
             # Check if the expected number of GPS goals has been visited
-            if userdata.GPS_counter == userdata.num_GPS_goals - 1: 
+            if self.GPS_counter == self.num_GPS_goals - 1: 
                 return "MISSION_OVER"
 
-            if userdata.GPS_counter == 2 and not userdata.gps_location_read:
-                # Move to node for determining GPS loc from heading and distance
-                return 'DETERMINE_REL_GPS_GOAL'
-            
+            if self.GPS_GOAL_REACHED:
+
+                if self.ar_tag_detected:
+
+                    return "ARUCO_FOUND"
+                else:
+
+                    return "SEARCHING"
             else:
-                userdata.GPS_counter += 1
+            
                 # Load the next GPS goal into the state 
                 # Move to RoverTraverse
                 return 'MOVE_TO_TRAVERSE'
@@ -219,7 +247,7 @@ class StateMachineNode:
     class RoverGPSCheckpoint(smach.State):
 
         def __init__(self):
-            smach.State.__init__(self, outcomes=['ARUCO_FOUND','SEARCHING'])
+            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL','ARUCO_FOUND','SEARCHING'])
             self.counter = 0
             # Your state initialization goes here
 
@@ -233,29 +261,8 @@ class StateMachineNode:
                 return "ARUCO_FOUND"
             
             if self.ar_tag_detected == False:
+                
                 return "SEARCHING"
-        
-    class RoverTransition(smach.State):
-
-        def __init__(self):
-            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL','MISSION_OVER', "MOVE_TO_TRAVERSE"])
-            self.counter = 0
-            # Your state initialization goes here
-
-        def execute(self, userdata):
-            rospy.loginfo('Executing state RoverTransition')
-            
-            if self.MODE == "MANUAL":
-                return "MOVE_TO_MANUAL"
-            # Check if the expected number of GPS goals has been visited
-            if userdata.GPS_counter == userdata.num_GPS_goals - 1: 
-                return "MISSION_OVER"
-            
-            else:
-                userdata.GPS_counter += 1
-                # Load the next GPS goal into the state 
-                # Move to RoverTraverse
-                return 'MOVE_TO_TRAVERSE'
             
 
     # Potentially removing this and moving to a Light Beacon scanning action  

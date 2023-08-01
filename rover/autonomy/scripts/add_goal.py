@@ -41,7 +41,7 @@ class GPS_to_UTM:
     # Define a local orgin, latitude and longitude in decimal degrees
     # GPS Origin (these is an example origin)
 
-    def __init__(self, lat, lon, name, olon = 50.0, olat=10.0):
+    def __init__(self, lat, lon, name, olon = -79.396042, olat= 43.660579):
         self.lat = lat
         self.lon = lon
         self.name = name
@@ -54,7 +54,7 @@ class GPS_to_UTM:
         # GPS Origin
         
         xg2, yg2 = self.ll2xy()
-        utmy, utmx, utmzone = self.LLtoUTM()
+        utmy, utmx, utmzone = self.LLtoUTM(self.lat, self.lon)
 
         # ROSPY Info Messages (wont print for some reason)
         rospy.loginfo("#########  "+self.name+"  ###########")  
@@ -90,8 +90,8 @@ class GPS_to_UTM:
             y is Northing in m  (local grid)
         '''
 
-        outmy, outmx, outmzone = self.LLtoUTM()
-        utmy, utmx, utmzone = self.LLtoUTM()
+        outmy, outmx, outmzone = self.LLtoUTM(self.olat, self.olon)
+        utmy, utmx, utmzone = self.LLtoUTM(self.lat, self.lon)
         if (not (outmzone==utmzone)):
             print('WARNING: geonav_conversion: origin and location are in different UTM zones!')
         y = utmy-outmy
@@ -99,23 +99,22 @@ class GPS_to_UTM:
         return (x,y) 
 
 
-    def LLtoUTM(self):
+    def LLtoUTM(self, lat, lon):
 
         a = self.WGS84_A
         eccSquared = self.UTM_E2
         k0 = self.UTM_K0
 
         # Make sure the longitude is between -180.00 .. 179.9
-        LongTemp = (self.lon+180.0)-int((self.lon+180.)/360.)*360.-180.
-
-        LatRad = self.lat*self.RADIANS_PER_DEGREE
+        LongTemp = (lon+180.0)-int((lon+180.)/360.)*360.-180.
+        LatRad = lat*self.RADIANS_PER_DEGREE
         LongRad = LongTemp*self.RADIANS_PER_DEGREE
         ZoneNumber = int((LongTemp + 180.0)/6.0) + 1
 
-        if (self.lat >= 56.0 and self.lat < 64.0 and LongTemp >= 3.0 and LongTemp < 12.0 ):
+        if (lat >= 56.0 and self.lat < 64.0 and LongTemp >= 3.0 and LongTemp < 12.0 ):
             ZoneNumber = 32
             # Special zones for Svalbard
-        if (self.lat >= 72.0 and self.lat < 84.0 ):
+        if (lat >= 72.0 and lat < 84.0 ):
             if ( LongTemp >= 0.0  and LongTemp <  9.0 ): ZoneNumber = 31
             elif ( LongTemp >= 9.0  and LongTemp < 21.0 ): ZoneNumber = 33
             elif ( LongTemp >= 21.0 and LongTemp < 33.0 ): ZoneNumber = 35
@@ -150,7 +149,7 @@ class GPS_to_UTM:
                             *(A*A/2.0+(5.0-T+9.0*C+4.0*C*C)*A*A*A*A/24.0
                             + (61.0-58.0*T+T*T+600.0*C
                                 - 330.0*eccPrimeSquared)*A*A*A*A*A*A/720.0)));
-        if (self.lat < 0):
+        if (lat < 0):
             # 10000000 meter offset for southern hemisphere
             UTMNorthing += 10000000.0
         

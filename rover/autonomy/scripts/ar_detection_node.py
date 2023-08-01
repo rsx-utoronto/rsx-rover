@@ -74,8 +74,8 @@ class ARucoTagDetectionNode():
                 else:
                     self.curr_aruco_detections[id] = 1
 
-                rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(bboxs[i], 0.02, self.K,
-                                                                                    self.D)
+                rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(bboxs[i], 0.1, self.K,
+                                                                                              self.D)
                 
                 print(rvec)
                 print(tvec)
@@ -97,6 +97,14 @@ class ARucoTagDetectionNode():
         if ids is not None:
             self.updated_state_msg.AR_TAG_DETECTED = True
             self.updated_state_msg.curr_AR_ID = int(best_detection)
+
+            # Transform into a goal in the odom frame
+
+            # lookup baselink to camera link transform 
+            # lookup baselink to odom transform 
+            # transform the 4x4 pose to the odom frame and publish below
+            self.updated_state_msg.curr_AR_pose.position = tvec
+            self.updated_state_msg.curr_AR_pose.orientation = rvec
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
             self.updated_state_msg.curr_AR_ID = -1

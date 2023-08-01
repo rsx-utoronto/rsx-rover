@@ -9,5 +9,6 @@ sensor_msgs/NavSatFix light_beacon_goal
 sensor_msgs/NavSatFix radio_beacon_goal
 sensor_msgs/NavSatFix sign_goal
 int16 curr_AR_ID
+geometry_msgs/Pose curr_AR_pose
 bool MANUAL_ENABLED
 
