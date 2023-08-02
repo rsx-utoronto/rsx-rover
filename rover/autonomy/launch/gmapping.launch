@@ -1,7 +1,7 @@
 <launch>
-  <arg name="scan_topic"  default="/scan" />
-  <arg name="base_frame"  default="os_sensor"/>
-  <arg name="odom_frame"  default="os_sensor"/>
+  <arg name="scan_topic"  default="scan" />
+  <arg name="base_frame"  default="base_link"/>
+  <arg name="odom_frame"  default="laser_odom"/>
   <param name="/use_sim_time" value="true" />
   
   <arg name="pub_map_odom_transform" default="false" />
@@ -29,15 +29,11 @@
       value="$(arg tf_map_scanmatch_transform_frame_name)" />
 
   </node>
-
-  <node pkg="tf" type="static_transform_publisher" name="laser_tranform" 
-          args="0 0 0 0 0 0 map os_sensor 100">
-  </node>
-
+<!-- 
   <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
     <remap from="cloud_in" to="/ouster/points" />
     <remap from="scan" to="/scan" />
-  </node>
+  </node> -->
 
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/autonomy/config/gmapping.rviz"/>
+  <node name="rviz_gmapping" pkg="rviz" type="rviz" args="-d $(find rover)/rover/autonomy/config/gmapping.rviz"/>
 </launch>
