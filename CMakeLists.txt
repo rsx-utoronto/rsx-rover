@@ -11,7 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  message_filters
   message_generation
   grid_map_core
   grid_map_pcl
@@ -65,7 +64,7 @@ add_definitions(${PCL_DEFINITIONS})
 
 ## Generate messages in the 'msg' folder
 add_message_files(
-  FILES 
+  FILES
   ArmInputs.msg
 )
 
@@ -120,10 +119,10 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-    #INCLUDE_DIRS include
-    #LIBRARIES Rover
-    CATKIN_DEPENDS roscpp rospy std_msgs message_filters message_runtime
-    DEPENDS system_lib
+#  INCLUDE_DIRS include
+#  LIBRARIES Rover
+ CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
+#  DEPENDS system_lib
 )
 
 ###########

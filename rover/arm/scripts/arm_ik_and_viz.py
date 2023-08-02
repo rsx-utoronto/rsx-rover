@@ -27,6 +27,7 @@ class Mode(Enum):
 
 # Global Variables 
 
+NODE_RATE = 1000    
 BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SELECT", "START", "PLAY_STATION", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"]
 JOYSTICK_AXES_NAMES = ["L-Right", "L-Down", "L2", "R-Right", "R-Down", "R2"]
 LIMIT_SWITCH_ANGLES = [0, 0, 0, 0, 0, 0, 0]
@@ -44,7 +45,7 @@ global gazeboPublisher
 global pubThreadPool
 global angleCorrections
 
-movementSpeed = 1
+movementSpeed = 10/NODE_RATE
 
 buttonsPressed = {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": False, "L1": False, "R1": False, "L2": False, "R2": False, "SELECT": False, "START": False, "PLAY_STATION": False, 
         "L3": False, "R3": False,"UP": False, "DOWN": False, "LEFT": False, "RIGHT": False} 
@@ -364,6 +365,45 @@ def controlGripperAngle(isButtonPressed, curArmAngles):
 
     return gripperAngle
 
+def limitAngleSpeed(newArmAngles, curArmAngles):
+    ''' Limits the rate at which the end effector targert changes
+
+    Helps arm joints move in sync (ish)
+
+    '''
+
+    jointSpeeds = [0.005, 0.003, 0.01, 0.075, 0.075, 0.0375, 0.04]
+    angleDelta = list(np.subtract(np.array(newArmAngles), np.array(curArmAngles)))
+    slowedDownAngles = copy.deepcopy(newArmAngles)
+
+    for i in range(7):
+        if abs(angleDelta[i]) > jointSpeeds[i]:
+            # exit, which tells ik to half distance of delta vector and try again until all joints can move there within the time frame
+            pass
+
+
+def incrementTargetAngles(newArmAngles, curArmAngles):
+    ''' Increments the current angle to the desired angle
+    
+    '''
+    jointSpeeds = [0.005, 0.003, 0.01, 0.075, 0.075, 0.0375, 0.04]
+    angleDelta = list(np.subtract(np.array(newArmAngles), np.array(curArmAngles)))
+    slowedDownAngles = copy.deepcopy(newArmAngles)
+
+    try:
+        for i in range(7):
+            if abs(np.rad2deg(angleDelta[i])) > jointSpeeds[i]:
+                if angleDelta[i] > 0:
+                    slowedDownAngles[i] = curArmAngles[i] + np.deg2rad(jointSpeeds[i])
+                else:
+                    slowedDownAngles[i] = curArmAngles[i] - np.deg2rad(jointSpeeds[i])
+    except Exception as ex:
+        print("deg2rad conversion in incrementAngles")
+    print(newArmAngles)
+    print(curArmAngles)
+    print(np.rad2deg(slowedDownAngles))
+    return slowedDownAngles
+
 # ROS Stuff
 
 def savePosition(posName):
@@ -511,6 +551,12 @@ def publishNewAngles(newJointAngles):
     adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
     for i in range(7):
         adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i]
+        adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
+
+    temp = adjustedAngles[5]
+    adjustedAngles[5] = adjustedAngles[4]
+    adjustedAngles[4] = temp
+
     ikAngles.data = adjustedAngles
     armAngles.publish(ikAngles)
 
@@ -524,17 +570,29 @@ def updateDesiredArmSimulation(armAngles):
     '''
     global jointPublisher
     global gazeboPublisher
+    global liveArmAngles
 
     tempAngles = copy.deepcopy(armAngles)
     tempAngles.append(tempAngles[6]) # make gripper angles equal
     tempAngles.append(tempAngles[6]) # make gripper angles equal
+
+    tempAngles2 = copy.deepcopy(liveArmAngles)
+    tempAngles2.append(tempAngles[6]) # make gripper angles equal
+    tempAngles2.append(tempAngles[6]) # make gripper angles equal
     if gazebo_on:
         curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
         # curArmAngles[6] = -curArmAngles[6]
         print(tempAngles)
         sim.moveInGazebo(gazeboPublisher, tempAngles)
     else:
-        sim.runNewJointState2(jointPublisher, tempAngles)
+        anglesToDisplay =  []
+        
+        for i in range(tempAngles2.__len__()):
+            anglesToDisplay.append(tempAngles2[i])
+        for i in range(tempAngles.__len__()):
+            anglesToDisplay.append(tempAngles[i])
+        # print(anglesToDisplay)
+        sim.runNewJointState4(jointPublisher, anglesToDisplay)
 
 def updateLiveArmSimulation(data):
     ''' Updates RViz URDF visulaztion based on IRL arm angles
@@ -547,13 +605,21 @@ def updateLiveArmSimulation(data):
         data.data contains a list 32 bit floats that correspond to joint angles
     '''
     global liveArmAngles
+    
+    liveArmAngles = list(data.data)
 
-    liveArmAngles = data.data
-    tempAngles = data.data
+    for i in range(7):
+        liveArmAngles[i] = np.deg2rad(liveArmAngles[i])
+
+    temp = liveArmAngles[5]
+    liveArmAngles[5] = liveArmAngles[4]
+    liveArmAngles[4] = temp
+    print(liveArmAngles)
+    tempAngles = copy.deepcopy(liveArmAngles)
     tempAngles.append(tempAngles[6]) # make gripper angles equal
     tempAngles.append(tempAngles[6]) # make gripper angles equal
 
-    sim.runNewJointState3(jointPublisher, tempAngles)
+    # sim.runNewJointState3(jointPublisher, tempAngles)
 
 def updateDesiredEETransformation(newTargetValues, scriptMode):
     ''' Updates tf2 transformation of desired end effector position.
@@ -650,10 +716,13 @@ def main():
             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
             targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
 
+            simulatedAngles = targetAngles
+            # slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
+
             # publish on different threads to speed up processing time
             pubThreadPool.submit(publishNewAngles, targetAngles)
             pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
-            pubThreadPool.submit(updateDesiredArmSimulation, targetAngles)
+            pubThreadPool.submit(updateDesiredArmSimulation, simulatedAngles)
 
             curArmAngles = targetAngles
             prevTargetTransform = targetEEPos
@@ -673,7 +742,7 @@ def main():
             prevTargetValues = newTargetValues
 
             pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
-            pubThreadPool.submit(updateDesiredArmSimulation, curArmAngles)
+            updateDesiredArmSimulation(curArmAngles)
     elif scriptMode == Mode.FORWARD_KIN: # update the values IK mode uses when not in IK mode
         curArmAngles = liveArmAngles
         dhTable = ik.createDHTable(curArmAngles)
@@ -684,7 +753,8 @@ def main():
         prevTargetValues = newTargetValues
 
         pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
-        pubThreadPool.submit(updateDesiredArmSimulation, curArmAngles)
+        updateDesiredArmSimulation(curArmAngles)
+
 # Main Area
 
 if __name__ == "__main__":
@@ -701,35 +771,38 @@ if __name__ == "__main__":
 
     pubThreadPool = concurrent.futures.ThreadPoolExecutor(max_workers=2) # create thread pool with two threads
 
-    try:
-        scriptMode = Mode.GLOBAL_IK
-        print(scriptMode.name)
+    # try:
+    scriptMode = Mode.FORWARD_KIN
+    print(scriptMode.name)
 
-        rospy.init_node("arm_master_control")
-        gazebo_on = rospy.get_param("/gazebo_on")
-        rate = rospy.Rate(10) # run at 10Hz
+    rospy.init_node("arm_ik_and_viz")
+    gazebo_on = rospy.get_param("/gazebo_on")
+    rate = rospy.Rate(NODE_RATE) # run at 10Hz
 
-        armAngles = rospy.Publisher("ik_angles", Float32MultiArray, queue_size=10)
-        rospy.Subscriber("arm_angles", Float32MultiArray, updateLiveArmSimulation)
+    armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
+    rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateLiveArmSimulation)
 
-        if gazebo_on:
-            gazeboPublisher = sim.startGazeboJointControllers(9)
-        else:
-            jointPublisher = sim.startJointPublisher()
+    if gazebo_on:
+        gazeboPublisher = sim.startGazeboJointControllers(9)
+    else:
+        jointPublisher = sim.startJointPublisher()
 
-        # sets start target position equal to curArmAngles after they have been updated
-        # while curArmAngles == [0, 0, 0, 0, 0, 0]:
-        #     tempDHTable = ik.createDHTable(curArmAngles)
-        #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
+    # sets start target position equal to curArmAngles after they have been updated
+    # while curArmAngles == [0, 0, 0, 0, 0, 0]:
+    #     tempDHTable = ik.createDHTable(curArmAngles)
+    #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
 
-        correctionsService = rospy.Service('update_arm_corrections', Corrections, updateAngleCorrections)
-        goToArmPosService = rospy.Service('move_arm_to', GoToArmPos, goToPosition)
-        saveArmPosService = rospy.Service('save_arm_pos_as', SaveArmPos, savePosition)
+    correctionsService = rospy.Service('update_arm_corrections', Corrections, updateAngleCorrections)
+    goToArmPosService = rospy.Service('move_arm_to', GoToArmPos, goToPosition)
+    saveArmPosService = rospy.Service('save_arm_pos_as', SaveArmPos, savePosition)
 
-        while not rospy.is_shutdown():
+    while not rospy.is_shutdown():
+        try:  
             main()
-            rate.sleep()
+        except Exception as ex:
+            print(ex)
+        rate.sleep()
 
-    except Exception as ex:
-        print("The following error has occured: ")
-        print(ex)
+    # except Exception as ex:
+    #     print("The following error has occured: ")
+    #     print(ex)
