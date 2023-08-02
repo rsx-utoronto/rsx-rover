@@ -2,7 +2,7 @@
 import rospy
 import subprocess
 from geometry_msgs.msg import Twist, PoseStamped
-from rover.msg import GPSMsg, StateMsg
+from rover.msg import StateMsg
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 from tkinter import *   
@@ -56,7 +56,7 @@ class interactStateMsg:
         """
         self.label = tk.Label(root, text=queue + " \n" + label)
         self.queue = queue
-        self.subscriber = rospy.Subscriber(StateMsg, self.callback)
+        self.subscriber = rospy.Subscriber('/rover_state', StateMsg, self.callback)
         self.label.place(x=x,y=y)
         self.stateMsg = -1
 
@@ -137,7 +137,7 @@ def main():
     root.geometry('1000x1000')
 
     # create all the subscribers
-    createLabel('rover_gps', GPSMsg, "N/A", gpsStr, 100, 150)
+    # createLabel('rover_gps', GPSMsg, "N/A", gpsStr, 100, 150)
     createLabel('cmd_vel', Twist, "N/A", twistStr, 100, 200)
     createLabel('move_base_simple/goal', PoseStamped, "N/A", poseStr, 100, 250)
 
