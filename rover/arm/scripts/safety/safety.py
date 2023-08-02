@@ -265,7 +265,7 @@ class Safety_Node():
         # TODO
         # Limits for position safety (Need to test these values)
         #limit = [1.25, 1.25, 1.25, 20, 1.25, 1.25, 1.25]
-        limit = [5, 1250000, 5, 200000, 50, 50, 40]
+        limit = [5, 1250000, 5, 10, 50, 50, 40]
 
         if not pos:
             pos = self.GOAL_POS
