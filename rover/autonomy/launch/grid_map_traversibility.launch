@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find grid_map_pcl)/launch/grid_map_pcl_loader_node.launch"/>
+  <include file="$(find grid_map_demos)/launch/filters_demo.launch"/>
+</launch>
