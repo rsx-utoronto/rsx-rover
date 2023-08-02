@@ -717,10 +717,10 @@ def main():
             targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
 
             simulatedAngles = targetAngles
-            slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
+            # slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
 
             # publish on different threads to speed up processing time
-            pubThreadPool.submit(publishNewAngles, slowedAngles)
+            pubThreadPool.submit(publishNewAngles, targetAngles)
             pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
             pubThreadPool.submit(updateDesiredArmSimulation, simulatedAngles)
 
