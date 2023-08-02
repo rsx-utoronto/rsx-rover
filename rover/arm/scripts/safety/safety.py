@@ -164,9 +164,9 @@ class Safety_Node():
         # Store the received motor current value
         self.MOTOR_CURR = MotorCurr_data.data
 
-        # Check if motor current is exceeding and publish the errors
-        self.current_check()
-        self.Error_pub.publish(self.ERRORS)
+        # # Check if motor current is exceeding and publish the errors
+        # self.current_check()
+        # self.Error_pub.publish(self.ERRORS)
     
     def callback_CurrPos(self, CurrPos_data : Float32MultiArray) -> None:
         """
@@ -178,6 +178,8 @@ class Safety_Node():
 
         CurrPos_data (Float32MultiArray): List containing current angles (degrees) of each motor
         """
+
+        # Store the received current position values
         self.CURR_POS = CurrPos_data.data
 
     def update_safe_goal_pos(self, final_pos : list) -> None:
@@ -217,7 +219,7 @@ class Safety_Node():
             # Check if the goal position is safe 
             #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
             self.postion_check()
-            self.current_check()
+            #self.current_check()
             self.limitSwitch_check()
             #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
 
@@ -265,7 +267,7 @@ class Safety_Node():
         # TODO
         # Limits for position safety (Need to test these values)
         #limit = [1.25, 1.25, 1.25, 20, 1.25, 1.25, 1.25]
-        limit = [5, 1250000, 5, 200000, 50, 50, 40]
+        limit = [5, 5, 5, 10, 50, 50, 40]
 
         if not pos:
             pos = self.GOAL_POS
@@ -277,8 +279,8 @@ class Safety_Node():
             if (abs(pos[i] - self.CURR_POS[i]) > limit[i]):
 
                 # Calculating the offset, applying it to goal position and storing it
-                offset                  = list(np.array(pos) - np.array(self.CURR_POS))
-                self.ERROR_OFFSET.data  = offset
+                offset                     = pos[i] - self.CURR_POS[i]
+                self.ERROR_OFFSET.data[i]  = offset - sign(offset) * limit[i]
                 #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
 
                 # # Update the error if no other error is set
