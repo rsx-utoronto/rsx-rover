@@ -3,10 +3,12 @@ import rospy
 import subprocess
 from geometry_msgs.msg import Twist, PoseStamped
 from rover.msg import StateMsg
-from sensor_msgs.msg import Image
+import sensor_msgs
+from sensor_msgs.msg import Image, CameraInfo, NavSatFix
 from cv_bridge import CvBridge, CvBridgeError
 from tkinter import *   
 import tkinter as tk
+from tf.transformations import euler_from_quaternion
 
 
 
@@ -58,14 +60,14 @@ class interactStateMsg:
         self.queue = queue
         self.subscriber = rospy.Subscriber('/rover_state', StateMsg, self.callback)
         self.label.place(x=x,y=y)
-        self.stateMsg = -1
+        self.stateMsg = StateMsg()
 
         self.pub = rospy.Publisher(queue, StateMsg, queue_size=1)
         self.clicked = StringVar(root)
         self.clicked.set(initValue)
         self.choices = choices
         self.drop = OptionMenu(root, self.clicked, *self.choices, command=self.updatePublisher)
-        self.drop.place(x=x,y=y)
+        self.drop.place(x=x-50,y=y)
         root.after(1000, self.updatePublisher())
 
     def updatePublisher(self, *args):
@@ -79,11 +81,18 @@ class interactStateMsg:
     
     def stateStr(self):
         data = self.stateMsg
-        st1 = "rover_mode: %f\nnext_goal_gps: %f\n"%(data.rover_mode, data.next_goal_gps)
-        st2 = "current_task: %f\ngoal_gps_found: %f\n"%(data.current_task, data.goal_gps_found)
-        st3 = "MISSION_OVER: %f\ndetected_AR_IDs: %f\n"%(data.MISSION_OVER, data.detected_AR_IDs)
-        st4 = "curr_AR_IDs: %f\nbest_current_AR_ID: %f\n"%(data.curr_AR_IDs, data.best_current_AR_ID)
-        return st1 + "\n" + st2 + "\n" + st3 + "\n" + st4
+        (curr_r,curr_p,curr_y) = euler_from_quaternion([data.curr_goal.pose.orientation.x, data.curr_goal.pose.orientation.y, data.curr_goal.pose.orientation.z, data.curr_goal.pose.orientation.w])
+        (l_r,l_p,l_y) = euler_from_quaternion([data.light_beacon_goal.pose.orientation.x, data.light_beacon_goal.pose.orientation.y, data.light_beacon_goal.pose.orientation.z, data.light_beacon_goal.pose.orientation.w])
+        (r_r,r_p,r_y) = euler_from_quaternion([data.radio_beacon_goal.pose.orientation.x, data.radio_beacon_goal.pose.orientation.y, data.radio_beacon_goal.pose.orientation.z, data.radio_beacon_goal.pose.orientation.w])
+        (s_r,s_p,s_y) = euler_from_quaternion([data.sign_goal.pose.orientation.x, data.sign_goal.pose.orientation.y, data.sign_goal.pose.orientation.z, data.sign_goal.pose.orientation.w])
+        st1 = f"rover_mode: {data.rover_mode}\n"
+        st2 = f"ar_tag_detected: {data.AR_TAG_DETECTED}\nlight_beacon_detected: {data.LIGHT_BEACON_DETECTED}\nradio_beacon_detected: {data.RADIO_BEACON_DETECTED}\n"
+        st3 = f"light_beacon_goal: x - {data.light_beacon_goal.pose.position.x}  y - {data.light_beacon_goal.pose.position.y} w - {l_y}\n"
+        st4 = f"radio_beacon_goal: x - {data.radio_beacon_goal.pose.position.x}  y - {data.radio_beacon_goal.pose.position.y} w - {r_y}\n"
+        st5 = f"sign_goal: x - {data.sign_goal.pose.position.x}  y - {data.sign_goal.pose.position.y} w - {s_y}\n"
+        st6 = f"Curr_AR_ID: {data.curr_AR_ID}\n"
+        st7 = f"gps_goal_reached: {data.GPS_GOAL_REACHED}\nMission over: {data.MISSION_OVER}\n"
+        return st1 + "\n" + st2 + "\n" + st3 + "\n" + st4 + "\n" + st5 + "\n" + st6 + "\n" + st7
 
 
 
@@ -103,7 +112,7 @@ class commandButton():
 
 
 class createCamera:
-    def __init__(self, queue, x, y) -> None:
+    def __init__(self, queue, x, y):
         """
         queue is the name of the published topic
         x,y are the location of the camera feed on the screen
@@ -112,7 +121,7 @@ class createCamera:
         self.feed = tk.Canvas(root, width=400, height=400, bd = 10, bg = 'white')
         self.feed.place(x=x,y=y)
         self.bridge = CvBridge()
-        self.imageSub = rospy.Subscriber(queue, Image, self.callback)
+        self.imageSub = rospy.Subscriber(queue, sensor_msgs.msg.Image, self.callback)
 
     def callback(self, data):
         try:
@@ -137,12 +146,12 @@ def main():
     root.geometry('1000x1000')
 
     # create all the subscribers
-    # createLabel('rover_gps', GPSMsg, "N/A", gpsStr, 100, 150)
-    createLabel('cmd_vel', Twist, "N/A", twistStr, 100, 200)
+    createLabel('rover_gps', NavSatFix, "N/A", gpsStr, 100, 150)
+    createLabel('drive', Twist, "N/A", twistStr, 100, 200)
     createLabel('move_base_simple/goal', PoseStamped, "N/A", poseStr, 100, 250)
 
     # create the label and drop down for StateMsg
-    interactStateMsg('rover_state', "N/A", "IDLE", modes, 100, 400)
+    interactStateMsg('rover_state', "N/A", "IDLE", modes, 150, 400)
 
     # create terminal command
     commandButton("start ros bag", "rosbag record -a", 100, 600)
