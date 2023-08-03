@@ -11,8 +11,18 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  sensor_msgs
+  geometry_msgs
+  message_generation
   message_filters
 )
+
+find_package(PCL 1.2 REQUIRED)
+
+# Variables set by the pcl config.cmake.in file
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -48,18 +58,16 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  StateMsg.msg
+)
 
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+# Generate services in the 'srv' folder
+add_service_files(
+  FILES
+  AddGoal.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -69,10 +77,12 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  sensor_msgs
+  geometry_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -106,8 +116,8 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
     #INCLUDE_DIRS include
     #LIBRARIES Rover
-    CATKIN_DEPENDS roscpp rospy std_msgs message_filters
-    DEPENDS system_lib
+    CATKIN_DEPENDS roscpp rospy std_msgs message_runtime message_filters
+    DEPENDS
 )
 
 ###########
@@ -199,9 +209,15 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
+# catkin_install_python(PROGRAMS rover/autonomy/scripts/state_machine_node.py
+# DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
+
 add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
 target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 
-catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py scripts/gui.py scripts/sub.py scripts/pub.py
- DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+add_executable(lidar_pcl_subscriber rover/autonomy/scripts/point_cloud_subscriber.cpp rover/autonomy/scripts/pcl_traversibility_score.cpp rover/autonomy/scripts/segment_pcl.cpp)
+target_link_libraries(lidar_pcl_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
+catkin_install_python(PROGRAMS scripts/utils/comms/base_comms_check.py scripts/utils/comms/nuc_comms_check.py
+ DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

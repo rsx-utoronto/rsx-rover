@@ -3,11 +3,12 @@
 import rospy
 import subprocess
 import time
+from std_msgs.msg import Bool
 
 def main():
     pub_network = rospy.Publisher('network_status', Bool, queue_size=1)
     rospy.init_node("base_comms_check")
-    host = rospy.get_param("jetson_ip", "192.168.0.250")
+    host = rospy.get_param("nuc_ip", "192.168.0.99")
     net_stat = Bool()
 
     # we continuously send pings to check network communication is working
@@ -24,7 +25,7 @@ def main():
             net_stat = True 
         else:
             net_stat = False
-        
+        print(net_stat)
         pub_network.publish(net_stat)
         time.sleep(0.001)
 
