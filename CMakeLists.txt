@@ -221,5 +221,8 @@ target_link_libraries(pcd_writer_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES}
 add_executable(grid_map_subscriber rover/autonomy/scripts/grid_map_node.cc)
 target_link_libraries(grid_map_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${G})
 
+add_executable(pcd_to_pcl rover/autonomy/scripts/pcd_to_pcl.cc)
+target_link_libraries(pcd_to_pcl ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${G})
+
 catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
