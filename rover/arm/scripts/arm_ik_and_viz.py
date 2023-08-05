@@ -698,6 +698,7 @@ def updateController(data):
     global scriptMode
     global buttonStatus
     global joystickAxesStatus
+    global movementSpeed
 
     buttonsPressed = [data.x, data.o, data.triangle, 0, data.l1, data.r1, data.l2, data.r2, data.share, data.options, 0, 0, 0, 0, 0, 0, 0]
     # isButtonPressed = {"X": data.x, "CIRCLE": data.o, "TRIANGLE": data.triagle, 
@@ -705,64 +706,50 @@ def updateController(data):
     #                         "R2": data.r2, "SHARE": data.share, "OPTIONS": data.options, 
     #                         "PLAY_STATION": 0, "L3": 0, "R3": 0, "UP": 0, "DOWN": 0, 
     #                         "LEFT": 0, "RIGHT": 0} 
-    buttonStatus = getJoystickButtons(buttonsPressed)
-
+    isButtonPressed = getJoystickButtons(buttonsPressed)
+    # print(isButtonPressed)
     joystickAxesStatus = {"L-Right": -data.l_horizontal, "L-Down": -data.l_vertical, "L2": data.l2, 
-                          "R-Right": -data.l_horizontal, "R-Down": -data.l_vertical, "R2": data.r2}
-    
-    if buttonStatus["TRIANGLE"] == 2: # changes mode when button is released
+                          "R-Right": -data.r_horizontal, "R-Down": -data.r_vertical, "R2": data.r2}
+
+    if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
         if (scriptMode.value + 1) > len(Mode):
             scriptMode = list(Mode)[0]
         else:
             scriptMode = list(Mode)[scriptMode.value]
         print(scriptMode.name)
 
-    if buttonStatus["START"] == 2:
+    if isButtonPressed["OPTIONS"] == 2:
         movementSpeed += 0.1/NODE_RATE
-    if buttonStatus["SELECT"] == 2:
+    if isButtonPressed["SHARE"] == 2:
         movementSpeed -= 0.1/NODE_RATE
         if movementSpeed < 0: # don't let movement speed go into negatives
             movementSpeed = 0
 
-    # if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
-    #     try:
-    #         dhTable = ik.createDHTable(curArmAngles)
-    #         run = True
-    #         runCount = 0
-    #         targetEEPos = np.array([])
-    #         targetAngles = copy.deepcopy(curArmAngles)
-    #         oldSpeed = movementSpeed
+    if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
+        dhTable = ik.createDHTable(curArmAngles)
 
-    #         while run:
-    #             targetEEPos = controlEEPosition(isButtonPressed, joystickAxes, prevTargetValues, 
-    #                                             prevTargetTransform, scriptMode)
-                
-    #             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+        targetEEPos = controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
+                                        prevTargetTransform, scriptMode)
+        
+        try:
+            targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+            targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
 
-    #             run = limitAngleSpeed(targetAngles, curArmAngles)
-    #             movementSpeed *= VECTOR_SMOOTHING
-                
-    #             runCount += 1
-    #             if runCount > 10:
-    #                 break
+            # simulatedAngles = targetAngles
+            # slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
 
-    #         movementSpeed = oldSpeed
+            # publish on different threads to speed up processing time
+            # pubThreadPool.submit(publishNewAngles, targetAngles)
+            # pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
+            # pubThreadPool.submit(updateDesiredArmSimulation, simulatedAngles)
 
-    #         targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
-
-    #         simulatedAngles = targetAngles
-    #         # slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
-
-    #         # publish on different threads to speed up processing time
-    #         pubThreadPool.submit(publishNewAngles, targetAngles)
-    #         pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
-    #         pubThreadPool.submit(updateDesiredArmSimulation, simulatedAngles)
-
-    #         curArmAngles = targetAngles
-    #         prevTargetTransform = targetEEPos
-    #         prevTargetValues = newTargetValues
-    #     except ik.CannotReachTransform:
-    #         print("Cannot reach outside of arm workspace")
+            curArmAngles = targetAngles
+            prevTargetTransform = targetEEPos
+            prevTargetValues = newTargetValues
+        except ik.CannotReachTransform:
+            print("Cannot reach outside of arm workspace")
+        except Exception as ex:
+            print(ex)
 
 # Program Control
 
@@ -804,30 +791,30 @@ def main():
 
     isButtonPressed = copy.deepcopy(buttonStatus)
     joystickAxes = copy.deepcopy(joystickAxesStatus)
-    
+
     if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
-        dhTable = ik.createDHTable(curArmAngles)
+    #     dhTable = ik.createDHTable(curArmAngles)
 
-        targetEEPos = controlEEPosition(isButtonPressed, joystickAxes, prevTargetValues, 
-                                        prevTargetTransform, scriptMode)
+    #     targetEEPos = controlEEPosition(isButtonPressed, joystickAxes, prevTargetValues, 
+    #                                     prevTargetTransform, scriptMode)
         
-        try:
-            targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-            targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
+    #     try:
+    #         targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+    #         targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
 
-            simulatedAngles = targetAngles
-            # slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
+    #         simulatedAngles = targetAngles
+    #         # slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
 
-            # publish on different threads to speed up processing time
-            pubThreadPool.submit(publishNewAngles, targetAngles)
-            pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
-            pubThreadPool.submit(updateDesiredArmSimulation, simulatedAngles)
+    #         # publish on different threads to speed up processing time
+        publishNewAngles(curArmAngles)
+        updateDesiredEETransformation(prevTargetValues, scriptMode)
+        updateDesiredArmSimulation(curArmAngles)
 
-            curArmAngles = targetAngles
-            prevTargetTransform = targetEEPos
-            prevTargetValues = newTargetValues
-        except ik.CannotReachTransform:
-            print("Cannot reach outside of arm workspace")
+    #         curArmAngles = targetAngles
+    #         prevTargetTransform = targetEEPos
+    #         prevTargetValues = newTargetValues
+    #     except ik.CannotReachTransform:
+    #         print("Cannot reach outside of arm workspace")
 
         if goToPosValues[0]: # if the service flag to go to a saved position has been called
             goToPosValues[0] = False
@@ -839,8 +826,8 @@ def main():
             [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
             newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
             prevTargetValues = newTargetValues
-
-            pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
+            
+            updateDesiredEETransformation(newTargetValues, scriptMode)
             updateDesiredArmSimulation(curArmAngles)
     elif scriptMode == Mode.FORWARD_KIN: # update the values IK mode uses when not in IK mode
         curArmAngles = liveArmAngles
@@ -851,13 +838,13 @@ def main():
         newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
         prevTargetValues = newTargetValues
 
-        pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
+        updateDesiredEETransformation(newTargetValues, scriptMode)
         updateDesiredArmSimulation(curArmAngles)
 
-    buttonStatus = getJoystickButtons([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) 
-    joystickAxesStatus = {"L-Right": 0, "L-Down": 0, "L2": 0, "R-Right": 0, "R-Down": 0, "R2": 0}
+    # buttonStatus = getJoystickButtons([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) 
+    # joystickAxesStatus = {"L-Right": 0, "L-Down": 0, "L2": 0, "R-Right": 0, "R-Down": 0, "R2": 0}
 
-     
+
 
 # Main Area
 
@@ -870,8 +857,10 @@ if __name__ == "__main__":
     prevTargetTransform = ik.createEndEffectorTransform(prevTargetValues[0], prevTargetValues[1],
                                                         prevTargetValues[2], prevTargetValues[3])
     goToPosValues = [False, [0, 0, 0, 0, 0, 0, 0]]
+    buttonStatus = getJoystickButtons([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) 
+    joystickAxesStatus = {"L-Right": 0, "L-Down": 0, "L2": 0, "R-Right": 0, "R-Down": 0, "R2": 0}
 
-    initializeJoystick()
+    # initializeJoystick()
 
     pubThreadPool = concurrent.futures.ThreadPoolExecutor(max_workers=2) # create thread pool with two threads
 
@@ -886,7 +875,7 @@ if __name__ == "__main__":
     armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
     rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateLiveArmSimulation)
     rospy.Subscriber("arm_state", String, updateState)
-    rospy.Subscriber("arm_inputs", ArmInputs,)
+    rospy.Subscriber("arm_inputs", ArmInputs, updateController)
 
     if gazebo_on:
         gazeboPublisher = sim.startGazeboJointControllers(9)
