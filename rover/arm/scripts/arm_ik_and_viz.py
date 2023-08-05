@@ -7,6 +7,7 @@ import ik_library as ik
 import arm_simulation_control as sim
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header, Float32MultiArray, String
+from rover.msg import ArmInputs
 from rover.srv import Corrections, CorrectionsResponse, GoToArmPos, GoToArmPosResponse, SaveArmPos, SaveArmPosResponse
 import json
 import copy
@@ -43,6 +44,8 @@ global jointPublisher
 global gazeboPublisher
 global pubThreadPool
 global angleCorrections
+global joystickButtonStatus
+global joystickAxesStatus
 
 movementSpeed = 10/NODE_RATE
 
@@ -681,6 +684,23 @@ def updateState(data):
     else:
         scriptMode = scriptMode
 
+def updateController(data):
+    ''' Callback function for the arm_inputs topic
+
+    '''
+
+    global joystickButtonStatus
+    global joystickAxesStatus
+
+    joystickButtonStatus = {"X": data.x, "CIRCLE": data.o, "TRIANGLE": data.triagle, 
+                            "SQUARE": 0, "L1": data.l1, "R1": data.r1, "L2": data.l2, 
+                            "R2": data.r2, "SHARE": data.share, "OPTIONS": data.options, 
+                            "PLAY_STATION": 0, "L3": 0, "R3": 0, "UP": 0, "DOWN": 0, 
+                            "LEFT": 0, "RIGHT": 0} 
+
+    joystickAxesStatus = {"L-Right": -data.l_horizontal, "L-Down": -data.l_vertical, "L2": data.l2, 
+                          "R-Right": -data.l_horizontal, "R-Down": -data.l_vertical, "R2": data.r2}
+
 # Program Control
 
 def main():
@@ -699,9 +719,11 @@ def main():
     global pubThreadPool
     global movementSpeed
     global goToPosValues
+    global joystickButtonStatus
+    global joystickAxesStatus
 
-    isButtonPressed = getJoystickButtons()
-    joystickAxes = getJoystickAxes()
+    isButtonPressed = copy.deepcopy(joystickButtonStatus)
+    joystickAxes = copy.deepcopy(joystickAxesStatus)
 
     if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
         if (scriptMode.value + 1) > len(Mode):
@@ -794,6 +816,7 @@ if __name__ == "__main__":
     armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
     rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateLiveArmSimulation)
     rospy.Subscriber("arm_state", String, updateState)
+    rospy.Subscriber("arm_inputs", ArmInputs,)
 
     if gazebo_on:
         gazeboPublisher = sim.startGazeboJointControllers(9)
