@@ -6,8 +6,7 @@ import numpy as np
 import ik_library as ik
 import arm_simulation_control as sim
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Header
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Header, Float32MultiArray, String
 from rover.srv import Corrections, CorrectionsResponse, GoToArmPos, GoToArmPosResponse, SaveArmPos, SaveArmPosResponse
 import json
 import copy
@@ -381,7 +380,6 @@ def limitAngleSpeed(newArmAngles, curArmAngles):
             # exit, which tells ik to half distance of delta vector and try again until all joints can move there within the time frame
             pass
 
-
 def incrementTargetAngles(newArmAngles, curArmAngles):
     ''' Increments the current angle to the desired angle
     
@@ -669,6 +667,20 @@ def updateDesiredEETransformation(newTargetValues, scriptMode):
     
     sim.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
 
+def updateState(data):
+    ''' Callback function for arm_state rostopic
+
+    If a state has been changed enter into forward kinematics mode
+    to copy the current arm angles.
+    
+    '''
+    global scriptMode
+
+    if data.data != "IK":
+        scriptMode = Mode.FORWARD_KIN
+    else:
+        scriptMode = scriptMode
+
 # Program Control
 
 def main():
@@ -781,6 +793,7 @@ if __name__ == "__main__":
 
     armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
     rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateLiveArmSimulation)
+    rospy.Subscriber("arm_state", String, updateState)
 
     if gazebo_on:
         gazeboPublisher = sim.startGazeboJointControllers(9)
@@ -795,6 +808,7 @@ if __name__ == "__main__":
     correctionsService = rospy.Service('update_arm_corrections', Corrections, updateAngleCorrections)
     goToArmPosService = rospy.Service('move_arm_to', GoToArmPos, goToPosition)
     saveArmPosService = rospy.Service('save_arm_pos_as', SaveArmPos, savePosition)
+    
 
     while not rospy.is_shutdown():
         try:  
