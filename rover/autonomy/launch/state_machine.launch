@@ -5,6 +5,6 @@
     <!-- Launch Auxillary Nodes -->
     <node pkg="rover" type="gps_goal_checker.py" name="gps_checker_node" output="screen"/>
     <node pkg="rover" type="state_publisher.py" name="state_publisher_node" output="screen"/>
-    <node pkg="rover" type="base_comms_check.py" name="comms_check_node" output="screen"/>
+    <node pkg="rover" type="nuc_comms_check.py" name="comms_check_node" output="screen"/>
 
 </launch>

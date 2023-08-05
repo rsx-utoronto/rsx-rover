@@ -1,7 +1,7 @@
 <launch> 
 
     <!-- Launch GUI -->
-
+    <node pkg="rover" type="rover_gui.py" name="rover_gui" />
 
     <!-- Launch Motors -->
     <include file="$(find rover)/rover/drive/launch/falcons.launch"/>
@@ -27,6 +27,5 @@
 
     <!-- Launch Drive Node -->
     <node pkg="rover" type="drive_sender_node" name="manual_control_node" output="screen" /> 
-
 
 </launch>

@@ -9,7 +9,7 @@ from std_msgs.msg import Bool
 def main():
     pub_network = rospy.Publisher('network_status', Bool, queue_size=1)
     rospy.init_node("nuc_comms_check")
-    host = rospy.get_param("base_ip", "192.168.0.69")
+    host = rospy.get_param("base_ip", "192.168.0.69") # 
     net_stat = Bool()
 
     # we continuously send pings to check network communication is working
