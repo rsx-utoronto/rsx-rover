@@ -4,16 +4,9 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
-        - /Status1
-        - /LaserScan1
+        - /TF1
+        - /TF1/Frames1
         - /TF1/Tree1
-        - /Map1
-        - /Map2
-        - /Map3
-        - /PoseArray1
-        - /Path1
-        - /Path2
       Splitter Ratio: 0.5
     Tree Height: 719
   - Class: rviz/Selection
@@ -33,7 +26,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: LaserScan
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -93,56 +86,26 @@ Visualization Manager:
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
         aft_mapped:
-          Value: true
+          Value: false
         base_link:
-          Value: true
+          Value: false
         camera:
-          Value: true
-        camera_accel_frame:
-          Value: true
-        camera_accel_optical_frame:
-          Value: true
-        camera_aligned_depth_to_color_frame:
-          Value: true
-        camera_color_frame:
-          Value: true
-        camera_color_optical_frame:
-          Value: true
-        camera_depth_frame:
-          Value: true
-        camera_depth_optical_frame:
-          Value: true
-        camera_gyro_frame:
-          Value: true
-        camera_gyro_optical_frame:
-          Value: true
-        camera_infra1_frame:
-          Value: true
-        camera_infra1_optical_frame:
-          Value: true
-        camera_infra2_frame:
-          Value: true
-        camera_infra2_optical_frame:
-          Value: true
+          Value: false
         camera_init:
-          Value: true
-        camera_link:
-          Value: true
+          Value: false
         gps_link:
-          Value: true
+          Value: false
         ins_link:
-          Value: true
+          Value: false
         laser_odom:
-          Value: true
+          Value: false
         map:
           Value: true
-        os_imu:
+        odom:
           Value: true
-        os_lidar:
-          Value: true
-        os_sensor:
+        velodyne:
           Value: true
       Marker Alpha: 1
       Marker Scale: 1
@@ -151,27 +114,6 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        camera_link:
-          camera_accel_frame:
-            camera_accel_optical_frame:
-              {}
-          camera_aligned_depth_to_color_frame:
-            camera_color_optical_frame:
-              {}
-          camera_color_frame:
-            {}
-          camera_depth_frame:
-            camera_depth_optical_frame:
-              {}
-          camera_gyro_frame:
-            camera_gyro_optical_frame:
-              {}
-          camera_infra1_frame:
-            camera_infra1_optical_frame:
-              {}
-          camera_infra2_frame:
-            camera_infra2_optical_frame:
-              {}
         map:
           camera_init:
             aft_mapped:
@@ -182,13 +124,12 @@ Visualization Manager:
                   {}
                 ins_link:
                   {}
-                os_sensor:
-                  os_imu:
-                    {}
-                  os_lidar:
-                    {}
+                velodyne:
+                  {}
             laser_odom:
               {}
+          odom:
+            {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -330,7 +271,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 11.060874938964844
+      Distance: 12.9829683303833
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -346,9 +287,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5404025316238403
+      Pitch: 0.600403368473053
       Target Frame: <Fixed Frame>
-      Yaw: 2.715411424636841
+      Yaw: 4.590447425842285
     Saved: ~
 Window Geometry:
   Displays:

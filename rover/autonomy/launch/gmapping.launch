@@ -1,13 +1,13 @@
 <launch>
   <arg name="scan_topic"  default="scan" />
   <arg name="base_frame"  default="base_link"/>
-  <arg name="odom_frame"  default="laser_odom"/>
-  <param name="/use_sim_time" value="true" />
+  <arg name="odom_frame"  default="odom"/>
+  <param name="/use_sim_time" value="false" />
   
-  <arg name="pub_map_odom_transform" default="false" />
+  <!-- <arg name="pub_map_odom_transform" default="false" />
   <arg name="scan_subscriber_queue_size" default="5" />
 
-  <arg name="tf_map_scanmatch_transform_frame_name" default="scanmatcher_frame" />
+  <arg name="tf_map_scanmatch_transform_frame_name" default="scanmatcher_frame" /> -->
 
   <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
     <rosparam file="$(find rover)/rover/simulation/config/gmapping_params.yaml" command="load" />
@@ -18,7 +18,7 @@
     <param name="odom_frame" value="$(arg odom_frame)" />
 
     <!-- Tf use -->
-    <param name="use_tf_scan_transformation" value="true" />
+    <!-- <param name="use_tf_scan_transformation" value="true" />
     <param name="use_tf_pose_start_estimate" value="false" />
     <param name="pub_map_odom_transform" value="$(arg pub_map_odom_transform)" />
 
@@ -26,7 +26,7 @@
     <param name="scan_subscriber_queue_size" value="$(arg scan_subscriber_queue_size)" />
     <param name="scan_topic" value="$(arg scan_topic)" />
     <param name="tf_map_scanmatch_transform_frame_name"
-      value="$(arg tf_map_scanmatch_transform_frame_name)" />
+      value="$(arg tf_map_scanmatch_transform_frame_name)" /> -->
 
   </node>
 <!-- 

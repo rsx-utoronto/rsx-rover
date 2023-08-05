@@ -214,8 +214,8 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-# add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
-# target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
+add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
+target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 
 add_executable(lidar_pcl_subscriber rover/autonomy/scripts/point_cloud_subscriber.cpp rover/autonomy/scripts/pcl_traversibility_score.cpp rover/autonomy/scripts/segment_pcl.cpp)
 target_link_libraries(lidar_pcl_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})

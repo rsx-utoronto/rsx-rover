@@ -1,21 +1,23 @@
 <launch>
 
     <!-- Launch LeGO LOAM (mapping and odometry node) -->    
-    <include file="$(find lego_loam)/launch/run.launch" />
+    <!-- <include file="$(find lego_loam)/launch/run.launch" /> -->
+    
 
     <node pkg="robot_localization" type="ekf_localization_node" name="ekf_odom_node" output="screen" >
 
         <!-- Basic parameters -->
-        <param name="frequency" value="30"/>
+        <param name="frequency" value="100"/>
         <param name="sensor_timeout" value="0.1"/>
         <param name="two_d_mode" value="false"/>
         <param name="transform_time_offset" value="0.0"/>
+        <remap from="tf" to="tf_ekf"/>
 
         <!-- Frames -->
-        <param name="map_frame" value="map"/>
-        <param name="odom_frame" value="laser_odom"/>
+        <!-- <param name="map_frame" value="map"/> -->
+        <param name="odom_frame" value="odom"/>
         <param name="base_link_frame" value="base_link"/>
-        <!-- <param name="world_frame" value="map"/> -->
+        <param name="world_frame" value="odom"/>
 
         <!-- Lidar Odometry -->
         <param name="odom0" value="/aft_mapped_to_init"/>
@@ -150,5 +152,7 @@
         <remap from="/imu/data" to="/imu" />
         <remap from="/gps/fix" to="/navsat/fix" />
     </node>
+
+    <!-- <node pkg="tf" type="static_transform_publisher" name="odom_broadcaster" args="0 0 0 0 0 0 1  odom laser_odom 100" /> -->
 
 </launch>

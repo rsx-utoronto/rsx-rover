@@ -19,8 +19,12 @@ def newOdom(msg):
     x = msg.pose.pose.position.x
     y = msg.pose.pose.position.y
 
+    print("X: ", x)
+    print("Y: ", y)
+
     rot_q = msg.pose.pose.orientation
     (roll, pitch, theta) = euler_from_quaternion([rot_q.x, rot_q.y, rot_q.z, rot_q.w])
+    print("ANGLES: ", (roll, pitch, theta))
 
 rospy.init_node("speed_controller")
 
@@ -34,7 +38,7 @@ r = rospy.Rate(10)
 
 goal = Point()
 goal.x = 3
-goal.y = 5
+goal.y = 0.5
 
 pos_integral = 0
 Kpp = 0.1
@@ -45,21 +49,25 @@ previous_pos_error = 0
 angle_integral = 0
 Kpa = 0.1
 Kda = 0.05
-Kia = 0.005
+Kia = 0.001
 previous_angle_error = 0
 
 
 while not rospy.is_shutdown():
     inc_x = goal.x -x
+    print("inc x:", inc_x)
     inc_y = goal.y -y
+    print("inc y:", inc_y)
 
     pos_error = math.sqrt(inc_x**2 + inc_y**2)
 
-    angle_to_goal = math.atan2(inc_x, inc_y)
+    angle_to_goal = math.atan2(inc_y, inc_x)
+    print("angle to goal: ", angle_to_goal)
 
     angle_error = angle_to_goal - theta
 
-    P = 0.05
+
+    P = 0.1
 
     print("pos_error: ", pos_error)
     print("angle_error: ", angle_error)
@@ -74,35 +82,30 @@ while not rospy.is_shutdown():
     previous_pos_error = pos_error
     previous_angle_error = angle_error
 
-    if abs(angle_error) < 0.1:
-        if pos_error <= 0.05:
+    if abs(angle_error) < 0.3:
+        if pos_error <= 0.5:
             speed.linear.x = 0.0
             pub.publish(speed)
-            if abs(angle_error) < 0.025: 
+            if abs(angle_error) < 0.2: 
                 speed.angular.z = 0.0
                 pub.publish(speed)
             else: 
-                if angle_correction > 0:
-                    speed.angular.z = min(0.5, angle_correction)
-                else:
-                    speed.angular.z = max(-0.5, angle_correction)
+                # if angle_correction > 0:
+                speed.angular.z = min(0.5, angle_correction)
+                # else:
+                #     speed.angular.z = max(-0.5, angle_correction)
                 pub.publish(speed)
 
 
-            
-            
         else:
             #if you have gone past: 
             #1. make speed negative and oscillate 
             #2. don't do pos_correction 
             speed.angular.z = 0.0
-            speed.linear.x = min(0.7, P*(0.02 + pos_correction))
+            speed.linear.x = min(0.3, P*(0.02 + pos_correction))
             pub.publish(speed)
     else:
-        if angle_correction > 0:
-            speed.angular.z = min(0.5, angle_correction)
-        else:
-            speed.angular.z = max(-0.5, angle_correction)
+        speed.angular.z = min(0.5, angle_correction)
 
         speed.linear.x = 0.0
         pub.publish(speed)
@@ -110,7 +113,7 @@ while not rospy.is_shutdown():
     
     
     print("Speed: ", speed)
-    # pub.publish(speed)
+    pub.publish(speed)
     pub_error.publish(pos_error)
     r.sleep() 
 

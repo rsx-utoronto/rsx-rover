@@ -18,11 +18,9 @@ public:
 	TeleopRover();
 	void publishDrive();
 	void pubConstSpeed();
-	void pubConstSpeed();
 
 private:
 	void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
-	void networkCallback(const std_msgs::Bool::ConstPtr& net_stat);
 	void networkCallback(const std_msgs::Bool::ConstPtr& net_stat);
 
 	ros::NodeHandle nh;
@@ -39,18 +37,13 @@ private:
 	ros::Subscriber net_sub;
 	int network_status = 1;
 	geometry_msgs::Twist twist;
-	ros::Subscriber joy_sub;
-	ros::Subscriber net_sub;
-	int network_status = 1;
-	geometry_msgs::Twist twist;
 };
 
 TeleopRover::TeleopRover()
-TeleopRover::TeleopRover()
 {
-	TeleopRover::network_status = false;
+	TeleopRover::network_status = true;
 	drive_pub_ = nh.advertise<geometry_msgs::Twist>("drive", 1);
-	TeleopRover::joy_sub = nh.subscribe("joy", 10, &TeleopRover::joyCallback, this);
+	TeleopRover::joy_sub = nh.subscribe("/software/joy", 10, &TeleopRover::joyCallback, this);
 	TeleopRover::net_sub = nh.subscribe("network_status", 1, &TeleopRover::networkCallback, this);
 }
 
@@ -68,9 +61,8 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	// Values from Controller
 	double posThrottle = joy->axes[R2];
 	double negThrottle = joy->axes[L2];
-	// double turnFactor_x = static_cast<double>(joy->axes[LS_x]);
-	// double turnFactor_y = static_cast<double>(joy->axes[LS_y]);
-	double turnFactor = static_cast<double>(joy->axes[LS]);
+	double turnFactor_x = static_cast<double>(joy->axes[LS_x]);
+	double turnFactor_y = static_cast<double>(joy->axes[LS_y]);
 	double lin_vel;
 
 	// Encoding value from joystick 
