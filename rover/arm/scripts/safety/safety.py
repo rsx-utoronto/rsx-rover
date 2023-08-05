@@ -245,7 +245,7 @@ class Safety_Node():
             print("publishing offsets:", self.ERROR_OFFSET.data)
             self.Offset_pub.publish(self.ERROR_OFFSET)
             #pass
-            #self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
+            self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
         
         # # Repeat the function if needed in 'IK' mode
         # if self.STATE == "IK" and max(abs(np.array(self.GOAL_POS) - np.array(self.CURR_POS))):

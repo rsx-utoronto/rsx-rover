@@ -324,8 +324,8 @@ def generate_data_packet(data_list : list) -> list:
 
         # Specific angle for gripper
         elif i + 1 == 7:
-             angle = data_list[i] + gripper_correction
-             print(angle)
+             angle = data_list[i] #+ gripper_correction
+             #print(angle)
         # For any other motor
         else:
              angle = data_list[i]
