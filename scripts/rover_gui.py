@@ -73,6 +73,7 @@ class interactStateMsg:
     def updatePublisher(self, *args):
         updatedMsg = self.stateMsg
         updatedMsg.rover_mode = self.clicked.get()
+        print(updatedMsg)
         self.pub.publish(updatedMsg)
     
     def callback(self, data):
@@ -151,7 +152,7 @@ def main():
     createLabel('move_base_simple/goal', PoseStamped, "N/A", poseStr, 100, 250)
 
     # create the label and drop down for StateMsg
-    interactStateMsg('rover_state', "N/A", "IDLE", modes, 150, 400)
+    interactStateMsg('gui_node/rover_state', "N/A", "IDLE", modes, 150, 400)
 
     # create terminal command
     commandButton("start ros bag", "rosbag record -a", 100, 600)

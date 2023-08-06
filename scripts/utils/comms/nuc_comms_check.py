@@ -21,7 +21,6 @@ def main():
         """
         command = ['ping', '-c', '2', '-w', '2', host]
         connected = subprocess.run(command, capture_output=True)
-        print(connected.returncode)
         if connected.returncode == 0:
             net_stat = True
         else:

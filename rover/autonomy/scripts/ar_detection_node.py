@@ -19,7 +19,7 @@ class ARucoTagDetectionNode():
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
         self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
-        self.aruco_pub = rospy.Publisher('rover_state', StateMsg, queue_size=10)
+        self.aruco_pub = rospy.Publisher('aruco_node/rover_state', StateMsg, queue_size=10)
         self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
         self.bridge = CvBridge()
         self.current_state = StateMsg()
