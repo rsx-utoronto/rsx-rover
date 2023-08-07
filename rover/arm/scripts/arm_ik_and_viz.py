@@ -6,8 +6,8 @@ import numpy as np
 import ik_library as ik
 import arm_simulation_control as sim
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Header
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Header, Float32MultiArray, String
+from rover.msg import ArmInputs
 from rover.srv import Corrections, CorrectionsResponse, GoToArmPos, GoToArmPosResponse, SaveArmPos, SaveArmPosResponse
 import json
 import copy
@@ -28,9 +28,10 @@ class Mode(Enum):
 # Global Variables 
 
 NODE_RATE = 1000    
-BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SELECT", "START", "PLAY_STATION", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"]
+BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SHARE", "OPTIONS", "PLAY_STATION", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"]
 JOYSTICK_AXES_NAMES = ["L-Right", "L-Down", "L2", "R-Right", "R-Down", "R2"]
 LIMIT_SWITCH_ANGLES = [0, 0, 0, 0, 0, 0, 0]
+VECTOR_SMOOTHING = 0.5
 
 global gazebo_on
 global curArmAngles
@@ -44,10 +45,12 @@ global jointPublisher
 global gazeboPublisher
 global pubThreadPool
 global angleCorrections
+global buttonStatus
+global joystickAxesStatus
 
 movementSpeed = 10/NODE_RATE
 
-buttonsPressed = {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": False, "L1": False, "R1": False, "L2": False, "R2": False, "SELECT": False, "START": False, "PLAY_STATION": False, 
+buttonsPressed = {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": False, "L1": False, "R1": False, "L2": False, "R2": False, "SHARE": False, "OPTIONS": False, "PLAY_STATION": False, 
         "L3": False, "R3": False,"UP": False, "DOWN": False, "LEFT": False, "RIGHT": False} 
 
 # Joystick Controller
@@ -64,7 +67,7 @@ def initializeJoystick():
     print('Initialized joystick: %s' % joystick.get_name())
     print(joystick.get_numbuttons())
     
-def getJoystickButtons() -> dict: # setting up the buttons
+def getJoystickButtons(tempButton:list) -> dict: # setting up the buttons
     ''' Gets the Currently Pressed Buttons on Joystick
 
     If the value in the returned dictionary for a button is 
@@ -80,19 +83,19 @@ def getJoystickButtons() -> dict: # setting up the buttons
     
     '''
     global buttonsPressed
-    global joystick
+    # global joystick
 
-    pygame.event.pump() # allow pygame to handle internal actions, keep everything current
+    # pygame.event.pump() # allow pygame to handle internal actions, keep everything current
     
     
-    buttons = {"X": 0, "CIRCLE": 0, "TRIANGLE": 0, "SQUARE": 0 , "L1": 0, "R1": 0, "L2": 0, "R2": 0, "SELECT": 0, "START": 0, "PLAY_STATION": 0, 
+    buttons = {"X": 0, "CIRCLE": 0, "TRIANGLE": 0, "SQUARE": 0 , "L1": 0, "R1": 0, "L2": 0, "R2": 0, "SHARE": 0, "OPTIONS": 0, "PLAY_STATION": 0, 
         "L3": 0, "R3": 0,"UP": 0, "DOWN": 0, "LEFT": 0, "RIGHT": 0 } # 1 is pressed, 0 is not pressed, -1 is just released
  
-    for i in range(0, joystick.get_numbuttons()):
-        button = joystick.get_button(i)
+    for i in range(0, tempButton.__len__()):
+        button = tempButton[i]
         
         if buttonsPressed[BUTTON_NAMES[i]] == True and button == 0: # button just released
-            button = -1
+            button = 0#-1
         if buttonsPressed[BUTTON_NAMES[i]] == False and button == 1: # button just pressed
             button = 2
 
@@ -352,10 +355,10 @@ def controlGripperAngle(isButtonPressed, curArmAngles):
     angleIncrement = 0.1*movementSpeed
 
     # If both buttons are pressed at the same time, angle will not change
-    if isButtonPressed["SQUARE"] == 1 and isButtonPressed["X"] != 1:
+    if isButtonPressed["CIRCLE"] == 1 and isButtonPressed["X"] != 1:
         gripperAngle -= angleIncrement
 
-    if isButtonPressed["X"] == 1 and isButtonPressed["SQUARE"] != 1:
+    if isButtonPressed["X"] == 1 and isButtonPressed["CIRCLE"] != 1:
         gripperAngle += angleIncrement
 
     # if gripperAngle < -0.04:
@@ -379,8 +382,9 @@ def limitAngleSpeed(newArmAngles, curArmAngles):
     for i in range(7):
         if abs(angleDelta[i]) > jointSpeeds[i]:
             # exit, which tells ik to half distance of delta vector and try again until all joints can move there within the time frame
-            pass
+            return False
 
+    return True
 
 def incrementTargetAngles(newArmAngles, curArmAngles):
     ''' Increments the current angle to the desired angle
@@ -669,6 +673,84 @@ def updateDesiredEETransformation(newTargetValues, scriptMode):
     
     sim.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
 
+def updateState(data):
+    ''' Callback function for arm_state rostopic
+
+    If a state has been changed enter into forward kinematics mode
+    to copy the current arm angles.
+    
+    '''
+    global scriptMode
+
+    if data.data != "IK":
+        scriptMode = Mode.FORWARD_KIN
+    else:
+        scriptMode = scriptMode
+
+def updateController(data):
+    ''' Callback function for the arm_inputs topic
+
+    '''
+
+    global curArmAngles
+    global prevTargetTransform
+    global prevTargetValues
+    global scriptMode
+    global buttonStatus
+    global joystickAxesStatus
+    global movementSpeed
+
+    buttonsPressed = [data.x, data.o, data.triangle, 0, data.l1, data.r1, data.l2, data.r2, data.share, data.options, 0, 0, 0, 0, 0, 0, 0]
+    # isButtonPressed = {"X": data.x, "CIRCLE": data.o, "TRIANGLE": data.triagle, 
+    #                         "SQUARE": 0, "L1": data.l1, "R1": data.r1, "L2": data.l2, 
+    #                         "R2": data.r2, "SHARE": data.share, "OPTIONS": data.options, 
+    #                         "PLAY_STATION": 0, "L3": 0, "R3": 0, "UP": 0, "DOWN": 0, 
+    #                         "LEFT": 0, "RIGHT": 0} 
+    isButtonPressed = getJoystickButtons(buttonsPressed)
+    # print(isButtonPressed)
+    joystickAxesStatus = {"L-Right": -data.l_horizontal, "L-Down": -data.l_vertical, "L2": data.l2, 
+                          "R-Right": -data.r_horizontal, "R-Down": -data.r_vertical, "R2": data.r2}
+
+    if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
+        if (scriptMode.value + 1) > len(Mode):
+            scriptMode = list(Mode)[0]
+        else:
+            scriptMode = list(Mode)[scriptMode.value]
+        print(scriptMode.name)
+
+    if isButtonPressed["OPTIONS"] == 2:
+        movementSpeed += 0.1/NODE_RATE
+    if isButtonPressed["SHARE"] == 2:
+        movementSpeed -= 0.1/NODE_RATE
+        if movementSpeed < 0: # don't let movement speed go into negatives
+            movementSpeed = 0
+
+    if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
+        dhTable = ik.createDHTable(curArmAngles)
+
+        targetEEPos = controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
+                                        prevTargetTransform, scriptMode)
+        
+        try:
+            targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+            targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
+
+            # simulatedAngles = targetAngles
+            # slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
+
+            # publish on different threads to speed up processing time
+            # pubThreadPool.submit(publishNewAngles, targetAngles)
+            # pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
+            # pubThreadPool.submit(updateDesiredArmSimulation, simulatedAngles)
+
+            curArmAngles = targetAngles
+            prevTargetTransform = targetEEPos
+            prevTargetValues = newTargetValues
+        except ik.CannotReachTransform:
+            print("Cannot reach outside of arm workspace")
+        except Exception as ex:
+            print(ex)
+
 # Program Control
 
 def main():
@@ -687,48 +769,52 @@ def main():
     global pubThreadPool
     global movementSpeed
     global goToPosValues
+    global buttonStatus
+    global joystickAxesStatus
 
-    isButtonPressed = getJoystickButtons()
-    joystickAxes = getJoystickAxes()
+    # isButtonPressed = copy.deepcopy(joystickButtonStatus)
+    # joystickAxes = copy.deepcopy(joystickAxesStatus)
 
-    if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
-        if (scriptMode.value + 1) > len(Mode):
-            scriptMode = list(Mode)[0]
-        else:
-            scriptMode = list(Mode)[scriptMode.value]
-        print(scriptMode.name)
+    # if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
+    #     if (scriptMode.value + 1) > len(Mode):
+    #         scriptMode = list(Mode)[0]
+    #     else:
+    #         scriptMode = list(Mode)[scriptMode.value]
+    #     print(scriptMode.name)
 
-    if isButtonPressed["START"] == 2:
-        movementSpeed += 0.1
-    if isButtonPressed["SELECT"] == 2:
-        movementSpeed -= 0.1
-        if movementSpeed < 0: # don't let movement speed go into negatives
-            movementSpeed = 0
+    # if isButtonPressed["START"] == 2:
+    #     movementSpeed += 0.1
+    # if isButtonPressed["SELECT"] == 2:
+    #     movementSpeed -= 0.1
+    #     if movementSpeed < 0: # don't let movement speed go into negatives
+    #         movementSpeed = 0
 
-    
+    isButtonPressed = copy.deepcopy(buttonStatus)
+    joystickAxes = copy.deepcopy(joystickAxesStatus)
+
     if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
-        dhTable = ik.createDHTable(curArmAngles)
+    #     dhTable = ik.createDHTable(curArmAngles)
 
-        targetEEPos = controlEEPosition(isButtonPressed, joystickAxes, prevTargetValues, 
-                                        prevTargetTransform, scriptMode)
+    #     targetEEPos = controlEEPosition(isButtonPressed, joystickAxes, prevTargetValues, 
+    #                                     prevTargetTransform, scriptMode)
         
-        try:
-            targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-            targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
+    #     try:
+    #         targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+    #         targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
 
-            simulatedAngles = targetAngles
-            # slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
+    #         simulatedAngles = targetAngles
+    #         # slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
 
-            # publish on different threads to speed up processing time
-            pubThreadPool.submit(publishNewAngles, targetAngles)
-            pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
-            pubThreadPool.submit(updateDesiredArmSimulation, simulatedAngles)
+    #         # publish on different threads to speed up processing time
+        publishNewAngles(curArmAngles)
+        updateDesiredEETransformation(prevTargetValues, scriptMode)
+        updateDesiredArmSimulation(curArmAngles)
 
-            curArmAngles = targetAngles
-            prevTargetTransform = targetEEPos
-            prevTargetValues = newTargetValues
-        except ik.CannotReachTransform:
-            print("Cannot reach outside of arm workspace")
+    #         curArmAngles = targetAngles
+    #         prevTargetTransform = targetEEPos
+    #         prevTargetValues = newTargetValues
+    #     except ik.CannotReachTransform:
+    #         print("Cannot reach outside of arm workspace")
 
         if goToPosValues[0]: # if the service flag to go to a saved position has been called
             goToPosValues[0] = False
@@ -740,8 +826,8 @@ def main():
             [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
             newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
             prevTargetValues = newTargetValues
-
-            pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
+            
+            updateDesiredEETransformation(newTargetValues, scriptMode)
             updateDesiredArmSimulation(curArmAngles)
     elif scriptMode == Mode.FORWARD_KIN: # update the values IK mode uses when not in IK mode
         curArmAngles = liveArmAngles
@@ -752,8 +838,13 @@ def main():
         newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
         prevTargetValues = newTargetValues
 
-        pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
+        updateDesiredEETransformation(newTargetValues, scriptMode)
         updateDesiredArmSimulation(curArmAngles)
+
+    # buttonStatus = getJoystickButtons([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) 
+    # joystickAxesStatus = {"L-Right": 0, "L-Down": 0, "L2": 0, "R-Right": 0, "R-Down": 0, "R2": 0}
+
+
 
 # Main Area
 
@@ -766,8 +857,10 @@ if __name__ == "__main__":
     prevTargetTransform = ik.createEndEffectorTransform(prevTargetValues[0], prevTargetValues[1],
                                                         prevTargetValues[2], prevTargetValues[3])
     goToPosValues = [False, [0, 0, 0, 0, 0, 0, 0]]
+    buttonStatus = getJoystickButtons([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) 
+    joystickAxesStatus = {"L-Right": 0, "L-Down": 0, "L2": 0, "R-Right": 0, "R-Down": 0, "R2": 0}
 
-    initializeJoystick()
+    # initializeJoystick()
 
     pubThreadPool = concurrent.futures.ThreadPoolExecutor(max_workers=2) # create thread pool with two threads
 
@@ -781,6 +874,8 @@ if __name__ == "__main__":
 
     armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
     rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateLiveArmSimulation)
+    rospy.Subscriber("arm_state", String, updateState)
+    rospy.Subscriber("arm_inputs", ArmInputs, updateController)
 
     if gazebo_on:
         gazeboPublisher = sim.startGazeboJointControllers(9)
@@ -795,6 +890,7 @@ if __name__ == "__main__":
     correctionsService = rospy.Service('update_arm_corrections', Corrections, updateAngleCorrections)
     goToArmPosService = rospy.Service('move_arm_to', GoToArmPos, goToPosition)
     saveArmPosService = rospy.Service('save_arm_pos_as', SaveArmPos, savePosition)
+    
 
     while not rospy.is_shutdown():
         try:  
