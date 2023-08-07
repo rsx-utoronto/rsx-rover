@@ -1,0 +1,58 @@
+<launch>
+   <param name="/use_sim_time" value="true"/>
+   
+<!--      ************** Stage Simulator ***************   -->
+   <!-- <node pkg="stage_ros" type="stageros" name="stageros" args="$(find teb_local_planner_tutorials)/stage/maze_diff_drive.world">
+		<remap from="base_scan" to="scan"/>
+  	</node> -->
+
+   <arg name="no_static_map" default="false" />
+   <arg name="command_velocity_topic" default="/robot_base_velocity_controller/cmd_vel" />
+   <arg name="odom_topic" default="/robot_base_velocity_controller/odom" />
+   <!-- <node pkg="tf" type="static_transform_publisher" name="base_link_to_map" args="0 0 0 0 0 0 map base_link 100" /> -->
+
+   <include file="$(find rover)/rover/simulation/launch/hector_slam_occupancy_grid_sim.launch" />
+
+   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+      <rosparam file="$(find rover)/rover/simulation/config/costmap_common.yaml" command="load" ns="global_costmap" /> 
+      <rosparam file="$(find rover)/rover/simulation/config/costmap_common.yaml" command="load" ns="local_costmap" />
+      <rosparam file="$(find rover)/rover/simulation/config/local_costmap.yaml" command="load" ns="local_costmap"/>
+      <rosparam file="$(find rover)/rover/simulation/config/global_costmap.yaml" command="load" ns="global_costmap" unless="$(arg no_static_map)"/> 
+      <rosparam file="$(find rover)/rover/simulation/config/move_base.yaml" command="load" />
+      
+      <param name="base_global_planner" value="navfn/NavfnROS" />
+      <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+
+      <param name="controller_frequency" value="5.0" />
+      <param name="controller_patience" value="15.0" />
+
+      <remap from="cmd_vel" to="$(arg command_velocity_topic)" />
+      <remap from="odom" to="$(arg odom_topic)" />
+
+      <!-- <rosparam file="$(find rover)/rover/autonomy/config/costmap_converter.yaml" command="load" /> -->
+   </node>
+
+   <!--  ****** Maps *****  -->
+  
+	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/white.yaml" output="screen">
+               <param name="frame_id" value="map"/>
+	</node>
+
+   <arg name="use_map_topic" default="true"/>
+   <arg name="scan_topic" default="rrbot/laser/scan" />
+   <arg name="map_topic" default="map" />
+
+
+   <node pkg="amcl" type="amcl" name="amcl">
+      <rosparam file="$(find rover)/rover/simulation/config/amcl_params.yaml" command="load" />
+      <remap from="scan" to="$(arg scan_topic)"/>    
+      <param name="initial_pose_x"            value="0"/>
+		<param name="initial_pose_y"            value="0"/>
+		<param name="initial_pose_a"            value="0"/>
+   </node>
+
+
+	  <!--  **************** Visualisation ****************  -->
+   <node name="rviz_move_base" pkg="rviz" type="rviz" args="-d $(find rover)/rover/simulation/config/move_base.rviz"/>
+
+</launch> 

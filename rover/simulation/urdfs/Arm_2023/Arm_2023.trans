@@ -1,0 +1,104 @@
+<?xml version="1.0" ?>
+<robot name="Arm_2023" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+<!-- URDF Transmissions-->
+<transmission name="tran1">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_1">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor1">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran2">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_2">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor2">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran3">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_3">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor3">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran4">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_4">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor4">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran5">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_5">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor5">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran6">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_6">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor6">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran7">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_7">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor7">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran8">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_8">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor8">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran9">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Joint_9">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor9">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+</robot>

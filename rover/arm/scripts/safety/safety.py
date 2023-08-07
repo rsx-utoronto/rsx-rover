@@ -1,12 +1,11 @@
-import arm_can_control as arm_can
-from GetManualJoystickFinal import *
-from MapManualJoystick import *
-#import arm_servo as servo
-import struct
+#!/usr/bin/env python3
+
 import rospy
-from std_msgs.msg import Float32MultiArray
-import threading
+from std_msgs.msg import *
 from enum import Enum
+import time
+import numpy as np
+import os
 
 ############ ENUMERATIONS #############
 
@@ -16,11 +15,6 @@ class Errors(Enum):
     ERROR_EXCEEDING_POS     = 1
     ERROR_EXCEEDING_CURRENT = 2
     ERROR_LIMIT_SWITCH      = 3
-
-########### GLOBAL CONSTANTS ###########
-
-REDUCTION       = [120, 160, 120, 20, 20, 20, 40]
-
 
 ############### CLASSES ###############
 
@@ -35,29 +29,81 @@ class Safety_Node():
     def __init__(self):
 
         # Attributes to hold data from subscribed topics
-        self.GOAL_POS        = [0, 0, 0, 0, 0, 0, 0]
-        self.CURR_POS        = [0, 0, 0, 0, 0, 0, 0]
-        self.MOTOR_CURR      = [0, 0, 0, 0, 0, 0, 0]
-        self.LIMIT_SWITCH    = [False, False, False, False, False, False, False]
+        self.GOAL_POS             = [0, 0, 0, 0, 0, 0, 0]
+        self.CURR_POS             = [0, 0, 0, 0, 0, 0, 0]
+        self.MOTOR_CURR           = [0, 0, 0, 0, 0, 0, 0]
+        self.LIMIT_SWITCH         = [False, False, False, False, False, False, False]
+        self.STATE                = 'Idle'
 
         # Attributes to hold data for publishing to topics
-        self.ERRORS          = [0, 0, 0, 0, 0, 0, 0]
+        self.ERRORS               = UInt8MultiArray()
+        self.ERRORS.data          = [0, 0, 0, 0, 0, 0, 0]
+        self.SAFE_GOAL_POS        = Float32MultiArray()
+        self.SAFE_GOAL_POS.data   = [0, 0, 0, 0, 0, 0, 0]
+        self.ERROR_OFFSET         = Float32MultiArray()
+        self.ERROR_OFFSET.data    = [0, 0, 0, 0, 0, 0, 0]
 
         # Attributes needed for detecting whether motor current is exceeding
-        self.TIME            = [0, 0, 0, 0, 0, 0, 0]
-        self.FIRST           = [True, True, True, True, True, True, True]
+        self.TIME                 = [0, 0, 0, 0, 0, 0, 0]
+        self.FIRST                = [True, True, True, True, True, True, True]
 
         # Variables for ROS publishers and subscribers
-        self.Goal_sub        = rospy.Subscriber("GOAL_POS", Float32MultiArray, self.callback_Goal)
-        self.MotorCurr_sub   = rospy.Subscriber("MOTOR_CURR", Float32MultiArray, self.callback_MotorCurr)
-        self.CurrPos_sub     = rospy.Subscriber("CURR_POS", Float32MultiArray, self.callback_CurrPos)
-        self.LimitSwitch_sub = rospy.Subscriber("LIMIT_SWITCH", Float32MultiArray, self.callback_LimitSwitch)
-        self.SafePos_pub     = rospy.Publisher("SAFE_GOAL_POS", Float32MultiArray, queue_size= 10)
-        self.Error_pub       = rospy.Publisher("ERROR_MSG", Float32MultiArray, queue_size= 10)
+        self.Goal_sub             = rospy.Subscriber("arm_goal_pos", Float32MultiArray, self.callback_Goal)
+        self.MotorCurr_sub        = rospy.Subscriber("arm_motor_curr", Float32MultiArray, self.callback_MotorCurr)
+        self.CurrPos_sub          = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.callback_CurrPos)
+        self.LimitSwitch_sub      = rospy.Subscriber("arm_limit_switch", UInt8MultiArray, self.callback_LimitSwitch)
+        self.KillSwitch_sub       = rospy.Subscriber("arm_killswitch", UInt8, self.callback_KillSwitch)
+        self.State_sub            = rospy.Subscriber("arm_state", String, self.CallbackState)
+        self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 0)
+        self.Error_pub            = rospy.Publisher("arm_error_msg", UInt8MultiArray, queue_size= 0)
+        self.Offset_pub           = rospy.Publisher("arm_error_offset", Float32MultiArray, queue_size= 0)
 
-    def callback_LimitSwitch(self, limitSwitch_data : list(int)) -> None:
+    def callback_KillSwitch(self, data : UInt8):
         """
-        list(int) -> (None)
+        (UInt8) -> (None)
+        
+        Receives and stores killswitch input from the controller node. If pressed, we shut down CAN_Send node
+        after sending the curr_pos as the latest position.
+
+        @parameters
+
+        data (UInt8): Input indicating whether killswitch is pressed or not
+        """
+        
+        # Storing the boolean value
+        killswitch = data.data
+
+        if killswitch:
+            self.SAFE_GOAL_POS.data = self.CURR_POS
+            self.SafePos_pub.publish(self.SAFE_GOAL_POS)
+            rospy.sleep(0.001)
+            os.system("rosnode kill "+ "CAN_Send")
+        
+        else:
+            os.system("rosrun rover "+ "CAN_send.py")
+            self.SAFE_GOAL_POS.data = self.CURR_POS
+
+    def CallbackState (self, status: String) -> None:
+        """
+        (String) -> (None)
+
+        Recieves and stores state (idle, manual, ik or setup) from controller node
+
+        @parameters
+
+        status (String): stores the status received from the ROS topic
+        """
+
+        # Update the state
+        self.STATE = status.data
+        
+        # If state is setup, do setup
+        if self.STATE == 'Setup':
+            self.setup()
+
+    def callback_LimitSwitch(self, limitSwitch_data : UInt8MultiArray) -> None:
+        """
+        (UInt8MultiArray) -> (None)
         
         Receives and stores limit switch inputs from SparkMax through the LIMIT_SWITCH topic
         into LIMIT_SWITCH attribute. Also updates the ERRORS attribute if needed and publishes it on 
@@ -65,19 +111,20 @@ class Safety_Node():
 
         @parameters
 
-        limitSwitch_data (list(int)): List containing limit switch inputs from SparkMax
+        limitSwitch_data (UInt8MultiArray): List containing limit switch inputs from SparkMax
         """
 
         # Store the received limit switch data
         self.LIMIT_SWITCH = limitSwitch_data.data
+        #print(self.LIMIT_SWITCH)
 
-        # Updating the ERRORS attribute if needed and publishing it
-        self.limitSwitch_check()
-        self.Error_pub.publish(self.ERRORS)
+        # # Updating the ERRORS attribute if needed and publishing it
+        # self.limitSwitch_check()
+        # self.Error_pub.publish(self.ERRORS)
 
-    def callback_Goal(self, goal_data : list(float)) -> None:
+    def callback_Goal(self, goal_data : Float32MultiArray) -> None:
         """
-        (list(float)) -> (None)
+        (Float32MultiArray) -> (None)
 
         Receives and stores data from GOAL_POS topic into GOAL_POS attribute, checks
         if the value is safe and publishes it to the SAFE_GOAL_POS topic if it is safe
@@ -86,25 +133,24 @@ class Safety_Node():
 
         @parameters
 
-        goal_data (list(float)): List containing input angles (degrees) of each motor
+        goal_data (Float32MultiArray): List containing input angles (degrees) of each motor
         """
 
         # Store the received goal postion
-        self.GOAL_POS = goal_data.data
+        self.GOAL_POS = list(goal_data.data)
 
-        # Check if the goal position is safe and publish the errors
-        self.postion_check()
-        self.Error_pub.publish(self.ERRORS)
+        if self.STATE == 'IK':
+            self.GOAL_POS[1] *= -1
+        # self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
+        #print("Received inputs:", self.GOAL_POS[0])
 
-        # Check if there are any other errors
-        if self.ERRORS.count(Errors.ERROR_NONE) == len(self.ERRORS):
+        # Update the SAFE_GOAL_POS and publish if the received position is safe
+        self.update_safe_goal_pos(self.GOAL_POS)
 
-            # Publish the position to SAFE_GOAL_POS topic
-            self.SafePos_pub.publish(self.GOAL_POS)
     
-    def callback_MotorCurr(self, MotorCurr_data : list(float)) -> None:
+    def callback_MotorCurr(self, MotorCurr_data : Float32MultiArray) -> None:
         """
-        (list(float)) -> (None)
+        (Float32MultiArray) -> (None)
 
         Receives and stores data from MOTOR_CURR topic into MOTOR_CURR attribute and
         checks whether any current value is exceeding limits. Publishes the errors on 
@@ -112,33 +158,102 @@ class Safety_Node():
 
         @parameters
 
-        MotorCurr_data (list(float)): List containing current values (amps, I think) of each motor
+        MotorCurr_data (Float32MultiArray): List containing current values (amps, I think) of each motor
         """
         
         # Store the received motor current value
         self.MOTOR_CURR = MotorCurr_data.data
 
-        # Check if motor current is exceeding and publish the errors
-        self.current_check()
-        self.Error_pub.publish(self.ERRORS)
-
-
+        # # Check if motor current is exceeding and publish the errors
+        # self.current_check()
+        # self.Error_pub.publish(self.ERRORS)
     
-    def callback_CurrPos(self, CurrPos_data : list(float)) -> None:
+    def callback_CurrPos(self, CurrPos_data : Float32MultiArray) -> None:
         """
-        (list(float)) -> (None)
+        (Float32MultiArray) -> (None)
 
         Receives and stores data from CURR_POS topic into CURR_POS attribute
 
         @parameters
 
-        CurrPos_data (list(float)): List containing current angles (degrees) of each motor
+        CurrPos_data (Float32MultiArray): List containing current angles (degrees) of each motor
         """
+
+        # Store the received current position values
         self.CURR_POS = CurrPos_data.data
+
+    def update_safe_goal_pos(self, final_pos : list) -> None:
+        """
+        (list(float)) -> (None)
+
+        Does checks on the received data and publishes them to arm_safe_goal_pos topic if the checks pass.
+        Becomes a recursive function for IK while a single loop function for manual
+
+        @parameters
+
+        final_pos (list(float)): POS values to be checked and published if safe
+        """
+
+        # # Check if we are in IK state
+        # if self.STATE == "IK":
+
+        #     # Speed Limits
+        #     SPEED_LIMIT = [0.005, 0.003, 0.01, 0.075, 
+        #                             0.075, 0.075, 0.075]
+
+        #     # Update the final pos according to direction we are going in
+        #     direction = [1, 1, 1, 1, 1, 1, 1]
+
+        #     for i in range(len(self.GOAL_POS)):
+        #         direction[i] = sign(self.GOAL_POS[i] - self.CURR_POS[i])
+            
+        #     final_pos = list(np.array(self.CURR_POS) + np.array(direction) * np.array(SPEED_LIMIT))
+            
+        #     # Do position check on this final_pos as well as all the other checks
+        #     self.postion_check(pos= final_pos)
+        #     self.current_check(pos= final_pos)
+        #     self.limitSwitch_check(pos= final_pos)
+        
+        if self.STATE == "Manual" or self.STATE == "IK":
+            
+            # Check if the goal position is safe 
+            #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
+            self.postion_check()
+            #self.current_check()
+            self.limitSwitch_check()
+            #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
+
+        else:
+            return
+
+        # Publish the errors
+        self.Error_pub.publish(self.ERRORS)
+
+        print("goal: {}, error: {}".format(final_pos, self.ERRORS.data))
+
+        # Check if there are any errors
+        if self.ERRORS.data.count(Errors.ERROR_NONE.value) == len(self.ERRORS.data):
+
+            # Print/Publish the position to SAFE_GOAL_POS topic
+            #print(self.GOAL_POS)
+            self.SAFE_GOAL_POS.data = self.GOAL_POS
+            self.SafePos_pub.publish(self.SAFE_GOAL_POS)
+        
+        # If there are any errors, publish the error offsets and reset them
+        elif Errors.ERROR_EXCEEDING_POS.value in self.ERRORS.data:
+
+            print("publishing offsets:", self.ERROR_OFFSET.data)
+            self.Offset_pub.publish(self.ERROR_OFFSET)
+            #pass
+            #self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
+        
+        # # Repeat the function if needed in 'IK' mode
+        # if self.STATE == "IK" and max(abs(np.array(self.GOAL_POS) - np.array(self.CURR_POS))):
+        #     self.update_safe_goal_pos(self.GOAL_POS)
     
-    def postion_check(self, dt : float = 0.1) -> None:
+    def postion_check(self, pos : list = None) -> None:
         '''
-        (float) -> (None)
+        (lsit(float)) -> (None)
 
         Compares the goal position with current position to see that the difference 
         between them is not gigantic. If gigantic sets the error as for that motor as
@@ -147,113 +262,185 @@ class Safety_Node():
 
         @parameters
 
-        dt (float) (optional): Time value (in s) to be multipled with speed limits
+        pos (list(int)) (optional): POS values to be checked. Only fill it for IK mode, otherwise keep it None
         '''
+        # TODO
+        # Limits for position safety (Need to test these values)
+        #limit = [1.25, 1.25, 1.25, 20, 1.25, 1.25, 1.25]
+        limit = [5, 5, 5, 10, 50, 50, 40]
 
-        # Multiplying factors for position safety
-        factor = [0.6, 0.8, 0.15, 0.05, 1/15, 1/15, 1/50]
+        if not pos:
+            pos = self.GOAL_POS
 
         # Going through each element of GOAL_POS
-        for i in range(len(self.GOAL_POS)):
-            
-            # Starting thread lock
-            #with lock:
-            #print(dt)
+        #for i in range(len(self.GOAL_POS)):
+        for i in [0, 1, 2, 3, 4, 5, 6]:    
             # Doing position comparisons for safety
-            if self.GOAL_POS[i] < (self.CURR_POS[i] - factor[i] * speed_limit[i] * dt) or self.GOAL_POS[i] > (self.CURR_POS[i] + factor[i] * speed_limit[i] * dt):
+            if (abs(pos[i] - self.CURR_POS[i]) > limit[i]):
 
-                # Calculating the offset and applying it to controller input
-                offset            = self.GOAL_POS[i] - self.CURR_POS[i]
-                self.GOAL_POS[i] -= offset
+                # Calculating the offset, applying it to goal position and storing it
+                offset                     = pos[i] - self.CURR_POS[i]
+                self.ERROR_OFFSET.data[i]  = offset - sign(offset) * limit[i]
                 #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
+
+                # # Update the error if no other error is set
+                # if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
+                #     self.ERRORS.data[i] == Errors.ERROR_EXCEEDING_POS.value):
 
                 # Set the error for the motor
-                self.ERRORS[i]    = Errors.ERROR_EXCEEDING_POS
+                self.ERRORS.data[i] = Errors.ERROR_EXCEEDING_POS.value
 
-                # For debugging safety code, you can uncomment this
-                #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
-
+            # NOTE
             # Remove the error if it is no longer there
             # By design, the EXCEEDING_POS error should not be there after one 
-            # cycle of the main loop as the offset to controller input will bring
+            # cycle of the loop as the offset to controller input will bring
             # the input back to a safe value.
             else:
-                if self.ERRORS[i] == Errors.ERROR_NONE or self.ERRORS[i] == Errors.ERROR_EXCEEDING_POS:
-                    self.ERRORS[i] = Errors.ERROR_NONE
+                ## Call other checks just to confirm there are no errors
+                # self.current_check()
+                # self.limitSwitch_check()
+                # if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
+                #     self.ERRORS.data[i] == Errors.ERROR_EXCEEDING_POS.value):
+                self.ERRORS.data[i] = Errors.ERROR_NONE.value
 
-        #print("Input:", arm_can.read_can_message(spark_input[4], arm_can.CMD_API_STAT2))
 
-    def current_check(self) -> None:
+    def current_check(self, pos : list = None) -> None:
         '''
         (None) -> (None)
 
         Checks the maximum current being consumed by a motor. If the current is higher than
         the expected max, sets the error for the particular motor as Errors.ERROR_EXCEEDING_CURRENT.
         Helps us to know when too much torque is being applied
+
+        @parameters
+
+        pos (list(int)) (optional): POS values to be checked. Only fill it for IK mode, otherwise keep it None
         '''
 
         # Max current values for each motor
         max_current = [40, 40, 40, 20, 20, 20, 20]
 
+        if not pos:
+            pos = self.GOAL_POS
+
         # Checking maximum currents
         for i in range(len(self.MOTOR_CURR)):
             if self.MOTOR_CURR[i] > max_current[i]:
 
-                # Checking if the input from controller is making it go further into 
-                # the direction that increases current
-                if (sign(self.GOAL_POS[i] - self.CURR_POS[i]) == sign(self.GOAL_POS[i])):
-                    #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
-                    # Check if the motor has an error associated with it already
-                    if self.ERRORS[i] == Errors.ERROR_NONE or self.ERRORS[i] == Errors.ERROR_EXCEEDING_CURRENT:
+                # Check if the motor has an error associated with it already
+                if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
+                    self.ERRORS.data[i] == Errors.ERROR_EXCEEDING_CURRENT.value):
+                    
+                    # Checking if the input from controller is making it go further into 
+                    # the direction that increases current
+                    if (sign(pos[i] - self.CURR_POS[i]) == sign(pos[i])):
 
                         # Change the error associated with the motor to EXCEEDING_CURRENT
-                        self.ERRORS[i] = Errors.ERROR_EXCEEDING_CURRENT
+                        self.ERRORS.data[i] = Errors.ERROR_EXCEEDING_CURRENT.value
+
+                        # # Calculating the offset, applying it to goal position and storing it
+                        # offset                  = list(np.array(self.GOAL_POS) - np.array(self.CURR_POS))
+                        # self.ERROR_OFFSET.data  = offset
 
                         # Check if this is the first time this error is set 
                         if self.FIRST[i]:
 
                             # Collect time stamp since the error was set
-                            self.TIME[i]  = time.time()
-                            self.FIRST[i] = False
+                            self.TIME[i]    = time.time()
+                            self.FIRST[i]   = False
                 
-                # If the controller input is in the direction that reduces the current
-                else:
-                    # Check if the motor has an associated with it already
-                    if self.ERRORS[i] == Errors.ERROR_NONE or self.ERRORS[i] == Errors.ERROR_EXCEEDING_CURRENT:
+                    # If the controller input is in the direction that reduces the current
+                    else:
 
                         # Remove any error and set TIME and FIRST back to original form
-                        self.ERRORS[i] = Errors.ERROR_NONE
-                        self.FIRST[i]  = True
-                        self.TIME[i]   = 0
+                        self.ERRORS.data[i] = Errors.ERROR_NONE.value
+                        self.FIRST[i]       = True
+                        self.TIME[i]        = 0
             
             # Checking if the current has been under the max limit for more than 10 ms
             elif self.MOTOR_CURR[i] < max_current[i] and time.time() - self.TIME[i] > 0.01:
 
                 # Check if the motor has an error associated with it already
-                if self.ERRORS[i] != Errors.ERROR_EXCEEDING_POS:
+                if (self.ERRORS.data[i] == Errors.ERROR_EXCEEDING_CURRENT.value or
+                    self.ERRORS.data[i] == Errors.ERROR_NONE.value):
 
                     # Remove the error and set TIME and FIRST back to original form
-                    self.ERRORS[i] = Errors.ERROR_NONE
+                    self.ERRORS.data[i] = Errors.ERROR_NONE.value
                     self.FIRST[i]  = True
                     self.TIME[i]   = 0
 
-    def limitSwitch_check(self) -> None:
+    def limitSwitch_check(self, pos : list = None) -> None:
         '''
         (None) -> (None)
 
         Checks whether any motor of the arm is hitting the limit switch attached to it. 
         Updates the error status of the motor if needed
+
+        @parameters
+
+        pos (list(int)) (optional): POS values to be checked. Only fill it for IK mode, otherwise keep it None
         '''
+
+        if not pos:
+            pos = self.GOAL_POS
+
         # Going through each limit switch input
         for i in range(len(self.LIMIT_SWITCH)):
-
+            
             # Checking if any other error is set already
-            if self.ERRORS[i] == Errors.ERROR_NONE or self.ERRORS[i] == Errors.ERROR_LIMIT_SWITCH:
+            if self.LIMIT_SWITCH[i]:
+            
+                #print(i)
 
-                # Checking if limit switch is being pressed, 
-                # if yes then change the error status for the motor
-                if self.LIMIT_SWITCH[i] == True:
-                    self.ERRORS[i] = Errors.ERROR_LIMIT_SWITCH
+                # Checking if the input from controller is making it go further into 
+                # the direction that presses the limit switch
+                if (sign(pos[i] - self.CURR_POS[i]) == sign(pos[i])):
+                    
+                    #print(self.LIMIT_SWITCH[6])
+
+                    # Checking if limit switch is being pressed, 
+                    # if yes then change the error status for the motor
+                    #if i == 6:
+                        #print(self.LIMIT_SWITCH[i])
+                        if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
+                            self.ERRORS.data[i] == Errors.ERROR_LIMIT_SWITCH.value):
+                            #print("error in", i)
+                            self.ERRORS.data[i]     = Errors.ERROR_LIMIT_SWITCH.value
+
+                    # # Calculating the offset, applying it to goal position and storing it
+                    # offset                  = list(np.array(self.GOAL_POS) - np.array(self.CURR_POS))
+                    # print(self.GOAL_POS[2], self.CURR_POS[2], offset[2])
+                    # self.ERROR_OFFSET.data  = offset
+                
+                else:
+                    if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
+                        self.ERRORS.data[i] == Errors.ERROR_LIMIT_SWITCH.value):
+                        self.ERRORS.data[i] = Errors.ERROR_NONE.value
+
+            else:
+                if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
+                    self.ERRORS.data[i] == Errors.ERROR_LIMIT_SWITCH.value):
+                    self.ERRORS.data[i] = Errors.ERROR_NONE.value
+
+    def setup(self):
+        # For each motor...
+        #for i in range(len(self.SAFE_GOAL_POS) - 1):
+        for i in [0]:
+            # Store current angles
+            initial_pos = self.CURR_POS[i]
+            # Send in a large value to hit limit switch
+            #self.SAFE_GOAL_POS.data[i] = 10000000
+            # When an error occurs, check again and reverse angle change
+            while Errors.ERROR_LIMIT_SWITCH.value != self.ERRORS.data[i]:
+                self.SAFE_GOAL_POS.data[i] += 1
+                self.SafePos_pub.publish(self.SAFE_GOAL_POS)
+                print(initial_pos)
+            final_pos = self.CURR_POS[i]
+            print(final_pos)
+
+            self.SAFE_GOAL_POS.data[i] = final_pos- (final_pos - initial_pos)
+            self.SafePos_pub.publish(self.SAFE_GOAL_POS)
+
 
 
 ############## FUNCTIONS ##############
@@ -279,156 +466,20 @@ def main() -> None:
     
     Main function that initializes the safety node
     '''
-    # Initialize a ROS node
-    rospy.init_node("Arm_Safety", anonymous= True)
 
-    # Set all the publishers and subscribers of the node
-    Safety = Safety_Node()
+    try:
+        # Initialize a ROS node
+        rospy.init_node("Arm_Safety")
 
-    # ROS spin to keep the node alive
-    rospy.spin()
+        # Set all the publishers and subscribers of the node
+        Safety = Safety_Node()
+
+        # ROS spin to keep the node alive
+        rospy.spin()
+
+    except rospy.ROSInterruptException:
+        pass
 
 if __name__ == "__main__":
+
     main()
-
-# def postion_check(spark_input : list, dt : float = 0.1) -> list(int):
-#     '''
-#     (list(int)) -> (list(int))
-
-#     Performs safety operations:
-#     1) Compares the goal position with current position to see that the difference 
-#     between them is not gigantic. If gigantic sets the error as for that motor as
-#     Errors.ERROR_EXCEEDING_POS. Makes sure the motor doesn't jerk back to 0 
-#     position in case computer loses power
-
-#     2) Checks the maximum current being consumed by a motor. If the current is higher than
-#     the expected max, sets the error for the particular motor as Errors.ERROR_EXCEEDING_CURRENT.
-#     Helps us to know when too much torque is being applied
-
-#     @parameters
-
-#     spark_input (list(int)): Input positions for the motors
-#     '''
-
-#     # Multiplying factors for position safety
-#     factor = [0.6, 0.8, 0.15, 0.05, 1/15, 1/15, 1/50]
-
-#     # Checking if input is as long as CURR_POS
-#     if len(spark_input) == len(CURR_POS):
-
-#         for i in range(len(spark_input)):
-            
-#             # Starting thread lock
-#             #with lock:
-#             #print(dt)
-#             # Doing position comparisons for safety
-#             if GOAL_POS[i] < (CURR_POS[i] - factor[i] * speed_limit[i] * 0.1) or GOAL_POS[i] > (CURR_POS[i] + factor[i] * speed_limit[i] * 0.1):
-
-#                 # Calculating the offset and applying it to controller input
-#                 offset = GOAL_POS[i] - CURR_POS[i]
-#                 GOAL_POS[i] -= offset
-#                 #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
-
-#                 # Set the error for the motor
-#                 ERRORS[i] = Errors.ERROR_EXCEEDING_POS
-
-#                 # For debugging safety code, you can uncomment this
-#                 #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
-
-#             # Remove the error if it is no longer there
-#             # By design, the EXCEEDING_POS error should not be there after one 
-#             # cycle of the main loop as the offset to controller input will bring
-#             # the input back to a safe value.
-#             else:
-#                 if ERRORS[i] != Errors.ERROR_EXCEEDING_CURRENT:
-#                     ERRORS[i] = Errors.ERROR_NONE
-
-#         #print("Input:", arm_can.read_can_message(spark_input[4], arm_can.CMD_API_STAT2))
-#         return spark_input
-        
-#     else:
-#         print('ERROR: "spark_input" is invalid, returning CURR_POS')
-
-# def current_check(spark_input : list, dt : float = 0.1):
-#     '''
-#     (list(int)) -> (list(int))
-
-#     Performs safety operations:
-#     1) Compares the goal position with current position to see that the difference 
-#     between them is not gigantic. If gigantic sets the error as for that motor as
-#     Errors.ERROR_EXCEEDING_POS. Makes sure the motor doesn't jerk back to 0 
-#     position in case computer loses power
-
-#     2) Checks the maximum current being consumed by a motor. If the current is higher than
-#     the expected max, sets the error for the particular motor as Errors.ERROR_EXCEEDING_CURRENT.
-#     Helps us to know when too much torque is being applied
-
-#     @parameters
-
-#     spark_input (list(int)): Input positions for the motors
-#     '''
-
-#     # Max current values for each motor
-#     max_current = [40, 40, 40, 20, 20, 20, 20]
-
-#     # Checking maximum currents
-#     for i in range(len(MOTOR_CURR)):
-#         if MOTOR_CURR[i] > max_current[i]:
-
-#             # Checking if the input from controller is making it go further into 
-#             # the direction that increases current
-#             if (sign(GOAL_POS[i] - CURR_POS[i]) == sign(GOAL_POS[i])):
-#                 #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
-#                 # Check if the motor has an error associated with it already
-#                 if ERRORS[i] != Errors.ERROR_EXCEEDING_POS:
-
-#                     # Change the error associated with the motor to EXCEEDING_CURRENT
-#                     ERRORS[i] = Errors.ERROR_EXCEEDING_CURRENT
-
-#                     # Check if this is the first time this error is set 
-#                     if FIRST[i]:
-
-#                         # Collect time stamp since the error was set
-#                         TIME[i]  = time.time()
-#                         FIRST[i] = False
-            
-#             # If the controller input is in the direction that reduces the current
-#             else:
-#                 # Check if the motor has an associated with it already
-#                 if ERRORS[i] != Errors.ERROR_EXCEEDING_POS:
-
-#                     # Remove any error and set TIME and FIRST back to original form
-#                     ERRORS[i] = Errors.ERROR_NONE
-#                     FIRST[i]  = True
-#                     TIME[i]   = 0
-        
-#         # Checking if the current has been under the max limit for more than 10 ms
-#         elif MOTOR_CURR[i] < max_current[i] and time.time() - TIME[i] > 0.01:
-
-#             # Check if the motor has an error associated with it already
-#             if ERRORS[i] != Errors.ERROR_EXCEEDING_POS:
-
-#                 # Remove the error and set TIME and FIRST back to original form
-#                 ERRORS[i] = Errors.ERROR_NONE
-#                 FIRST[i]  = True
-#                 TIME[i]   = 0
-
-# def limitSwitch_check(spark_input : list, dt : float = 0.1):
-#     '''
-#     (list(int)) -> (list(int))
-
-#     Performs safety operations:
-#     1) Compares the goal position with current position to see that the difference 
-#     between them is not gigantic. If gigantic sets the error as for that motor as
-#     Errors.ERROR_EXCEEDING_POS. Makes sure the motor doesn't jerk back to 0 
-#     position in case computer loses power
-
-#     2) Checks the maximum current being consumed by a motor. If the current is higher than
-#     the expected max, sets the error for the particular motor as Errors.ERROR_EXCEEDING_CURRENT.
-#     Helps us to know when too much torque is being applied
-
-#     @parameters
-
-#     spark_input (list(int)): Input positions for the motors
-#     '''
-#     pass

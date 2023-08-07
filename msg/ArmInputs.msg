@@ -1,2 +1,13 @@
-float32 r_right
-float32 r_down
+float32 l_horizontal
+float32 l_vertical
+float32 r_vertical
+float32 r_horizontal
+int8 l1
+int8 r1
+float32 l2
+float32 r2
+int8 x
+int8 o
+int8 triangle
+int8 share
+int8 options

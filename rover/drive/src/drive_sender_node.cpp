@@ -24,8 +24,12 @@ private:
 	void networkCallback(const std_msgs::Bool::ConstPtr& net_stat);
 
 	ros::NodeHandle nh;
+	// double throttle_min = -1;
+	// double throttle_max = 1
+	// double turn_min = -1;
+	// double turn_max = 1;
 	double robot_radius = 0.8;
-	double MAX_LINEAR_SPEED = 2.5;
+	double MAX_LINEAR_SPEED = 1.625; // 2.5 speed est * 0.65 from rough calibration
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
 	double gear = 0; // set to 0 initially
 	ros::Publisher drive_pub_;
@@ -37,9 +41,9 @@ private:
 
 TeleopRover::TeleopRover()
 {
-	TeleopRover::network_status = false;
+	TeleopRover::network_status = true;
 	drive_pub_ = nh.advertise<geometry_msgs::Twist>("drive", 1);
-	TeleopRover::joy_sub = nh.subscribe("joy", 10, &TeleopRover::joyCallback, this);
+	TeleopRover::joy_sub = nh.subscribe("/software/joy", 10, &TeleopRover::joyCallback, this);
 	TeleopRover::net_sub = nh.subscribe("network_status", 1, &TeleopRover::networkCallback, this);
 }
 
@@ -87,13 +91,14 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 
 	lin_vel = lin_vel * gear;
 	turnFactor_x = turnFactor_x * gear;
-	ROS_INFO("Linear velocity: %f", lin_vel);
+	// ROS_INFO("Linear velocity: %f", lin_vel);
 	twist.linear.x = static_cast<double>(lin_vel/(double)255.0)*MAX_LINEAR_SPEED; // Should be in range of -MAX_LINEAR_SPEED to +MAX_LINEAR_SPEED 
 	twist.angular.z = static_cast<double>(turnFactor_x)*MAX_ANGULAR_SPEED; // Should be in range of -MAX_ANGULAR_SPEED to +MAX_ANGULAR_SPEED 
 
-	ROS_INFO("Turn Factor X %f", turnFactor_x);
-	ROS_INFO("Turn Factor Y %f", turnFactor_y);
-	ROS_INFO("Motor Value %f", lin_vel);
+	// ROS_INFO("Turn Factor X %f", turnFactor_x);
+	// ROS_INFO("Turn Factor Y %f", turnFactor_y);
+	// ROS_INFO("Motor Value %f", lin_vel);
+	ROS_INFO("GEAR %f", gear);
 
 	drive_pub_.publish(twist);
 }
@@ -125,5 +130,8 @@ int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "drive_sender_falcon");
 	TeleopRover drive_sender;
+	// while (ros::ok()){
+	// 	drive_sender.pubConstSpeed();
+	// }
 	ros::spin();
 }
