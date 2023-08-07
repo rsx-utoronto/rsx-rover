@@ -62,8 +62,9 @@ class CAN_Send():
 		# Save the data from the topic into our buffer
 		self.SAFE_GOAL_POS = list(data.data)
 
-		# Add correction for gripper (due to mechanical design)
-		self.SAFE_GOAL_POS[6] -= (self.SAFE_GOAL_POS[4] - self.CURR_POS[4])
+		# # Add correction for gripper (due to mechanical design)
+		# self.SAFE_GOAL_POS[6] -= (self.SAFE_GOAL_POS[4] - self.CURR_POS[4])
+		# print(self.SAFE_GOAL_POS[6])
 	
 	def send_msgs(self):
 		

@@ -229,7 +229,7 @@ class Safety_Node():
         # Publish the errors
         self.Error_pub.publish(self.ERRORS)
 
-        print("goal: {}, error: {}".format(final_pos, self.ERRORS.data))
+        #print("goal: {}, error: {}".format(final_pos, self.ERRORS.data))
 
         # Check if there are any errors
         if self.ERRORS.data.count(Errors.ERROR_EXCEEDING_POS.value) == 0:
@@ -238,6 +238,11 @@ class Safety_Node():
             #print(self.GOAL_POS)
             self.SAFE_GOAL_POS.data = self.GOAL_POS
             self.SafePos_pub.publish(self.SAFE_GOAL_POS)
+
+            # Publish any errors that we need to
+            self.Offset_pub.publish(self.ERROR_OFFSET)
+            #pass
+            self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
         
         # If there are any errors, publish the error offsets and reset them
         elif Errors.ERROR_EXCEEDING_POS.value in self.ERRORS.data:
