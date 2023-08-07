@@ -12,7 +12,22 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_generation
+  grid_map_core
+  grid_map_pcl
+  grid_map_ros
 )
+
+
+find_package(GTSAM REQUIRED)
+
+include_directories(${GTSAM_INCLUDE_DIR})
+
+find_package(PCL 1.2 REQUIRED)
+
+# Variables set by the pcl config.cmake.in file
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -199,9 +214,17 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-catkin_install_python(PROGRAMS
-DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
+target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 
-# add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
-# target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
+add_executable(lidar_pcl_subscriber rover/autonomy/scripts/point_cloud_subscriber.cpp rover/autonomy/scripts/pcl_traversibility_score.cpp rover/autonomy/scripts/segment_pcl.cpp)
+target_link_libraries(lidar_pcl_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(pcd_writer_subscriber rover/autonomy/scripts/pcd_writer_node.cc)
+target_link_libraries(pcd_writer_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(grid_map_subscriber rover/autonomy/scripts/grid_map_node.cc)
+target_link_libraries(grid_map_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${G})
+
+catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
+ DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
