@@ -1,5 +1,5 @@
 string rover_mode
-sensor_msgs/NavSatFix[] GPS_goals
+geometry_msgs/PoseStamped[] GPS_goals
 geometry_msgs/PoseStamped curr_goal
 bool GPS_GOAL_REACHED
 bool MISSION_OVER

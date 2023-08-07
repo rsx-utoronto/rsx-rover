@@ -1,5 +1,7 @@
 # request fields
-string coordinates
+float32 x 
+float32 y 
+float32 w
 string type
 bool give_priority
 ---
@@ -7,11 +9,11 @@ bool give_priority
 string service_response
 
 # Goal types and corresponding coordinate format 
-# gps - '{"lat": X,  "long": Y}'
-# light_beacon (provided in odom frame) - '{"x": X, "y": Y, "w": W}'
-# radio_beacon - '{"lat": X,  "long": Y}'
-# odom - '{"x": X, "y": Y, "w": W}'
-# sign - '{"dist": D, "heading": H}'
+# gps - x = lat, y = long
+# light_beacon (provided in odom frame) - x = x, y = y, w = w
+# radio_beacon - x = lat, y = long 
+# odom - x = x, y = y, w = w
+# sign - x = dist, w = heading
 
 
 

@@ -35,6 +35,8 @@ class StateMachineNode:
 
     def sm_state_callback(self, msg):
         self.state_msg.MANUAL_ENABLED = msg.MANUAL_ENABLED
+        self.state_msg.GPS_goals = msg.GPS_goals
+        self.state_msg.curr_goal = msg.curr_goal
     
     
 def main():

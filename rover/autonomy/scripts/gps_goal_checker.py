@@ -12,39 +12,37 @@ class GPSCheckerNode():
 
     def __init__(self):
         # CHANGE
-        self.curr_UTM_subscriber = rospy.Subscriber("utm_position", Odometry, self.curr_utm_callback)
-        self.goal_UTM_subscriber = rospy.Subscriber("rover_state", StateMsg, self.goal_utm_callback)
+        self.curr_subscriber = rospy.Subscriber("/aft_mapped_to_init", Odometry, self.curr_callback)
+        self.goal_subscriber = rospy.Subscriber("/rover_state", StateMsg, self.goal_callback)
         self.state_publisher = rospy.Publisher('/gps_checker_node/rover_state', StateMsg, queue_size=10)
         self.state_msg_old = StateMsg()
         self.updated_state_msg = StateMsg()
-        self.curr_utm_pos = np.zeros((0,3))
-        self.goal_utm_pos = np.zeros((0,3))
+        self.curr_pos = np.zeros((0,3))
+        self.goal_pos = np.zeros((0,3))
 
     
-    def curr_utm_callback(self, curr_utm_msg):
+    def curr_callback(self, curr_msg):
 
-        self.curr_utm_pos = np.asarray([curr_utm_msg.pose.position.x, curr_utm_msg.pose.position.y, curr_utm_msg.pose.position.z])
+        self.curr_pos = np.asarray([curr_msg.pose.position.x, curr_msg.pose.position.y, curr_msg.pose.position.z])
 
-    def goal_utm_callback(self, goal_utm_msg):
+    def goal_callback(self, goal_msg):
 
-        self.state_msg_old = goal_utm_msg
+        self.state_msg_old = goal_msg
 
-        self.goal_utm_pos = np.asarray([goal_utm_msg.curr_goal.pose.position.x, goal_utm_msg.curr_goal.pose.position.y, goal_utm_msg.curr_goal.pose.position.z])
+        self.goal_pos = np.asarray([goal_msg.curr_goal.pose.position.x, goal_msg.curr_goal.pose.position.y, goal_msg.curr_goal.pose.position.z])
 
     
     def check_goal_error(self):
 
         self.updated_state_msg = self.state_msg_old
 
-        err = np.linalg.norm(self.curr_utm_pos - self.goal_utm_pos)
+        err = np.linalg.norm(self.curr_pos - self.goal_pos)
 
-        if err < 2.5 :
+        if err < 2.5 and len(self.updated_state_msg.GPS_goals) > 0:
 
             self.updated_state_msg.GPS_GOAL_REACHED = True
 
         self.state_publisher.publish(self.updated_state_msg)
-
-
 
     def main(self):
         rospy.init_node("gps_goal_checker")

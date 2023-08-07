@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-
 from math import *
 import re
 import rospy
 #import tf
 from nav_msgs.msg import Odometry
+import numpy as np
+import tf2_ros
 
 
 class GPS_to_UTM:
@@ -41,34 +42,34 @@ class GPS_to_UTM:
     # Define a local orgin, latitude and longitude in decimal degrees
     # GPS Origin (these is an example origin)
 
-    def __init__(self, lat, lon, name, olon = -79.396042, olat= 43.660579):
+    def __init__(self, lat, lon, olon = -79.396042, olat= 43.660579):
         self.lat = lat
         self.lon = lon
-        self.name = name
         self.olon = olon 
         self.olat = olat
         
 
-    def get_xy_based_on_lat_long(self):
+    def convertGPSToOdom(self):
         # Define a local orgin, latitude and longitude in decimal degrees
         # GPS Origin
-        
         xg2, yg2 = self.ll2xy()
         utmy, utmx, utmzone = self.LLtoUTM(self.lat, self.lon)
 
         # ROSPY Info Messages (wont print for some reason)
-        rospy.loginfo("#########  "+self.name+"  ###########")  
+        rospy.loginfo("####################")  
         rospy.loginfo("LAT COORDINATES ==>"+str(self.lat)+","+str(self.lon))  
         rospy.loginfo("COORDINATES XYZ ==>"+str(xg2)+","+str(yg2))
         rospy.loginfo("COORDINATES UTM==>"+str(utmx)+","+str(utmy))
 
-        # Normal Print Messages (but this will print for whatever reason)
-        print("#########  "+self.name+"  ###########")  
-        print("LAT COORDINATES ==>"+str(self.lat)+","+str(self.lon))  
-        print("COORDINATES XYZ ==>"+str(xg2)+","+str(yg2))
-        print("COORDINATES UTM==>"+str(utmx)+","+str(utmy))
+        tfBuffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tfBuffer)
 
-        return xg2, yg2
+        T_map_utm = tfBuffer.lookup_transform("utm", "map", rospy.Time())
+        
+        # Add a utm to odom conversion
+        # Get the initial odom position in UTM (on start up) and set it as a translation and rotation 
+
+        return np.asarray([xg2, yg2, 0])
 
 
 
@@ -89,7 +90,6 @@ class GPS_to_UTM:
             x is Easting in m (local grid)
             y is Northing in m  (local grid)
         '''
-
         outmy, outmx, outmzone = self.LLtoUTM(self.olat, self.olon)
         utmy, utmx, utmzone = self.LLtoUTM(self.lat, self.lon)
         if (not (outmzone==utmzone)):
@@ -153,6 +153,8 @@ class GPS_to_UTM:
             # 10000000 meter offset for southern hemisphere
             UTMNorthing += 10000000.0
         
+        print(UTMEasting)
+        
         return (UTMNorthing, UTMEasting, UTMZone)
 
     def UTMLetterDesignator(self):
@@ -185,11 +187,6 @@ class GPS_to_UTM:
         return LetterDesignator
 
 
-    def convertGPSToOdom(self):
-        
-        pass 
-
-
 def convertSignToOdom():
 
     # convert distance and heading to UTM coords 
@@ -197,9 +194,9 @@ def convertSignToOdom():
     # convert UTM to odom (transform provided by robot localization node)
     pass
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
     
-    coords1 = GPS_to_UTM(lat=40.9,lon=7.9, name="MAP") #EDIT (these are example lat, long coords)
-    coords1.get_xy_based_on_lat_long()
+#     coords1 = GPS_to_UTM(lat=40.9,lon=7.9) #EDIT (these are example lat, long coords)
+#     coords1.get_xy_based_on_lat_long()
 
 

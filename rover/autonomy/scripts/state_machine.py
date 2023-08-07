@@ -8,6 +8,7 @@ from rover.msg import StateMsg
 from rover.srv import AddGoal, AddGoalResponse
 from geometry_msgs.msg import PoseStamped
 from std_srvs.srv import Empty, EmptyResponse
+from tf.transformations import quaternion_from_euler
 from add_goal import *
 import argparse
 import yaml
@@ -27,6 +28,8 @@ class StateMachineNode:
         self.curr_goal = PoseStamped()
         self.num_gps_goals = num_gps_goals
         self.GPS_counter = 0
+        self.olat = 10
+        self.olon = 50
 
         # State Machine States
         self.rover_idle = self.RoverIdle(self)
@@ -57,49 +60,59 @@ class StateMachineNode:
         Handler for adding goals to the state machine
         """
         goal_type = req.type 
-        goal_coords = json.loads(req.coordinates)
         give_priority = req.give_priority # If True, cue this as the next goal
-
-        response_status = False
 
         if goal_type == "gps":
             # Convert to a goal in metres in the odom frame
-            get_gps = GPS_to_UTM(goal_coords["lat"], goal_coords["lon"])
+            get_gps = GPS_to_UTM(lat=req.x, lon=req.y)
             goal = get_gps.convertGPSToOdom()
 
-            if not goal:
-                return AddGoalResponse("Invalid coordinate format provided")
+            try:
+                if goal == None:
+                    return AddGoalResponse("Invalid coordinate format provided")
+            except:
+                rospy.loginfo("Goal successfully converted")
         
         elif goal_type == "light_beacon":
             # should be able to directly add to the goal queue
             # Add goal to queue
             self.state_msg_raw.LIGHT_BEACON_DETECTED = True
-            goal = np.asarray[goal_coords.x, goal_coords.y, goal_coords.w]
+            goal = np.asarray[req.x, req.y, req.w]
             
-            if not goal: 
-                return AddGoalResponse("Invalid coordinate format provided")
+            try:
+                if goal == None:
+                    return AddGoalResponse("Invalid coordinate format provided")
+            except:
+                rospy.loginfo("Goal successfully converted")
         
         elif goal_type == "radio_beacon":
             # Convert to a goal in metres in the odom frame
             self.state_msg_raw.RADIO_BEACON_DETECTED = True
-            goal = get_gps.convertGPSToOdom(goal_coords)
+            get_gps = GPS_to_UTM(req.x, req.y)
+            goal = get_gps.convertGPSToOdom()
             
-            if goal == False: 
-                return "Invalid coordinate format provided"
+            try:
+                if goal == None:
+                    return AddGoalResponse("Invalid coordinate format provided")
+            except:
+                rospy.loginfo("Goal successfully converted")
         
         elif goal_type == "odom":
             # Add goal to queue
             try:
-                goal = np.asarray[goal_coords.x, goal_coords.y, goal_coords.w]
+                goal = np.asarray([req.x, req.y, req.w])
             except:
                 return "Invalid coordinate format provided"
         
         elif goal_type == "sign":
             
             self.state_msg_raw.SIGN_DETECTED = True
-            goal = get_gps.convertSignToOdom(goal_coords)
-            if goal == False: 
-                return "Invalid coordinate format provided"
+            goal = get_gps.convertSignToOdom(req.x, req.w)
+            try:
+                if goal == None:
+                    return AddGoalResponse("Invalid coordinate format provided")
+            except:
+                rospy.loginfo("Goal successfully converted")
         
         else: 
             return "Invalid goal type provided"
@@ -110,9 +123,30 @@ class StateMachineNode:
         
         else:
             self.GPS_goals = np.vstack((self.GPS_goals, goal))
-        
-        return "Successfully added goal to list"
 
+        return "Successfully added goal to the list"
+
+    def convertGoals(self):
+
+        goal_list = []
+
+        for curr_goal in self.GPS_goals:
+
+            goal = PoseStamped()
+            goal.header.frame_id = "laser_odom" # change
+            goal.header.stamp = rospy.Time.now()
+
+            goal.pose.position.x = curr_goal[0]
+            goal.pose.position.y = curr_goal[1]
+            quat = quaternion_from_euler(0,0,curr_goal[2])
+            goal.pose.orientation.x = quat[0]
+            goal.pose.orientation.y = quat[1]
+            goal.pose.orientation.z = quat[2]
+            goal.pose.orientation.w = quat[3]
+
+            goal_list.append(goal)
+        
+        return goal_list
 
     class RoverIdle(smach.State):
         """
@@ -185,6 +219,9 @@ class StateMachineNode:
             rospy.loginfo("Please load any provided GPS waypoints using the AddGoal service")
             result = input("When you are done inputting the waypoints, please type [Y]. Any other input will leave the rover in initialize mode.")
             if result == "Y":
+                self.sm.state_msg_raw.GPS_goals = self.sm.convertGoals()
+                self.sm.state_msg_raw.curr_goal = self.sm.state_msg_raw.GPS_goals.pop()
+                self.sm.state_publisher.publish(self.sm.state_msg_raw)
                 return "MOVE_TO_TRAVERSE"
             else:
                 if self.sm.MODE == "MANUAL":
@@ -206,7 +243,8 @@ class StateMachineNode:
 
         def execute(self, userdata):
             rospy.loginfo('Executing state RoverTransition')
-
+            self.sm.state_msg_raw.GPS_GOAL_REACHED = False
+            self.sm.state_publisher.publish(self.sm.state_msg_raw)
             if self.sm.MODE == "MANUAL":
                 return "MOVE_TO_MANUAL"
             
@@ -238,7 +276,6 @@ class StateMachineNode:
 
         def execute(self, userdata):
             rospy.loginfo('Executing state Traverse')
-            
             if self.sm.MODE == "MANUAL":
                 return 'MOVE_TO_MANUAL'
             if self.sm.MODE == "IDLE":
@@ -265,6 +302,10 @@ class StateMachineNode:
             # Your state execution goes here
             if self.sm.GPS_GOAL_REACHED:
                 return 'GPS_GOAL_REACHED'
+            if self.sm.MODE == "MANUAL":
+                return 'MOVE_TO_MANUAL'
+            if self.sm.MODE == "IDLE":
+                return 'MOVE_TO_IDLE'
             else:
                 return 'ARUCO_TRAVERSING'
 
@@ -298,7 +339,7 @@ class StateMachineNode:
     class RoverArucoScan(smach.State):
 
         def __init__(self, sm_node):
-            smach.State.__init__(self, outcomes=['SCAN_COMPLETE', 'STAY'])
+            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL','MOVE_TO_IDLE', 'SCAN_COMPLETE', 'STAY'])
             self.counter = 0
             self.sm = sm_node
             self.sm.aruco_scan_complete = False
@@ -310,6 +351,10 @@ class StateMachineNode:
             # Add the actionlib execution for Aruco scanning
             if self.sm.aruco_scan_complete:
                 return 'SCAN_COMPLETE'  
+            if self.sm.MODE == "MANUAL":
+                return 'MOVE_TO_MANUAL'
+            if self.sm.MODE == "IDLE":
+                return 'MOVE_TO_IDLE'
             else:
                 return 'STAY'      
 
@@ -317,7 +362,7 @@ class StateMachineNode:
     class RoverLightBeaconScan(smach.State):
 
         def __init__(self, sm_node):
-            smach.State.__init__(self, outcomes=['SCAN_COMPLETE', 'STAY'])
+            smach.State.__init__(self, outcomes=['SCAN_COMPLETE', 'STAY','MOVE_TO_MANUAL','MOVE_TO_IDLE'])
             self.counter = 0
             self.sm = sm_node
 
@@ -328,6 +373,12 @@ class StateMachineNode:
             # Add the actionlib execution for Aruco scanning
             if self.sm.light_beacon_scan_complete:
                 return 'SCAN_COMPLETE' 
+            if self.sm.MODE == "MANUAL":
+                return 'MOVE_TO_MANUAL'
+            if self.sm.MODE == "IDLE":
+                return 'MOVE_TO_IDLE'
+            else:
+                return 'STAY' 
 
 
 def main():
@@ -389,9 +440,13 @@ def main():
                                             'MOVE_TO_IDLE': 'RoverIdle'})
         smach.StateMachine.add('RoverArucoScan', state_machine_node.rover_aruco_scan,
                                transitions={'SCAN_COMPLETE':'RoverTransition', 
+                                            'MOVE_TO_MANUAL': 'RoverManual',
+                                            'MOVE_TO_IDLE': 'RoverIdle', 
                                             'STAY':'RoverArucoScan'})
         smach.StateMachine.add('RoverLightBeaconScan', state_machine_node.rover_light_beacon_scan,
                                transitions={'SCAN_COMPLETE':'RoverTransition', 
+                                            'MOVE_TO_MANUAL': 'RoverManual',
+                                            'MOVE_TO_IDLE': 'RoverIdle', 
                                             'STAY':'RoverLightBeaconScan'})
 
 
