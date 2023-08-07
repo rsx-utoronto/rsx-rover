@@ -9,8 +9,7 @@ plugins:
 
 width: 5
 height: 5
-update_frequency: 2.0 # update frequency of the costmap in Hz
-
+update_frequency: 10.0 # update frequency of the costmap in Hz
 
 
 

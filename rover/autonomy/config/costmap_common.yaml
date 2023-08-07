@@ -22,5 +22,5 @@ obstacles_laser:
     laser_scan_sensor: {sensor_frame: velodyne, data_type: LaserScan, topic: /scan, marking: true, clearing: true} # scan topic
 
 inflation:
-    inflation_radius: 1.0
+    inflation_radius: 0.2
 

@@ -2,7 +2,7 @@
 
    <arg name="no_static_map" default="false" />
    <arg name="command_velocity_topic" default="/drive" />
-   <arg name="odom_topic" default="/odometry/filtered" />
+   <arg name="odom_topic" default="/aft_mapped_to_init" />
    <arg name="pose_topic" default="/aft_mapped_to_init" />
 
    <include file="$(find rover)/rover/autonomy/launch/gmapping.launch" />

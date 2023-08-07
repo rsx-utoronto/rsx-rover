@@ -2,11 +2,13 @@
 
 import rospy
 from sensor_msgs.msg import Imu
+from nav_msgs.msg import Odometry
 
 
 class ImuVelCalc:
     def __init__(self):
         self.sub_imu = rospy.Subscriber("/imu", Imu, self.imu_callback)
+        self.pub_odom = rospy.Publisher("/my_odom", Odometry, queue_size=1)
         self.vel_x_prev = 0
         self.vel_y.prev = 0
         self.vel_z_prev = 0
@@ -14,6 +16,15 @@ class ImuVelCalc:
 
         rospy.spin()
     def imu_callback(self, data):
+        elapsed = 0
+        acc = []
+        while elapsed < 1:
+            elapsed += time(0)
+            acc.append( time(1))
+        
+        avg_acc = np.sum(acc, axis = 1)  / len(acc)
+        
+        
         acc = data.linear_acceleration
 
         acc_x = acc.x
@@ -28,7 +39,13 @@ class ImuVelCalc:
         self.vel_x_prev = vel_x
         self.vel_y_prev = vel_y
         self.vel_z_prev = vel_z
-        
+
         self.time_prev = data.header.secs
+        odom = Odometry()
+        odom.twist.pose.x = 1.0
+        self.pub_odom.publish(odom)
+
+    def time()
+        return (self.time_prev = data.header.secs, data.linear_acceleration.x)
 
 
