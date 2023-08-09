@@ -7,7 +7,7 @@ import rospy
 import cv2
 from std_msgs.msg import Float32, Bool
 from sensor_msgs.msg import Image, CameraInfo
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TransformStamped
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
 from std_srvs.srv import Empty, EmptyResponse # you import the service message python classes generated from Empty.srv.
@@ -30,6 +30,7 @@ class image_converter:
         self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.brightest_spot)
         self.first_image = True
         self.count = 0
+        self.beacon_detected = False
 
 
 
@@ -64,16 +65,18 @@ class image_converter:
         beta = rot_x.dot(alpha)
         beta = rot_z.dot(beta)
         return beta
-    def tf_baselink_to_odom(self):
-        tfBuffer = tf2_ros.Buffer()
+    def tf_baselink_to_map(self):
+        tfBuffer = tf2_ros.Buffer(rospy.Duration(1200.0))  # tf buffer length 
         listener = tf2_ros.TransformListener(tfBuffer)
         try:
-            tfBuffer.waitForTransform('laser_odom', 'base_link', rospy.Time(0), rospy.Duration(4))
-            trans = tfBuffer.lookup_transform('laser_odom', 'base_link', rospy.Time(0))
+            # tfBuffer.waitForTransform('map', 'base_link', rospy.Time(0), rospy.Duration(4))
+            trans = tfBuffer.lookup_transform('map', 'base_link', rospy.Time(0))
+            return trans
             
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            rospy.logwarn("Could not find the transform between base_link and map")
             return None
-        return trans
+        
 
 
     def brightest_spot(self, data):
@@ -119,9 +122,9 @@ class image_converter:
         z = 0.1
         set_dist = 5
         maxLoc_base_link = np.array([x, y, z]) + maxLoc_base_link
-        if self.tf_baselink_to_odom() is not None:
-            rospy.loginfo("odom tf")
-            trans = self.tf_baselink_to_odom()
+        if self.tf_baselink_to_map() is not None:
+            rospy.loginfo("map tf")
+            trans = self.tf_baselink_to_map()
             odom_x = trans.transform.translation.x + maxLoc_base_link[0] + set_dist
             odom_y = trans.transform.translation.y + maxLoc_base_link[1] + set_dist
             odom_z = trans.transform.translation.z + maxLoc_base_link[2] + set_dist
@@ -143,6 +146,7 @@ class image_converter:
         amber_spot_depth = self.depth_image[max_y, max_x] # This is the depth of the amber spot in mm
         self.maxVal = maxVal
         if maxVal > 200:
+            self.beacon_detected = True
             self.spot_pub.publish(amber_spot_depth)
 
             # print("Depth of the light beacon(in mm):", amber_spot_depth)
@@ -150,6 +154,8 @@ class image_converter:
             cv2.circle(image, maxLoc, radius, (255, 0, 0), 2) # (0, 191, 255) is the colour code for amber colour
             self.count += 1
             print(str(self.count) + ". maxVal = ", maxVal)
+        else:
+            self.beacon_detected = False
 
         # display the results of the naive attempt
         cv2.imshow("Amber Spot", image)
@@ -222,7 +228,7 @@ class CircleService():
         self.odom_sub = rospy.Subscriber("/aft_mapped_to_init", Odometry, self.odom_callback)
         rospy.loginfo("Service /light_beacon_rotate Ready")
         self.my_service = rospy.Service('/light_beacon_rotate', Empty, self.callback)
-        ic = image_converter()
+        # ic = image_converter()
 
         rospy.spin() # maintain the service open.
 
@@ -257,10 +263,11 @@ class CircleService():
             rospy.loginfo("The rotation has paused")
             time.sleep(5)
             ic = image_converter()
+            # ic.main(sys.argv)
             rospy.loginfo("Beacon detection has started/resumed")
             i = 0
             while i < 5:
-                if ic.maxVal > 200:
+                if ic.beacon_detected:
                     time.sleep(2)
                     i+=1
                     rospy.loginfo("Checking Again...")
@@ -270,11 +277,6 @@ class CircleService():
                 rospy.loginfo("Beacon detected")
                 self.detect_pub.publish(True)
                 break
-        
-        
-        
-        
-
 
         return EmptyResponse()
 
@@ -282,5 +284,7 @@ class CircleService():
    
 if __name__ == '__main__':
     while not rospy.is_shutdown():
+        # rospy.init_node('amber_spot_finder')
         CircleService()
+        # image_converter.main(sys.argv)
 
