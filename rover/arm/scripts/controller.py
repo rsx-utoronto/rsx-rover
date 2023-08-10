@@ -87,7 +87,7 @@ class Controller():
                     abs(self.values.r_horizontal) >= 0.05 or abs(self.values.r_vertical) >= 0.05 or 
                     self.values.l1 or self.values.r1 or self.values.l2 or self.values.r2 or 
                     self.values.x or self.values.o or self.values.triangle or self.values.share
-                    or self.values.options):
+                    or self.values.options) or self.values.r3:
                     # self.input_pub.publish(self.values)
                     publishInputs = True
                 else:
@@ -185,6 +185,7 @@ class Controller():
         self.values.o               = rawButtons[1]
         self.values.share           = rawButtons[8]
         self.values.options         = rawButtons[9]
+        self.values.r3              = rawButtons[12]
 
         # Check if analog sticks are not moving and triggers are not pressed 
         # and any other buttons are not pressed. If any of them is false, then do not

@@ -47,8 +47,10 @@ global pubThreadPool
 global angleCorrections
 global buttonStatus
 global joystickAxesStatus
+global isMovementNormalized
 
 movementSpeed = 10/NODE_RATE
+isMovementNormalized = False
 
 buttonsPressed = {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": False, "L1": False, "R1": False, "L2": False, "R2": False, "SHARE": False, "OPTIONS": False, "PLAY_STATION": False, 
         "L3": False, "R3": False,"UP": False, "DOWN": False, "LEFT": False, "RIGHT": False} 
@@ -377,7 +379,7 @@ def limitAngleSpeed(newArmAngles, curArmAngles):
 
     jointSpeeds = [0.005, 0.003, 0.01, 0.075, 0.075, 0.0375, 0.04]
     angleDelta = list(np.subtract(np.array(newArmAngles), np.array(curArmAngles)))
-    slowedDownAngles = copy.deepcopy(newArmAngles)
+    # slowedDownAngles = copy.deepcopy(newArmAngles)
 
     for i in range(7):
         if abs(angleDelta[i]) > jointSpeeds[i]:
@@ -684,8 +686,8 @@ def updateState(data):
 
     if data.data != "IK":
         scriptMode = Mode.FORWARD_KIN
-    else:
-        scriptMode = scriptMode
+    # else:
+    #     scriptMode = scriptMode
 
 def updateController(data):
     ''' Callback function for the arm_inputs topic
@@ -699,6 +701,7 @@ def updateController(data):
     global buttonStatus
     global joystickAxesStatus
     global movementSpeed
+    global isMovementNormalized
 
     buttonsPressed = [data.x, data.o, data.triangle, 0, data.l1, data.r1, data.l2, data.r2, data.share, data.options, 0, 0, 0, 0, 0, 0, 0]
     # isButtonPressed = {"X": data.x, "CIRCLE": data.o, "TRIANGLE": data.triagle, 
@@ -725,14 +728,35 @@ def updateController(data):
         if movementSpeed < 0: # don't let movement speed go into negatives
             movementSpeed = 0
 
-    if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
-        dhTable = ik.createDHTable(curArmAngles)
+    if isButtonPressed["R3"] == 2:
+        isMovementNormalized = not isMovementNormalized
+        print("Normalized Movement: ", isMovementNormalized)
 
-        targetEEPos = controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
-                                        prevTargetTransform, scriptMode)
-        
+    if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
         try:
+            dhTable = ik.createDHTable(curArmAngles)
+
+            targetEEPos = controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
+                                        prevTargetTransform, scriptMode)
+            
             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+
+            maxIterations = 10
+            iteration = 0
+            originalSpeed = movementSpeed
+
+            while isMovementNormalized and (iteration < maxIterations):
+                if not limitAngleSpeed(targetAngles, curArmAngles):
+                    break
+                iteration += 1
+                movementSpeed = movementSpeed*0.5
+
+                targetEEPos = controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
+                                        prevTargetTransform, scriptMode)
+                targetAngles = ik.inverseKinematics(dhTable, targetEEPos)
+
+            movementSpeed = originalSpeed
+
             targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
 
             # simulatedAngles = targetAngles
