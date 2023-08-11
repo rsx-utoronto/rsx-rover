@@ -152,8 +152,9 @@
         <param name="yaw_offset" value="0"/>
         <param name="publish_filtered_gps" value="true"/>
         <param name="broadcast_utm_transform" value="true"/>
+        <!-- <param name="broadcast_cartesian_transform" value="true"/> -->
         <remap from="/imu/data" to="/imu" />
-        <remap from="/gps/fix" to="/navsat/fix" />
+        <remap from="/gps/fix" to="/ublox/fix" />
     </node>
 
 </launch>
