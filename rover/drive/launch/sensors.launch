@@ -30,4 +30,38 @@
 
     <!-- Launch Velodyne lidar driver -->
     <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch"/>
+
+    <!-- <arg name="param_file_name"     doc="name of param file, e.g. rover" />
+    <arg name="param_file_dir"      doc="directory to look for $(arg param_file_name).yaml"
+                            default="$(find ublox_gps)/config" /> -->
+
+    <arg name="node_name" default="ublox" />
+    <arg name="output" default="screen" />
+    <arg name="respawn" default="true" />
+    <arg name="respawn_delay" default="30" />
+    <arg name="clear_params" default="true" />
+
+    <node pkg="ublox_gps" type="ublox_gps" name="$(arg node_name)"
+        output="$(arg output)"
+        clear_params="$(arg clear_params)"
+        respawn="$(arg respawn)"
+        respawn_delay="$(arg respawn_delay)">
+        <!-- <rosparam command="load"
+              file="$(arg param_file_dir)/$(arg param_file_name).yaml" /> -->
+        <rosparam>
+            debug: 1
+            device: /dev/ttyACM0
+            frame_id: gps
+            gnss:
+                gps: true
+            <!-- inf:
+                all: false
+            publish:
+                all: true
+            nav:
+                all:false
+            rxm:
+                all:false -->
+        </rosparam>
+    </node>
 </launch>
