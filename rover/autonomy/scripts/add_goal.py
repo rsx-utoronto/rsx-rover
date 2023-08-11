@@ -7,6 +7,7 @@ import rospy
 from nav_msgs.msg import Odometry
 import numpy as np
 import tf2_ros
+from tf.transformations import quaternion_matrix
 
 
 class GPS_to_UTM:
@@ -64,8 +65,20 @@ class GPS_to_UTM:
         tfBuffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tfBuffer)
 
-        T_map_utm = tfBuffer.lookup_transform("utm", "map", rospy.Time())
-        
+        T_utm_map_msg = tfBuffer.lookup_transform("utm", "map", rospy.Time())
+
+        quat = np.asarray([T_utm_map_msg.pose.orientation.w, T_utm_map_msg.pose.orientation.x, T_utm_map_msg.pose.orientation.y, T_utm_map_msg.pose.orientation.z])
+        trans = np.asarray([T_utm_map_msg.pose.position.x, T_utm_map_msg.pose.position.y, T_utm_map_msg.pose.position.z])
+
+        T_map_utm = np.eye(4)
+
+        T_map_utm[:3,:3] = quaternion_matrix(quat)
+        T_map_utm[:3,3] = trans.T
+
+        p_map = np.vstack((np.array([curr_pos.pose.pose.position.x, curr_pos.pose.pose.position.y, curr_pos.pose.pose.position.z, 1])))
+
+        p_utm = T_map_utm@p_map
+
         # Add a utm to odom conversion
         # Get the initial odom position in UTM (on start up) and set it as a translation and rotation 
 
@@ -187,16 +200,28 @@ class GPS_to_UTM:
         return LetterDesignator
 
 
-def convertSignToOdom():
+def convertSignToOdom(curr_goal, curr_pos, dist, heading):
 
-    # convert distance and heading to UTM coords 
+    # Get the current position in utm 
 
-    # convert UTM to odom (transform provided by robot localization node)
-    pass
+    tfBuffer = tf2_ros.Buffer()
+    listener = tf2_ros.TransformListener(tfBuffer)
 
-# if __name__ == '__main__':
-    
-#     coords1 = GPS_to_UTM(lat=40.9,lon=7.9) #EDIT (these are example lat, long coords)
-#     coords1.get_xy_based_on_lat_long()
+    T_map_utm_msg = tfBuffer.lookup_transform("map", "utm", rospy.Time())
+
+    quat = np.asarray([T_map_utm_msg.pose.orientation.w, T_map_utm_msg.pose.orientation.x, T_map_utm_msg.pose.orientation.y, T_map_utm_msg.pose.orientation.z])
+    trans = np.asarray([T_map_utm_msg.pose.position.x, T_map_utm_msg.pose.position.y, T_map_utm_msg.pose.position.z])
+
+    T_map_utm = np.eye(4)
+
+    T_map_utm[:3,:3] = quaternion_matrix(quat)
+    T_map_utm[:3,3] = trans.T
+
+    p_map = np.vstack((np.array([curr_pos.pose.pose.position.x, curr_pos.pose.pose.position.y, curr_pos.pose.pose.position.z, 1])))
+
+    p_utm = T_map_utm@p_map
+
+    return p_utm[:3]
+
 
 

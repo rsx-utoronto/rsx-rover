@@ -35,25 +35,40 @@ private:
 	ros::Subscriber joy_sub;
 	ros::Subscriber net_sub;
 	ros::Subscriber state_sub;
-	bool network_status = true;
+	bool network_status = false;
 	geometry_msgs::Twist twist;
-	bool MANUAL_ENABLED = true;
+	bool MANUAL_ENABLED = false;
+	bool KILL_PRESSED = false;
 };
 
 TeleopRover::TeleopRover()
 {
-	TeleopRover::network_status = true;
 	drive_pub_ = nh.advertise<geometry_msgs::Twist>("drive", 1);
-	TeleopRover::joy_sub = nh.subscribe("joy", 10, &TeleopRover::joyCallback, this);
+	TeleopRover::joy_sub = nh.subscribe("/software/joy", 10, &TeleopRover::joyCallback, this);
 	TeleopRover::net_sub = nh.subscribe("network_status", 1, &TeleopRover::networkCallback, this);
 	TeleopRover::state_sub = nh.subscribe("rover_state", 1, &TeleopRover::stateCallback, this);
 }
 
 void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 {
-	if (MANUAL_ENABLED){
+	int KILL = 0;
+	if (joy->buttons[KILL] == 1)[
+		if (KILL_PRESSED == false) {
+			twist.linear.x = 0;
+			twist.linear.y = 0;
+			twist.linear.z = 0;
+			twist.angular.x = 0;
+			twist.angular.y = 0;
+			twist.angular.z = 0;
+			drive_pub_.publish(twist);	
+			KILL_PRESSED = true;
+		} else {
+			KILL_PRESSED = false;
+		}
+	]
+
+	if (MANUAL_ENABLED || ~KILL_PRESSED){
 		if (network_status == false){
-			TeleopRover::network_status = false;
 			twist.linear.x = 0; 
 			twist.linear.y = 0;
 			twist.linear.z = 0;
@@ -61,8 +76,6 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 			twist.angular.y = 0;
 			twist.angular.z = 0;
 		} else {
-			TeleopRover::network_status = true;
-
 			// indexs for controller values
 			int R2 = 5;
 			int L2 = 2;
@@ -117,11 +130,11 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 }
 
 void TeleopRover::networkCallback(const std_msgs::Bool::ConstPtr& net_stat){
-	TeleopRover::network_status = net_stat->data;
+	network_status = net_stat->data;
 }
 
 void TeleopRover::stateCallback(const rover::StateMsg::ConstPtr& state_msg){
-	TeleopRover::MANUAL_ENABLED = state_msg->MANUAL_ENABLED;
+	MANUAL_ENABLED = state_msg->MANUAL_ENABLED;
 }
 
 void TeleopRover::pubConstSpeed() {
