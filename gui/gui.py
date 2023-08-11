@@ -124,19 +124,19 @@ class createCamera:
         self.queue = queue
         self.feed = tk.Canvas(root, width=w, height=h)
         self.feed.place(x=x,y=y)
+        self.x = x
+        self.y = y
         self.bridge = CvBridge()
         self.imageSub = rospy.Subscriber(queue, ImageMsg, self.callback, buff_size=2000000)
-        self.w = w 
-        self.h = h
 
     def callback(self, data):
         try:
           img = self.bridge.imgmsg_to_cv2(data, "rgb8")
         except CvBridgeError as e:
             print(e)
-        img1 = ImagePIL.fromarray(img).resize((self.w, self.h))
+        img1 = ImagePIL.fromarray(img)
         img2 = ImageTk.PhotoImage(image=img1)
-        self.feed.create_image(0,0, image=img2)
+        self.feed.create_image(self.x,self.y, anchor = NW, image=img2)
         self.feed.image = img2
         #rospy.sleep(1)
 
@@ -172,9 +172,6 @@ def main():
     createLabel('drive', Twist, "N/A", twistStr, 100, 200)
     createLabel('move_base_simple/goal', PoseStamped, "N/A", poseStr, 100, 250)
 
-    # create the label and drop down for StateMsg
-    interactStateMsg('rover_state', "N/A", "IDLE", modes, 150, 400)
-
     # create terminal command
     # for this button to actually start a rosbag the script recordBag.py has to already be running
     commandButton("/gui_node/bagCommands", "start rosbag", "RECORD", 1000, 700)
@@ -184,7 +181,7 @@ def main():
 
     # create camera feed
     # the first two numbers are x,y and the second two width, height
-    createCamera("/camera/color/image_raw", 15, 15, 860, 640)
+    createCamera("/visualize", 5, 5, 640, 480)
 
      # create all the subscribers
     createLabel('cmd_vel', Twist, "N/A", twistStr, 850, 15)
