@@ -5,10 +5,10 @@ import pygame
 import numpy as np
 import os
 import sys
-os.environ["SDL_VIDEODRIVER"] = "dummy"
+#os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 running = True
-
+time_event = 0
 
 def initializeJoystick():
     # robot operated with a joystick - uses pygame library
@@ -68,8 +68,11 @@ def GetManualJoystick():
             #     joypos[12] = 1
             # if buttons[11]:
             #     joypos[11] = 1
-            # if buttons[3]:
-            #     joypos[7] = (1)                
+            if buttons[3]:
+                if joypos[7]:
+                    joypos[7] = 0
+                else:
+                    joypos[7] = 1                
             # if buttons[0]:
             #     joypos[7] = (-1)                  
             # if buttons[2]:
@@ -125,11 +128,11 @@ def GetManualJoystick():
                 joypos[6] = 0
             if buttons[0] == 0:
                 joypos[6] = 0
-            if buttons[3] == 0:
-                if joypos[7]:
-                    joypos[7] = 0
-                else:
-                    joypos[7] = 1
+            # if buttons[3] == 0:
+                # if joypos[7]:
+                #     joypos[7] = 0
+                # else:
+                #     joypos[7] = 1
             #if buttons[1] == 0:
             #    joypos[7] = 0
              

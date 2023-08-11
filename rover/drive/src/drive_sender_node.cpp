@@ -27,8 +27,12 @@ private:
 	void stateCallback(const rover::StateMsg::ConstPtr& state);
 
 	ros::NodeHandle nh;
+	// double throttle_min = -1;
+	// double throttle_max = 1
+	// double turn_min = -1;
+	// double turn_max = 1;
 	double robot_radius = 0.8;
-	double MAX_LINEAR_SPEED = 2.5;
+	double MAX_LINEAR_SPEED = 1.625; // 2.5 speed est * 0.65 from rough calibration
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
 	double gear = 0; // set to 0 initially
 	ros::Publisher drive_pub_;
@@ -147,5 +151,8 @@ int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "drive_sender_falcon");
 	TeleopRover drive_sender;
+	// while (ros::ok()){
+	// 	drive_sender.pubConstSpeed();
+	// }
 	ros::spin();
 }
