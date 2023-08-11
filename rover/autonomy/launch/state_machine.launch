@@ -4,7 +4,7 @@
     <node pkg="rover" type="state_publisher.py" name="state_publisher_node" output="screen"/>
 
     <!-- Launch GUI -->
-    <node pkg="rover" type="rover_gui.py" name="GUI" output="screen"/>
+    <!-- <node pkg="rover" type="rover_gui.py" name="GUI" output="screen"/> -->
 
     <!-- Launch Main State Machine Node -->
     <node pkg="rover" type="state_machine.py" name="state_machine_node" output="screen">
