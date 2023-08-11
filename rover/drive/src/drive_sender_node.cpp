@@ -55,9 +55,10 @@ TeleopRover::TeleopRover()
 
 void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 {
-	int KILL = 0;
-	if (joy->buttons[KILL] == 1)[
+	int KILL = 10;
+	if (joy->buttons[KILL] == 1){
 		if (KILL_PRESSED == false) {
+			ROS_INFO("KILL ENGAGED");
 			twist.linear.x = 0;
 			twist.linear.y = 0;
 			twist.linear.z = 0;
@@ -67,11 +68,12 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 			drive_pub_.publish(twist);	
 			KILL_PRESSED = true;
 		} else {
+			ROS_INFO("KILL DISENGAGED");
 			KILL_PRESSED = false;
 		}
-	]
+	}
 
-	if (MANUAL_ENABLED || ~KILL_PRESSED){
+	if (MANUAL_ENABLED && ~KILL_PRESSED){
 		if (network_status == false){
 			twist.linear.x = 0; 
 			twist.linear.y = 0;
