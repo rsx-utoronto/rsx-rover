@@ -108,6 +108,10 @@ class Controller():
 
                         # Close the Arduino port since it was properly opened                    
                         arm_servo.close_arduino_port()
+                    
+                    # Make sure self.servo and triggered are reversed
+                    else:
+                        self.servo = not self.servo
 
                 elif not self.servo and triggered:
 
@@ -123,6 +127,10 @@ class Controller():
                 
                         # Close the Arduino port since it was properly opened                    
                         arm_servo.close_arduino_port()
+                    
+                    # Make sure self.servo and triggered are reversed
+                    else:
+                        self.servo = not self.servo
                 
                 # Control rate sleep
                 self.rate.sleep()

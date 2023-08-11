@@ -23,9 +23,9 @@
 
    <!-- STARTING CAN NODES-->
 
-   <node name="CAN_send" pkg="rover" type="CAN_send.py" output="screen"/>
+   <!--node name="CAN_send" pkg="rover" type="CAN_send.py" output="screen"/>
 
-   <node name="CAN_recv" pkg="rover" type="CAN_send.py" output="screen"/>
+   <node name="CAN_recv" pkg="rover" type="CAN_send.py" output="screen"/-->
    
 </launch>
    

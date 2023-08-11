@@ -164,7 +164,7 @@ class Manual():
         speed_limit (list(float)): List containing tested out manually controlled speeds for each motor
         """
         # Apply gripper correction due to wrist roll
-        curr_goal_pos[6] -= (joy_input[4] * speed_limit[4])
+        curr_goal_pos[6] -= (joy_input[4] * speed_limit[4]) * 0.5
 
         # Set controller pos based on joint speed calculations/joypos
         return list(np.array(joy_input) * np.array(speed_limit) + np.array(curr_goal_pos))

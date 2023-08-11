@@ -109,6 +109,19 @@ if __name__=="__main__":
         
 	# # Instantiate CAN bus
 	# initialize_bus()
+
+	# Broadcast heartbeat
+	hb = can.Message(
+		arbitration_id= generate_can_id(
+			dev_id= 0x0, 
+			api= CMD_API_NONRIO_HB), 
+		data= bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 
+		is_extended_id= True,
+		is_remote_frame = False, 
+		is_error_frame = False
+	)
+	task = BUS.send_periodic(hb, 0.01, store_task= False)
+	print("Heartbeat initiated")
 	
 	# Initialize node
 	rospy.init_node('CAN_Send')
