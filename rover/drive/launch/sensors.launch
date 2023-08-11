@@ -13,7 +13,7 @@
     <!-- <node pkg = "rover" name="imu_quaternion_fix" type="imu_quaternion_fix.py" output="screen"/> -->
 
     <!-- Launch Realsense driver -->
-    <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
         <arg name="enable_infra"  value="true"/>
         <arg name="enable_infra1"  value="true"/>
         <arg name="enable_infra2"  value="true"/>
@@ -29,7 +29,7 @@
         <arg name="enable_accel" value="true"/>
         <arg name="enable_gyro"  value="true"/>
         <arg name="unite_imu_method" value="true"/> 
-    </include> -->
+    </include>
 
     <!-- Launch Velodyne lidar driver -->
     <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch"/>
