@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from geometry_msgs.msg import Twist, PoseStamped
+<<<<<<< HEAD:gui/gui.py
 from std_msgs.msg import String
 from rover.msg import GPSMsg, StateMsg
 from sensor_msgs.msg import Image as ImageMsg
@@ -8,6 +9,15 @@ from cv_bridge import CvBridge, CvBridgeError
 from tkinter import *   
 import tkinter as tk
 from PIL import ImageTk, Image as ImagePIL
+=======
+from rover.msg import StateMsg
+import sensor_msgs
+from sensor_msgs.msg import Image, CameraInfo, NavSatFix
+from cv_bridge import CvBridge, CvBridgeError
+from tkinter import *   
+import tkinter as tk
+from tf.transformations import euler_from_quaternion
+>>>>>>> 6a5cbb79392da213501696056393f0321d783b43:scripts/gui1.py
 
 
 
@@ -56,18 +66,28 @@ class interactStateMsg:
         choices are the options in the drop down
         x,y are the location on the screen
         """
+<<<<<<< HEAD:gui/gui.py
         self.label = tk.Label(root, text=sub + " \n" + label)
         self.sub = sub
         self.subscriber = rospy.Subscriber(sub, StateMsg, self.callback)
+=======
+        self.label = tk.Label(root, text=queue + " \n" + label)
+        self.queue = queue
+        self.subscriber = rospy.Subscriber('/rover_state', StateMsg, self.callback)
+>>>>>>> 6a5cbb79392da213501696056393f0321d783b43:scripts/gui1.py
         self.label.place(x=x,y=y)
-        self.stateMsg = -1
+        self.stateMsg = StateMsg()
 
         self.pub = rospy.Publisher(pub, StateMsg, queue_size=10)
         self.clicked = StringVar(root)
         self.clicked.set(initValue)
         self.choices = choices
         self.drop = OptionMenu(root, self.clicked, *self.choices, command=self.updatePublisher)
+<<<<<<< HEAD:gui/gui.py
         self.drop.place(x=x+300,y=y)
+=======
+        self.drop.place(x=x-50,y=y)
+>>>>>>> 6a5cbb79392da213501696056393f0321d783b43:scripts/gui1.py
         root.after(1000, self.updatePublisher())
 
     def updatePublisher(self, *args):
@@ -81,6 +101,7 @@ class interactStateMsg:
     
     def stateStr(self):
         data = self.stateMsg
+<<<<<<< HEAD:gui/gui.py
         st1 = "rover_mode: %f"%(data.rover_mode)
         st2 = "GPS_goals:\n%f"%(poseStr(data.GPS_goals))
         st3 = "curr_goal:\n%f"%(poseStr(data.curr_goals))
@@ -98,11 +119,44 @@ class interactStateMsg:
         comb1 = st1 + "\n" + st2 + "\n" + st3 + "\n" + st4 + "\n" + st5 + "\n" + st6 + "\n" + st7 + "\n" + st8
         comb2 = st9 + "\n" + st10 + "\n" + st11 + "\n" + st12 + "\n" + st13 + "\n" + st14
         return comb1 + "\n" + comb2
+=======
+        (curr_r,curr_p,curr_y) = euler_from_quaternion([data.curr_goal.pose.orientation.x, data.curr_goal.pose.orientation.y, data.curr_goal.pose.orientation.z, data.curr_goal.pose.orientation.w])
+        (l_r,l_p,l_y) = euler_from_quaternion([data.light_beacon_goal.pose.orientation.x, data.light_beacon_goal.pose.orientation.y, data.light_beacon_goal.pose.orientation.z, data.light_beacon_goal.pose.orientation.w])
+        (r_r,r_p,r_y) = euler_from_quaternion([data.radio_beacon_goal.pose.orientation.x, data.radio_beacon_goal.pose.orientation.y, data.radio_beacon_goal.pose.orientation.z, data.radio_beacon_goal.pose.orientation.w])
+        (s_r,s_p,s_y) = euler_from_quaternion([data.sign_goal.pose.orientation.x, data.sign_goal.pose.orientation.y, data.sign_goal.pose.orientation.z, data.sign_goal.pose.orientation.w])
+        st1 = f"rover_mode: {data.rover_mode}\n"
+        st2 = f"ar_tag_detected: {data.AR_TAG_DETECTED}\nlight_beacon_detected: {data.LIGHT_BEACON_DETECTED}\nradio_beacon_detected: {data.RADIO_BEACON_DETECTED}\n"
+        st3 = f"light_beacon_goal: x - {data.light_beacon_goal.pose.position.x}  y - {data.light_beacon_goal.pose.position.y} w - {l_y}\n"
+        st4 = f"radio_beacon_goal: x - {data.radio_beacon_goal.pose.position.x}  y - {data.radio_beacon_goal.pose.position.y} w - {r_y}\n"
+        st5 = f"sign_goal: x - {data.sign_goal.pose.position.x}  y - {data.sign_goal.pose.position.y} w - {s_y}\n"
+        st6 = f"Curr_AR_ID: {data.curr_AR_ID}\n"
+        st7 = f"gps_goal_reached: {data.GPS_GOAL_REACHED}\nMission over: {data.MISSION_OVER}\n"
+        return st1 + "\n" + st2 + "\n" + st3 + "\n" + st4 + "\n" + st5 + "\n" + st6 + "\n" + st7
+
+
+
+class commandButton():
+    def __init__(self, name, action, x, y) -> None:
+        """
+        action is the command
+        x,y are the location of the drop down on the screen
+        """
+        self.action = action
+        self.btn = tk.Button(root, text = name, bd = '5', command = self.act)
+        self.btn.place(x=x,y=y)
+
+    def act(self):
+        subprocess.call(self.action)
+>>>>>>> 6a5cbb79392da213501696056393f0321d783b43:scripts/gui1.py
 
 
 
 class createCamera:
+<<<<<<< HEAD:gui/gui.py
     def __init__(self, queue, x, y, w, h) -> None:
+=======
+    def __init__(self, queue, x, y):
+>>>>>>> 6a5cbb79392da213501696056393f0321d783b43:scripts/gui1.py
         """
         queue is the name of the published topic
         x,y are the location of the camera feed on the screen
@@ -112,9 +166,13 @@ class createCamera:
         self.feed = tk.Canvas(root, width=w, height=h)
         self.feed.place(x=x,y=y)
         self.bridge = CvBridge()
+<<<<<<< HEAD:gui/gui.py
         self.imageSub = rospy.Subscriber(queue, ImageMsg, self.callback, buff_size=2000000)
         self.w = w 
         self.h = h
+=======
+        self.imageSub = rospy.Subscriber(queue, sensor_msgs.msg.Image, self.callback)
+>>>>>>> 6a5cbb79392da213501696056393f0321d783b43:scripts/gui1.py
 
     def callback(self, data):
         try:
@@ -150,8 +208,22 @@ def main():
     
     # create a tkinter window
     global root
+<<<<<<< HEAD:gui/gui.py
     root = tk.Tk()
     root.geometry('1350x750')
+=======
+    root = tk.Tk()             
+    # Open window having dimension 100x100
+    root.geometry('1000x1000')
+
+    # create all the subscribers
+    createLabel('rover_gps', NavSatFix, "N/A", gpsStr, 100, 150)
+    createLabel('drive', Twist, "N/A", twistStr, 100, 200)
+    createLabel('move_base_simple/goal', PoseStamped, "N/A", poseStr, 100, 250)
+
+    # create the label and drop down for StateMsg
+    interactStateMsg('rover_state', "N/A", "IDLE", modes, 150, 400)
+>>>>>>> 6a5cbb79392da213501696056393f0321d783b43:scripts/gui1.py
 
     # create terminal command
     # for this button to actually start a rosbag the script recordBag.py has to already be running

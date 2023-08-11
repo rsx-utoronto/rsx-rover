@@ -8,8 +8,8 @@
 # Setup environment 
 cd ~/catkin_ws
 source devel/setup.bash
-# export ROS_MASTER_URI=http://192.168.0.250:11311
-# export ROS_IP=192.168.0.250
+export ROS_MASTER_URI=http://192.168.0.250:11311
+export ROS_IP=192.168.0.250
 
 # Do not start roscore unless specified
 core=0
@@ -52,7 +52,7 @@ fi
 
 # Start up motors 
 echo "Starting up falcons..."
-roslaunch rover falcons.launch &
+# roslaunch rover falcons.launch &
 
 # Start drrover drive_sender
 echo "Starting drive_sender..."
@@ -61,6 +61,14 @@ rosrun rover drive_sender_node &
 # Start sensors
 echo "Launching sensors..."
 roslaunch rover sensors.launch &
+
+# wheel odom node launch 
+
+roslaunch rover robot_loc.launch
+
+# state est node launch 
+
+# tf tree launch 
 
 # tmux \
 #   new-session -s "drive" -n "control" \; \
