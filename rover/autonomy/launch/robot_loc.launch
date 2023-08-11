@@ -148,13 +148,14 @@
 
     <node pkg="robot_localization" type="navsat_transform_node" name="navsat_transform_node" respawn="true">
 
-        <param name="magnetic_declination_radians" value="0"/>
+        <param name="magnetic_declination_radians" value="0.22985986"/>
+        <param name="magnetic_inclination_radians" value="1.274090354"/>
         <param name="yaw_offset" value="0"/>
         <param name="publish_filtered_gps" value="true"/>
-        <param name="broadcast_utm_transform" value="true"/>
-        <!-- <param name="broadcast_cartesian_transform" value="true"/> -->
+        <param name="broadcast_cartesian_transform" value="true"/>
+        <remap from="tf" to="tf_ekf"/>
         <remap from="/imu/data" to="/imu" />
-        <remap from="/gps/fix" to="/ublox/fix" />
+        <remap from="/gps/fix" to="/NavSatFix" />
     </node>
 
 </launch>
