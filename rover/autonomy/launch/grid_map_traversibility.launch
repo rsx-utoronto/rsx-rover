@@ -1,4 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
 <launch>
-  <include file="$(find grid_map_pcl)/launch/grid_map_pcl_loader_node.launch"/>
-  <include file="$(find grid_map_demos)/launch/filters_demo.launch"/>
+
+  <node name="interpolate_node" pkg="rover" type="interpolate_node.py" output="screen" />
+
+  <node pkg="rover" type="pcl_to_pcd" name="pcl_to_pcd" output="screen" />
+        
+  <include file="$(find grid_map_pcl)/launch/grid_map_pcl_loader_node.launch" />
+  <include file="$(find grid_map_demos)/launch/filters_demo.launch" />
 </launch>
