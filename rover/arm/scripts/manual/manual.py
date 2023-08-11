@@ -174,7 +174,7 @@ class Manual():
 def main():
 
     try:
-        rospy.init_node("arm_manual")
+        rospy.init_node("Arm_Manual")
         
         Manual_Node = Manual()
 

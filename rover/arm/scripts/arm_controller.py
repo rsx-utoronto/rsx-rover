@@ -270,7 +270,7 @@ class Controller():
 if __name__ == "__main__":
  
     try:
-        rospy.init_node("controller")
+        rospy.init_node("Arm_Controller")
         
         Controller_Node = Controller()
 
