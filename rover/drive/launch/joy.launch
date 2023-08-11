@@ -1,0 +1,14 @@
+<launch>
+    <group ns="software">
+        <node pkg="joy" type="joy_node" name="software_joy"> 
+            <param name="dev" value="/dev/ttyACM0" />
+        </node>
+    </group>
+
+    <group ns="arm">
+        <node pkg="joy" type="joy_node" name="software_joy"> 
+            <param name="dev" value="/dev/ttyACM1" />
+        </node>
+    </group>
+</launch>
+

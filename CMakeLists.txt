@@ -11,7 +11,10 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  sensor_msgs
+  geometry_msgs
   message_generation
+  message_filters
   grid_map_core
   grid_map_pcl
   grid_map_ros
@@ -66,11 +69,13 @@ add_definitions(${PCL_DEFINITIONS})
 add_message_files(
   FILES
   ArmInputs.msg
+  StateMsg.msg
 )
 
-## Generate services in the 'srv' folder
+# Generate services in the 'srv' folder
 add_service_files(
   FILES
+  AddGoal.srv
   Corrections.srv
   GoToArmPos.srv
   SaveArmPos.srv
@@ -87,6 +92,8 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  sensor_msgs
+  geometry_msgs
 )
 
 ################################################
@@ -119,10 +126,10 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES Rover
- CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
-#  DEPENDS system_lib
+    #INCLUDE_DIRS include
+    #LIBRARIES Rover
+    CATKIN_DEPENDS roscpp rospy std_msgs message_runtime message_filters
+    DEPENDS
 )
 
 ###########
@@ -213,6 +220,10 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+# catkin_install_python(PROGRAMS rover/autonomy/scripts/state_machine_node.py
+# DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
 add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
 target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
