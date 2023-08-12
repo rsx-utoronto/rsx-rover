@@ -32,7 +32,7 @@
     </include>
 
     <!-- Launch Velodyne lidar driver -->
-    <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch"/>
+    <!-- <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch"/> -->
 
     <!-- <arg name="param_file_name"     doc="name of param file, e.g. rover" />
     <arg name="param_file_dir"      doc="directory to look for $(arg param_file_name).yaml"
