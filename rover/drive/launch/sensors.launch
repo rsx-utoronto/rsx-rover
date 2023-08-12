@@ -1,20 +1,16 @@
 <launch> 
     <!-- Define tf tree -->
-    <node pkg="tf" type="static_transform_publisher" name="lidar_broadcaster" args="0.0 0 0.278189004081027 0 0 0 1 base_link os_sensor 100" />
-    <node pkg="tf" type="static_transform_publisher" name="imu_broadcaster" args="0.0 0 0.278189004081027 0 0 0 1 base_link ins_link 100" />
-    <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster" args="0 0 0 0.7071068, 0, 0, 0.7071068 base_link gps_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="lidar_broadcaster" args="-0.2 0 1 0 0 0 1 base_link velodyne 100" />
+    <node pkg="tf" type="static_transform_publisher" name="imu_broadcaster" args="0.0 0 0.1 0 0 0 1 base_link ins_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_ekf" args="-0.2 0 0.6 0 0 0 1 base_link gps_link 100">
+        <remap from="tf" to="tf_ekf"/>
+    </node> 
+    <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster" args="-0.2 0 0.6 0 0 0 1 base_link gps_link 100"/>
+    <node pkg="tf" type="static_transform_publisher" name="camera_broadcaster" args="-0.2 0 0.8 0 0 0 1 base_link camera_link 100" />
 
     <!-- Launch GPS and IMU drivers-->
-    <!-- <node pkg="inertial_sense_ros" type="inertial_sense_node" name="imu_ins_node" respawn="false">
-        <arg name="frame_id" value="imu_link"/>
-        <arg name="stream_odom_ins_enu" value="true"/>
-        <arg name="stream_covariance" value="true"/>
-        <arg name="stream_mag" value="true"/>
-        <arg name="stream_IMU" value="true"/>
-        <arg name="stream_GPS1" value="true"/>
-        <arg name="stream_NavSatFix" value="true"/>
-        <arg name="publishTf" value="true"/>
-    </node> -->
+    <include file="$(find inertial_sense_ros)/launch/test.launch"/>
+    <!-- <node pkg = "rover" name="imu_quaternion_fix" type="imu_quaternion_fix.py" output="screen"/> -->
 
     <!-- Launch Realsense driver -->
     <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
@@ -23,7 +19,7 @@
         <arg name="enable_infra2"  value="true"/>
         <arg name="depth_width"   value="640"/>
         <arg name="depth_height"  value="480"/> 
-        <arg name="depth_fps"    value="15"/>       
+        <arg name="depth_fps"    value="15"/>     
         <arg name="infra_width"   value="640"/>
         <arg name="infra_height"  value="480"/>
         <arg name="infra_fps"    value="15"/>
@@ -35,11 +31,41 @@
         <arg name="unite_imu_method" value="true"/> 
     </include>
 
-    <!-- Launch Ouster lidar driver
-    <include file="$(find ouster_ros)/launch/sensor.launch">
-        <arg name="sensor_hostname" value="os-992120000585.local" />
-        <arg name="metadata" value="meta.json" />
-        <arg name="lidar_mode" value="1024x20" />
-        <arg name="viz" value="false"/>
-    </include> -->
+    <!-- Launch Velodyne lidar driver -->
+    <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch"/>
+
+    <!-- <arg name="param_file_name"     doc="name of param file, e.g. rover" />
+    <arg name="param_file_dir"      doc="directory to look for $(arg param_file_name).yaml"
+                            default="$(find ublox_gps)/config" /> -->
+
+    <arg name="node_name" default="ublox" />
+    <arg name="output" default="screen" />
+    <arg name="respawn" default="true" />
+    <arg name="respawn_delay" default="30" />
+    <arg name="clear_params" default="true" />
+
+    <node pkg="ublox_gps" type="ublox_gps" name="$(arg node_name)"
+        output="$(arg output)"
+        clear_params="$(arg clear_params)"
+        respawn="$(arg respawn)"
+        respawn_delay="$(arg respawn_delay)">
+        <!-- <rosparam command="load"
+              file="$(arg param_file_dir)/$(arg param_file_name).yaml" /> -->
+        <rosparam>
+            debug: 1
+            device: /dev/ttyACM0
+            frame_id: gps
+            gnss:
+                gps: true
+            <!-- inf:
+                all: false
+            publish:
+                all: true
+            nav:
+                all:false
+            rxm:
+                all:false -->
+        </rosparam>
+    </node>
+    <node pkg="rover" type="gps_converter.py" name="gps_converter" output="screen" />
 </launch>

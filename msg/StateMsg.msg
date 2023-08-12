@@ -1,0 +1,15 @@
+string rover_mode
+geometry_msgs/PoseStamped[] GPS_goals
+geometry_msgs/PoseStamped curr_goal
+bool GPS_GOAL_REACHED
+bool MISSION_OVER
+bool AR_TAG_DETECTED
+bool LIGHT_BEACON_DETECTED
+bool RADIO_BEACON_DETECTED
+geometry_msgs/PoseStamped light_beacon_goal 
+geometry_msgs/PoseStamped radio_beacon_goal
+geometry_msgs/PoseStamped sign_goal
+int16 curr_AR_ID
+geometry_msgs/Pose curr_AR_pose
+bool MANUAL_ENABLED
+

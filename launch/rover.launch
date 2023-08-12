@@ -1,0 +1,31 @@
+<launch> 
+
+    <!-- Launch GUI -->
+    <node pkg="rover" type="rover_gui.py" name="rover_gui" />
+
+    <!-- Launch Motors -->
+    <include file="$(find rover)/rover/drive/launch/falcons.launch"/>
+
+    <!-- Launch all sensors -->
+    <include file="$(find rover)/rover/drive/launch/sensors.launch"/>
+
+    <!-- Launch LeGO LOAM -->
+    <!-- Add a delay to wait for LiDAR to be up -->
+    <include file="$(find lego_loam)/launch/run.launch"/>
+
+    <!-- Launch robot configuration -->
+    <include file="$(find rover)/rover/autonomy/launch/robot_loc.launch"/>
+
+    <!-- Launch Move Base -->
+    <include file="$(find rover)/rover/autonomy/launch/move_base.launch"/>
+
+    <!-- Launch Task Nodes -->
+    <include file="$(find rover)/rover/autonomy/launch/task.launch"/>
+
+    <!-- Launch State Machine Nodes -->
+    <include file="$(find rover)/rover/autonomy/launch/state_machine.launch"/>
+
+    <!-- Launch Drive Node -->
+    <node pkg="rover" type="drive_sender_node" name="manual_control_node" output="screen" /> 
+
+</launch>
