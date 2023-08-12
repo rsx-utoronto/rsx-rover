@@ -139,8 +139,6 @@ class Safety_Node():
         # Store the received goal postion
         self.GOAL_POS = list(goal_data.data)
 
-        if self.STATE == 'IK':
-            self.GOAL_POS[1] *= -1
         # self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
         #print("Received inputs:", self.GOAL_POS[0])
 
@@ -232,7 +230,7 @@ class Safety_Node():
         #print("goal: {}, error: {}".format(final_pos, self.ERRORS.data))
 
         # Check if there are any errors
-        if self.ERRORS.data.count(Errors.ERROR_EXCEEDING_POS.value) == 0:
+        if self.ERRORS.data.count(Errors.ERROR_EXCEEDING_POS.value) == 0 or self.STATE == 'IK':
 
             # Print/Publish the position to SAFE_GOAL_POS topic
             #print(self.GOAL_POS)
@@ -272,7 +270,7 @@ class Safety_Node():
         # TODO
         # Limits for position safety (Need to test these values)
         #limit = [1.25, 1.25, 1.25, 20, 1.25, 1.25, 1.25]
-        limit = [5, 5, 5, 10, 50, 50, 40]
+        limit = [5, 5, 5, 5, 4, 4, 40]
 
         if not pos:
             pos = self.GOAL_POS

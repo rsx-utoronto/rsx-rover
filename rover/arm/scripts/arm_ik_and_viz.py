@@ -48,7 +48,10 @@ global angleCorrections
 global buttonStatus
 global joystickAxesStatus
 global isMovementNormalized
+global savedCanAngles
+global ikEntered
 
+ikEntered = False
 movementSpeed = 10/NODE_RATE
 isMovementNormalized = False
 
@@ -552,12 +555,17 @@ def publishNewAngles(newJointAngles):
 
     '''
     global angleCorrections
+    global savedCanAngles
 
     ikAngles = Float32MultiArray()
     adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
     for i in range(7):
-        adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i]
+        adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i] - savedCanAngles[i]
         adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
+
+    adjustedAngles[0] = -adjustedAngles[0]
+    adjustedAngles[1] = -adjustedAngles[1]
+    adjustedAngles[5] = -adjustedAngles[5]
 
     temp = adjustedAngles[5]
     adjustedAngles[5] = adjustedAngles[4]
@@ -598,7 +606,7 @@ def updateDesiredArmSimulation(armAngles):
         for i in range(tempAngles.__len__()):
             anglesToDisplay.append(tempAngles[i])
         # print(anglesToDisplay)
-        sim.runNewJointState4(jointPublisher, anglesToDisplay)
+        sim.runNewJointState2(jointPublisher, tempAngles)
 
 def updateLiveArmSimulation(data):
     ''' Updates RViz URDF visulaztion based on IRL arm angles
@@ -611,21 +619,29 @@ def updateLiveArmSimulation(data):
         data.data contains a list 32 bit floats that correspond to joint angles
     '''
     global liveArmAngles
-    
-    liveArmAngles = list(data.data)
+    global savedCanAngles
+
+    tempList = list(data.data)
 
     for i in range(7):
-        liveArmAngles[i] = np.deg2rad(liveArmAngles[i])
+        tempList[i] = np.deg2rad(tempList[i])
 
+    liveArmAngles = tempList
     temp = liveArmAngles[5]
     liveArmAngles[5] = liveArmAngles[4]
     liveArmAngles[4] = temp
-    print(liveArmAngles)
-    tempAngles = copy.deepcopy(liveArmAngles)
+
+    # print(liveArmAngles)
+    tempAngles = copy.deepcopy(list(np.subtract(np.array(liveArmAngles),np.array(savedCanAngles))))
+    liveArmAngles = copy.deepcopy(tempAngles)
     tempAngles.append(tempAngles[6]) # make gripper angles equal
     tempAngles.append(tempAngles[6]) # make gripper angles equal
 
-    # sim.runNewJointState3(jointPublisher, tempAngles)
+    tempAngles[0] = -tempAngles[0]
+    tempAngles[1] = -tempAngles[1]
+    tempAngles[5] = -tempAngles[5]
+
+    sim.runNewJointState3(jointPublisher, tempAngles)
 
 def updateDesiredEETransformation(newTargetValues, scriptMode):
     ''' Updates tf2 transformation of desired end effector position.
@@ -683,11 +699,18 @@ def updateState(data):
     
     '''
     global scriptMode
+    global ikEntered
+    global savedCanAngles
+
 
     if data.data != "IK":
         scriptMode = Mode.FORWARD_KIN
-    # else:
+        ikEntered = False
+    else:
     #     scriptMode = scriptMode
+        if not ikEntered:
+            savedCanAngles = copy.deepcopy(liveArmAngles) 
+        ikEntered = True
 
 def updateController(data):
     ''' Callback function for the arm_inputs topic
@@ -883,6 +906,7 @@ if __name__ == "__main__":
     goToPosValues = [False, [0, 0, 0, 0, 0, 0, 0]]
     buttonStatus = getJoystickButtons([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) 
     joystickAxesStatus = {"L-Right": 0, "L-Down": 0, "L2": 0, "R-Right": 0, "R-Down": 0, "R2": 0}
+    savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
 
     # initializeJoystick()
 
