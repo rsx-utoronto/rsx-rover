@@ -11,3 +11,4 @@ int8 o
 int8 triangle
 int8 share
 int8 options
+int8 r3

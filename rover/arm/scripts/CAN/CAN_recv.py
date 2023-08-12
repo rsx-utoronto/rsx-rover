@@ -129,8 +129,8 @@ class CAN_Recv():
             # Control rate
             #rate.sleep()
         
-        # Stop the heartbeat when ROS is killed
-        task.stop()
+        # # Stop the heartbeat when ROS is killed
+        # task.stop()
 
 
 if __name__=="__main__":

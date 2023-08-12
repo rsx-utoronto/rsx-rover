@@ -48,12 +48,17 @@ class GPS_to_UTM:
         self.lon = lon
         self.olon = olon 
         self.olat = olat
+
+        self.xg2 = 0
+        self.yg2 = 0
         
 
-    def convertGPSToOdom(self):
+    def convertGPStoUTM(self):
         # Define a local orgin, latitude and longitude in decimal degrees
         # GPS Origin
         xg2, yg2 = self.ll2xy()
+        self.xg2 = xg2
+        self.yg2 = yg2
         utmy, utmx, utmzone = self.LLtoUTM(self.lat, self.lon)
 
         # ROSPY Info Messages (wont print for some reason)
@@ -62,27 +67,36 @@ class GPS_to_UTM:
         rospy.loginfo("COORDINATES XYZ ==>"+str(xg2)+","+str(yg2))
         rospy.loginfo("COORDINATES UTM==>"+str(utmx)+","+str(utmy))
 
+
+        return np.asarray([xg2, yg2, 0])
+
+    def convertGPStoOdom(self):
+
+        _ = self.convertGPStoUTM()
+
         tfBuffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tfBuffer)
 
-        T_utm_map_msg = tfBuffer.lookup_transform("utm", "map", rospy.Time())
+        tf_not_received = True 
+        rate = rospy.Rate(10)
+        while (tf_not_received):
+            try: 
+                T_map_utm_msg = tfBuffer.lookup_transform("utm", "map", rospy.Time())
+                tf_not_received = False
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                rate.sleep()
+                continue
 
-        quat = np.asarray([T_utm_map_msg.pose.orientation.w, T_utm_map_msg.pose.orientation.x, T_utm_map_msg.pose.orientation.y, T_utm_map_msg.pose.orientation.z])
-        trans = np.asarray([T_utm_map_msg.pose.position.x, T_utm_map_msg.pose.position.y, T_utm_map_msg.pose.position.z])
+        quat = np.array([T_map_utm_msg.transform.rotation.x, T_map_utm_msg.transform.rotation.y, T_map_utm_msg.transform.rotation.z, T_map_utm_msg.transform.rotation.w])
+        
+        R_map_utm = np.eye(3)
+        R_map_utm[:3,:3] = quaternion_matrix(quat)
 
-        T_map_utm = np.eye(4)
+        t_map_utm = np.array([T_map_utm_msg.transform.translation.x, T_map_utm_msg.transform.translation.y, T_map_utm_msg.transform.translation.z])
 
-        T_map_utm[:3,:3] = quaternion_matrix(quat)
-        T_map_utm[:3,3] = trans.T
+        p_map = R_map_utm*np.array([self.xg2, self.yg2,0]).T + t_map_utm
 
-        p_map = np.vstack((np.array([curr_pos.pose.pose.position.x, curr_pos.pose.pose.position.y, curr_pos.pose.pose.position.z, 1])))
-
-        p_utm = T_map_utm@p_map
-
-        # Add a utm to odom conversion
-        # Get the initial odom position in UTM (on start up) and set it as a translation and rotation 
-
-        return np.asarray([xg2, yg2, 0])
+        return p_map
 
 
 

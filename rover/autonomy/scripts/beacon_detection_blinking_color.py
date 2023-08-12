@@ -10,7 +10,9 @@ from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import Twist, TransformStamped
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
-from std_srvs.srv import Empty, EmptyResponse # you import the service message python classes generated from Empty.srv.
+from std_srvs.srv import Empty, EmptyResponse
+from rover.msg import StateMsg
+
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import numpy as np
 import tf2_ros
@@ -21,7 +23,7 @@ class image_converter:
     def __init__(self):
         self.image_pub = rospy.Publisher("/camera/color/image_raw_new",Image, queue_size=1)
         self.spot_pub = rospy.Publisher("/beacon_spot_depth", Float32, queue_size=1)
-        self.pose_pub = rospy.Publisher("/beacon_pose", Odometry, queue_size=1)
+        self.pose_pub = rospy.Publisher("/light_node/rover_state", StateMsg, queue_size=1)
 
         self.bridge = CvBridge()
         self.info_sub = rospy.Subscriber("/camera/color/camera_info", CameraInfo, self.get_coordinates)        
@@ -128,10 +130,10 @@ class image_converter:
             odom_x = trans.transform.translation.x + maxLoc_base_link[0] + set_dist
             odom_y = trans.transform.translation.y + maxLoc_base_link[1] + set_dist
             odom_z = trans.transform.translation.z + maxLoc_base_link[2] + set_dist
-            target_pose = Odometry()
-            target_pose.pose.pose.position.x = odom_x
-            target_pose.pose.pose.position.y = odom_y
-            target_pose.pose.pose.position.z = odom_z
+            target_pose = StateMsg()
+            target_pose.light_beacon_goal.pose.pose.position.x = odom_x
+            target_pose.light_beacon_goal.pose.pose.position.y = odom_y
+            target_pose.light_beacon_goal.pose.pose.position.z = odom_z
             self.pose_pub.publish(target_pose)
 
         
@@ -223,7 +225,7 @@ class CircleService():
     def __init__(self):
         rospy.init_node('amber_spot_finder', anonymous=True)
         self.vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
-        self.detect_pub = rospy.Publisher("/beacon_detected", Bool, queue_size=1)
+        self.detect_pub = rospy.Publisher("/light_node/rover_state", StateMsg, queue_size=1)
         self.rate = rospy.Rate(1)
         self.odom_sub = rospy.Subscriber("/aft_mapped_to_init", Odometry, self.odom_callback)
         rospy.loginfo("Service /light_beacon_rotate Ready")
@@ -275,7 +277,7 @@ class CircleService():
                     break
             if i ==5:
                 rospy.loginfo("Beacon detected")
-                self.detect_pub.publish(True)
+                self.detect_pub.LIGHT_BEACON_DETECTED.publish(True)
                 break
 
         return EmptyResponse()

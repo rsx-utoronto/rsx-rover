@@ -41,7 +41,8 @@ class GPSTesting:
         gps_to_utm = GPS_to_UTM(self.lat, self.long, "test")
         gps_to_utm.olat = self.olat
         gps_to_utm.olon = self.olon
-        self.x, self.y = gps_to_utm.get_xy_based_on_lat_long()
+        # self.x, self.y = gps_to_utm.get_xy_based_on_lat_long()
+        self.x, self.y, _ = gps_to_utm.convertGPSToOdom()
         utm_msg.header.frame_id = "ins"
         utm_msg.child_frame_id = ""
         utm_msg.pose.pose.position.x = self.x 
