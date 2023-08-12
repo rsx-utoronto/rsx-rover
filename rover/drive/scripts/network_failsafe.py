@@ -21,7 +21,7 @@ class NetworkFailsafe:
             self.twist.angular.x = 0
             self.twist.angular.y = 0
             self.twist.angular.z = 0
-            # self.drive_pub.publish(twist)
+            self.drive_pub.publish(self.twist)
             # self.rate.sleep()
         else:
             pass
@@ -29,10 +29,6 @@ class NetworkFailsafe:
 def main():
     rospy.init_node("network_failsafe")
     nf = NetworkFailsafe()
-    while not rospy.is_shutdown():
-        nf.drive_pub.publish(nf.twist)
-        nf.rate.sleep()
-        
     rospy.spin()
 
 if __name__ == '__main__':
