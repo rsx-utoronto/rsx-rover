@@ -7,10 +7,10 @@ import html
 
 def main():
     """
-    Initilizes a listener to determine if the current stage is search or rescue, then connects to the corresponding
+    Currently we hardcode if the task search or rescue (see var below), then connect to the corresponding
     open ssid (wifi). Lastly accesses the webpage to get the gps location (of the astronuat or reactor).
     """
-    rospy.init_node("gpsLocFromWifi")
+    rospy.init_node("gps_loc_from_wifi")
     task = 'search'
 
     while not rospy.is_shutdown():

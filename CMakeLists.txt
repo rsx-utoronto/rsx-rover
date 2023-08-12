@@ -215,5 +215,5 @@ target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 add_executable(lidar_pcl_subscriber rover/autonomy/scripts/point_cloud_subscriber.cpp rover/autonomy/scripts/pcl_traversibility_score.cpp rover/autonomy/scripts/segment_pcl.cpp)
 target_link_libraries(lidar_pcl_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-catkin_install_python(PROGRAMS scripts/utils/comms/base_comms_check.py scripts/utils/comms/nuc_comms_check.py gui/gui.py gui/recordBag.py rover/autonomy/scripts/gpsLocFromWIFI.py
+catkin_install_python(PROGRAMS scripts/utils/comms/base_comms_check.py scripts/utils/comms/nuc_comms_check.py gui/gui.py gui/recordBag.py rover/autonomy/scripts/gps_loc_from_wifi.py rover/autonomy/scripts/radio_beacon_dist.py
  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
