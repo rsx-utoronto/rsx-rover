@@ -19,7 +19,7 @@
         <arg name="enable_infra2"  value="true"/>
         <arg name="depth_width"   value="640"/>
         <arg name="depth_height"  value="480"/> 
-        <arg name="depth_fps"    value="15"/>       
+        <arg name="depth_fps"    value="15"/>     
         <arg name="infra_width"   value="640"/>
         <arg name="infra_height"  value="480"/>
         <arg name="infra_fps"    value="15"/>

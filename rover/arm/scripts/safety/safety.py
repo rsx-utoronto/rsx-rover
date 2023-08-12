@@ -97,9 +97,9 @@ class Safety_Node():
         # Update the state
         self.STATE = status.data
         
-        # If state is setup, do setup
-        if self.STATE == 'Setup':
-            self.setup()
+        # # If state is setup, do setup
+        # if self.STATE == 'Setup':
+        #     self.setup()
 
     def callback_LimitSwitch(self, limitSwitch_data : UInt8MultiArray) -> None:
         """
@@ -139,8 +139,6 @@ class Safety_Node():
         # Store the received goal postion
         self.GOAL_POS = list(goal_data.data)
 
-        if self.STATE == 'IK':
-            self.GOAL_POS[1] *= -1
         # self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
         #print("Received inputs:", self.GOAL_POS[0])
 
@@ -219,7 +217,7 @@ class Safety_Node():
             # Check if the goal position is safe 
             #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
             self.postion_check()
-            #self.current_check()
+            self.current_check()
             self.limitSwitch_check()
             #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
 
@@ -229,15 +227,20 @@ class Safety_Node():
         # Publish the errors
         self.Error_pub.publish(self.ERRORS)
 
-        print("goal: {}, error: {}".format(final_pos, self.ERRORS.data))
+        #print("goal: {}, error: {}".format(final_pos, self.ERRORS.data))
 
         # Check if there are any errors
-        if self.ERRORS.data.count(Errors.ERROR_NONE.value) == len(self.ERRORS.data):
+        if self.ERRORS.data.count(Errors.ERROR_EXCEEDING_POS.value) == 0 or self.STATE == 'IK':
 
             # Print/Publish the position to SAFE_GOAL_POS topic
             #print(self.GOAL_POS)
             self.SAFE_GOAL_POS.data = self.GOAL_POS
             self.SafePos_pub.publish(self.SAFE_GOAL_POS)
+
+            # Publish any errors that we need to
+            self.Offset_pub.publish(self.ERROR_OFFSET)
+            #pass
+            self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
         
         # If there are any errors, publish the error offsets and reset them
         elif Errors.ERROR_EXCEEDING_POS.value in self.ERRORS.data:
@@ -245,7 +248,7 @@ class Safety_Node():
             print("publishing offsets:", self.ERROR_OFFSET.data)
             self.Offset_pub.publish(self.ERROR_OFFSET)
             #pass
-            #self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
+            self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
         
         # # Repeat the function if needed in 'IK' mode
         # if self.STATE == "IK" and max(abs(np.array(self.GOAL_POS) - np.array(self.CURR_POS))):
@@ -267,7 +270,7 @@ class Safety_Node():
         # TODO
         # Limits for position safety (Need to test these values)
         #limit = [1.25, 1.25, 1.25, 20, 1.25, 1.25, 1.25]
-        limit = [5, 5, 5, 10, 50, 50, 40]
+        limit = [5, 5, 5, 5, 4, 4, 40]
 
         if not pos:
             pos = self.GOAL_POS
@@ -333,7 +336,7 @@ class Safety_Node():
                     
                     # Checking if the input from controller is making it go further into 
                     # the direction that increases current
-                    if (sign(pos[i] - self.CURR_POS[i]) == sign(pos[i])):
+                    #if (sign(pos[i] - self.CURR_POS[i]) == sign(pos[i])):
 
                         # Change the error associated with the motor to EXCEEDING_CURRENT
                         self.ERRORS.data[i] = Errors.ERROR_EXCEEDING_CURRENT.value
@@ -350,12 +353,12 @@ class Safety_Node():
                             self.FIRST[i]   = False
                 
                     # If the controller input is in the direction that reduces the current
-                    else:
+                    # else:
 
-                        # Remove any error and set TIME and FIRST back to original form
-                        self.ERRORS.data[i] = Errors.ERROR_NONE.value
-                        self.FIRST[i]       = True
-                        self.TIME[i]        = 0
+                    #     # Remove any error and set TIME and FIRST back to original form
+                    #     self.ERRORS.data[i] = Errors.ERROR_NONE.value
+                    #     self.FIRST[i]       = True
+                    #     self.TIME[i]        = 0
             
             # Checking if the current has been under the max limit for more than 10 ms
             elif self.MOTOR_CURR[i] < max_current[i] and time.time() - self.TIME[i] > 0.01:
@@ -394,7 +397,7 @@ class Safety_Node():
 
                 # Checking if the input from controller is making it go further into 
                 # the direction that presses the limit switch
-                if (sign(pos[i] - self.CURR_POS[i]) == sign(pos[i])):
+                #if (sign(pos[i] - self.CURR_POS[i]) == sign(pos[i])):
                     
                     #print(self.LIMIT_SWITCH[6])
 
@@ -412,10 +415,10 @@ class Safety_Node():
                     # print(self.GOAL_POS[2], self.CURR_POS[2], offset[2])
                     # self.ERROR_OFFSET.data  = offset
                 
-                else:
-                    if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
-                        self.ERRORS.data[i] == Errors.ERROR_LIMIT_SWITCH.value):
-                        self.ERRORS.data[i] = Errors.ERROR_NONE.value
+                #else:
+                    # if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
+                    #     self.ERRORS.data[i] == Errors.ERROR_LIMIT_SWITCH.value):
+                    #     self.ERRORS.data[i] = Errors.ERROR_NONE.value
 
             else:
                 if (self.ERRORS.data[i] == Errors.ERROR_NONE.value or 
