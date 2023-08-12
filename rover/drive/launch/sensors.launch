@@ -29,10 +29,19 @@
         <arg name="enable_accel" value="true"/>
         <arg name="enable_gyro"  value="true"/>
         <arg name="unite_imu_method" value="true"/> 
+        <arg name="image_transport" value="compressed"/>
     </include>
 
     <!-- Launch Velodyne lidar driver -->
     <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch"/>
+
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="collapse_pointcloud" output="screen" > 
+        <param name="max_height" value="0.2" />
+        <param name="min_height" value="-1.2" />
+        <param name="range_min" value="0.5" /> 
+        <param name="range_max" value="15.0" />
+        <remap from="/scan" to="/scan_collapsed" />
+    </node>
 
     <!-- <arg name="param_file_name"     doc="name of param file, e.g. rover" />
     <arg name="param_file_dir"      doc="directory to look for $(arg param_file_name).yaml"
