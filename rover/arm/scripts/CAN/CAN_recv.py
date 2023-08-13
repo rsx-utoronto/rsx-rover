@@ -51,6 +51,7 @@ class CAN_Recv():
         can_id  = msg.arbitration_id
         dev_id  = can_id & 0b00000000000000000000000111111
         api     = (can_id >> 6) & 0b00000000000001111111111
+        #man_id  = (can_id) & 0b00000111111110000000000000000
         
         # If every element in motor_list is True, it means this was for initialization 
         # and we should break out of the loop
@@ -63,34 +64,35 @@ class CAN_Recv():
         # If this is for initialization, set the correseponding element in motor_list to be True
         # if init:
         # 	motor_read[index] = True
+        #print(dev_id)
+        if dev_id >  10:
+            # API for reading limit switch
+            if api == CMD_API_STAT0:
 
-        # API for reading limit switch
-        if api == CMD_API_STAT0:
+                # Update the LIMIT_SWITCH data
+                self.LIMIT_SWITCH[index] = read_can_message(msg.data, CMD_API_STAT0)
 
-            # Update the LIMIT_SWITCH data
-            self.LIMIT_SWITCH[index] = read_can_message(msg.data, CMD_API_STAT0)
+            # API for reading motor current
+            elif api == CMD_API_STAT1:
 
-        # API for reading motor current
-        elif api == CMD_API_STAT1:
+                # Update the MOTOR_CURR data
+                self.MOTOR_CURR[index]   = read_can_message(msg.data, CMD_API_STAT1)
 
-            # Update the MOTOR_CURR data
-            self.MOTOR_CURR[index]   = read_can_message(msg.data, CMD_API_STAT1)
+            # API for reading current position of motor
+            elif api == CMD_API_STAT2:
 
-        # API for reading current position of motor
-        elif api == CMD_API_STAT2:
+                # Update the CURR_POS data
+                self.CURR_POS[index]     = read_can_message(msg.data, CMD_API_STAT2, index)
 
-            # Update the CURR_POS data
-            self.CURR_POS[index]     = read_can_message(msg.data, CMD_API_STAT2, index)
-
-            # Check if we updated wrist motors and apply the conversions
-            if index == 4 or index == 5:
-                wrist1_angle       = self.CURR_POS[4]
-                wrist2_angle       = self.CURR_POS[5]
-                self.CURR_ANGLE[4] = (wrist1_angle + wrist2_angle) / (2 * WRIST_RATIO)
-                self.CURR_ANGLE[5] = (wrist1_angle - wrist2_angle) / 2
-            
-            else:
-                self.CURR_ANGLE[index] = self.CURR_POS[index]
+                # Check if we updated wrist motors and apply the conversions
+                if index == 4 or index == 5:
+                    wrist1_angle       = self.CURR_POS[4]
+                    wrist2_angle       = self.CURR_POS[5]
+                    self.CURR_ANGLE[4] = (wrist1_angle + wrist2_angle) / (2 * WRIST_RATIO)
+                    self.CURR_ANGLE[5] = (wrist1_angle - wrist2_angle) / 2
+                
+                else:
+                    self.CURR_ANGLE[index] = self.CURR_POS[index]
 
 
 

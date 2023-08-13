@@ -270,7 +270,7 @@ class Safety_Node():
         # TODO
         # Limits for position safety (Need to test these values)
         #limit = [1.25, 1.25, 1.25, 20, 1.25, 1.25, 1.25]
-        limit = [5, 5, 5, 5, 4, 4, 40]
+        limit = [5, 5, 5, 10, 4, 4, 40]
 
         if not pos:
             pos = self.GOAL_POS
@@ -283,7 +283,7 @@ class Safety_Node():
 
                 # Calculating the offset, applying it to goal position and storing it
                 offset                     = pos[i] - self.CURR_POS[i]
-                self.ERROR_OFFSET.data[i]  = offset - sign(offset) * limit[i]
+                self.ERROR_OFFSET.data[i]  = offset #- sign(offset) * limit[i]
                 #spark_input[i] = arm_can.pos_to_sparkdata(CURR_POS[i])
 
                 # # Update the error if no other error is set

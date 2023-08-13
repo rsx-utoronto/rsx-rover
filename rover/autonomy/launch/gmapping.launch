@@ -1,5 +1,5 @@
 <launch>
-  <arg name="scan_topic"  default="scan" />
+  <arg name="scan_topic"  default="scan_collapsed" />
   <arg name="base_frame"  default="base_link"/>
   <arg name="odom_frame"  default="odom"/>
   <param name="/use_sim_time" value="false" />

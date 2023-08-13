@@ -83,7 +83,7 @@ class ARucoTagDetectionNode():
                 dist = np.linalg.norm(tvec)
                 dists_to_tags.append(dist)
 
-            best_detection = ids[np.argmax(np.array(dists_to_tags))]
+            best_detection = ids[0][0]
             rospy.loginfo(f"An AR tag was detected with the ID {best_detection}")
             
             if draw:
@@ -103,8 +103,6 @@ class ARucoTagDetectionNode():
             # lookup baselink to camera link transform 
             # lookup baselink to odom transform 
             # transform the 4x4 pose to the odom frame and publish below
-            self.updated_state_msg.curr_AR_pose.position = tvec
-            self.updated_state_msg.curr_AR_pose.orientation = rvec
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
             self.updated_state_msg.curr_AR_ID = -1
