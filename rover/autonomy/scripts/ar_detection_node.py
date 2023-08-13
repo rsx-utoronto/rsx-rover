@@ -61,11 +61,13 @@ class ARucoTagDetectionNode():
         arucoParam = aruco.DetectorParameters_create()
         bboxs, ids, rejected = aruco.detectMarkers(imgGray,arucoDict,parameters=arucoParam)
 
-        if ids is not None:
 
-            dists_to_tags = []
+        if ids is not None:
+            print("AR detected!")
+            print(ids)
             for i, id in enumerate(ids):
                 id = id[0]
+                print(id)
                 if id in self.curr_aruco_detections: 
                     self.curr_aruco_detections[id] += 1
                     if self.curr_aruco_detections[id] > self.permanent_thresh:
@@ -74,20 +76,21 @@ class ARucoTagDetectionNode():
                 else:
                     self.curr_aruco_detections[id] = 1
 
-                rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(bboxs[i], 0.1, self.K,
-                                                                                              self.D)
-                
-                print(rvec)
-                print(tvec)
-                
-                dist = np.linalg.norm(tvec)
-                dists_to_tags.append(dist)
 
             best_detection = ids[0][0]
             rospy.loginfo(f"An AR tag was detected with the ID {best_detection}")
-            
+            bboxs = bboxs[0]
             if draw:
-                aruco.drawDetectedMarkers(img,bboxs)
+                for bbox, id in zip(bboxs, ids):
+                    cv2.rectangle(img, (bbox[0][0], bbox[0][1]) , (bbox[2][0], bbox[2][1]), (0,255,0), 4)
+                    # font
+                    font = cv2.FONT_HERSHEY_SIMPLEX
+                    org = (int(bbox[0][0]), int(bbox[0][1] - 20))
+                    fontScale = 1
+                    color = (0, 255, 0)
+                    thickness = 2
+                    img = cv2.putText(img, f"ID: {int(id)}", org, font, 
+                                    fontScale, color, thickness, cv2.LINE_AA)
             
             img_msg = bridge.cv2_to_imgmsg(img, encoding="passthrough")
             self.vis_pub.publish(img_msg)
@@ -97,12 +100,15 @@ class ARucoTagDetectionNode():
         if ids is not None:
             self.updated_state_msg.AR_TAG_DETECTED = True
             self.updated_state_msg.curr_AR_ID = int(best_detection)
+<<<<<<< HEAD
 
             # Transform into a goal in the odom frame
 
             # lookup baselink to camera link transform 
             # lookup baselink to odom transform 
             # transform the 4x4 pose to the odom frame and publish below
+=======
+>>>>>>> aeaeaf1b0767fef3f3885392d519140d60c3fd9e
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
             self.updated_state_msg.curr_AR_ID = -1
