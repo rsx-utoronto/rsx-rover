@@ -6,8 +6,8 @@ import subprocess
 arduino_port = 0
 
 #angles to toggle
-angle_low = "0 "
-angle_high = "100 "
+angle_low = "1"
+angle_high = "105"
 
 def open_arduino_port():
     """
@@ -19,7 +19,7 @@ def open_arduino_port():
     global arduino_port
 
     # Custom Arduino name to be detected
-    arduino_name = "1a86_USB2.0-Serial"
+    arduino_name = "1a86_USB2.0-Ser_"
 
     # Specifying the command prompt to be run on terminal and running it
     command_prompt  = ["bash", "/home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/find_usb.sh"]
@@ -62,7 +62,7 @@ def write_servo_high_angle():
     global arduino_port
 
     # Write servo value to Arduino port
-    arduino_port.write(angle_high.encode('utf-8'))
+    arduino_port.write(bytes(angle_high, 'utf-8'))
 
 
 def write_servo_low_angle():
@@ -73,7 +73,7 @@ def write_servo_low_angle():
     global arduino_port
 
     # Write servo value to Arduino port
-    arduino_port.write(angle_low.encode('utf-8'))
+    arduino_port.write(bytes(angle_low, 'utf-8'))
 
 def set_permissions():
     """

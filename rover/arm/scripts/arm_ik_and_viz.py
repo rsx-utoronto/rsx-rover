@@ -560,7 +560,7 @@ def publishNewAngles(newJointAngles):
     ikAngles = Float32MultiArray()
     adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
     for i in range(7):
-        adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i] - savedCanAngles[i]
+        adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i] + savedCanAngles[i]
         adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
 
     adjustedAngles[0] = -adjustedAngles[0]
@@ -608,6 +608,22 @@ def updateDesiredArmSimulation(armAngles):
         # print(anglesToDisplay)
         sim.runNewJointState2(jointPublisher, tempAngles)
 
+def updateLiveSim():
+    global liveArmAngles
+    global savedCanAngles
+    global curArmAngles
+    
+    tempAngles = copy.deepcopy(liveArmAngles)#copy.deepcopy(list(np.subtract(np.array(liveArmAngles),np.array(savedCanAngles))))
+    # tempAngles = copy.deepcopy(liveArmAngles)
+    tempAngles.append(tempAngles[6]) # make gripper angles equal
+    tempAngles.append(tempAngles[6]) # make gripper angles equal
+
+    tempAngles[0] = tempAngles[0]
+    tempAngles[1] = tempAngles[1]
+    tempAngles[5] = -tempAngles[5]
+
+    sim.runNewJointState3(jointPublisher, tempAngles)
+
 def updateLiveArmSimulation(data):
     ''' Updates RViz URDF visulaztion based on IRL arm angles
 
@@ -626,22 +642,28 @@ def updateLiveArmSimulation(data):
     for i in range(7):
         tempList[i] = np.deg2rad(tempList[i])
 
-    liveArmAngles = tempList
-    temp = liveArmAngles[5]
-    liveArmAngles[5] = liveArmAngles[4]
-    liveArmAngles[4] = temp
+    tempList[0] = -tempList[0]
+    tempList[1] = -tempList[1]
+    temp = tempList[5]
+    tempList[5] = tempList[4]
+    tempList[4] = temp
+    # tempList[5] = -tempList[5]
+    tempList[6] = -tempList[6]
+    tempAngles = copy.deepcopy(list(np.subtract(np.array(tempList),np.array(savedCanAngles))))
 
+    liveArmAngles = tempAngles
     # print(liveArmAngles)
-    tempAngles = copy.deepcopy(list(np.subtract(np.array(liveArmAngles),np.array(savedCanAngles))))
-    liveArmAngles = copy.deepcopy(tempAngles)
-    tempAngles.append(tempAngles[6]) # make gripper angles equal
-    tempAngles.append(tempAngles[6]) # make gripper angles equal
+    # tempAngles = copy.deepcopy(list(np.subtract(np.array(liveArmAngles),np.array(savedCanAngles))))
+    # liveArmAngles = copy.deepcopy(tempAngles)
+    # tempAngles.append(tempAngles[6]) # make gripper angles equal
+    # tempAngles.append(tempAngles[6]) # make gripper angles equal
 
-    tempAngles[0] = -tempAngles[0]
-    tempAngles[1] = -tempAngles[1]
-    tempAngles[5] = -tempAngles[5]
+    # tempAngles[0] = -tempAngles[0]
+    # tempAngles[1] = -tempAngles[1]
+    # tempAngles[5] = -tempAngles[5]
 
-    sim.runNewJointState3(jointPublisher, tempAngles)
+    # sim.runNewJointState3(jointPublisher, tempAngles)
+    # updateLiveSim()
 
 def updateDesiredEETransformation(newTargetValues, scriptMode):
     ''' Updates tf2 transformation of desired end effector position.
@@ -701,6 +723,11 @@ def updateState(data):
     global scriptMode
     global ikEntered
     global savedCanAngles
+    global curArmAngles
+    global goToPosValues
+    global prevTargetTransform
+    global prevTargetValues
+    global liveArmAngles
 
 
     if data.data != "IK":
@@ -710,6 +737,19 @@ def updateState(data):
     #     scriptMode = scriptMode
         if not ikEntered:
             savedCanAngles = copy.deepcopy(liveArmAngles) 
+            scriptMode = Mode.DEFAULT_IK
+            liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
+            curArmAngles = [0, 0, 0, 0, 0, 0, 0]
+
+            dhTable = ik.createDHTable(curArmAngles)
+            prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
+
+            [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
+            newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
+            prevTargetValues = newTargetValues
+            
+            updateDesiredEETransformation(newTargetValues, scriptMode)
+            updateDesiredArmSimulation(curArmAngles)
         ikEntered = True
 
 def updateController(data):
@@ -839,6 +879,7 @@ def main():
     isButtonPressed = copy.deepcopy(buttonStatus)
     joystickAxes = copy.deepcopy(joystickAxesStatus)
 
+    updateLiveSim()
     if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
     #     dhTable = ik.createDHTable(curArmAngles)
 
@@ -877,7 +918,9 @@ def main():
             updateDesiredEETransformation(newTargetValues, scriptMode)
             updateDesiredArmSimulation(curArmAngles)
     elif scriptMode == Mode.FORWARD_KIN: # update the values IK mode uses when not in IK mode
-        curArmAngles = liveArmAngles
+        # print(goToPosValues)
+        
+        curArmAngles = copy.deepcopy(liveArmAngles)
         dhTable = ik.createDHTable(curArmAngles)
         prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
 
@@ -890,8 +933,6 @@ def main():
 
     # buttonStatus = getJoystickButtons([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) 
     # joystickAxesStatus = {"L-Right": 0, "L-Down": 0, "L2": 0, "R-Right": 0, "R-Down": 0, "R2": 0}
-
-
 
 # Main Area
 

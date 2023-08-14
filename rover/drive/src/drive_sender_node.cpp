@@ -34,7 +34,7 @@ public:
 	ros::Subscriber state_sub;
 	bool network_status = false;
 	geometry_msgs::Twist twist;
-	bool MANUAL_ENABLED = false;
+	bool MANUAL_ENABLED = true;
 	bool KILL_PRESSED = false;
 };
 

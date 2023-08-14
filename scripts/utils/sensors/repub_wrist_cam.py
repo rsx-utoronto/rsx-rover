@@ -8,12 +8,12 @@ from cv_bridge import CvBridge
 import numpy as np 
 
 def repub_images():
-    rospy.init_node("cam_pub")
-    image_pub= rospy.Publisher("wrist_cam", Image, queue_size=10)
+    rospy.init_node("imx219_pub")
+    image_pub= rospy.Publisher("gripper_cam", Image, queue_size=10)
     bridge=CvBridge()
     rate=rospy.Rate(10)
 
-    cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)540, height=(int)540,format=(string)NV12, framerate=(fraction)20/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink")
+    cap = cv2.VideoCapture("/dev/video0")
     if not cap.isOpened():
         print("Error")
         return
@@ -23,14 +23,10 @@ def repub_images():
             print("Error")
             break
 
-        frame = cv2.undistort(frame, K, D)
-        frame = cv2.rotate(frame, cv2.ROTATE_180)
-        frame = cv2.resize(frame, (960, 540))
+        frame = cv2.resize(frame, (240, 135))
         image_msg = bridge.cv2_to_imgmsg(frame, encoding='bgr8')
         image_msg.header.stamp = rospy.Time.now()
         image_pub.publish(image_msg)
-
-
         rate.sleep()
 
     cap.release()

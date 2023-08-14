@@ -4,9 +4,13 @@
     <node pkg="rover" type="ar_detection_node.py" name="ar_detection_node" output="screen"/>
 
     <!-- Launch light beacon detection node -->
+<<<<<<< HEAD
+    <!-- <node pkg="rover" type="beacon_detection_blinking_color.py" name="light_beacon_detection_node" output="screen"/> -->
+=======
     <node pkg="rover" type="beacon_detection_blinking_color.py" name="light_beacon_detection_node" output="screen"/>
 
     <!-- Launch radio beacon detection node
     <node pkg="rover" type="radio_beacon_detection.py" name="radio_beacon_detection_node" output="screen"/> -->
+>>>>>>> aeaeaf1b0767fef3f3885392d519140d60c3fd9e
 
 </launch>

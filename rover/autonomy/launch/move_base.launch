@@ -43,7 +43,7 @@
 	</node>  -->
 
    <arg name="use_map_topic" default="true"/>
-   <arg name="scan_topic" default="/scan" />
+   <arg name="scan_topic" default="/scan_collapsed" />
    <arg name="map_topic" default="map" />
 
 
