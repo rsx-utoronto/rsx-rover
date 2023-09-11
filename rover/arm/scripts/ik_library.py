@@ -27,7 +27,7 @@ class ScriptState():
     def controlEEPosition() -> None:
         pass
 
-    def updateDesiredEETrasform() -> None:
+    def updateDesiredEETrasformtion():
         pass
 
 

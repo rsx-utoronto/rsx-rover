@@ -76,6 +76,7 @@ class IKMode(ik.ScriptState):
 
         self.positionScale = 10*movementSpeed
         self.angleScale = 0.1*movementSpeed
+        self.overRiding = False
 
 
     def main() -> None:
@@ -131,6 +132,48 @@ class IKMode(ik.ScriptState):
             print("Cannot reach outside of arm workspace")
         except Exception as ex:
             print(ex)
+
+    def updateDesiredEEtransform(self):
+        global jointPublisher
+        global gazeboPublisher
+
+        # the following is specific the URDF, you will have to change these values and maybe swap coordiantes if you change URDFs
+        tempTarget = copy.deepcopy(newTargetValues) # target transform scaled to rviz
+        tempX = tempTarget[3][0] # swap x and y coords
+        tempTarget[3][0] = tempTarget[3][1]
+        tempTarget[3][1] = tempX
+
+        # scale target transform
+        if tempTarget[3][0] >= 0:
+            tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0594
+        else:   
+            tempTarget[3][0] = -0.00101165*tempTarget[3][0] + 0.0494
+        if tempTarget[3][1] >= 0:
+            tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.03
+        else:
+            tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.04
+            tempTarget[3][2] = (0.47/450)*tempTarget[3][2]
+
+        tempRoll = tempTarget[0] # swap roll and pitch
+        tempTarget[0] = -tempTarget[1]
+        tempTarget[1] = tempRoll # should be 0 for default
+
+        if self.overRiding:
+            return tempTarget
+
+        referenceLink = "base_link" # link to base end effector transform off of
+
+        if scriptMode == Mode.DEFAULT_IK:
+            tempTarget[1] = 0 
+        if scriptMode == Mode.GLOBAL_IK:
+            tempTarget[:3] = [0, 0, 0]
+        if scriptMode == Mode.ROT_RELATIVE_IK or scriptMode == Mode.RELATIVE_IK:
+            tempTarget = [0, 0 , pi, [0, 0, 198*0.47/450]]
+            referenceLink = "Link_6"
+    
+        sim.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
+
+            
          
 class DefaultIK(IKMode):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
@@ -163,6 +206,12 @@ class DefaultIK(IKMode):
         newTargetValues = newTarget
         
         return ik.createEndEffectorTransform(newRoll, newPitch, newYaw, newTarget[3])
+
+    def updateDesiredEETrasformtion(self):
+        self.overRiding = True
+        tempTarget = super().updateDesiredEETrasformtion()
+        tempTarget[1] = 0
+        sim.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
 
 class GlobalIK(IKMode):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
