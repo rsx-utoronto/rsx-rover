@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import rospy
-import pygame
 import numpy as np
 import ik_library as ik
 import arm_simulation_control as sim
@@ -58,20 +57,239 @@ isMovementNormalized = False
 buttonsPressed = {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": False, "L1": False, "R1": False, "L2": False, "R2": False, "SHARE": False, "OPTIONS": False, "PLAY_STATION": False, 
         "L3": False, "R3": False,"UP": False, "DOWN": False, "LEFT": False, "RIGHT": False} 
 
-# Joystick Controller
+class ForwardKin(ik.ScriptState):
+    def main() -> None:
+        curArmAngles = copy.deepcopy(liveArmAngles)
+        dhTable = ik.createDHTable(curArmAngles)
+        prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
 
-def initializeJoystick():
-    '''### Connects Joystick to Script
+        [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
+        newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
+        prevTargetValues = newTargetValues
 
-    For when the arm is operated by a PS3, PS4, or PS5 joystick. Probably will work with X-box Controllers.
-    '''
-    pygame.init()
-    global joystick
-    joystick = pygame.joystick.Joystick(0)
-    joystick.init()
-    print('Initialized joystick: %s' % joystick.get_name())
-    print(joystick.get_numbuttons())
+        updateDesiredEETransformation(newTargetValues)
+        updateDesiredArmSimulation(curArmAngles)        
+
+class IKMode(ik.ScriptState):
+    def __init__(self) -> None:
+        global movementSpeed
+
+        self.positionScale = 10*movementSpeed
+        self.angleScale = 0.1*movementSpeed
+
+
+    def main() -> None:
+        publishNewAngles(curArmAngles)
+        updateDesiredEETransformation(prevTargetValues)
+        updateDesiredArmSimulation(curArmAngles)
+
+        if goToPosValues[0]: # if the service flag to go to a saved position has been called
+            goToPosValues[0] = False
+            curArmAngles = goToPosValues[1]
+
+            dhTable = ik.createDHTable(curArmAngles)
+            prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
+
+            [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
+            newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
+            prevTargetValues = newTargetValues
+            
+            updateDesiredEETransformation(newTargetValues)
+            updateDesiredArmSimulation(curArmAngles)
     
+    def onJoystickUpdate(isButtonPressed:dict) -> None:
+        try:
+            dhTable = ik.createDHTable(curArmAngles)
+
+            targetEEPos = controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
+                                        prevTargetTransform)
+            
+            targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+
+            maxIterations = 10
+            iteration = 0
+            originalSpeed = movementSpeed
+
+            while isMovementNormalized and (iteration < maxIterations):
+                if not limitAngleSpeed(targetAngles, curArmAngles):
+                    break
+                iteration += 1
+                movementSpeed = movementSpeed*0.5
+
+                targetEEPos = controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
+                                        prevTargetTransform)
+                targetAngles = ik.inverseKinematics(dhTable, targetEEPos)
+
+            movementSpeed = originalSpeed
+
+            targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
+
+            curArmAngles = targetAngles
+            prevTargetTransform = targetEEPos
+            prevTargetValues = newTargetValues
+        except ik.CannotReachTransform:
+            print("Cannot reach outside of arm workspace")
+        except Exception as ex:
+            print(ex)
+         
+class DefaultIK(IKMode):
+    def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
+        # control x, y, z
+        if joystickAxis["L-Down"] != 0:
+            newX -= joystickAxis["L-Down"]*self.positionScale
+        if joystickAxis["L-Right"] != 0:
+            newY -= joystickAxis["L-Right"]*self.positionScale
+        if joystickAxis["L2"] != 0:
+            newZ -= joystickAxis["L2"]*self.positionScale
+        if joystickAxis["R2"] != 0:
+            newZ += joystickAxis["R2"]*self.positionScale
+        
+        # control roll, pitch, yaw
+        if joystickAxis["R-Right"] != 0:
+            newYaw -= joystickAxis["R-Right"]*self.angleScale
+        # if joystickAxis["R-Down"] != 0:
+        #     newPitch -= joystickAxis["R-Down"]*scale2
+        if isButtonPressed["DOWN"]:
+            newPitch -= self.angleScale
+        elif isButtonPressed["UP"]:
+            newPitch += self.angleScale
+        if isButtonPressed["L1"]:
+            newRoll -= self.angleScale
+        elif isButtonPressed["R1"]:
+            newRoll += self.angleScale
+
+        newTarget = [newRoll, newPitch, newYaw, [newX, newY, newZ]]
+        # print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", newRoll, " pitch: ", newPitch, " yaw: ", newYaw)
+        newTargetValues = newTarget
+        
+        return ik.createEndEffectorTransform(newRoll, newPitch, newYaw, newTarget[3])
+
+class GlobalIK(IKMode):
+    def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
+        newRoll = 0
+        newPitch = 0
+        newYaw = 0
+
+        if joystickAxis["L-Down"] != 0:
+            newX -= joystickAxis["L-Down"]*self.positionScale
+        if joystickAxis["L-Right"] != 0:
+            newY -= joystickAxis["L-Right"]*self.positionScale
+        if joystickAxis["L2"] != 0:
+            newZ -= joystickAxis["L2"]*self.positionScale
+        if joystickAxis["R2"] != 0:
+            newZ += joystickAxis["R2"]*self.positionScale
+        # control roll, pitch, yaw
+        if joystickAxis["R-Right"] != 0:
+            newRoll += joystickAxis["R-Right"]*self.angleScale
+        if joystickAxis["R-Down"] != 0:
+            newPitch += joystickAxis["R-Down"]*self.angleScale
+        # if isButtonPressed["UP"]:
+        #     newPitch = -self.angleScale
+        # elif isButtonPressed["DOWN"]:
+        #     newPitch = self.angleScale
+        if isButtonPressed["L1"]:
+            newYaw = -self.angleScale
+        elif isButtonPressed["R1"]:
+            newYaw = self.angleScale
+        
+        prevRotation = prevTargetTransform[:3, :3]
+        
+        newRotation = np.dot(ik.createRotationMatrix(newRoll, newPitch, newYaw, "ypr"), prevRotation)
+        newTransformation = np.block([
+                                        [newRotation, np.array([[newX, newY, newZ]]).transpose()],
+                                        [0, 0, 0, 1]
+                                        ])
+        [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
+
+        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [newX, newY, newZ]]
+        # print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", correctedRoll, " pitch: ", correctedPitch, " yaw: ", correctedYaw)
+        
+        return newTransformation
+
+class RotRelativeIK(IKMode):
+    def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
+        newRoll = 0
+        newPitch = 0
+        newYaw = 0
+
+        if joystickAxis["L-Down"] != 0:
+            newX -= joystickAxis["L-Down"]*self.positionScale
+        if joystickAxis["L-Right"] != 0:
+            newY -= joystickAxis["L-Right"]*self.positionScale
+        if joystickAxis["L2"] != 0:
+            newZ -= joystickAxis["L2"]*self.positionScale
+        if joystickAxis["R2"] != 0:
+            newZ += joystickAxis["R2"]*self.positionScale
+        # control roll, pitch, yaw
+        if joystickAxis["R-Right"] != 0:
+            newRoll = -joystickAxis["R-Right"]*self.angleScale
+        if joystickAxis["R-Down"] != 0:
+            newPitch = joystickAxis["R-Down"]*self.angleScale
+        if isButtonPressed["L1"]:
+            newYaw = -self.angleScale
+        elif isButtonPressed["R1"]:
+            newYaw = self.angleScale
+        
+        prevRotation = prevTargetTransform[:3, :3]
+        
+        newRotation = np.matmul(prevRotation, ik.createRotationMatrix(newRoll, newPitch, newYaw, "ypr"))
+        newTransformation = np.block([
+                                        [newRotation, np.array([[newX, newY, newZ]]).transpose()],
+                                        [0, 0, 0, 1]
+                                        ])
+        [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
+
+        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [newX, newY, newZ]]
+
+        return newTransformation
+
+class RelativeIK(IKMode):
+    def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
+        global curArmAngles
+        [newRoll, newPitch, newYaw, newX, newY, newZ] = [0, 0, 0, 0, 0, 0]
+        
+        if joystickAxis["L-Down"] != 0:
+            newX = joystickAxis["L-Down"]*self.positionScale
+        if joystickAxis["L-Right"] != 0:
+            newY = -joystickAxis["L-Right"]*self.positionScale
+        if joystickAxis["L2"] != 0:
+            newZ = -joystickAxis["L2"]*self.positionScale
+        if joystickAxis["R2"] != 0:
+            newZ = joystickAxis["R2"]*self.positionScale
+        # control roll, pitch, yaw
+        if joystickAxis["R-Right"] != 0:
+            newRoll = joystickAxis["R-Right"]*self.angleScale
+        if joystickAxis["R-Down"] != 0:
+            newPitch = joystickAxis["R-Down"]*self.angleScale
+        if isButtonPressed["L1"]:
+            newYaw = -self.angleScale
+        elif isButtonPressed["R1"]:
+            newYaw = self.angleScale
+        
+        t05 = ik.calculateTransformToLink(ik.createDHTable(curArmAngles), 5) # transform to link 5
+        r05 = t05[:3, :3] # rotation matrix of third link
+        relativeXYZ = np.matmul(r05, np.transpose([np.array([newX, newY, newZ ])]))
+        targetXYZ = relativeXYZ+np.transpose([prevTargetTransform[:3, 3]])
+
+        prevRotation = prevTargetTransform[:3, :3]
+        newRotation = np.matmul(prevRotation, ik.createRotationMatrix(newRoll, newPitch, newYaw, "ypr"))
+
+        newTransformation = np.block([
+                                        [newRotation, targetXYZ],
+                                        [0, 0, 0, 1]
+                                        ])
+
+        [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
+        [correctedX, correctedY, correctedZ] = [newTransformation[0][3], newTransformation[1][3], newTransformation[2][3]]
+        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [correctedX, correctedY, correctedZ]]
+
+        return newTransformation
+
+class CamRelativeIK(IKMode):
+    def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
+        pass
+
+# Joystick Controller
 def getJoystickButtons(tempButton:list) -> dict: # setting up the buttons
     ''' Gets the Currently Pressed Buttons on Joystick
 
@@ -88,10 +306,6 @@ def getJoystickButtons(tempButton:list) -> dict: # setting up the buttons
     
     '''
     global buttonsPressed
-    # global joystick
-
-    # pygame.event.pump() # allow pygame to handle internal actions, keep everything current
-    
     
     buttons = {"X": 0, "CIRCLE": 0, "TRIANGLE": 0, "SQUARE": 0 , "L1": 0, "R1": 0, "L2": 0, "R2": 0, "SHARE": 0, "OPTIONS": 0, "PLAY_STATION": 0, 
         "L3": 0, "R3": 0,"UP": 0, "DOWN": 0, "LEFT": 0, "RIGHT": 0 } # 1 is pressed, 0 is not pressed, -1 is just released
@@ -113,38 +327,6 @@ def getJoystickButtons(tempButton:list) -> dict: # setting up the buttons
  
         
     return buttons
-
-def getJoystickAxes(): # setting up the axes for the control stick
-    '''Get the state of the controllers joystick axes and bumpers.
-
-    Get the value of joystick axes that are labelled in JOYSTICK_AXES_NAMES. Anything pushed
-    in the direction labelled will be returned as positive float; against will be negative. L2 
-    and R2 swill return depth pushed in.
-    
-    Returns
-    -------
-    #### dictionary: 
-    A dictionary with keys that are from JOYSTICK_AXES_NAME, value is amount pushed.
-    '''
-    
-    global joystick
-    
-    axes = {}
-    
-    pygame.event.pump()
-    #Read input from the joystick       
-    for i in range(0, joystick.get_numaxes()):
-        axes[JOYSTICK_AXES_NAMES[i]] = joystick.get_axis(i) 
-
-        # set inputs to zero if near zero
-        if abs(axes[JOYSTICK_AXES_NAMES[i]]) <= 0.05: 
-            axes[JOYSTICK_AXES_NAMES[i]] = 0
-
-        # zero bumpers
-        if JOYSTICK_AXES_NAMES[i] == "L2" or JOYSTICK_AXES_NAMES[i] == "R2":
-            axes[JOYSTICK_AXES_NAMES[i]] = (axes[JOYSTICK_AXES_NAMES[i]] + 1)/2
-
-    return axes
 
 # Arm Control
 
@@ -795,49 +977,6 @@ def updateController(data):
         isMovementNormalized = not isMovementNormalized
         print("Normalized Movement: ", isMovementNormalized)
 
-    if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
-        try:
-            dhTable = ik.createDHTable(curArmAngles)
-
-            targetEEPos = controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
-                                        prevTargetTransform, scriptMode)
-            
-            targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-
-            maxIterations = 10
-            iteration = 0
-            originalSpeed = movementSpeed
-
-            while isMovementNormalized and (iteration < maxIterations):
-                if not limitAngleSpeed(targetAngles, curArmAngles):
-                    break
-                iteration += 1
-                movementSpeed = movementSpeed*0.5
-
-                targetEEPos = controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
-                                        prevTargetTransform, scriptMode)
-                targetAngles = ik.inverseKinematics(dhTable, targetEEPos)
-
-            movementSpeed = originalSpeed
-
-            targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
-
-            # simulatedAngles = targetAngles
-            # slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
-
-            # publish on different threads to speed up processing time
-            # pubThreadPool.submit(publishNewAngles, targetAngles)
-            # pubThreadPool.submit(updateDesiredEETransformation, newTargetValues, scriptMode)
-            # pubThreadPool.submit(updateDesiredArmSimulation, simulatedAngles)
-
-            curArmAngles = targetAngles
-            prevTargetTransform = targetEEPos
-            prevTargetValues = newTargetValues
-        except ik.CannotReachTransform:
-            print("Cannot reach outside of arm workspace")
-        except Exception as ex:
-            print(ex)
-
 # Program Control
 
 def main():
@@ -859,80 +998,10 @@ def main():
     global buttonStatus
     global joystickAxesStatus
 
-    # isButtonPressed = copy.deepcopy(joystickButtonStatus)
-    # joystickAxes = copy.deepcopy(joystickAxesStatus)
-
-    # if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
-    #     if (scriptMode.value + 1) > len(Mode):
-    #         scriptMode = list(Mode)[0]
-    #     else:
-    #         scriptMode = list(Mode)[scriptMode.value]
-    #     print(scriptMode.name)
-
-    # if isButtonPressed["START"] == 2:
-    #     movementSpeed += 0.1
-    # if isButtonPressed["SELECT"] == 2:
-    #     movementSpeed -= 0.1
-    #     if movementSpeed < 0: # don't let movement speed go into negatives
-    #         movementSpeed = 0
-
     isButtonPressed = copy.deepcopy(buttonStatus)
     joystickAxes = copy.deepcopy(joystickAxesStatus)
 
     updateLiveSim()
-    if scriptMode.value <= 4: # everything below CAM_RELATIVE_MOTION
-    #     dhTable = ik.createDHTable(curArmAngles)
-
-    #     targetEEPos = controlEEPosition(isButtonPressed, joystickAxes, prevTargetValues, 
-    #                                     prevTargetTransform, scriptMode)
-        
-    #     try:
-    #         targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-    #         targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
-
-    #         simulatedAngles = targetAngles
-    #         # slowedAngles = incrementTargetAngles(targetAngles, liveArmAngles)            
-
-    #         # publish on different threads to speed up processing time
-        publishNewAngles(curArmAngles)
-        updateDesiredEETransformation(prevTargetValues, scriptMode)
-        updateDesiredArmSimulation(curArmAngles)
-
-    #         curArmAngles = targetAngles
-    #         prevTargetTransform = targetEEPos
-    #         prevTargetValues = newTargetValues
-    #     except ik.CannotReachTransform:
-    #         print("Cannot reach outside of arm workspace")
-
-        if goToPosValues[0]: # if the service flag to go to a saved position has been called
-            goToPosValues[0] = False
-            curArmAngles = goToPosValues[1]
-
-            dhTable = ik.createDHTable(curArmAngles)
-            prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
-
-            [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
-            newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
-            prevTargetValues = newTargetValues
-            
-            updateDesiredEETransformation(newTargetValues, scriptMode)
-            updateDesiredArmSimulation(curArmAngles)
-    elif scriptMode == Mode.FORWARD_KIN: # update the values IK mode uses when not in IK mode
-        # print(goToPosValues)
-        
-        curArmAngles = copy.deepcopy(liveArmAngles)
-        dhTable = ik.createDHTable(curArmAngles)
-        prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
-
-        [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
-        newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
-        prevTargetValues = newTargetValues
-
-        updateDesiredEETransformation(newTargetValues, scriptMode)
-        updateDesiredArmSimulation(curArmAngles)
-
-    # buttonStatus = getJoystickButtons([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) 
-    # joystickAxesStatus = {"L-Right": 0, "L-Down": 0, "L2": 0, "R-Right": 0, "R-Down": 0, "R2": 0}
 
 # Main Area
 
@@ -948,8 +1017,6 @@ if __name__ == "__main__":
     buttonStatus = getJoystickButtons([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) 
     joystickAxesStatus = {"L-Right": 0, "L-Down": 0, "L2": 0, "R-Right": 0, "R-Down": 0, "R2": 0}
     savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
-
-    # initializeJoystick()
 
     pubThreadPool = concurrent.futures.ThreadPoolExecutor(max_workers=2) # create thread pool with two threads
 

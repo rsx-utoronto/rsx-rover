@@ -12,6 +12,25 @@ class CannotReachTransform(Exception):
         self.message = message
         super().__init__(self.message)
 
+# IK State Class
+
+class ScriptState():
+    def __init__(self) -> None:
+        pass
+
+    def main() -> None:
+        pass
+
+    def onJoystickUpdate() -> None:
+        pass
+
+    def controlEEPosition() -> None:
+        pass
+
+    def updateDesiredEETrasform() -> None:
+        pass
+
+
 # IK Code
 
 def createRotationMatrix(roll: float, pitch: float, yaw: float, order: str = "ypr"):
