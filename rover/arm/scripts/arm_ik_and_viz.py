@@ -42,10 +42,7 @@ global prevTargetValues # [roll, pitch, yaw, [x, y, z]]
 global newTargetValues
 global jointPublisher
 global gazeboPublisher
-global pubThreadPool
 global angleCorrections
-global buttonStatus
-global joystickAxesStatus
 global isMovementNormalized
 global savedCanAngles
 global ikEntered
@@ -57,8 +54,27 @@ isMovementNormalized = False
 buttonsPressed = {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": False, "L1": False, "R1": False, "L2": False, "R2": False, "SHARE": False, "OPTIONS": False, "PLAY_STATION": False, 
         "L3": False, "R3": False,"UP": False, "DOWN": False, "LEFT": False, "RIGHT": False} 
 
-class ForwardKin(ik.ScriptState):
+class ScriptState():
+    def __init__(self) -> None:
+        pass
+
     def main() -> None:
+        pass
+
+    def onJoystickUpdate() -> None:
+        pass
+
+    def controlEEPosition() -> None:
+        pass
+
+    def updateDesiredEETrasformtion():
+        pass
+
+class ForwardKin(ScriptState):
+    def main() -> None:
+        global prevTargetValues
+        global curArmAngles
+
         curArmAngles = copy.deepcopy(liveArmAngles)
         dhTable = ik.createDHTable(curArmAngles)
         prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
@@ -70,16 +86,17 @@ class ForwardKin(ik.ScriptState):
         updateDesiredEETransformation(newTargetValues)
         updateDesiredArmSimulation(curArmAngles)        
 
-class IKMode(ik.ScriptState):
+class IKMode(ScriptState):
     def __init__(self) -> None:
-        global movementSpeed
-
-        self.positionScale = 10*movementSpeed
-        self.angleScale = 0.1*movementSpeed
-        self.overRiding = False
+        self.overriding = False
 
 
     def main() -> None:
+        global curArmAngles
+        global prevTargetValues
+        global prevTargetTransform
+        global goToPosValues
+
         publishNewAngles(curArmAngles)
         updateDesiredEETransformation(prevTargetValues)
         updateDesiredArmSimulation(curArmAngles)
@@ -98,7 +115,13 @@ class IKMode(ik.ScriptState):
             updateDesiredEETransformation(newTargetValues)
             updateDesiredArmSimulation(curArmAngles)
     
-    def onJoystickUpdate(isButtonPressed:dict) -> None:
+    def onJoystickUpdate(isButtonPressed:dict, joystickAxesStatus:dict) -> None:
+        global curArmAngles
+        global prevTargetTransform
+        global prevTargetValues
+        global movementSpeed
+        global isMovementNormalized
+
         try:
             dhTable = ik.createDHTable(curArmAngles)
 
@@ -133,10 +156,23 @@ class IKMode(ik.ScriptState):
         except Exception as ex:
             print(ex)
 
-    def updateDesiredEEtransform(self):
-        global jointPublisher
-        global gazeboPublisher
+    def controlEEPosition(self, prevTargetValues):
+        global movementSpeed
 
+        self.positionScale = 10*movementSpeed
+        self.angleScale = 0.1*movementSpeed
+       
+        self.newTarget = copy.deepcopy(prevTargetValues)
+
+        self.newRoll = self.newTarget[0]
+        self.newPitch = self.newTarget[1]
+        self.newYaw = self.newTarget[2]
+    
+        self.newX = self.newTarget[3][0]
+        self.newY = self.newTarget[3][1]
+        self.newZ = self.newTarget[3][2]
+
+    def updateDesiredEEtransform(self):
         # the following is specific the URDF, you will have to change these values and maybe swap coordiantes if you change URDFs
         tempTarget = copy.deepcopy(newTargetValues) # target transform scaled to rviz
         tempX = tempTarget[3][0] # swap x and y coords
@@ -158,140 +194,146 @@ class IKMode(ik.ScriptState):
         tempTarget[0] = -tempTarget[1]
         tempTarget[1] = tempRoll # should be 0 for default
 
-        if self.overRiding:
+        if self.overriding:
             return tempTarget
 
         referenceLink = "base_link" # link to base end effector transform off of
 
-        if scriptMode == Mode.DEFAULT_IK:
-            tempTarget[1] = 0 
-        if scriptMode == Mode.GLOBAL_IK:
-            tempTarget[:3] = [0, 0, 0]
-        if scriptMode == Mode.ROT_RELATIVE_IK or scriptMode == Mode.RELATIVE_IK:
-            tempTarget = [0, 0 , pi, [0, 0, 198*0.47/450]]
-            referenceLink = "Link_6"
-    
         sim.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
 
-            
-         
 class DefaultIK(IKMode):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
+        super().controlEEPosition(prevTargetValues)
+
         # control x, y, z
         if joystickAxis["L-Down"] != 0:
-            newX -= joystickAxis["L-Down"]*self.positionScale
+            self.newX -= joystickAxis["L-Down"]*self.positionScale
         if joystickAxis["L-Right"] != 0:
-            newY -= joystickAxis["L-Right"]*self.positionScale
+            self.newY -= joystickAxis["L-Right"]*self.positionScale
         if joystickAxis["L2"] != 0:
-            newZ -= joystickAxis["L2"]*self.positionScale
+            self.newZ -= joystickAxis["L2"]*self.positionScale
         if joystickAxis["R2"] != 0:
-            newZ += joystickAxis["R2"]*self.positionScale
+            self.newZ += joystickAxis["R2"]*self.positionScale
         
         # control roll, pitch, yaw
         if joystickAxis["R-Right"] != 0:
-            newYaw -= joystickAxis["R-Right"]*self.angleScale
+            self.newYaw -= joystickAxis["R-Right"]*self.angleScale
         # if joystickAxis["R-Down"] != 0:
-        #     newPitch -= joystickAxis["R-Down"]*scale2
+        #     self.newPitch -= joystickAxis["R-Down"]*scale2
         if isButtonPressed["DOWN"]:
-            newPitch -= self.angleScale
+            self.newPitch -= self.angleScale
         elif isButtonPressed["UP"]:
-            newPitch += self.angleScale
+            self.newPitch += self.angleScale
         if isButtonPressed["L1"]:
-            newRoll -= self.angleScale
+            self.newRoll -= self.angleScale
         elif isButtonPressed["R1"]:
-            newRoll += self.angleScale
+            self.newRoll += self.angleScale
 
-        newTarget = [newRoll, newPitch, newYaw, [newX, newY, newZ]]
-        # print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", newRoll, " pitch: ", newPitch, " yaw: ", newYaw)
-        newTargetValues = newTarget
+        self.newTarget = [self.newRoll, self.newPitch, self.newYaw, [self.newX, self.newY, self.newZ]]
+        # print("x: ", self.newX, " y: ", newY, " z: ", newZ, " roll: ", newRoll, " pitch: ", newPitch, " yaw: ", newYaw)
+        newTargetValues = self.newTarget
         
-        return ik.createEndEffectorTransform(newRoll, newPitch, newYaw, newTarget[3])
+        return ik.createEndEffectorTransform(self.newRoll, self.newPitch, self.newYaw, self.newTarget[3])
 
     def updateDesiredEETrasformtion(self):
-        self.overRiding = True
+        self.overriding = True
         tempTarget = super().updateDesiredEETrasformtion()
         tempTarget[1] = 0
         sim.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
 
 class GlobalIK(IKMode):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
-        newRoll = 0
-        newPitch = 0
-        newYaw = 0
+        super().controlEEPosition(prevTargetValues)
+
+        self.newRoll = 0
+        self.newPitch = 0
+        self.newYaw = 0
 
         if joystickAxis["L-Down"] != 0:
-            newX -= joystickAxis["L-Down"]*self.positionScale
+            self.newX -= joystickAxis["L-Down"]*self.positionScale
         if joystickAxis["L-Right"] != 0:
-            newY -= joystickAxis["L-Right"]*self.positionScale
+            self.newY -= joystickAxis["L-Right"]*self.positionScale
         if joystickAxis["L2"] != 0:
-            newZ -= joystickAxis["L2"]*self.positionScale
+            self.newZ -= joystickAxis["L2"]*self.positionScale
         if joystickAxis["R2"] != 0:
-            newZ += joystickAxis["R2"]*self.positionScale
+            self.newZ += joystickAxis["R2"]*self.positionScale
         # control roll, pitch, yaw
         if joystickAxis["R-Right"] != 0:
-            newRoll += joystickAxis["R-Right"]*self.angleScale
+            self.newRoll += joystickAxis["R-Right"]*self.angleScale
         if joystickAxis["R-Down"] != 0:
-            newPitch += joystickAxis["R-Down"]*self.angleScale
+            self.newPitch += joystickAxis["R-Down"]*self.angleScale
         # if isButtonPressed["UP"]:
-        #     newPitch = -self.angleScale
+        #     self.newPitch = -self.angleScale
         # elif isButtonPressed["DOWN"]:
-        #     newPitch = self.angleScale
+        #     self.newPitch = self.angleScale
         if isButtonPressed["L1"]:
-            newYaw = -self.angleScale
+            self.newYaw = -self.angleScale
         elif isButtonPressed["R1"]:
-            newYaw = self.angleScale
+            self.newYaw = self.angleScale
         
         prevRotation = prevTargetTransform[:3, :3]
         
-        newRotation = np.dot(ik.createRotationMatrix(newRoll, newPitch, newYaw, "ypr"), prevRotation)
+        newRotation = np.dot(ik.createRotationMatrix(self.newRoll, self.newPitch, self.newYaw, "ypr"), prevRotation)
         newTransformation = np.block([
-                                        [newRotation, np.array([[newX, newY, newZ]]).transpose()],
+                                        [newRotation, np.array([[self.newX, self.newY, self.newZ]]).transpose()],
                                         [0, 0, 0, 1]
                                         ])
         [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
 
-        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [newX, newY, newZ]]
+        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [self.newX, self.newY, self.newZ]]
         # print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", correctedRoll, " pitch: ", correctedPitch, " yaw: ", correctedYaw)
         
         return newTransformation
+    
+    def updateDesiredEETrasformtion(self):
+        self.overriding = True
+        tempTarget = super().updateDesiredEETrasformtion()
+        tempTarget[:3] = [0, 0, 0]
+        sim.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
 
 class RotRelativeIK(IKMode):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
-        newRoll = 0
-        newPitch = 0
-        newYaw = 0
+        super().controlEEPosition(prevTargetValues)
+
+        self.newRoll = 0
+        self.newPitch = 0
+        self.newYaw = 0
 
         if joystickAxis["L-Down"] != 0:
-            newX -= joystickAxis["L-Down"]*self.positionScale
+            self.newX -= joystickAxis["L-Down"]*self.positionScale
         if joystickAxis["L-Right"] != 0:
-            newY -= joystickAxis["L-Right"]*self.positionScale
+            self.newY -= joystickAxis["L-Right"]*self.positionScale
         if joystickAxis["L2"] != 0:
-            newZ -= joystickAxis["L2"]*self.positionScale
+            self.newZ -= joystickAxis["L2"]*self.positionScale
         if joystickAxis["R2"] != 0:
-            newZ += joystickAxis["R2"]*self.positionScale
+            self.newZ += joystickAxis["R2"]*self.positionScale
         # control roll, pitch, yaw
         if joystickAxis["R-Right"] != 0:
-            newRoll = -joystickAxis["R-Right"]*self.angleScale
+            self.newRoll = -joystickAxis["R-Right"]*self.angleScale
         if joystickAxis["R-Down"] != 0:
-            newPitch = joystickAxis["R-Down"]*self.angleScale
+            self.newPitch = joystickAxis["R-Down"]*self.angleScale
         if isButtonPressed["L1"]:
-            newYaw = -self.angleScale
+            self.newYaw = -self.angleScale
         elif isButtonPressed["R1"]:
-            newYaw = self.angleScale
+            self.newYaw = self.angleScale
         
         prevRotation = prevTargetTransform[:3, :3]
         
-        newRotation = np.matmul(prevRotation, ik.createRotationMatrix(newRoll, newPitch, newYaw, "ypr"))
+        newRotation = np.matmul(prevRotation, ik.createRotationMatrix(self.newRoll, self.newPitch, self.newYaw, "ypr"))
         newTransformation = np.block([
-                                        [newRotation, np.array([[newX, newY, newZ]]).transpose()],
+                                        [newRotation, np.array([[self.newX, self.newY, self.newZ]]).transpose()],
                                         [0, 0, 0, 1]
                                         ])
         [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
 
-        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [newX, newY, newZ]]
+        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [self.newX, self.newY, self.newZ]]
 
         return newTransformation
 
+    def updateDesiredEEtransform(self):
+        tempTarget = [0, 0 , pi, [0, 0, 198*0.47/450]]
+        sim.displayEndEffectorTransform(tempTarget, "Link_6")
+        
 class RelativeIK(IKMode):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         global curArmAngles
@@ -333,6 +375,10 @@ class RelativeIK(IKMode):
         newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [correctedX, correctedY, correctedZ]]
 
         return newTransformation
+
+    def updateDesiredEEtransform(self):
+        tempTarget = [0, 0 , pi, [0, 0, 198*0.47/450]]
+        sim.displayEndEffectorTransform(tempTarget, "Link_6")
 
 class CamRelativeIK(IKMode):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
@@ -420,154 +466,6 @@ def controlEEPosition(isButtonPressed, joystickAxis, prevTargetValues, prevTarge
     newX = newTarget[3][0]
     newY = newTarget[3][1]
     newZ = newTarget[3][2]
-
-    if scriptMode == Mode.DEFAULT_IK:
-        # control x, y, z
-        if joystickAxis["L-Down"] != 0:
-            newX -= joystickAxis["L-Down"]*positionScale
-        if joystickAxis["L-Right"] != 0:
-            newY -= joystickAxis["L-Right"]*positionScale
-        if joystickAxis["L2"] != 0:
-            newZ -= joystickAxis["L2"]*positionScale
-        if joystickAxis["R2"] != 0:
-            newZ += joystickAxis["R2"]*positionScale
-        
-        # control roll, pitch, yaw
-        if joystickAxis["R-Right"] != 0:
-            newYaw -= joystickAxis["R-Right"]*angleScale
-        # if joystickAxis["R-Down"] != 0:
-        #     newPitch -= joystickAxis["R-Down"]*scale2
-        if isButtonPressed["DOWN"]:
-            newPitch -= angleScale
-        elif isButtonPressed["UP"]:
-            newPitch += angleScale
-        if isButtonPressed["L1"]:
-            newRoll -= angleScale
-        elif isButtonPressed["R1"]:
-            newRoll += angleScale
-
-        newTarget = [newRoll, newPitch, newYaw, [newX, newY, newZ]]
-        # print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", newRoll, " pitch: ", newPitch, " yaw: ", newYaw)
-        newTargetValues = newTarget
-        
-        return ik.createEndEffectorTransform(newRoll, newPitch, newYaw, newTarget[3])
-    elif scriptMode == Mode.GLOBAL_IK:
-        newRoll = 0
-        newPitch = 0
-        newYaw = 0
-
-        if joystickAxis["L-Down"] != 0:
-            newX -= joystickAxis["L-Down"]*positionScale
-        if joystickAxis["L-Right"] != 0:
-            newY -= joystickAxis["L-Right"]*positionScale
-        if joystickAxis["L2"] != 0:
-            newZ -= joystickAxis["L2"]*positionScale
-        if joystickAxis["R2"] != 0:
-            newZ += joystickAxis["R2"]*positionScale
-        # control roll, pitch, yaw
-        if joystickAxis["R-Right"] != 0:
-            newRoll += joystickAxis["R-Right"]*angleScale
-        if joystickAxis["R-Down"] != 0:
-            newPitch += joystickAxis["R-Down"]*angleScale
-        # if isButtonPressed["UP"]:
-        #     newPitch = -angleScale
-        # elif isButtonPressed["DOWN"]:
-        #     newPitch = angleScale
-        if isButtonPressed["L1"]:
-            newYaw = -angleScale
-        elif isButtonPressed["R1"]:
-            newYaw = angleScale
-        
-        prevRotation = prevTargetTransform[:3, :3]
-        
-        newRotation = np.dot(ik.createRotationMatrix(newRoll, newPitch, newYaw, "ypr"), prevRotation)
-        newTransformation = np.block([
-                                        [newRotation, np.array([[newX, newY, newZ]]).transpose()],
-                                        [0, 0, 0, 1]
-                                        ])
-        [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
-
-        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [newX, newY, newZ]]
-        # print("x: ", newX, " y: ", newY, " z: ", newZ, " roll: ", correctedRoll, " pitch: ", correctedPitch, " yaw: ", correctedYaw)
-        
-        return newTransformation
-    elif scriptMode == Mode.ROT_RELATIVE_IK:
-        newRoll = 0
-        newPitch = 0
-        newYaw = 0
-
-        if joystickAxis["L-Down"] != 0:
-            newX -= joystickAxis["L-Down"]*positionScale
-        if joystickAxis["L-Right"] != 0:
-            newY -= joystickAxis["L-Right"]*positionScale
-        if joystickAxis["L2"] != 0:
-            newZ -= joystickAxis["L2"]*positionScale
-        if joystickAxis["R2"] != 0:
-            newZ += joystickAxis["R2"]*positionScale
-        # control roll, pitch, yaw
-        if joystickAxis["R-Right"] != 0:
-            newRoll = -joystickAxis["R-Right"]*angleScale
-        if joystickAxis["R-Down"] != 0:
-            newPitch = joystickAxis["R-Down"]*angleScale
-        if isButtonPressed["L1"]:
-            newYaw = -angleScale
-        elif isButtonPressed["R1"]:
-            newYaw = angleScale
-        
-        prevRotation = prevTargetTransform[:3, :3]
-        
-        newRotation = np.matmul(prevRotation, ik.createRotationMatrix(newRoll, newPitch, newYaw, "ypr"))
-        newTransformation = np.block([
-                                        [newRotation, np.array([[newX, newY, newZ]]).transpose()],
-                                        [0, 0, 0, 1]
-                                        ])
-        [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
-
-        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [newX, newY, newZ]]
-
-        return newTransformation
-    elif scriptMode == Mode.RELATIVE_IK:
-        global curArmAngles
-        [newRoll, newPitch, newYaw, newX, newY, newZ] = [0, 0, 0, 0, 0, 0]
-        
-        if joystickAxis["L-Down"] != 0:
-            newX = joystickAxis["L-Down"]*positionScale
-        if joystickAxis["L-Right"] != 0:
-            newY = -joystickAxis["L-Right"]*positionScale
-        if joystickAxis["L2"] != 0:
-            newZ = -joystickAxis["L2"]*positionScale
-        if joystickAxis["R2"] != 0:
-            newZ = joystickAxis["R2"]*positionScale
-        # control roll, pitch, yaw
-        if joystickAxis["R-Right"] != 0:
-            newRoll = joystickAxis["R-Right"]*angleScale
-        if joystickAxis["R-Down"] != 0:
-            newPitch = joystickAxis["R-Down"]*angleScale
-        if isButtonPressed["L1"]:
-            newYaw = -angleScale
-        elif isButtonPressed["R1"]:
-            newYaw = angleScale
-        
-        t05 = ik.calculateTransformToLink(ik.createDHTable(curArmAngles), 5) # transform to link 5
-        r05 = t05[:3, :3] # rotation matrix of third link
-        relativeXYZ = np.matmul(r05, np.transpose([np.array([newX, newY, newZ ])]))
-        targetXYZ = relativeXYZ+np.transpose([prevTargetTransform[:3, 3]])
-
-        prevRotation = prevTargetTransform[:3, :3]
-        newRotation = np.matmul(prevRotation, ik.createRotationMatrix(newRoll, newPitch, newYaw, "ypr"))
-
-        newTransformation = np.block([
-                                        [newRotation, targetXYZ],
-                                        [0, 0, 0, 1]
-                                        ])
-
-        [correctedRoll, correctedPitch, correctedYaw] = ik.calculateRotationAngles(newTransformation)
-        [correctedX, correctedY, correctedZ] = [newTransformation[0][3], newTransformation[1][3], newTransformation[2][3]]
-        newTargetValues = [correctedRoll, correctedPitch, correctedYaw, [correctedX, correctedY, correctedZ]]
-
-        return newTransformation
-    elif scriptMode == Mode.CAM_RELATIVE_IK:
-        pass
 
 def controlGripperAngle(isButtonPressed, curArmAngles):
     ''' Adjust the angle at which the gripper is open
@@ -988,12 +886,7 @@ def updateController(data):
 
     '''
 
-    global curArmAngles
-    global prevTargetTransform
-    global prevTargetValues
     global scriptMode
-    global buttonStatus
-    global joystickAxesStatus
     global movementSpeed
     global isMovementNormalized
 
@@ -1041,14 +934,8 @@ def main():
     global prevTargetTransform
     global prevTargetValues
     global newTargetValues
-    global pubThreadPool
     global movementSpeed
     global goToPosValues
-    global buttonStatus
-    global joystickAxesStatus
-
-    isButtonPressed = copy.deepcopy(buttonStatus)
-    joystickAxes = copy.deepcopy(joystickAxesStatus)
 
     updateLiveSim()
 
@@ -1063,11 +950,7 @@ if __name__ == "__main__":
     prevTargetTransform = ik.createEndEffectorTransform(prevTargetValues[0], prevTargetValues[1],
                                                         prevTargetValues[2], prevTargetValues[3])
     goToPosValues = [False, [0, 0, 0, 0, 0, 0, 0]]
-    buttonStatus = getJoystickButtons([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) 
-    joystickAxesStatus = {"L-Right": 0, "L-Down": 0, "L2": 0, "R-Right": 0, "R-Down": 0, "R2": 0}
     savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
-
-    pubThreadPool = concurrent.futures.ThreadPoolExecutor(max_workers=2) # create thread pool with two threads
 
     # try:
     scriptMode = Mode.FORWARD_KIN
@@ -1103,7 +986,3 @@ if __name__ == "__main__":
         except Exception as ex:
             print(ex)
         rate.sleep()
-
-    # except Exception as ex:
-    #     print("The following error has occured: ")
-    #     print(ex)
