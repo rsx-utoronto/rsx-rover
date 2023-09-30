@@ -56,7 +56,7 @@ buttonsPressed = {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": Fals
 
 class ScriptState():
     def __init__(self) -> None:
-        pass
+        self.overriding = False
 
     def main() -> None:
         pass
@@ -67,112 +67,31 @@ class ScriptState():
     def controlEEPosition() -> None:
         pass
 
-    def updateDesiredEETrasformtion():
-        pass
+    def updateDesiredArmSimulation(armAngles):
+        ''' Updates RViz URDF visulaztion of desired arm angles
 
-class ForwardKin(ScriptState):
-    def main() -> None:
-        global prevTargetValues
-        global curArmAngles
+        Paramters
+        ---------
+        armAngles
+            contains a list 32 bit floats that correspond to joint angles
+        '''
+        global jointPublisher
+        global gazeboPublisher
+        global liveArmAngles
 
-        curArmAngles = copy.deepcopy(liveArmAngles)
-        dhTable = ik.createDHTable(curArmAngles)
-        prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
+        tempAngles = copy.deepcopy(armAngles)
+        tempAngles.append(tempAngles[6]) # make gripper angles equal
+        tempAngles.append(tempAngles[6]) # make gripper angles equal
 
-        [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
-        newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
-        prevTargetValues = newTargetValues
+        if gazebo_on:
+            curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
+            # curArmAngles[6] = -curArmAngles[6]
+            print(tempAngles)
+            sim.moveInGazebo(gazeboPublisher, tempAngles)
+        else:
+            sim.runNewJointState2(jointPublisher, tempAngles)
 
-        updateDesiredEETransformation(newTargetValues)
-        updateDesiredArmSimulation(curArmAngles)        
-
-class IKMode(ScriptState):
-    def __init__(self) -> None:
-        self.overriding = False
-
-
-    def main() -> None:
-        global curArmAngles
-        global prevTargetValues
-        global prevTargetTransform
-        global goToPosValues
-
-        publishNewAngles(curArmAngles)
-        updateDesiredEETransformation(prevTargetValues)
-        updateDesiredArmSimulation(curArmAngles)
-
-        if goToPosValues[0]: # if the service flag to go to a saved position has been called
-            goToPosValues[0] = False
-            curArmAngles = goToPosValues[1]
-
-            dhTable = ik.createDHTable(curArmAngles)
-            prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
-
-            [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
-            newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
-            prevTargetValues = newTargetValues
-            
-            updateDesiredEETransformation(newTargetValues)
-            updateDesiredArmSimulation(curArmAngles)
-    
-    def onJoystickUpdate(isButtonPressed:dict, joystickAxesStatus:dict) -> None:
-        global curArmAngles
-        global prevTargetTransform
-        global prevTargetValues
-        global movementSpeed
-        global isMovementNormalized
-
-        try:
-            dhTable = ik.createDHTable(curArmAngles)
-
-            targetEEPos = controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
-                                        prevTargetTransform)
-            
-            targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-
-            maxIterations = 10
-            iteration = 0
-            originalSpeed = movementSpeed
-
-            while isMovementNormalized and (iteration < maxIterations):
-                if not limitAngleSpeed(targetAngles, curArmAngles):
-                    break
-                iteration += 1
-                movementSpeed = movementSpeed*0.5
-
-                targetEEPos = controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
-                                        prevTargetTransform)
-                targetAngles = ik.inverseKinematics(dhTable, targetEEPos)
-
-            movementSpeed = originalSpeed
-
-            targetAngles.append(controlGripperAngle(isButtonPressed, curArmAngles))
-
-            curArmAngles = targetAngles
-            prevTargetTransform = targetEEPos
-            prevTargetValues = newTargetValues
-        except ik.CannotReachTransform:
-            print("Cannot reach outside of arm workspace")
-        except Exception as ex:
-            print(ex)
-
-    def controlEEPosition(self, prevTargetValues):
-        global movementSpeed
-
-        self.positionScale = 10*movementSpeed
-        self.angleScale = 0.1*movementSpeed
-       
-        self.newTarget = copy.deepcopy(prevTargetValues)
-
-        self.newRoll = self.newTarget[0]
-        self.newPitch = self.newTarget[1]
-        self.newYaw = self.newTarget[2]
-    
-        self.newX = self.newTarget[3][0]
-        self.newY = self.newTarget[3][1]
-        self.newZ = self.newTarget[3][2]
-
-    def updateDesiredEEtransform(self):
+    def updateDesiredEETransformtion(self, newTargetValues):
         # the following is specific the URDF, you will have to change these values and maybe swap coordiantes if you change URDFs
         tempTarget = copy.deepcopy(newTargetValues) # target transform scaled to rviz
         tempX = tempTarget[3][0] # swap x and y coords
@@ -200,6 +119,152 @@ class IKMode(ScriptState):
         referenceLink = "base_link" # link to base end effector transform off of
 
         sim.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
+
+class ForwardKin(ScriptState):
+    def main(self) -> None:
+        global prevTargetValues
+        global curArmAngles
+
+        curArmAngles = copy.deepcopy(liveArmAngles)
+        dhTable = ik.createDHTable(curArmAngles)
+        prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
+
+        [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
+        newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
+        prevTargetValues = newTargetValues
+
+        self.updateDesiredEEtransform(curArmAngles)
+        self.updateDesiredArmSimulation(curArmAngles)        
+
+class IKMode(ScriptState):
+    def main(self) -> None:
+        global curArmAngles
+        global prevTargetValues
+        global prevTargetTransform
+        global goToPosValues
+
+        publishNewAngles(curArmAngles)
+        self.updateDesiredEETransformation(prevTargetValues)
+        self.updateDesiredArmSimulation(curArmAngles)
+
+        if goToPosValues[0]: # if the service flag to go to a saved position has been called
+            goToPosValues[0] = False
+            curArmAngles = goToPosValues[1]
+
+            dhTable = ik.createDHTable(curArmAngles)
+            prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
+
+            [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
+            newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
+            prevTargetValues = newTargetValues
+            
+            self.updateDesiredEETransformation(newTargetValues)
+            self.updateDesiredArmSimulation(curArmAngles)
+
+    def shouldLimitSpeed(newArmAngles, curArmAngles):
+        ''' Limits the rate at which the end effector targert changes
+
+        Helps arm joints move in sync (ish)
+
+        '''
+
+        jointSpeeds = [0.005, 0.003, 0.01, 0.075, 0.075, 0.0375, 0.04]
+        angleDelta = list(np.subtract(np.array(newArmAngles), np.array(curArmAngles)))
+        # slowedDownAngles = copy.deepcopy(newArmAngles)
+
+        for i in range(7):
+            if abs(angleDelta[i]) > jointSpeeds[i]:
+                # exit, which tells ik to half distance of delta vector and try again until all joints can move there within the time frame
+                return False
+
+        return True
+
+    def controlEEPosition(self, prevTargetValues):
+        global movementSpeed
+
+        self.positionScale = 10*movementSpeed
+        self.angleScale = 0.1*movementSpeed
+       
+        self.newTarget = copy.deepcopy(prevTargetValues)
+
+        self.newRoll = self.newTarget[0]
+        self.newPitch = self.newTarget[1]
+        self.newYaw = self.newTarget[2]
+    
+        self.newX = self.newTarget[3][0]
+        self.newY = self.newTarget[3][1]
+        self.newZ = self.newTarget[3][2]
+    
+    def controlGripperAngle(isButtonPressed, curArmAngles):
+        ''' Adjust the angle at which the gripper is open
+
+        Moves all fingers by an equal amount. Focuses on L1 and L2.
+
+        Paramters
+        ---------
+        isButtonPressed
+            a dictionary containing buttons pressed. Values can be retrived via isButtonPressed["Button Name"].
+        
+        Returns
+        -------
+        float
+            a float containing the angle at which the gripper is open.
+        '''
+        global movementSpeed
+
+        gripperAngle = curArmAngles[6]
+        # Tune amount that angle is changed with each cycle
+        angleIncrement = 0.1*movementSpeed
+
+        # If both buttons are pressed at the same time, angle will not change
+        if isButtonPressed["CIRCLE"] == 1 and isButtonPressed["X"] != 1:
+            gripperAngle -= angleIncrement
+
+        if isButtonPressed["X"] == 1 and isButtonPressed["CIRCLE"] != 1:
+            gripperAngle += angleIncrement
+
+        return gripperAngle
+
+    def onJoystickUpdate(self, isButtonPressed:dict, joystickAxesStatus:dict) -> None:
+        global curArmAngles
+        global prevTargetTransform
+        global prevTargetValues
+        global movementSpeed
+        global isMovementNormalized
+
+        try:
+            dhTable = ik.createDHTable(curArmAngles)
+
+            targetEEPos = self.controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
+                                        prevTargetTransform)
+            
+            targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+
+            maxIterations = 10
+            iteration = 0
+            originalSpeed = movementSpeed
+
+            while isMovementNormalized and (iteration < maxIterations):
+                if not self.shouldLimitSpeed(targetAngles, curArmAngles):
+                    break
+                iteration += 1
+                movementSpeed = movementSpeed*0.5
+
+                targetEEPos = self.controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
+                                        prevTargetTransform)
+                targetAngles = ik.inverseKinematics(dhTable, targetEEPos)
+
+            movementSpeed = originalSpeed
+
+            targetAngles.append(self.controlGripperAngle(isButtonPressed, curArmAngles))
+
+            curArmAngles = targetAngles
+            prevTargetTransform = targetEEPos
+            prevTargetValues = newTargetValues
+        except ik.CannotReachTransform:
+            print("Cannot reach outside of arm workspace")
+        except Exception as ex:
+            print(ex)
 
 class DefaultIK(IKMode):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
@@ -334,7 +399,7 @@ class RotRelativeIK(IKMode):
         tempTarget = [0, 0 , pi, [0, 0, 198*0.47/450]]
         sim.displayEndEffectorTransform(tempTarget, "Link_6")
         
-class RelativeIK(IKMode):
+class RelativeIK(RotRelativeIK):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         global curArmAngles
         [newRoll, newPitch, newYaw, newX, newY, newZ] = [0, 0, 0, 0, 0, 0]
@@ -376,11 +441,7 @@ class RelativeIK(IKMode):
 
         return newTransformation
 
-    def updateDesiredEEtransform(self):
-        tempTarget = [0, 0 , pi, [0, 0, 198*0.47/450]]
-        sim.displayEndEffectorTransform(tempTarget, "Link_6")
-
-class CamRelativeIK(IKMode):
+class CamRelativeIK(RotRelativeIK):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         pass
 
@@ -495,52 +556,7 @@ def controlGripperAngle(isButtonPressed, curArmAngles):
     if isButtonPressed["X"] == 1 and isButtonPressed["CIRCLE"] != 1:
         gripperAngle += angleIncrement
 
-    # if gripperAngle < -0.04:
-    #     gripperAngle = -0.04
-    # if gripperAngle > 0:
-    #     gripperAngle = 0
-
     return gripperAngle
-
-def limitAngleSpeed(newArmAngles, curArmAngles):
-    ''' Limits the rate at which the end effector targert changes
-
-    Helps arm joints move in sync (ish)
-
-    '''
-
-    jointSpeeds = [0.005, 0.003, 0.01, 0.075, 0.075, 0.0375, 0.04]
-    angleDelta = list(np.subtract(np.array(newArmAngles), np.array(curArmAngles)))
-    # slowedDownAngles = copy.deepcopy(newArmAngles)
-
-    for i in range(7):
-        if abs(angleDelta[i]) > jointSpeeds[i]:
-            # exit, which tells ik to half distance of delta vector and try again until all joints can move there within the time frame
-            return False
-
-    return True
-
-def incrementTargetAngles(newArmAngles, curArmAngles):
-    ''' Increments the current angle to the desired angle
-    
-    '''
-    jointSpeeds = [0.005, 0.003, 0.01, 0.075, 0.075, 0.0375, 0.04]
-    angleDelta = list(np.subtract(np.array(newArmAngles), np.array(curArmAngles)))
-    slowedDownAngles = copy.deepcopy(newArmAngles)
-
-    try:
-        for i in range(7):
-            if abs(np.rad2deg(angleDelta[i])) > jointSpeeds[i]:
-                if angleDelta[i] > 0:
-                    slowedDownAngles[i] = curArmAngles[i] + np.deg2rad(jointSpeeds[i])
-                else:
-                    slowedDownAngles[i] = curArmAngles[i] - np.deg2rad(jointSpeeds[i])
-    except Exception as ex:
-        print("deg2rad conversion in incrementAngles")
-    print(newArmAngles)
-    print(curArmAngles)
-    print(np.rad2deg(slowedDownAngles))
-    return slowedDownAngles
 
 # ROS Stuff
 
@@ -703,40 +719,6 @@ def publishNewAngles(newJointAngles):
     ikAngles.data = adjustedAngles
     armAngles.publish(ikAngles)
 
-def updateDesiredArmSimulation(armAngles):
-    ''' Updates RViz URDF visulaztion of desired arm angles
-
-    Paramters
-    ---------
-    armAngles
-        contains a list 32 bit floats that correspond to joint angles
-    '''
-    global jointPublisher
-    global gazeboPublisher
-    global liveArmAngles
-
-    tempAngles = copy.deepcopy(armAngles)
-    tempAngles.append(tempAngles[6]) # make gripper angles equal
-    tempAngles.append(tempAngles[6]) # make gripper angles equal
-
-    tempAngles2 = copy.deepcopy(liveArmAngles)
-    tempAngles2.append(tempAngles[6]) # make gripper angles equal
-    tempAngles2.append(tempAngles[6]) # make gripper angles equal
-    if gazebo_on:
-        curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
-        # curArmAngles[6] = -curArmAngles[6]
-        print(tempAngles)
-        sim.moveInGazebo(gazeboPublisher, tempAngles)
-    else:
-        anglesToDisplay =  []
-        
-        for i in range(tempAngles2.__len__()):
-            anglesToDisplay.append(tempAngles2[i])
-        for i in range(tempAngles.__len__()):
-            anglesToDisplay.append(tempAngles[i])
-        # print(anglesToDisplay)
-        sim.runNewJointState2(jointPublisher, tempAngles)
-
 def updateLiveSim():
     global liveArmAngles
     global savedCanAngles
@@ -861,7 +843,6 @@ def updateState(data):
 
     if data.data != "IK":
         scriptMode = Mode.FORWARD_KIN
-        ikEntered = False
     else:
     #     scriptMode = scriptMode
         if not ikEntered:
