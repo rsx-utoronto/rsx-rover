@@ -48,38 +48,18 @@ class ScriptState():
         pass
 
     def main(self) -> None:
-        pass
+        ''' Function that runs the program
+    
+        Combines all code to takes Joystick values, chooses script mode, changes arm movement speed,
+        changes EE transform, solves IK, publishes joints, and updates RViz.
+        '''
 
     def onJoystickUpdate(self, isButtonPressed, joystickAxesStatus) -> None:
         pass
 
     def controlEEPosition(self) -> None:
         pass
-
-    def updateDesiredArmSimulation(self, armAngles):
-        ''' Updates RViz URDF visulaztion of desired arm angles
-
-        Paramters
-        ---------
-        armAngles
-            contains a list 32 bit floats that correspond to joint angles
-        '''
-        global jointPublisher
-        global gazeboPublisher
-        global liveArmAngles
-
-        tempAngles = copy.deepcopy(armAngles)
-        tempAngles.append(tempAngles[6]) # make gripper angles equal
-        tempAngles.append(tempAngles[6]) # make gripper angles equal
-
-        if gazebo_on:
-            curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
-            # curArmAngles[6] = -curArmAngles[6]
-            print(tempAngles)
-            sim.moveInGazebo(gazeboPublisher, tempAngles)
-        else:
-            sim.runNewJointState2(jointPublisher, tempAngles)
-
+   
     def createDesiredEETarget(self, newTargetValues):
         ''' Create the End Effector target to be displayed in RViz
 
@@ -129,6 +109,12 @@ class ScriptState():
         sim.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
 
 class ForwardKin(ScriptState):
+    ''' The Forward Kinematics Mode
+
+        As the arm_ik node does not do forward kinematics, this node
+        simply follows what the arm is doing based on the real angles
+        given.
+    '''
     def main(self) -> None:
         global prevTargetValues
         global curArmAngles
@@ -142,18 +128,20 @@ class ForwardKin(ScriptState):
         prevTargetValues = newTargetValues
 
         self.updateDesiredEETransformation(newTargetValues)
-        self.updateDesiredArmSimulation(curArmAngles)        
 
 class IKMode(ScriptState):
+    '''The General Description of the various IK modes'''
     def main(self) -> None:
         global curArmAngles
         global prevTargetValues
         global prevTargetTransform
         global goToPosValues
+        global gazebo_on
         
+        print(curArmAngles)
         publishNewAngles(curArmAngles)
+
         self.updateDesiredEETransformation(prevTargetValues)
-        self.updateDesiredArmSimulation(curArmAngles)
 
         if goToPosValues[0]: # if the service flag to go to a saved position has been called
             goToPosValues[0] = False
@@ -167,7 +155,6 @@ class IKMode(ScriptState):
             prevTargetValues = newTargetValues
             
             self.updateDesiredEETransformation(newTargetValues)
-            self.updateDesiredArmSimulation(curArmAngles)
 
     def shouldLimitSpeed(self, newArmAngles, curArmAngles):
         ''' Limits the rate at which the end effector targert changes
@@ -275,6 +262,12 @@ class IKMode(ScriptState):
             print(ex)
 
 class DefaultIK(IKMode):
+    ''' The Default mode for IK
+
+        In this mode you specify the x, y, z coordinates and
+        the roll, pitch, yaw variables which is then used to make
+        the target matrix.
+    '''
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         super().controlEEPosition(prevTargetValues)
         global newTargetValues
@@ -315,6 +308,12 @@ class DefaultIK(IKMode):
         sim.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
 
 class GlobalIK(IKMode):
+    ''' The Global IK mode
+
+        This mode manipulates the target matrix such that all 
+        changes in coordinates (x, y, z, roll, pitch, yaw) occur
+        relative to the global coordinate frame.
+    '''
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         super().controlEEPosition(prevTargetValues)
         global newTargetValues
@@ -365,6 +364,12 @@ class GlobalIK(IKMode):
         sim.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
 
 class RotRelativeIK(IKMode):
+    ''' The Relative Rotation IK mode
+
+        This mode moves the x, y, z coordinates relative to the
+        global coordinate system but rotates it relative to the
+        end effectors.
+    '''
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         super().controlEEPosition(prevTargetValues)
         global newTargetValues
@@ -409,6 +414,12 @@ class RotRelativeIK(IKMode):
         sim.displayEndEffectorTransform(tempTarget, "Link_6")
         
 class RelativeIK(RotRelativeIK):
+    ''' The Relative IK mode
+    
+        This mode moves the target matrix relative to the
+        end effector frame. Class inherits from RotRelativeIK
+        because they share the same end effector visualization.
+    '''
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         IKMode.controlEEPosition(self, prevTargetValues)
         global curArmAngles
@@ -453,6 +464,11 @@ class RelativeIK(RotRelativeIK):
         return newTransformation
 
 class CamRelativeIK(RotRelativeIK):
+    ''' The Camera Relative IK mode
+
+        This mode changes the target matrix relative to the 
+        frame of the camera. Ideal for POV control of the arm.
+    '''
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         IKMode.controlEEPosition(self, prevTargetValues)
         global curArmAngles
@@ -497,6 +513,7 @@ class CamRelativeIK(RotRelativeIK):
         return newTransformation
 
 # Joystick Controller
+
 def getJoystickButtons(tempButton:list) -> dict: # setting up the buttons
     ''' Gets the Currently Pressed Buttons on Joystick
 
@@ -696,24 +713,8 @@ def publishNewAngles(newJointAngles):
     ikAngles.data = adjustedAngles
     armAngles.publish(ikAngles)
 
-def updateLiveSim():
-    global liveArmAngles
-    global savedCanAngles
-    global curArmAngles
-    
-    tempAngles = copy.deepcopy(liveArmAngles)#copy.deepcopy(list(np.subtract(np.array(liveArmAngles),np.array(savedCanAngles))))
-    # tempAngles = copy.deepcopy(liveArmAngles)
-    tempAngles.append(tempAngles[6]) # make gripper angles equal
-    tempAngles.append(tempAngles[6]) # make gripper angles equal
-
-    tempAngles[0] = tempAngles[0]
-    tempAngles[1] = tempAngles[1]
-    tempAngles[5] = -tempAngles[5]
-
-    sim.runNewJointState3(jointPublisher, tempAngles)
-
-def updateLiveArmSimulation(data):
-    ''' Updates RViz URDF visulaztion based on IRL arm angles
+def updateLiveArmAngles(data):
+    ''' Updates the real angle that IK knows
 
     Should be used as the callback function of the real angle subscriber.
 
@@ -740,18 +741,6 @@ def updateLiveArmSimulation(data):
     tempAngles = copy.deepcopy(list(np.subtract(np.array(tempList),np.array(savedCanAngles))))
 
     liveArmAngles = tempAngles
-    # print(liveArmAngles)
-    # tempAngles = copy.deepcopy(list(np.subtract(np.array(liveArmAngles),np.array(savedCanAngles))))
-    # liveArmAngles = copy.deepcopy(tempAngles)
-    # tempAngles.append(tempAngles[6]) # make gripper angles equal
-    # tempAngles.append(tempAngles[6]) # make gripper angles equal
-
-    # tempAngles[0] = -tempAngles[0]
-    # tempAngles[1] = -tempAngles[1]
-    # tempAngles[5] = -tempAngles[5]
-
-    # sim.runNewJointState3(jointPublisher, tempAngles)
-    # updateLiveSim()
 
 def updateState(data):
     ''' Callback function for arm_state rostopic
@@ -788,7 +777,7 @@ def updateState(data):
             prevTargetValues = newTargetValues
             
             scriptMode.updateDesiredEETransformation(newTargetValues)
-            scriptMode.updateDesiredArmSimulation(curArmAngles)
+            #scriptMode.updateDesiredArmSimulation(curArmAngles)
         ikEntered = True
 
 def updateController(data):
@@ -832,19 +821,12 @@ def updateController(data):
         isMovementNormalized = not isMovementNormalized
         print("Normalized Movement: ", isMovementNormalized)
 
+    if gazebo_on:
+        curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
+        # curArmAngles[6] = -curArmAngles[6]
+
     scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)
 
-# Program Control
-
-def main():
-    ''' Function that runs the program
-    
-    Combines all code to takes Joystick values, chooses script mode, changes arm movement speed,
-    changes EE transform, solves IK, publishes joints, and updates RViz.
-    '''
-
-    updateLiveSim()
-    scriptMode.main()
 
 # Main Area
 
@@ -871,7 +853,7 @@ if __name__ == "__main__":
     rate = rospy.Rate(NODE_RATE) # run at 10Hz
 
     armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
-    rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateLiveArmSimulation)
+    rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateLiveArmAngles)
     rospy.Subscriber("arm_state", String, updateState)
     rospy.Subscriber("arm_inputs", ArmInputs, updateController)
 
@@ -892,7 +874,7 @@ if __name__ == "__main__":
 
     while not rospy.is_shutdown():
         #try:  
-        main()
+        scriptMode.main()
         #except Exception as ex:
         #    print(ex)
         rate.sleep()
