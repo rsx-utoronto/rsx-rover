@@ -50,7 +50,6 @@ RUN apt-get install python3-catkin-tools -y --no-install-recommends
 RUN apt-get install ros-noetic-tf2* -y --no-install-recommends
 RUN apt-get install ros-noetic-navigation* -y --no-install-recommends
 RUN apt-get install ros-noetic-teleop-twist-keyboard -y --no-install-recommends
-RUN apt install libpcl-dev
 
 # Additionnal packages
 RUN apt-get install -y gnome-core mesa-utils --no-install-recommends
