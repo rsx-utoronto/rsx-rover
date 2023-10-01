@@ -12,7 +12,6 @@ import json
 import copy
 from math import pi
 from enum import Enum
-import concurrent.futures
 
 # Enums
 
@@ -56,18 +55,18 @@ buttonsPressed = {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": Fals
 
 class ScriptState():
     def __init__(self) -> None:
-        self.overriding = False
-
-    def main() -> None:
         pass
 
-    def onJoystickUpdate() -> None:
+    def main(self) -> None:
         pass
 
-    def controlEEPosition() -> None:
+    def onJoystickUpdate(self, isButtonPressed, joystickAxesStatus) -> None:
         pass
 
-    def updateDesiredArmSimulation(armAngles):
+    def controlEEPosition(self) -> None:
+        pass
+
+    def updateDesiredArmSimulation(self, armAngles):
         ''' Updates RViz URDF visulaztion of desired arm angles
 
         Paramters
@@ -91,7 +90,17 @@ class ScriptState():
         else:
             sim.runNewJointState2(jointPublisher, tempAngles)
 
-    def updateDesiredEETransformtion(self, newTargetValues):
+    def createDesiredEETarget(self, newTargetValues):
+        ''' Create the End Effector target to be displayed in RViz
+
+            Use in a inherited mode if you want to overwrite the
+            updateDesiredEETransformation function.
+
+            Paramters
+            ---------
+            newTargetValues:
+                [roll, pitch, yaw, [x, y, z]] of the position
+        '''
         # the following is specific the URDF, you will have to change these values and maybe swap coordiantes if you change URDFs
         tempTarget = copy.deepcopy(newTargetValues) # target transform scaled to rviz
         tempX = tempTarget[3][0] # swap x and y coords
@@ -108,16 +117,25 @@ class ScriptState():
         else:
             tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.04
             tempTarget[3][2] = (0.47/450)*tempTarget[3][2]
+        tempTarget[3][2] = (0.47/450)*tempTarget[3][2] # scale z-axis
 
         tempRoll = tempTarget[0] # swap roll and pitch
         tempTarget[0] = -tempTarget[1]
-        tempTarget[1] = tempRoll # should be 0 for default
+        tempTarget[1] = tempRoll # should be 0 for default mode
+        return tempTarget
 
-        if self.overriding:
-            return tempTarget
+    def updateDesiredEETransformation(self, newTargetValues):
+        ''' Updates tf2 transformation of desired end effector position.
 
+            Displays a tf2 transform of the end effector position.
+            
+            Paramters
+            ---------
+            newTargetValues:
+                [roll, pitch, yaw, [x, y, z]] of the position
+        '''
+        tempTarget = self.createDesiredEETarget(newTargetValues)
         referenceLink = "base_link" # link to base end effector transform off of
-
         sim.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
 
 class ForwardKin(ScriptState):
@@ -133,7 +151,7 @@ class ForwardKin(ScriptState):
         newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
         prevTargetValues = newTargetValues
 
-        self.updateDesiredEEtransform(curArmAngles)
+        self.updateDesiredEETransformation(newTargetValues)
         self.updateDesiredArmSimulation(curArmAngles)        
 
 class IKMode(ScriptState):
@@ -142,7 +160,7 @@ class IKMode(ScriptState):
         global prevTargetValues
         global prevTargetTransform
         global goToPosValues
-
+        
         publishNewAngles(curArmAngles)
         self.updateDesiredEETransformation(prevTargetValues)
         self.updateDesiredArmSimulation(curArmAngles)
@@ -161,7 +179,7 @@ class IKMode(ScriptState):
             self.updateDesiredEETransformation(newTargetValues)
             self.updateDesiredArmSimulation(curArmAngles)
 
-    def shouldLimitSpeed(newArmAngles, curArmAngles):
+    def shouldLimitSpeed(self, newArmAngles, curArmAngles):
         ''' Limits the rate at which the end effector targert changes
 
         Helps arm joints move in sync (ish)
@@ -195,7 +213,7 @@ class IKMode(ScriptState):
         self.newY = self.newTarget[3][1]
         self.newZ = self.newTarget[3][2]
     
-    def controlGripperAngle(isButtonPressed, curArmAngles):
+    def controlGripperAngle(self, isButtonPressed, curArmAngles):
         ''' Adjust the angle at which the gripper is open
 
         Moves all fingers by an equal amount. Focuses on L1 and L2.
@@ -269,6 +287,7 @@ class IKMode(ScriptState):
 class DefaultIK(IKMode):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         super().controlEEPosition(prevTargetValues)
+        global newTargetValues
 
         # control x, y, z
         if joystickAxis["L-Down"] != 0:
@@ -300,15 +319,15 @@ class DefaultIK(IKMode):
         
         return ik.createEndEffectorTransform(self.newRoll, self.newPitch, self.newYaw, self.newTarget[3])
 
-    def updateDesiredEETrasformtion(self):
-        self.overriding = True
-        tempTarget = super().updateDesiredEETrasformtion()
+    def updateDesiredEETrasformtion(self, newTargetValues):
+        tempTarget = self.createDesiredEETarget(newTargetValues)
         tempTarget[1] = 0
         sim.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
 
 class GlobalIK(IKMode):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         super().controlEEPosition(prevTargetValues)
+        global newTargetValues
 
         self.newRoll = 0
         self.newPitch = 0
@@ -350,15 +369,15 @@ class GlobalIK(IKMode):
         
         return newTransformation
     
-    def updateDesiredEETrasformtion(self):
-        self.overriding = True
-        tempTarget = super().updateDesiredEETrasformtion()
-        tempTarget[:3] = [0, 0, 0]
+    def updateDesiredEETrasformtion(self, newTargetValues):
+        tempTarget = self.createDesiredEETarget(newTargetValues) 
+        tempTarget[:3] = [0, 0, 0] # don't rotate global axis
         sim.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
 
 class RotRelativeIK(IKMode):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         super().controlEEPosition(prevTargetValues)
+        global newTargetValues
 
         self.newRoll = 0
         self.newPitch = 0
@@ -395,13 +414,14 @@ class RotRelativeIK(IKMode):
 
         return newTransformation
 
-    def updateDesiredEEtransform(self):
-        tempTarget = [0, 0 , pi, [0, 0, 198*0.47/450]]
+    def updateDesiredEEtransform(self, newTargetValues):
+        tempTarget = [0, 0 , pi, [0, 0, 198*0.47/450]] # Display frame relative to tip of of end effector
         sim.displayEndEffectorTransform(tempTarget, "Link_6")
         
 class RelativeIK(RotRelativeIK):
     def controlEEPosition(self, isButtonPressed, joystickAxis, prevTargetValues, prevTargetTransform):
         global curArmAngles
+        global newTargetValues
         [newRoll, newPitch, newYaw, newX, newY, newZ] = [0, 0, 0, 0, 0, 0]
         
         if joystickAxis["L-Down"] != 0:
@@ -842,12 +862,12 @@ def updateState(data):
 
 
     if data.data != "IK":
-        scriptMode = Mode.FORWARD_KIN
+        scriptMode = SCRIPT_MODES[0]
     else:
     #     scriptMode = scriptMode
         if not ikEntered:
             savedCanAngles = copy.deepcopy(liveArmAngles) 
-            scriptMode = Mode.DEFAULT_IK
+            scriptMode = SCRIPT_MODES[1]
             liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
             curArmAngles = [0, 0, 0, 0, 0, 0, 0]
 
@@ -859,7 +879,7 @@ def updateState(data):
             prevTargetValues = newTargetValues
             
             updateDesiredEETransformation(newTargetValues, scriptMode)
-            updateDesiredArmSimulation(curArmAngles)
+            #updateDesiredArmSimulation(curArmAngles)
         ikEntered = True
 
 def updateController(data):
@@ -883,11 +903,11 @@ def updateController(data):
                           "R-Right": -data.r_horizontal, "R-Down": -data.r_vertical, "R2": data.r2}
 
     if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
-        if (scriptMode.value + 1) > len(Mode):
-            scriptMode = list(Mode)[0]
+        if (SCRIPT_MODES.index(scriptMode) + 1) > len(SCRIPT_MODES):
+            scriptMode = SCRIPT_MODES[0]
         else:
-            scriptMode = list(Mode)[scriptMode.value]
-        print(scriptMode.name)
+            scriptMode = SCRIPT_MODES[SCRIPT_MODES.index(scriptMode)]
+        print(type(scriptMode).__name__)
 
     if isButtonPressed["OPTIONS"] == 2:
         movementSpeed += 0.1/NODE_RATE
@@ -900,6 +920,8 @@ def updateController(data):
         isMovementNormalized = not isMovementNormalized
         print("Normalized Movement: ", isMovementNormalized)
 
+    scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)
+
 # Program Control
 
 def main():
@@ -909,18 +931,12 @@ def main():
     changes EE transform, solves IK, publishes joints, and updates RViz.
     '''
 
-    global curArmAngles
-    global liveArmAngles
-    global scriptMode
-    global prevTargetTransform
-    global prevTargetValues
-    global newTargetValues
-    global movementSpeed
-    global goToPosValues
-
     updateLiveSim()
+    scriptMode.main()
 
 # Main Area
+
+SCRIPT_MODES = [ForwardKin(), DefaultIK(), GlobalIK(), RotRelativeIK(), RelativeIK(), CamRelativeIK()]
 
 if __name__ == "__main__":
     angleCorrections = [0, 0, 0, 0, 0, 0, 0]
@@ -934,8 +950,8 @@ if __name__ == "__main__":
     savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
 
     # try:
-    scriptMode = Mode.FORWARD_KIN
-    print(scriptMode.name)
+    scriptMode = SCRIPT_MODES[0]
+    print(type(scriptMode).__name__)
 
     rospy.init_node("arm_ik_and_viz")
     gazebo_on = rospy.get_param("/gazebo_on")
@@ -962,8 +978,8 @@ if __name__ == "__main__":
     
 
     while not rospy.is_shutdown():
-        try:  
-            main()
-        except Exception as ex:
-            print(ex)
+        #try:  
+        main()
+        #except Exception as ex:
+        #    print(ex)
         rate.sleep()
