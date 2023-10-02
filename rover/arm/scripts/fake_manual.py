@@ -12,7 +12,7 @@ global curStates
 global jointPublisher
 global armAngles # the angles that fake_manual thinks it's at
 
-CONTROLLER_ENABLED = False
+CONTROLLER_ENABLED = True 
 
 def updateStates(data):
     ''' Callback function for the /arm_states topic'''

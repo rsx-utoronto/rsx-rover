@@ -138,7 +138,6 @@ class IKMode(ScriptState):
         global goToPosValues
         global gazebo_on
         
-        print(curArmAngles)
         publishNewAngles(curArmAngles)
 
         self.updateDesiredEETransformation(prevTargetValues)
@@ -811,9 +810,9 @@ def updateController(data):
         print(type(scriptMode).__name__)
 
     if isButtonPressed["OPTIONS"] == 2:
-        movementSpeed += 0.1/NODE_RATE
+        movementSpeed *= 2 
     if isButtonPressed["SHARE"] == 2:
-        movementSpeed -= 0.1/NODE_RATE
+        movementSpeed /= 2 
         if movementSpeed < 0: # don't let movement speed go into negatives
             movementSpeed = 0
 
@@ -826,7 +825,6 @@ def updateController(data):
         # curArmAngles[6] = -curArmAngles[6]
 
     scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)
-
 
 # Main Area
 
