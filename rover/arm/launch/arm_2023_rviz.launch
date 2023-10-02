@@ -8,8 +8,9 @@
 
    <node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub"/>
 
+   <node name="arm_visualization" pkg="rover" type="arm_visualization.py" output="screen"/>
    <node name="arm_ik_and_viz" pkg="rover" type="arm_ik_and_viz.py" if="$(arg ik_on)" output="screen"/>
-   <node unless="$(arg ik_on)" name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui"/>
+   <!-- <node unless="$(arg ik_on)" name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui"/> -->
 
 	<node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true"/>
    
