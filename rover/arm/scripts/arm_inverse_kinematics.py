@@ -120,6 +120,7 @@ class ForwardKin(ScriptState):
         global curArmAngles
 
         curArmAngles = copy.deepcopy(liveArmAngles)
+
         dhTable = ik.createDHTable(curArmAngles)
         prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
 
@@ -128,6 +129,7 @@ class ForwardKin(ScriptState):
         prevTargetValues = newTargetValues
 
         self.updateDesiredEETransformation(newTargetValues)
+        publishNewAngles(liveArmAngles)
 
 class IKMode(ScriptState):
     '''The General Description of the various IK modes'''
@@ -736,7 +738,7 @@ def updateLiveArmAngles(data):
     tempList[5] = tempList[4]
     tempList[4] = temp
     # tempList[5] = -tempList[5]
-    tempList[6] = -tempList[6]
+    tempList[6] = tempList[6]
     tempAngles = copy.deepcopy(list(np.subtract(np.array(tempList),np.array(savedCanAngles))))
 
     liveArmAngles = tempAngles
@@ -765,8 +767,8 @@ def updateState(data):
         if not ikEntered:
             savedCanAngles = copy.deepcopy(liveArmAngles) 
             scriptMode = SCRIPT_MODES[1]
-            liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
-            curArmAngles = [0, 0, 0, 0, 0, 0, 0]
+            liveArmAngles = [0, pi/2, 0, 0, 0, 0, 0]
+            curArmAngles = [0, pi/2, 0, 0, 0, 0, 0]
 
             dhTable = ik.createDHTable(curArmAngles)
             prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
@@ -820,8 +822,8 @@ def updateController(data):
         isMovementNormalized = not isMovementNormalized
         print("Normalized Movement: ", isMovementNormalized)
 
-    if gazebo_on:
-        curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
+    # if gazebo_on:
+    #   curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
         # curArmAngles[6] = -curArmAngles[6]
 
     scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)
@@ -846,7 +848,7 @@ if __name__ == "__main__":
     scriptMode = SCRIPT_MODES[0]
     print(type(scriptMode).__name__)
 
-    rospy.init_node("arm_ik_and_viz")
+    rospy.init_node("arm_ik")
     gazebo_on = rospy.get_param("/gazebo_on")
     rate = rospy.Rate(NODE_RATE) # run at 10Hz
 

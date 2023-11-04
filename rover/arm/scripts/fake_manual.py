@@ -8,7 +8,7 @@ This code is just to help debug arm control code when
 the real arm isn't plugged in an manual is needed
 '''
 
-global curStates
+global curState
 global jointPublisher
 global armAngles # the angles that fake_manual thinks it's at
 
@@ -88,6 +88,8 @@ if __name__ == "__main__":
         jointPublisher = rospy.Publisher("arm_curr_pos", Float32MultiArray, queue_size=10)
         rospy.Subscriber("arm_state", String, updateStates)
         rospy.Subscriber("arm_goal_pos", Float32MultiArray, updateRealAngles)
+
+        curState = "Idle"
 
         if CONTROLLER_ENABLED:
             rospy.Subscriber("arm_inputs", ArmInputs, updateController)
