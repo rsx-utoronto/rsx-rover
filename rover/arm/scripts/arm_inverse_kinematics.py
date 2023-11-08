@@ -129,7 +129,7 @@ class ForwardKin(ScriptState):
         prevTargetValues = newTargetValues
 
         self.updateDesiredEETransformation(newTargetValues)
-        publishNewAngles(liveArmAngles)
+        # publishNewAngles(liveArmAngles)
 
 class IKMode(ScriptState):
     '''The General Description of the various IK modes'''
@@ -705,6 +705,7 @@ def publishNewAngles(newJointAngles):
 
     adjustedAngles[0] = -adjustedAngles[0]
     adjustedAngles[1] = -adjustedAngles[1]
+    adjustedAngles[2] - -adjustedAngles[2]
     adjustedAngles[5] = -adjustedAngles[5]
 
     temp = adjustedAngles[5]
@@ -767,8 +768,8 @@ def updateState(data):
         if not ikEntered:
             savedCanAngles = copy.deepcopy(liveArmAngles) 
             scriptMode = SCRIPT_MODES[1]
-            liveArmAngles = [0, pi/2, 0, 0, 0, 0, 0]
-            curArmAngles = [0, pi/2, 0, 0, 0, 0, 0]
+            liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
+            curArmAngles = [0, 0, 0, 0, 0, 0, 0]
 
             dhTable = ik.createDHTable(curArmAngles)
             prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
