@@ -709,7 +709,7 @@ def publishNewAngles(newJointAngles):
     adjustedAngles[5] = -adjustedAngles[5]
 
     temp = adjustedAngles[5]
-    adjustedAngles[5] = adjustedAngles[4]
+    adjustedAngles[5] = -adjustedAngles[4]
     adjustedAngles[4] = temp
 
     ikAngles.data = adjustedAngles

@@ -56,7 +56,7 @@ CMD_API_ALT_ENC_POS     = 0x0A4
 CMD_API_PARAM_ACCESS    = 0x300
 
 # REDUCTION Ratios
-REDUCTION               = [120, 160, 120, 20, 20, 20, 40]
+REDUCTION               = [120, 160, 120*2, 100, 20, 20, 40]
 WRIST_RATIO             = 2
 
 ########## SHARED FUNCTIONS ##########
