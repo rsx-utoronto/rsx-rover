@@ -24,10 +24,6 @@ class StateMachineNode:
         self.state_msg.GPS_GOAL_REACHED = msg.GPS_GOAL_REACHED
 
     def aruco_state_callback(self, msg):
-<<<<<<< HEAD
-        self.state_msg.AR_TAG_DETECTED = msg.AR_TAG_DETECTED
-=======
->>>>>>> aeaeaf1b0767fef3f3885392d519140d60c3fd9e
         self.state_msg.curr_AR_ID = msg.curr_AR_ID
 
     def radio_state_callback(self, msg):

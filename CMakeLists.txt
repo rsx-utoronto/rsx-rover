@@ -62,6 +62,7 @@ add_message_files(
   FILES
   ArmInputs.msg
   StateMsg.msg
+  TransformMsg.msg
 )
 
 # Generate services in the 'srv' folder

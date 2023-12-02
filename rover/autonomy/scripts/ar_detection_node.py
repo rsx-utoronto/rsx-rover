@@ -100,15 +100,12 @@ class ARucoTagDetectionNode():
         if ids is not None:
             self.updated_state_msg.AR_TAG_DETECTED = True
             self.updated_state_msg.curr_AR_ID = int(best_detection)
-<<<<<<< HEAD
-
             # Transform into a goal in the odom frame
 
             # lookup baselink to camera link transform 
             # lookup baselink to odom transform 
             # transform the 4x4 pose to the odom frame and publish below
-=======
->>>>>>> aeaeaf1b0767fef3f3885392d519140d60c3fd9e
+
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
             self.updated_state_msg.curr_AR_ID = -1
