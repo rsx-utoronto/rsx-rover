@@ -1,0 +1,2 @@
+int16 rotation_angle
+int16 travel_distance
