@@ -26,6 +26,7 @@ def updateController(data):
         the arm angles that fake manual thinks it's at.
     '''
     global jointPublisher
+    global realJointPublisher
     global armAngles
     global curState
 
@@ -41,6 +42,7 @@ def updateController(data):
         anglesToPublish = Float32MultiArray()
         anglesToPublish.data = armAngles
         jointPublisher.publish(anglesToPublish)
+        realJointPublisher.publish(anglesToPublish)
         print(armAngles)
 
 def updateRealAngles(data):
@@ -85,9 +87,10 @@ if __name__ == "__main__":
         rospy.init_node("fake_manual")
         armAngles = [0, 0, 0, 0, 0, 0, 0]
 
-        jointPublisher = rospy.Publisher("arm_curr_pos", Float32MultiArray, queue_size=10)
+        jointPublisher = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
+        realJointPublisher = rospy.Publisher("arm_curr_pos", Float32MultiArray, queue_size=10)
         rospy.Subscriber("arm_state", String, updateStates)
-        rospy.Subscriber("arm_goal_pos", Float32MultiArray, updateRealAngles)
+        rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateRealAngles)
 
         curState = "Idle"
 

@@ -21,7 +21,7 @@ VECTOR_SMOOTHING = 0.5
 
 # Global Variables
 global gazebo_on
-global curArmAngles
+global curArmAngles # the current arm angles relative to it's zero position (not ik's)
 global liveArmAngles
 global scriptMode
 global goToPosValues # [isSrvCalled, [posAngles]]
@@ -120,8 +120,9 @@ class ForwardKin(ScriptState):
         global curArmAngles
 
         curArmAngles = copy.deepcopy(liveArmAngles)
+        curArmAngles[1] -= pi/2
 
-        dhTable = ik.createDHTable(curArmAngles)
+        dhTable = ik.createDHTable(liveArmAngles)
         prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
 
         [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
@@ -235,6 +236,9 @@ class IKMode(ScriptState):
                                         prevTargetTransform)
             
             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+            if not gazebo_on:
+                targetAngles[1] = targetAngles[1] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
+            # curArmAngles[6] = -curArmAngles[6]
 
             maxIterations = 10
             iteration = 0
@@ -748,7 +752,7 @@ def updateLiveArmAngles(data):
     # tempList[5] = -tempList[5]
     tempList[6] = tempList[6]
     tempAngles = copy.deepcopy(list(np.subtract(np.array(tempList),np.array(savedCanAngles))))
-
+    tempAngles[1] += pi/2
     liveArmAngles = tempAngles
 
 def updateState(data):
@@ -778,7 +782,7 @@ def updateState(data):
             liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
             curArmAngles = [0, 0, 0, 0, 0, 0, 0]
 
-            dhTable = ik.createDHTable(curArmAngles)
+            dhTable = ik.createDHTable([0, pi/2, 0, 0, 0, 0, 0])
             prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
 
             [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
@@ -787,7 +791,10 @@ def updateState(data):
             
             scriptMode.updateDesiredEETransformation(newTargetValues)
             #scriptMode.updateDesiredArmSimulation(curArmAngles)
-        ikEntered = True
+
+            ikEntered = True
+        else:
+            scriptMode = SCRIPT_MODES[1]
 
 def updateController(data):
     ''' Callback function for the arm_inputs topic
@@ -830,8 +837,8 @@ def updateController(data):
         isMovementNormalized = not isMovementNormalized
         print("Normalized Movement: ", isMovementNormalized)
 
-    # if gazebo_on:
-    #   curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
+    if gazebo_on:
+        curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
         # curArmAngles[6] = -curArmAngles[6]
 
     scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)

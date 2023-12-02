@@ -1,7 +1,7 @@
 <launch>
    <!-- Load the urdf into the parameter server. -->
    <param name="gazebo_on" type="boolean" value="false"/>
-   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find rover)/rover/simulation/urdfs/Arm_2023/Arm_2023.xacro"/>
+   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find rover)/rover/simulation/urdfs/Arm_2023/Arm_2023_gazebo.xacro"/>
 
    <arg name="ik_on" default="false"/>
    <arg name="rvizconfig" default="$(find rover)/rover/simulation/rviz_config/arm_urdf.rviz"/>
@@ -10,7 +10,7 @@
 
    <node name="arm_visualization" pkg="rover" type="arm_visualization.py" output="screen"/>
    <node name="arm_ik" pkg="rover" type="arm_inverse_kinematics.py" if="$(arg ik_on)" output="screen"/>
-   <!-- <node unless="$(arg ik_on)" name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui"/> -->
+   <node unless="$(arg ik_on)" name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui"/>
 
 	<node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true"/>
    
