@@ -11,7 +11,7 @@
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true"/>
 
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
-        <arg name="paused" value="true"/>
+        <arg name="paused" value="false"/>
     </include>
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-file $(arg model) -urdf -x 0 -y 0 -z 0 -model arm"/>
     
@@ -23,8 +23,8 @@
     joint6_position_controller joint7_position_controller joint8_position_controller 
     joint9_position_controller joint_state_controller"/>
 
-    <!-- <arg name="ik_on" default="false"/> -->
-    <!-- <node name="arm_inverse_kinematics" pkg="rover" type="arm_inverse_kinematics.py" if="$(arg ik_on)" output="screen"/> -->
+    <arg name="ik_on" default="false"/>
+    <node name="arm_inverse_kinematics" pkg="rover" type="arm_inverse_kinematics.py" if="$(arg ik_on)" output="screen"/>
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub" respawn="false" output="screen">
         <remap from="/joint_states" to="/arm/joint_states"/>
     </node>

@@ -236,8 +236,8 @@ class IKMode(ScriptState):
                                         prevTargetTransform)
             
             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-            if not gazebo_on:
-                targetAngles[1] = targetAngles[1] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
+            # if not gazebo_on:
+            targetAngles[1] = targetAngles[1] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
             # curArmAngles[6] = -curArmAngles[6]
 
             maxIterations = 10
@@ -704,7 +704,7 @@ def publishNewAngles(newJointAngles):
     if gazebo_on:
         gazeboAngles = copy.deepcopy(newJointAngles)
         gazeboAngles.append(6) # make gripper angles equal
-        gazeboAngles[2] = gazeboAngles[2] - pi/2 #adjustment for third joint
+        # gazeboAngles[1] = gazeboAngles[1] + pi/2 #adjustment for third joint
 
         sim.moveInGazebo(gazeboPublisher, gazeboAngles)
     else:
