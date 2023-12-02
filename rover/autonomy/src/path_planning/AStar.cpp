@@ -1,6 +1,11 @@
 #include "AStar.h"
 #include <queue>
 #include <iostream>
+#include "ros/ros.h"
+#include "std_msgs/String.h"
+#include "nav_msgs/OccupancyGrid.h"
+
+
 
 
 vector<Node*> aStar(Map& map, Node* start, Node* end){

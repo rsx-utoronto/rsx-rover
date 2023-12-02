@@ -231,3 +231,6 @@ target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 
 # catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
 #  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+add_executable(local_constmap_listener rover/autonomy/src/path_planning/subscriber.cpp)
+target_link_libraries(local_constmap_listener ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${G})
