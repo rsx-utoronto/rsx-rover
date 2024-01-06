@@ -20,7 +20,6 @@ LIMIT_SWITCH_ANGLES = [0, 0, 0, 0, 0, 0, 0]
 VECTOR_SMOOTHING = 0.5
 
 # Global Variables
-global gazebo_on
 global curArmAngles # the current arm angles relative to it's zero position (not ik's)
 global liveArmAngles
 global scriptMode
@@ -28,7 +27,6 @@ global goToPosValues # [isSrvCalled, [posAngles]]
 global prevTargetTransform
 global prevTargetValues # [roll, pitch, yaw, [x, y, z]]
 global newTargetValues
-global gazeboPublisher
 global angleCorrections
 global isMovementNormalized
 global savedCanAngles
@@ -46,7 +44,7 @@ class ScriptState():
     def __init__(self) -> None:
         pass
 
-    def main(self) -> None:
+    def main(self, ikNode) -> None:
         ''' Function that runs the program
     
         Combines all code to takes Joystick values, chooses script mode, changes arm movement speed,
@@ -113,7 +111,7 @@ class ForwardKin(ScriptState):
         simply follows what the arm is doing based on the real angles
         given.
     '''
-    def main(self) -> None:
+    def main(self, ikNode) -> None:
         global prevTargetValues
         global curArmAngles
 
@@ -132,14 +130,13 @@ class ForwardKin(ScriptState):
 
 class IKMode(ScriptState):
     '''The General Description of the various IK modes'''
-    def main(self) -> None:
+    def main(self, ikNode) -> None:
         global curArmAngles
         global prevTargetValues
         global prevTargetTransform
         global goToPosValues
-        global gazebo_on
         
-        publishNewAngles(curArmAngles)
+        ikNode.publishNewAngles(curArmAngles)
 
         self.updateDesiredEETransformation(prevTargetValues)
 
@@ -515,333 +512,353 @@ class CamRelativeIK(RotRelativeIK):
 
         return newTransformation
 
-# Joystick Controller
-
-def getJoystickButtons(tempButton:list) -> dict: # setting up the buttons
-    ''' Gets the Currently Pressed Buttons on Joystick
-
-    If the value in the returned dictionary for a button is 
-        2: button was just pressed
-        1: button is pressed
-        0: button is not pressed
-        -1: button was just released 
-
-    Returns
-    -------
-    dictionary
-        dictionary with keys for buttons from BUTTON_NAMES, value is either 2, 1, 0, or -1
+class InverseKinematicsNode():
     
-    '''
-    global buttonsPressed
-    
-    buttons = {"X": 0, "CIRCLE": 0, "TRIANGLE": 0, "SQUARE": 0 , "L1": 0, "R1": 0, "L2": 0, "R2": 0, "SHARE": 0, "OPTIONS": 0, "PLAY_STATION": 0, 
-        "L3": 0, "R3": 0,"UP": 0, "DOWN": 0, "LEFT": 0, "RIGHT": 0 } # 1 is pressed, 0 is not pressed, -1 is just released
- 
-    for i in range(0, tempButton.__len__()):
-        button = tempButton[i]
+    def __init__(self) -> None:
+        global armAngles
+        global correctionsService
+        global goToArmPosService
+        global saveArmPosService
         
-        if buttonsPressed[BUTTON_NAMES[i]] == True and button == 0: # button just released
-            button = 0#-1
-        if buttonsPressed[BUTTON_NAMES[i]] == False and button == 1: # button just pressed
-            button = 2
+        rospy.init_node("arm_ik")
+        self.rate = rospy.Rate(NODE_RATE) # run at 10Hz
 
-        if button < 1:
-            buttonsPressed[BUTTON_NAMES[i]] = False
-        else:
-            buttonsPressed[BUTTON_NAMES[i]] = True
-    
-        buttons[BUTTON_NAMES[i]] = button
- 
+        armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
+
+        rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.updateLiveArmAngles)
+        rospy.Subscriber("arm_state", String, self.updateState)
+        rospy.Subscriber("arm_inputs", ArmInputs, self.updateController)
+
+
+    # Joystick Controller
+
+    def getJoystickButtons(self, tempButton:list) -> dict: # setting up the buttons
+        ''' Gets the Currently Pressed Buttons on Joystick
+
+        If the value in the returned dictionary for a button is 
+            2: button was just pressed
+            1: button is pressed
+            0: button is not pressed
+            -1: button was just released 
+
+        Returns
+        -------
+        dictionary
+            dictionary with keys for buttons from BUTTON_NAMES, value is either 2, 1, 0, or -1
         
-    return buttons
-
-# ROS Stuff
-
-def savePosition(posName):
-    ''' Service function that saves the current angles the arm is in
-
-    Uses global variable curArmAngles and saves angles to file. Asks for name
-    of position before saving (preferable a GUI).
-
-    Paramters
-    ---------
-    posName
-        the input message of SaveArmPos.srv, or the name to give the position
-    
-    Returns
-    '''
-
-    # (Placeholders for angles 1-5)
-
-    # positionName = input("Enter Position Name: ")
-    try:
-        global curArmAngles
-
-        positionName = posName.positionName
-        print(positionName)
-
-        newAngles = {
-        "title":positionName,
-        "angle0":curArmAngles[0],
-        "angle1":curArmAngles[1],
-        "angle2":curArmAngles[2],
-        "angle3":curArmAngles[3],
-        "angle4":curArmAngles[4],
-        "angle5":curArmAngles[5],
-        "gripperAngle":curArmAngles[6]
-        }
-
-        with open('arm_positions.json','r+') as file:
-            breakLoop = False
-            savedPos = json.load(file)
-            # Checks if any existing positions have same positionName
-            for x in range(len(savedPos["position_names"])):
-                if breakLoop:
-                    break
-                if savedPos["position_names"][x]["title"] == positionName: # if found, deletes existing entry
-                    savedPos["position_names"].pop(x)
-                    breakLoop = True
-            # Appends new position to end of file
-            savedPos["position_names"].append(newAngles)
-            file.seek(0)
-            json.dump(savedPos,file,indent = 0)
-            file.close()
+        '''
+        global buttonsPressed
         
-        return SaveArmPosResponse(True)
-    except Exception as ex:
-        print("An error has occured")
-        print(ex)
-        return SaveArmPosResponse(False)
-
-def goToPosition(posName):
-    ''' Pulls up GUI with options of saved joint angles.
-
-    Paramters
-    ---------
-    posName
-        the input data message from GoToArmPos.srv, or the name of the saved position
-
-    Returns
-    -------
-    service response
-        has the service been completed sucessfully
-    '''
-    try:
-        global scriptMode
-        global goToPosValues
-
-        # retrievePos = input("Enter Position Name to Retrieve: ")
-        retrievePos = posName.positionName
-        tempAngles = [0, 0, 0, 0, 0, 0, 0]
-
-        with open('arm_positions.json','r') as file:
-            found = False
-            savedPos = json.load(file)
-            # Checks to see if position names match request
-            for x in range(len(savedPos["position_names"])):
-                if savedPos["position_names"][x]["title"] == retrievePos: # if found, changes current angles to requested position
-                    found = True
-                    tempAngles[0] = savedPos["position_names"][x]["angle0"]
-                    tempAngles[1] = savedPos["position_names"][x]["angle1"]
-                    tempAngles[2] = savedPos["position_names"][x]["angle2"]
-                    tempAngles[3] = savedPos["position_names"][x]["angle3"]
-                    tempAngles[4] = savedPos["position_names"][x]["angle4"]
-                    tempAngles[5] = savedPos["position_names"][x]["angle5"]
-                    tempAngles[6] = savedPos["position_names"][x]["gripperAngle"]
-
-            if not found:
-                print("Position name '"+retrievePos+"' not found") # if not found, prints message
-                return GoToArmPosResponse(False)
-
-            goToPosValues[0] = True # sets the goTO arm position value true a
-            goToPosValues[1] = tempAngles
-            return GoToArmPosResponse(True)
-    except Exception as ex:
-        print("The following error has occured: ")
-        print(ex)
-        return GoToArmPosResponse(False)
-
-def updateAngleCorrections(corrections):
-    ''' Service function that updates the angle corrections for published IK values
+        buttons = {"X": 0, "CIRCLE": 0, "TRIANGLE": 0, "SQUARE": 0 , "L1": 0, "R1": 0, "L2": 0, "R2": 0, "SHARE": 0, "OPTIONS": 0, "PLAY_STATION": 0, 
+            "L3": 0, "R3": 0,"UP": 0, "DOWN": 0, "LEFT": 0, "RIGHT": 0 } # 1 is pressed, 0 is not pressed, -1 is just released
     
-    Paramters
-    ---------
-    corrections
-        the input data message from Corrections.srv
+        for i in range(0, tempButton.__len__()):
+            button = tempButton[i]
+            
+            if buttonsPressed[BUTTON_NAMES[i]] == True and button == 0: # button just released
+                button = 0#-1
+            if buttonsPressed[BUTTON_NAMES[i]] == False and button == 1: # button just pressed
+                button = 2
 
-    Returns
-    -------
-    service response
-        has the service been completed sucessfully
-    '''
-    try:
+            if button < 1:
+                buttonsPressed[BUTTON_NAMES[i]] = False
+            else:
+                buttonsPressed[BUTTON_NAMES[i]] = True
+        
+            buttons[BUTTON_NAMES[i]] = button
+    
+            
+        return buttons
+
+    # ROS Stuff
+
+    def savePosition(self, posName):
+        ''' Service function that saves the current angles the arm is in
+
+        Uses global variable curArmAngles and saves angles to file. Asks for name
+        of position before saving (preferable a GUI).
+
+        Paramters
+        ---------
+        posName
+            the input message of SaveArmPos.srv, or the name to give the position
+        
+        Returns
+        '''
+
+        # (Placeholders for angles 1-5)
+
+        # positionName = input("Enter Position Name: ")
+        try:
+            global curArmAngles
+
+            positionName = posName.positionName
+            print(positionName)
+
+            newAngles = {
+            "title":positionName,
+            "angle0":curArmAngles[0],
+            "angle1":curArmAngles[1],
+            "angle2":curArmAngles[2],
+            "angle3":curArmAngles[3],
+            "angle4":curArmAngles[4],
+            "angle5":curArmAngles[5],
+            "gripperAngle":curArmAngles[6]
+            }
+
+            with open('arm_positions.json','r+') as file:
+                breakLoop = False
+                savedPos = json.load(file)
+                # Checks if any existing positions have same positionName
+                for x in range(len(savedPos["position_names"])):
+                    if breakLoop:
+                        break
+                    if savedPos["position_names"][x]["title"] == positionName: # if found, deletes existing entry
+                        savedPos["position_names"].pop(x)
+                        breakLoop = True
+                # Appends new position to end of file
+                savedPos["position_names"].append(newAngles)
+                file.seek(0)
+                json.dump(savedPos,file,indent = 0)
+                file.close()
+            
+            return SaveArmPosResponse(True)
+        except Exception as ex:
+            print("An error has occured")
+            print(ex)
+            return SaveArmPosResponse(False)
+
+    def goToPosition(self, posName):
+        ''' Pulls up GUI with options of saved joint angles.
+
+        Paramters
+        ---------
+        posName
+            the input data message from GoToArmPos.srv, or the name of the saved position
+
+        Returns
+        -------
+        service response
+            has the service been completed sucessfully
+        '''
+        try:
+            global scriptMode
+            global goToPosValues
+
+            # retrievePos = input("Enter Position Name to Retrieve: ")
+            retrievePos = posName.positionName
+            tempAngles = [0, 0, 0, 0, 0, 0, 0]
+
+            with open('arm_positions.json','r') as file:
+                found = False
+                savedPos = json.load(file)
+                # Checks to see if position names match request
+                for x in range(len(savedPos["position_names"])):
+                    if savedPos["position_names"][x]["title"] == retrievePos: # if found, changes current angles to requested position
+                        found = True
+                        tempAngles[0] = savedPos["position_names"][x]["angle0"]
+                        tempAngles[1] = savedPos["position_names"][x]["angle1"]
+                        tempAngles[2] = savedPos["position_names"][x]["angle2"]
+                        tempAngles[3] = savedPos["position_names"][x]["angle3"]
+                        tempAngles[4] = savedPos["position_names"][x]["angle4"]
+                        tempAngles[5] = savedPos["position_names"][x]["angle5"]
+                        tempAngles[6] = savedPos["position_names"][x]["gripperAngle"]
+
+                if not found:
+                    print("Position name '"+retrievePos+"' not found") # if not found, prints message
+                    return GoToArmPosResponse(False)
+
+                goToPosValues[0] = True # sets the goTO arm position value true a
+                goToPosValues[1] = tempAngles
+                return GoToArmPosResponse(True)
+        except Exception as ex:
+            print("The following error has occured: ")
+            print(ex)
+            return GoToArmPosResponse(False)
+
+    def updateAngleCorrections(self, corrections):
+        ''' Service function that updates the angle corrections for published IK values
+        
+        Paramters
+        ---------
+        corrections
+            the input data message from Corrections.srv
+
+        Returns
+        -------
+        service response
+            has the service been completed sucessfully
+        '''
+        try:
+            global angleCorrections
+
+            angleCorrections = [corrections.correction1, corrections.correction2, corrections.correction3, corrections.correction4,
+                                corrections.correction5, corrections.correction6, corrections.correction7]
+            return CorrectionsResponse(True)
+        except Exception as ex:
+            print("The following error has occured")
+            print(ex)
+            return CorrectionsResponse(False)
+
+    def publishNewAngles(self, newJointAngles):
+        ''' Publishes the new angles to /arm_target_angles
+
+        Publishes a list 32 bit floats.
+
+        Parameters
+        ---------- 
+        newJointAngles
+            an array of the new angles (7 elements)
+
+        '''
         global angleCorrections
+        global savedCanAngles
 
-        angleCorrections = [corrections.correction1, corrections.correction2, corrections.correction3, corrections.correction4,
-                            corrections.correction5, corrections.correction6, corrections.correction7]
-        return CorrectionsResponse(True)
-    except Exception as ex:
-        print("The following error has occured")
-        print(ex)
-        return CorrectionsResponse(False)
+        ikAngles = Float32MultiArray()
+        adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
+        for i in range(adjustedAngles.__len__()):
+            adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i] + savedCanAngles[i]
+            adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
 
-def publishNewAngles(newJointAngles):
-    ''' Publishes the new angles to /arm_target_angles
+        adjustedAngles[0] = -adjustedAngles[0]
+        adjustedAngles[1] = -adjustedAngles[1]
+        # adjustedAngles[2] - -adjustedAngles[2]
+        adjustedAngles[5] = -adjustedAngles[5]
 
-    Publishes a list 32 bit floats.
+        temp = adjustedAngles[5]
+        adjustedAngles[5] = -adjustedAngles[4]
+        adjustedAngles[4] = temp
 
-    Parameters
-    ---------- 
-    newJointAngles
-        an array of the new angles (7 elements)
+        ikAngles.data = adjustedAngles
+        armAngles.publish(ikAngles)
 
-    '''
-    global angleCorrections
-    global savedCanAngles
+    def updateLiveArmAngles(self, data):
+        ''' Updates the real angle that IK knows
 
-    ikAngles = Float32MultiArray()
-    adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
-    for i in range(adjustedAngles.__len__()):
-        adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i] + savedCanAngles[i]
-        adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
+        Should be used as the callback function of the real angle subscriber.
 
-    adjustedAngles[0] = -adjustedAngles[0]
-    adjustedAngles[1] = -adjustedAngles[1]
-    # adjustedAngles[2] - -adjustedAngles[2]
-    adjustedAngles[5] = -adjustedAngles[5]
+        Paramters
+        ---------
+        data
+            data.data contains a list 32 bit floats that correspond to joint angles
+        '''
+        global liveArmAngles
+        global savedCanAngles
 
-    temp = adjustedAngles[5]
-    adjustedAngles[5] = -adjustedAngles[4]
-    adjustedAngles[4] = temp
+        tempList = list(data.data)
 
-    ikAngles.data = adjustedAngles
-    armAngles.publish(ikAngles)
+        for i in range(7):
+            tempList[i] = np.deg2rad(tempList[i])
 
-def updateLiveArmAngles(data):
-    ''' Updates the real angle that IK knows
+        tempList[0] = -tempList[0]
+        tempList[1] = -tempList[1]
+        temp = tempList[5]
+        tempList[5] = tempList[4]
+        tempList[4] = temp
+        # tempList[5] = -tempList[5]
+        tempList[6] = tempList[6]
+        tempAngles = copy.deepcopy(list(np.subtract(np.array(tempList),np.array(savedCanAngles))))
+        tempAngles[1] += pi/2
+        liveArmAngles = tempAngles
 
-    Should be used as the callback function of the real angle subscriber.
+    def updateState(self, data):
+        ''' Callback function for arm_state rostopic
 
-    Paramters
-    ---------
-    data
-        data.data contains a list 32 bit floats that correspond to joint angles
-    '''
-    global liveArmAngles
-    global savedCanAngles
-
-    tempList = list(data.data)
-
-    for i in range(7):
-        tempList[i] = np.deg2rad(tempList[i])
-
-    tempList[0] = -tempList[0]
-    tempList[1] = -tempList[1]
-    temp = tempList[5]
-    tempList[5] = tempList[4]
-    tempList[4] = temp
-    # tempList[5] = -tempList[5]
-    tempList[6] = tempList[6]
-    tempAngles = copy.deepcopy(list(np.subtract(np.array(tempList),np.array(savedCanAngles))))
-    tempAngles[1] += pi/2
-    liveArmAngles = tempAngles
-
-def updateState(data):
-    ''' Callback function for arm_state rostopic
-
-    If a state has been changed enter into forward kinematics mode
-    to copy the current arm angles.
-    
-    '''
-    global scriptMode
-    global curModeListIndex
-    global ikEntered
-    global savedCanAngles
-    global curArmAngles
-    global goToPosValues
-    global prevTargetTransform
-    global prevTargetValues
-    global liveArmAngles
+        If a state has been changed enter into forward kinematics mode
+        to copy the current arm angles.
+        
+        '''
+        global scriptMode
+        global curModeListIndex
+        global ikEntered
+        global savedCanAngles
+        global curArmAngles
+        global goToPosValues
+        global prevTargetTransform
+        global prevTargetValues
+        global liveArmAngles
 
 
-    if data.data != "IK":
-        scriptMode = SCRIPT_MODES[0]
-        curModeListIndex = 0
-    else:
-    #     scriptMode = scriptMode
-        if not ikEntered:
-            curModeListIndex = 1
-            scriptMode = SCRIPT_MODES[curModeListIndex] # set to defaultIK mode
+        if data.data != "IK":
+            scriptMode = SCRIPT_MODES[0]
+            curModeListIndex = 0
+        else:
+        #     scriptMode = scriptMode
+            if not ikEntered:
+                curModeListIndex = 1
+                scriptMode = SCRIPT_MODES[curModeListIndex] # set to defaultIK mode
+                print(type(scriptMode).__name__)
+
+                savedCanAngles = copy.deepcopy(liveArmAngles) 
+                liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
+                curArmAngles = [0, 0, 0, 0, 0, 0, 0]
+
+                dhTable = ik.createDHTable([0, pi/2, 0, 0, 0, 0, 0])
+                prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
+
+                [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
+                newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
+                prevTargetValues = newTargetValues
+                
+                scriptMode.updateDesiredEETransformation(newTargetValues)
+                #scriptMode.updateDesiredArmSimulation(curArmAngles)
+
+                ikEntered = True
+            else:
+                scriptMode = SCRIPT_MODES[1]
+                curModeListIndex = 1
+
+    def updateController(self, data):
+        ''' Callback function for the arm_inputs topic
+
+        '''
+
+        global curModeListIndex
+        global scriptMode
+        global movementSpeed
+        global isMovementNormalized
+
+        buttonsPressed = [data.x, data.o, data.triangle, 0, data.l1, data.r1, data.l2, data.r2, data.share, data.options, 0, 0, 0, 0, 0, 0, 0]
+        # isButtonPressed = {"X": data.x, "CIRCLE": data.o, "TRIANGLE": data.triagle, 
+        #                         "SQUARE": 0, "L1": data.l1, "R1": data.r1, "L2": data.l2, 
+        #                         "R2": data.r2, "SHARE": data.share, "OPTIONS": data.options, 
+        #                         "PLAY_STATION": 0, "L3": 0, "R3": 0, "UP": 0, "DOWN": 0, 
+        #                         "LEFT": 0, "RIGHT": 0} 
+        isButtonPressed = self.getJoystickButtons(buttonsPressed)
+        # print(isButtonPressed)
+        joystickAxesStatus = {"L-Right": -data.l_horizontal, "L-Down": -data.l_vertical, "L2": data.l2, 
+                            "R-Right": -data.r_horizontal, "R-Down": -data.r_vertical, "R2": data.r2}
+
+        if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
+            if (curModeListIndex + 1) >= len(SCRIPT_MODES):
+                curModeListIndex = 0
+                scriptMode = SCRIPT_MODES[curModeListIndex]
+            else:
+                curModeListIndex += 1
+                scriptMode = SCRIPT_MODES[curModeListIndex]
             print(type(scriptMode).__name__)
 
-            savedCanAngles = copy.deepcopy(liveArmAngles) 
-            liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
-            curArmAngles = [0, 0, 0, 0, 0, 0, 0]
+        if isButtonPressed["OPTIONS"] == 2:
+            movementSpeed *= 2 
+        if isButtonPressed["SHARE"] == 2:
+            movementSpeed /= 2 
+            if movementSpeed < 0: # don't let movement speed go into negatives
+                movementSpeed = 0
 
-            dhTable = ik.createDHTable([0, pi/2, 0, 0, 0, 0, 0])
-            prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
-
-            [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
-            newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
-            prevTargetValues = newTargetValues
-            
-            scriptMode.updateDesiredEETransformation(newTargetValues)
-            #scriptMode.updateDesiredArmSimulation(curArmAngles)
-
-            ikEntered = True
-        else:
-            scriptMode = SCRIPT_MODES[1]
-            curModeListIndex = 1
-
-def updateController(data):
-    ''' Callback function for the arm_inputs topic
-
-    '''
-
-    global curModeListIndex
-    global scriptMode
-    global movementSpeed
-    global isMovementNormalized
-
-    buttonsPressed = [data.x, data.o, data.triangle, 0, data.l1, data.r1, data.l2, data.r2, data.share, data.options, 0, 0, 0, 0, 0, 0, 0]
-    # isButtonPressed = {"X": data.x, "CIRCLE": data.o, "TRIANGLE": data.triagle, 
-    #                         "SQUARE": 0, "L1": data.l1, "R1": data.r1, "L2": data.l2, 
-    #                         "R2": data.r2, "SHARE": data.share, "OPTIONS": data.options, 
-    #                         "PLAY_STATION": 0, "L3": 0, "R3": 0, "UP": 0, "DOWN": 0, 
-    #                         "LEFT": 0, "RIGHT": 0} 
-    isButtonPressed = getJoystickButtons(buttonsPressed)
-    # print(isButtonPressed)
-    joystickAxesStatus = {"L-Right": -data.l_horizontal, "L-Down": -data.l_vertical, "L2": data.l2, 
-                          "R-Right": -data.r_horizontal, "R-Down": -data.r_vertical, "R2": data.r2}
-
-    if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
-        if (curModeListIndex + 1) >= len(SCRIPT_MODES):
-            curModeListIndex = 0
-            scriptMode = SCRIPT_MODES[curModeListIndex]
-        else:
-            curModeListIndex += 1
-            scriptMode = SCRIPT_MODES[curModeListIndex]
-        print(type(scriptMode).__name__)
-
-    if isButtonPressed["OPTIONS"] == 2:
-        movementSpeed *= 2 
-    if isButtonPressed["SHARE"] == 2:
-        movementSpeed /= 2 
-        if movementSpeed < 0: # don't let movement speed go into negatives
-            movementSpeed = 0
-
-    if isButtonPressed["R3"] == 2:
-        isMovementNormalized = not isMovementNormalized
-        print("Normalized Movement: ", isMovementNormalized)
+        if isButtonPressed["R3"] == 2:
+            isMovementNormalized = not isMovementNormalized
+            print("Normalized Movement: ", isMovementNormalized)
 
 
-    scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)
+        scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)
 
 # Main Area
 
 SCRIPT_MODES = [ForwardKin(), DefaultIK(), GlobalIK(), RotRelativeIK(), RelativeIK(), CamRelativeIK()]
 
 if __name__ == "__main__":
+    ikNode = InverseKinematicsNode()
+
     angleCorrections = [0, 0, 0, 0, 0, 0, 0]
     curArmAngles = [0, 0, 0, 0, 0, 0, 0]
     liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
@@ -852,35 +869,17 @@ if __name__ == "__main__":
     goToPosValues = [False, [0, 0, 0, 0, 0, 0, 0]]
     savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
 
-    # try:
     curModeListIndex = 0
     scriptMode = SCRIPT_MODES[0]
-    # print(type(scriptMode).__name__)
 
-    rospy.init_node("arm_ik")
-    rate = rospy.Rate(NODE_RATE) # run at 10Hz
+    ikNode = InverseKinematicsNode()
 
-    if rospy.has_param("/gazebo_on"):
-        gazebo_on = rospy.get_param("/gazebo_on")
-    else:
-        gazebo_on = False
-
-    armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
-    rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateLiveArmAngles)
-    rospy.Subscriber("arm_state", String, updateState)
-    rospy.Subscriber("arm_inputs", ArmInputs, updateController)
-
-    if gazebo_on:
-        gazeboPublisher = sim.startGazeboJointControllers(9)
-
-    correctionsService = rospy.Service('update_arm_corrections', Corrections, updateAngleCorrections)
-    goToArmPosService = rospy.Service('move_arm_to', GoToArmPos, goToPosition)
-    saveArmPosService = rospy.Service('save_arm_pos_as', SaveArmPos, savePosition)
-    
-
+    correctionsService = rospy.Service('update_arm_corrections', Corrections, ikNode.updateAngleCorrections)
+    goToArmPosService = rospy.Service('move_arm_to', GoToArmPos, ikNode.goToPosition)
+    saveArmPosService = rospy.Service('save_arm_pos_as', SaveArmPos, ikNode.savePosition)
     while not rospy.is_shutdown():
         #try:  
-        scriptMode.main()
+        scriptMode.main(ikNode)
         #except Exception as ex:
         #    print(ex)
-        rate.sleep()
+        ikNode.rate.sleep()
