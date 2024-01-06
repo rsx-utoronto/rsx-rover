@@ -53,7 +53,7 @@ def startGazeboJointControllers(numJoints):
     gazeboPublisher = list()
 
     for i in range(numJoints):
-        tempController = rospy.Publisher(f"/arm/joint{i}_position_controller/command", Float64, queue_size=10)
+        tempController = rospy.Publisher(f"/arm/joint{i+1}_position_controller/command", Float64, queue_size=10)
         gazeboPublisher.append(tempController)
     
     return gazeboPublisher
@@ -205,7 +205,7 @@ def moveInGazebo(jointControllerPublishers, angles):
     '''
     
     for i in range(len(jointControllerPublishers)):
-        jointControllerPublishers[i].publish(angles[i-1])
+        jointControllerPublishers[i].publish(angles[i])
 
 if __name__ == "__main__":  # if used rosrun on this script then ...
     try:

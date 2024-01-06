@@ -28,7 +28,6 @@ global goToPosValues # [isSrvCalled, [posAngles]]
 global prevTargetTransform
 global prevTargetValues # [roll, pitch, yaw, [x, y, z]]
 global newTargetValues
-global jointPublisher
 global gazeboPublisher
 global angleCorrections
 global isMovementNormalized
@@ -704,6 +703,7 @@ def publishNewAngles(newJointAngles):
     if gazebo_on:
         gazeboAngles = copy.deepcopy(newJointAngles)
         gazeboAngles.append(6) # make gripper angles equal
+        gazeboAngles.append(6) # make gripper angles equal
         # gazeboAngles[1] = gazeboAngles[1] + pi/2 #adjustment for third joint
 
         sim.moveInGazebo(gazeboPublisher, gazeboAngles)
@@ -861,7 +861,7 @@ if __name__ == "__main__":
     # try:
     curModeListIndex = 0
     scriptMode = SCRIPT_MODES[0]
-    print(type(scriptMode).__name__)
+    # print(type(scriptMode).__name__)
 
     rospy.init_node("arm_ik")
     gazebo_on = rospy.get_param("/gazebo_on")
@@ -874,8 +874,6 @@ if __name__ == "__main__":
 
     if gazebo_on:
         gazeboPublisher = sim.startGazeboJointControllers(9)
-    else:
-        jointPublisher = sim.startJointPublisher()
 
     # sets start target position equal to curArmAngles after they have been updated
     # while curArmAngles == [0, 0, 0, 0, 0, 0]:
