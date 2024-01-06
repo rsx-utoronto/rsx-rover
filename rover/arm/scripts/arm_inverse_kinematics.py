@@ -13,7 +13,7 @@ import copy
 from math import pi
 
 # Constants 
-NODE_RATE = 1000    
+NODE_RATE = 100 
 BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SHARE", "OPTIONS", "PLAY_STATION", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"]
 JOYSTICK_AXES_NAMES = ["L-Right", "L-Down", "L2", "R-Right", "R-Down", "R2"]
 LIMIT_SWITCH_ANGLES = [0, 0, 0, 0, 0, 0, 0]
