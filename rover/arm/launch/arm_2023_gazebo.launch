@@ -25,6 +25,7 @@
 
     <arg name="ik_on" default="false"/>
     <node name="arm_inverse_kinematics" pkg="rover" type="arm_inverse_kinematics.py" if="$(arg ik_on)" output="screen"/>
+    <node name="arm_visualization" pkg="rover" type="arm_visualization.py" output="screen"/>
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub" respawn="false" output="screen">
         <remap from="/joint_states" to="/arm/joint_states"/>
     </node>

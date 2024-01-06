@@ -267,7 +267,7 @@
   <origin xyz="0.007325 -0.028875 0.276776" rpy="0 0 0"/>
   <parent link="Link_4"/>
   <child link="Link_5"/>
-  <axis xyz="-0.0 1.0 -0.0"/>
+  <axis xyz="-0.0 -1.0 -0.0"/>
 </joint>
 
 <joint name="Joint_6" type="continuous">

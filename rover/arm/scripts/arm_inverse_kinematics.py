@@ -699,31 +699,23 @@ def publishNewAngles(newJointAngles):
     global angleCorrections
     global savedCanAngles
 
-    if gazebo_on:
-        gazeboAngles = copy.deepcopy(newJointAngles)
-        gazeboAngles.append(gazeboAngles[6]) # make gripper angles equal
-        gazeboAngles.append(gazeboAngles[6]) # make gripper angles equal
-        # gazeboAngles[1] = gazeboAngles[1] + pi/2 #adjustment for third joint
+    ikAngles = Float32MultiArray()
+    adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
+    for i in range(adjustedAngles.__len__()):
+        adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i] + savedCanAngles[i]
+        adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
 
-        sim.moveInGazebo(gazeboPublisher, gazeboAngles)
-    else:
-        ikAngles = Float32MultiArray()
-        adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
-        for i in range(adjustedAngles.__len__()):
-            adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i] + savedCanAngles[i]
-            adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
+    adjustedAngles[0] = -adjustedAngles[0]
+    adjustedAngles[1] = -adjustedAngles[1]
+    # adjustedAngles[2] - -adjustedAngles[2]
+    adjustedAngles[5] = -adjustedAngles[5]
 
-        adjustedAngles[0] = -adjustedAngles[0]
-        adjustedAngles[1] = -adjustedAngles[1]
-        adjustedAngles[2] - -adjustedAngles[2]
-        adjustedAngles[5] = -adjustedAngles[5]
+    temp = adjustedAngles[5]
+    adjustedAngles[5] = -adjustedAngles[4]
+    adjustedAngles[4] = temp
 
-        temp = adjustedAngles[5]
-        adjustedAngles[5] = -adjustedAngles[4]
-        adjustedAngles[4] = temp
-
-        ikAngles.data = adjustedAngles
-        armAngles.publish(ikAngles)
+    ikAngles.data = adjustedAngles
+    armAngles.publish(ikAngles)
 
 def updateLiveArmAngles(data):
     ''' Updates the real angle that IK knows
