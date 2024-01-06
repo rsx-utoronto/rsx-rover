@@ -13,7 +13,7 @@ import copy
 from math import pi
 
 # Constants 
-NODE_RATE = 100 
+NODE_RATE = 1000 
 BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SHARE", "OPTIONS", "PLAY_STATION", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"]
 JOYSTICK_AXES_NAMES = ["L-Right", "L-Down", "L2", "R-Right", "R-Down", "R2"]
 LIMIT_SWITCH_ANGLES = [0, 0, 0, 0, 0, 0, 0]
@@ -85,7 +85,6 @@ class ScriptState():
             tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.03
         else:
             tempTarget[3][1] = 0.001025*tempTarget[3][1] + 0.04
-            tempTarget[3][2] = (0.47/450)*tempTarget[3][2]
         tempTarget[3][2] = (0.47/450)*tempTarget[3][2] # scale z-axis
 
         tempRoll = tempTarget[0] # swap roll and pitch
@@ -168,7 +167,7 @@ class IKMode(ScriptState):
         angleDelta = list(np.subtract(np.array(newArmAngles), np.array(curArmAngles)))
         # slowedDownAngles = copy.deepcopy(newArmAngles)
 
-        for i in range(7):
+        for i in range(len(jointSpeeds)):
             if abs(angleDelta[i]) > jointSpeeds[i]:
                 # exit, which tells ik to half distance of delta vector and try again until all joints can move there within the time frame
                 return False
@@ -702,15 +701,15 @@ def publishNewAngles(newJointAngles):
 
     if gazebo_on:
         gazeboAngles = copy.deepcopy(newJointAngles)
-        gazeboAngles.append(6) # make gripper angles equal
-        gazeboAngles.append(6) # make gripper angles equal
+        gazeboAngles.append(gazeboAngles[6]) # make gripper angles equal
+        gazeboAngles.append(gazeboAngles[6]) # make gripper angles equal
         # gazeboAngles[1] = gazeboAngles[1] + pi/2 #adjustment for third joint
 
         sim.moveInGazebo(gazeboPublisher, gazeboAngles)
     else:
         ikAngles = Float32MultiArray()
         adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
-        for i in range(7):
+        for i in range(adjustedAngles.__len__()):
             adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i] + savedCanAngles[i]
             adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
 
@@ -763,6 +762,7 @@ def updateState(data):
     
     '''
     global scriptMode
+    global curModeListIndex
     global ikEntered
     global savedCanAngles
     global curArmAngles
@@ -774,11 +774,15 @@ def updateState(data):
 
     if data.data != "IK":
         scriptMode = SCRIPT_MODES[0]
+        curModeListIndex = 0
     else:
     #     scriptMode = scriptMode
         if not ikEntered:
+            curModeListIndex = 1
+            scriptMode = SCRIPT_MODES[curModeListIndex] # set to defaultIK mode
+            print(type(scriptMode).__name__)
+
             savedCanAngles = copy.deepcopy(liveArmAngles) 
-            scriptMode = SCRIPT_MODES[1]
             liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
             curArmAngles = [0, 0, 0, 0, 0, 0, 0]
 
@@ -795,6 +799,7 @@ def updateState(data):
             ikEntered = True
         else:
             scriptMode = SCRIPT_MODES[1]
+            curModeListIndex = 1
 
 def updateController(data):
     ''' Callback function for the arm_inputs topic
@@ -837,9 +842,6 @@ def updateController(data):
         isMovementNormalized = not isMovementNormalized
         print("Normalized Movement: ", isMovementNormalized)
 
-    if gazebo_on:
-        curArmAngles[2] = curArmAngles[2] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
-        # curArmAngles[6] = -curArmAngles[6]
 
     scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)
 
@@ -864,8 +866,12 @@ if __name__ == "__main__":
     # print(type(scriptMode).__name__)
 
     rospy.init_node("arm_ik")
-    gazebo_on = rospy.get_param("/gazebo_on")
     rate = rospy.Rate(NODE_RATE) # run at 10Hz
+
+    if rospy.has_param("/gazebo_on"):
+        gazebo_on = rospy.get_param("/gazebo_on")
+    else:
+        gazebo_on = False
 
     armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
     rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateLiveArmAngles)
@@ -874,11 +880,6 @@ if __name__ == "__main__":
 
     if gazebo_on:
         gazeboPublisher = sim.startGazeboJointControllers(9)
-
-    # sets start target position equal to curArmAngles after they have been updated
-    # while curArmAngles == [0, 0, 0, 0, 0, 0]:
-    #     tempDHTable = ik.createDHTable(curArmAngles)
-    #     prevTargetPos = ik.calculayteTransformToLink(tempDHTable, 5)
 
     correctionsService = rospy.Service('update_arm_corrections', Corrections, updateAngleCorrections)
     goToArmPosService = rospy.Service('move_arm_to', GoToArmPos, goToPosition)

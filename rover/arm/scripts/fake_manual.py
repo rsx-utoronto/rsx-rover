@@ -11,8 +11,7 @@ the real arm isn't plugged in an manual is needed
 global curState
 global jointPublisher
 global armAngles # the angles that fake_manual thinks it's at
-
-CONTROLLER_ENABLED = True 
+global gazebo_on
 
 def updateStates(data):
     ''' Callback function for the /arm_states topic'''
@@ -94,10 +93,7 @@ if __name__ == "__main__":
 
         curState = "Idle"
 
-        if CONTROLLER_ENABLED:
-            rospy.Subscriber("arm_inputs", ArmInputs, updateController)
-        else:
-            rospy.Subscriber("keyboard_fake_man", Float32MultiArray, keyboardController)
+        rospy.Subscriber("arm_inputs", ArmInputs, updateController)
 
         rospy.spin()
     except Exception as ex:

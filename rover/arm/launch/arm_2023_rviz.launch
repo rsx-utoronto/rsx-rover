@@ -1,7 +1,7 @@
 <launch>
    <!-- Load the urdf into the parameter server. -->
    <param name="gazebo_on" type="boolean" value="false"/>
-   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find rover)/rover/simulation/urdfs/Arm_2023/Arm_2023_gazebo.xacro"/>
+   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find rover)/rover/simulation/urdfs/Arm_2023/Arm_2023.xacro"/>
 
    <arg name="ik_on" default="false"/>
    <arg name="rvizconfig" default="$(find rover)/rover/simulation/rviz_config/arm_urdf.rviz"/>
