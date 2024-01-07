@@ -12,33 +12,23 @@ import json
 import copy
 from math import pi
 
-# Constants 
+# Global Constants 
 NODE_RATE = 1000 
-BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SHARE", "OPTIONS", "PLAY_STATION", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"]
-JOYSTICK_AXES_NAMES = ["L-Right", "L-Down", "L2", "R-Right", "R-Down", "R2"]
-LIMIT_SWITCH_ANGLES = [0, 0, 0, 0, 0, 0, 0]
 VECTOR_SMOOTHING = 0.5
 
 # Global Variables
-global curArmAngles # the current arm angles relative to it's zero position (not ik's)
-global liveArmAngles
-global scriptMode
-global goToPosValues # [isSrvCalled, [posAngles]]
-global prevTargetTransform
+global curArmAngles # angles IK thinks the arm is it relative to the home position 
+global liveArmAngles # angles coming in from sensors
+global prevTargetTransform # transform matrix of previous transform
 global prevTargetValues # [roll, pitch, yaw, [x, y, z]]
 global newTargetValues
-global angleCorrections
+
 global isMovementNormalized
+global isIKEntered
+
+global goToPosValues # [isSrvCalled, [posAngles]]
+global angleCorrections
 global savedCanAngles
-global ikEntered
-global curModeListIndex
-
-ikEntered = False
-movementSpeed = 10/NODE_RATE
-isMovementNormalized = False
-
-buttonsPressed = {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": False, "L1": False, "R1": False, "L2": False, "R2": False, "SHARE": False, "OPTIONS": False, "PLAY_STATION": False, 
-        "L3": False, "R3": False,"UP": False, "DOWN": False, "LEFT": False, "RIGHT": False} 
 
 class ScriptState():
     def __init__(self) -> None:
@@ -55,6 +45,7 @@ class ScriptState():
         pass
 
     def controlEEPosition(self) -> None:
+        ''' Change the end effector target position'''
         pass
    
     def createDesiredEETarget(self, newTargetValues):
@@ -231,9 +222,7 @@ class IKMode(ScriptState):
                                         prevTargetTransform)
             
             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-            # if not gazebo_on:
-            targetAngles[1] = targetAngles[1] - pi/2 # adjustment for third joint (shifted 90 degrees so it won't collide with ground on startup)
-            # curArmAngles[6] = -curArmAngles[6]
+            targetAngles[1] = targetAngles[1] - pi/2 # raises zero position of shoulder (shoulder is pointing up)
 
             maxIterations = 10
             iteration = 0
@@ -521,19 +510,26 @@ class InverseKinematicsNode():
         global saveArmPosService
         
         rospy.init_node("arm_ik")
-        self.rate = rospy.Rate(NODE_RATE) # run at 10Hz
+        self.rate = rospy.Rate(NODE_RATE) # run at {NODE_RATE}Hz 
 
         armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
 
         rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.updateLiveArmAngles)
-        rospy.Subscriber("arm_state", String, self.updateState)
-        rospy.Subscriber("arm_inputs", ArmInputs, self.updateController)
+        rospy.Subscriber("arm_state", String, self.onStateUpdate)
+        rospy.Subscriber("arm_inputs", ArmInputs, self.onControllerUpdate)
 
+        self.SCRIPT_MODES = [ForwardKin(), DefaultIK(), GlobalIK(), RotRelativeIK(), RelativeIK(), CamRelativeIK()]
+        self.curModeListIndex = 0
+        self.scriptMode = self.SCRIPT_MODES[0]
 
-    # Joystick Controller
+        self.BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SHARE", "OPTIONS", "PLAY_STATION", "L3", 
+                             "R3", "UP", "DOWN", "LEFT", "RIGHT"]
+        self.buttonStatus= {"X": False, "CIRCLE": False, "TRIANGLE": False, "SQUARE": False, "L1": False, "R1": False, "L2": False, 
+                               "R2": False, "SHARE": False, "OPTIONS": False, "PLAY_STATION": False, "L3": False, "R3": False,"UP": False, 
+                               "DOWN": False, "LEFT": False, "RIGHT": False} 
 
-    def getJoystickButtons(self, tempButton:list) -> dict: # setting up the buttons
-        ''' Gets the Currently Pressed Buttons on Joystick
+    def getJoystickButtonStatus(self, tempButton:list) -> dict: # setting up the buttons
+        ''' Gets the Status of the Pressed Buttons on Joystick
 
         If the value in the returned dictionary for a button is 
             2: button was just pressed
@@ -547,26 +543,22 @@ class InverseKinematicsNode():
             dictionary with keys for buttons from BUTTON_NAMES, value is either 2, 1, 0, or -1
         
         '''
-        global buttonsPressed
-        
         buttons = {"X": 0, "CIRCLE": 0, "TRIANGLE": 0, "SQUARE": 0 , "L1": 0, "R1": 0, "L2": 0, "R2": 0, "SHARE": 0, "OPTIONS": 0, "PLAY_STATION": 0, 
             "L3": 0, "R3": 0,"UP": 0, "DOWN": 0, "LEFT": 0, "RIGHT": 0 } # 1 is pressed, 0 is not pressed, -1 is just released
     
         for i in range(0, tempButton.__len__()):
             button = tempButton[i]
-            
-            if buttonsPressed[BUTTON_NAMES[i]] == True and button == 0: # button just released
-                button = 0#-1
-            if buttonsPressed[BUTTON_NAMES[i]] == False and button == 1: # button just pressed
+            if self.buttonStatus[self.BUTTON_NAMES[i]] == True and button == 0: # button just released
+                button = -1
+            if self.buttonStatus[self.BUTTON_NAMES[i]] == False and button == 1: # button just pressed
                 button = 2
 
             if button < 1:
-                buttonsPressed[BUTTON_NAMES[i]] = False
+                self.buttonStatus[self.BUTTON_NAMES[i]] = False
             else:
-                buttonsPressed[BUTTON_NAMES[i]] = True
+                self.buttonStatus[self.BUTTON_NAMES[i]] = True
         
-            buttons[BUTTON_NAMES[i]] = button
-    
+            buttons[self.BUTTON_NAMES[i]] = button
             
         return buttons
 
@@ -642,7 +634,6 @@ class InverseKinematicsNode():
             has the service been completed sucessfully
         '''
         try:
-            global scriptMode
             global goToPosValues
 
             # retrievePos = input("Enter Position Name to Retrieve: ")
@@ -717,7 +708,7 @@ class InverseKinematicsNode():
         ikAngles = Float32MultiArray()
         adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
         for i in range(adjustedAngles.__len__()):
-            adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] - LIMIT_SWITCH_ANGLES[i] + savedCanAngles[i]
+            adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] + savedCanAngles[i]
             adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
 
         adjustedAngles[0] = -adjustedAngles[0]
@@ -761,16 +752,13 @@ class InverseKinematicsNode():
         tempAngles[1] += pi/2
         liveArmAngles = tempAngles
 
-    def updateState(self, data):
+    def onStateUpdate(self, data):
         ''' Callback function for arm_state rostopic
 
         If a state has been changed enter into forward kinematics mode
         to copy the current arm angles.
-        
         '''
-        global scriptMode
-        global curModeListIndex
-        global ikEntered
+        global isIKEntered
         global savedCanAngles
         global curArmAngles
         global goToPosValues
@@ -778,16 +766,14 @@ class InverseKinematicsNode():
         global prevTargetValues
         global liveArmAngles
 
-
         if data.data != "IK":
-            scriptMode = SCRIPT_MODES[0]
-            curModeListIndex = 0
+            self.scriptMode = self.SCRIPT_MODES[0]
+            self.curModeListIndex = 0
         else:
-        #     scriptMode = scriptMode
-            if not ikEntered:
-                curModeListIndex = 1
-                scriptMode = SCRIPT_MODES[curModeListIndex] # set to defaultIK mode
-                print(type(scriptMode).__name__)
+            if not isIKEntered:
+                self.curModeListIndex = 1
+                self.scriptMode = self.SCRIPT_MODES[self.curModeListIndex] # set to defaultIK mode
+                print(type(self.scriptMode).__name__)
 
                 savedCanAngles = copy.deepcopy(liveArmAngles) 
                 liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
@@ -800,21 +786,17 @@ class InverseKinematicsNode():
                 newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
                 prevTargetValues = newTargetValues
                 
-                scriptMode.updateDesiredEETransformation(newTargetValues)
+                self.scriptMode.updateDesiredEETransformation(newTargetValues)
                 #scriptMode.updateDesiredArmSimulation(curArmAngles)
 
-                ikEntered = True
+                isIKEntered = True
             else:
-                scriptMode = SCRIPT_MODES[1]
-                curModeListIndex = 1
+                self.scriptMode = self.SCRIPT_MODES[1]
+                self.curModeListIndex = 1
 
-    def updateController(self, data):
-        ''' Callback function for the arm_inputs topic
+    def onControllerUpdate(self, data):
+        ''' Callback function for the arm_inputs topic'''
 
-        '''
-
-        global curModeListIndex
-        global scriptMode
         global movementSpeed
         global isMovementNormalized
 
@@ -824,19 +806,19 @@ class InverseKinematicsNode():
         #                         "R2": data.r2, "SHARE": data.share, "OPTIONS": data.options, 
         #                         "PLAY_STATION": 0, "L3": 0, "R3": 0, "UP": 0, "DOWN": 0, 
         #                         "LEFT": 0, "RIGHT": 0} 
-        isButtonPressed = self.getJoystickButtons(buttonsPressed)
+        isButtonPressed = self.getJoystickButtonStatus(buttonsPressed)
         # print(isButtonPressed)
         joystickAxesStatus = {"L-Right": -data.l_horizontal, "L-Down": -data.l_vertical, "L2": data.l2, 
                             "R-Right": -data.r_horizontal, "R-Down": -data.r_vertical, "R2": data.r2}
 
         if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
-            if (curModeListIndex + 1) >= len(SCRIPT_MODES):
-                curModeListIndex = 0
-                scriptMode = SCRIPT_MODES[curModeListIndex]
+            if (self.curModeListIndex + 1) >= len(self.SCRIPT_MODES):
+                self.curModeListIndex = 0
+                self.scriptMode = self.SCRIPT_MODES[self.curModeListIndex]
             else:
-                curModeListIndex += 1
-                scriptMode = SCRIPT_MODES[curModeListIndex]
-            print(type(scriptMode).__name__)
+                self.curModeListIndex += 1
+                self.scriptMode = self.SCRIPT_MODES[self.curModeListIndex]
+            print(type(self.scriptMode).__name__)
 
         if isButtonPressed["OPTIONS"] == 2:
             movementSpeed *= 2 
@@ -850,36 +832,35 @@ class InverseKinematicsNode():
             print("Normalized Movement: ", isMovementNormalized)
 
 
-        scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)
+        self.scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)
 
 # Main Area
 
-SCRIPT_MODES = [ForwardKin(), DefaultIK(), GlobalIK(), RotRelativeIK(), RelativeIK(), CamRelativeIK()]
-
 if __name__ == "__main__":
-    ikNode = InverseKinematicsNode()
-
     angleCorrections = [0, 0, 0, 0, 0, 0, 0]
     curArmAngles = [0, 0, 0, 0, 0, 0, 0]
     liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
-    prevTargetValues = [0, 0, 0, [250, 0, 450]] # start position
+    prevTargetValues = [0, 0, 0, [250, 0, 450]] # start position for ik
     newTargetValues = prevTargetValues
     prevTargetTransform = ik.createEndEffectorTransform(prevTargetValues[0], prevTargetValues[1],
                                                         prevTargetValues[2], prevTargetValues[3])
     goToPosValues = [False, [0, 0, 0, 0, 0, 0, 0]]
     savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
 
-    curModeListIndex = 0
-    scriptMode = SCRIPT_MODES[0]
-
+    isIKEntered = False
+    movementSpeed = 10/NODE_RATE
+    isMovementNormalized = False
+        
     ikNode = InverseKinematicsNode()
 
+    # services don't like being in the ikNode object for some reason
     correctionsService = rospy.Service('update_arm_corrections', Corrections, ikNode.updateAngleCorrections)
     goToArmPosService = rospy.Service('move_arm_to', GoToArmPos, ikNode.goToPosition)
     saveArmPosService = rospy.Service('save_arm_pos_as', SaveArmPos, ikNode.savePosition)
+
     while not rospy.is_shutdown():
         #try:  
-        scriptMode.main(ikNode)
+        ikNode.scriptMode.main(ikNode)
         #except Exception as ex:
         #    print(ex)
         ikNode.rate.sleep()
