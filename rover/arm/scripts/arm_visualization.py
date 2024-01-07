@@ -4,6 +4,7 @@ import rospy
 import arm_simulation_control as sim
 from std_msgs.msg import String, Float32MultiArray
 from numpy import deg2rad, subtract, array
+from math import pi
 from copy import deepcopy
 
 class ArmVisualizationNode():
@@ -50,6 +51,7 @@ class ArmVisualizationNode():
         if data.data == "IK":
             if not self.ikEntered:
                 self.savedCanAngles = deepcopy(self.liveArmAngles)
+                self.savedCanAngles[1] += pi/2
 
             self.ikEntered = True
 

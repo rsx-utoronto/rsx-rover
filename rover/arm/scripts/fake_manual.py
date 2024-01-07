@@ -42,7 +42,7 @@ def updateController(data):
         anglesToPublish.data = armAngles
         jointPublisher.publish(anglesToPublish)
         realJointPublisher.publish(anglesToPublish)
-        print(armAngles)
+        #print(armAngles)
 
 def updateRealAngles(data):
     ''' Callback function for /arm_goal_pos topic
@@ -57,12 +57,11 @@ def updateRealAngles(data):
         # tempList[0] = tempList[0]
         # tempList[1] = -tempList[1]
         # tempList[4] = -tempList[4]
-
         armAngles = tempList
 
         anglesToPublish = Float32MultiArray()
         anglesToPublish.data = armAngles
-        jointPublisher.publish(anglesToPublish)
+        realJointPublisher.publish(anglesToPublish)
 
 def keyboardController(data):
     ''' Callback function for /keyboard_fake_man topic
@@ -89,7 +88,7 @@ if __name__ == "__main__":
         jointPublisher = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
         realJointPublisher = rospy.Publisher("arm_curr_pos", Float32MultiArray, queue_size=10)
         rospy.Subscriber("arm_state", String, updateStates)
-        rospy.Subscriber("arm_curr_pos", Float32MultiArray, updateRealAngles)
+        rospy.Subscriber("arm_goal_pos", Float32MultiArray, updateRealAngles)
 
         curState = "Idle"
 

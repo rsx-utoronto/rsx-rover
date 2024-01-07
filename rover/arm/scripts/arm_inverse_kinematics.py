@@ -744,8 +744,8 @@ class InverseKinematicsNode():
         tempList[0] = -tempList[0]
         tempList[1] = -tempList[1]
         temp = tempList[5]
-        tempList[5] = tempList[4]
-        tempList[4] = temp
+        tempList[5] = -tempList[4]
+        tempList[4] = -temp
         # tempList[5] = -tempList[5]
         tempList[6] = tempList[6]
         tempAngles = copy.deepcopy(list(np.subtract(np.array(tempList),np.array(savedCanAngles))))
