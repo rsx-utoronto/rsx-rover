@@ -275,8 +275,8 @@ class DefaultIK(IKMode):
         # control roll, pitch, yaw
         if joystickAxis["R-Right"] != 0:
             self.newYaw -= joystickAxis["R-Right"]*self.angleScale
-        # if joystickAxis["R-Down"] != 0:
-        #     self.newPitch -= joystickAxis["R-Down"]*scale2
+        if joystickAxis["R-Down"] != 0:
+            self.newPitch -= joystickAxis["R-Down"]*self.angleScale
         if isButtonPressed["DOWN"]:
             self.newPitch -= self.angleScale
         elif isButtonPressed["UP"]:
@@ -518,6 +518,7 @@ class InverseKinematicsNode():
         rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.updateLiveArmAngles)
         rospy.Subscriber("arm_state", String, self.onStateUpdate)
         rospy.Subscriber("arm_inputs", ArmInputs, self.onControllerUpdate)
+        rospy.Subscriber("ik_targets", Float32MultiArray, self.onIKTargetUpdate)
 
         self.SCRIPT_MODES = [ForwardKin(), DefaultIK(), GlobalIK(), RotRelativeIK(), RelativeIK(), CamRelativeIK()]
         self.curModeListIndex = 0
@@ -790,9 +791,6 @@ class InverseKinematicsNode():
                 #scriptMode.updateDesiredArmvizulation(curArmAngles)
 
                 isIKEntered = True
-            else:
-                self.scriptMode = self.SCRIPT_MODES[1]
-                self.curModeListIndex = 1
 
     def onControllerUpdate(self, data):
         ''' Callback function for the arm_inputs topic'''
@@ -813,10 +811,11 @@ class InverseKinematicsNode():
 
         if isButtonPressed["TRIANGLE"] == 2: # changes mode when button is released
             if (self.curModeListIndex + 1) >= len(self.SCRIPT_MODES):
-                self.curModeListIndex = 0
+                self.curModeListIndex = 1
                 self.scriptMode = self.SCRIPT_MODES[self.curModeListIndex]
             else:
-                self.curModeListIndex += 1
+                self.curModeListIndex = self.curModeListIndex + 1
+                print(self.curModeListIndex)
                 self.scriptMode = self.SCRIPT_MODES[self.curModeListIndex]
             print(type(self.scriptMode).__name__)
 
@@ -831,8 +830,46 @@ class InverseKinematicsNode():
             isMovementNormalized = not isMovementNormalized
             print("Normalized Movement: ", isMovementNormalized)
 
-
         self.scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)
+
+    def onIKTargetUpdate(self, data):
+        ''' Callback function for the /ik_target topic
+
+            Sets the [x, y, z, roll, pitch, yaw, gripperPos] target for
+            the arm and then ik publishes the angle values.
+            Assumes you want default ik mode (will make changeable 
+            later).
+
+            Paramters
+            ---------
+            data
+                A float32 array of the [x, y, z, roll, ptich, yaw, gripperPos] target
+                for ik
+        '''
+        global curArmAngles
+        global newTargetValues
+        global prevTargetTransform
+        global prevTargetValues
+
+        if self.curModeListIndex == 1: # in default IK mode
+            try:
+                tempList = list(data.data)
+
+                dhTable = ik.createDHTable(curArmAngles)
+                newTargetValues = [tempList[5], tempList[4], tempList[3], 
+                                [tempList[0], tempList[1], tempList[2]]]
+                targetEEPos = ik.createEndEffectorTransform(tempList[5], tempList[4], tempList[3], newTargetValues[3])
+                targetAngles = ik.inverseKinematics(dhTable, targetEEPos)
+                targetAngles[1] -= pi/2
+                targetAngles.append(tempList[6])
+
+                curArmAngles = targetAngles
+                prevTargetTransform = targetEEPos
+                prevTargetValues = newTargetValues
+            except ik.CannotReachTransform:
+                print("Cannot reach outside of arm workspace")
+            except Exception as ex:
+                print(ex)
 
 # Main Area
 
