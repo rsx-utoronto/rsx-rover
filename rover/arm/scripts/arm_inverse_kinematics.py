@@ -3,7 +3,7 @@
 import rospy
 import numpy as np
 import ik_library as ik
-import arm_simulation_control as sim
+import arm_visualization as viz
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header, Float32MultiArray, String
 from rover.msg import ArmInputs
@@ -93,7 +93,7 @@ class ScriptState():
         '''
         tempTarget = self.createDesiredEETarget(newTargetValues)
         referenceLink = "base_link" # link to base end effector transform off of
-        sim.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
+        viz.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
 
 class ForwardKin(ScriptState):
     ''' The Forward Kinematics Mode
@@ -107,9 +107,10 @@ class ForwardKin(ScriptState):
         global curArmAngles
 
         curArmAngles = copy.deepcopy(liveArmAngles)
-        curArmAngles[1] -= pi/2
+        adjustedCurAngles = curArmAngles
+        adjustedCurAngles[1] += pi/2
 
-        dhTable = ik.createDHTable(liveArmAngles)
+        dhTable = ik.createDHTable(adjustedCurAngles)
         prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
 
         [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
@@ -294,7 +295,7 @@ class DefaultIK(IKMode):
     def updateDesiredEETransformation(self, newTargetValues):
         tempTarget = self.createDesiredEETarget(newTargetValues)
         tempTarget[1] = 0
-        sim.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
+        viz.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
 
 class GlobalIK(IKMode):
     ''' The Global IK mode
@@ -350,7 +351,7 @@ class GlobalIK(IKMode):
     def updateDesiredEETransformation(self, newTargetValues):
         tempTarget = self.createDesiredEETarget(newTargetValues) 
         tempTarget[:3] = [0, 0, 0] # don't rotate global axis
-        sim.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
+        viz.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
 
 class RotRelativeIK(IKMode):
     ''' The Relative Rotation IK mode
@@ -400,7 +401,7 @@ class RotRelativeIK(IKMode):
 
     def updateDesiredEETransformation(self, newTargetValues):
         tempTarget = [0, 0 , pi, [0, 0, 198*0.47/450]] # Display frame relative to tip of of end effector
-        sim.displayEndEffectorTransform(tempTarget, "Link_6")
+        viz.displayEndEffectorTransform(tempTarget, "Link_6")
         
 class RelativeIK(RotRelativeIK):
     ''' The Relative IK mode
@@ -749,7 +750,6 @@ class InverseKinematicsNode():
         # tempList[5] = -tempList[5]
         tempList[6] = tempList[6]
         tempAngles = copy.deepcopy(list(np.subtract(np.array(tempList),np.array(savedCanAngles))))
-        tempAngles[1] += pi/2
         liveArmAngles = tempAngles
 
     def onStateUpdate(self, data):
@@ -787,7 +787,7 @@ class InverseKinematicsNode():
                 prevTargetValues = newTargetValues
                 
                 self.scriptMode.updateDesiredEETransformation(newTargetValues)
-                #scriptMode.updateDesiredArmSimulation(curArmAngles)
+                #scriptMode.updateDesiredArmvizulation(curArmAngles)
 
                 isIKEntered = True
             else:
