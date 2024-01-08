@@ -3,7 +3,7 @@
 import rospy
 import numpy as np
 import ik_library as ik
-import arm_visualization as viz
+import arm_viz as viz
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header, Float32MultiArray, String
 from rover.msg import ArmInputs
