@@ -30,6 +30,9 @@ global goToPosValues # [isSrvCalled, [posAngles]]
 global angleCorrections
 global savedCanAngles
 
+global nRevTheta 
+global prevArmAngles
+
 class ScriptState():
     def __init__(self) -> None:
         pass
@@ -124,10 +127,12 @@ class IKMode(ScriptState):
     '''The General Description of the various IK modes'''
     def main(self, ikNode) -> None:
         global curArmAngles
+        global prevArmAngles
         global prevTargetValues
         global prevTargetTransform
         global goToPosValues
         
+        curArmAngles = self.continousInvTan(curArmAngles, prevArmAngles)
         ikNode.publishNewAngles(curArmAngles)
 
         self.updateDesiredEETransformation(prevTargetValues)
@@ -135,6 +140,7 @@ class IKMode(ScriptState):
         if goToPosValues[0]: # if the service flag to go to a saved position has been called
             goToPosValues[0] = False
             curArmAngles = goToPosValues[1]
+            prevArmAngles = curArmAngles
 
             dhTable = ik.createDHTable(curArmAngles)
             prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
@@ -211,6 +217,7 @@ class IKMode(ScriptState):
 
     def onJoystickUpdate(self, isButtonPressed:dict, joystickAxesStatus:dict) -> None:
         global curArmAngles
+        global prevArmAngles
         global prevTargetTransform
         global prevTargetValues
         global movementSpeed
@@ -243,6 +250,7 @@ class IKMode(ScriptState):
 
             targetAngles.append(self.controlGripperAngle(isButtonPressed, curArmAngles))
 
+            prevArmAngles = curArmAngles
             curArmAngles = targetAngles
             prevTargetTransform = targetEEPos
             prevTargetValues = newTargetValues
@@ -250,6 +258,27 @@ class IKMode(ScriptState):
             print("Cannot reach outside of arm workspace")
         except Exception as ex:
             print(ex)
+
+    def continousInvTan(self, armAngles, prevArmAngles):
+        global nRevTheta
+
+        deltaTheta4 = armAngles[3] - prevArmAngles[3]
+        deltaTheta6 = armAngles[5] - prevArmAngles[5]
+        deltaAngles = [0, 0, 0, deltaTheta4, 0, deltaTheta6, 0]
+
+        for i in range(len(deltaAngles)):
+            if prevArmAngles[i] >= 0:
+                if round(deltaAngles[i], 5) < 0: # round to 5 decimals to not worry about floating point run off
+                    nRevTheta[i] += 1 # increase current revolution if switchted to negative from positive
+            else:
+                if round(deltaAngles[i], 5) > 0:
+                    nRevTheta[i] -= 1 # decrease current revolution if switched to positive from negative
+
+        for i in range(len(armAngles)):
+            if nRevTheta[i] != 0:
+                armAngles[i] += 2*pi*nRevTheta[i]
+
+        return armAngles
 
 class DefaultIK(IKMode):
     ''' The Default mode for IK
@@ -847,6 +876,7 @@ class InverseKinematicsNode():
                 for ik
         '''
         global curArmAngles
+        global prevArmAngles
         global newTargetValues
         global prevTargetTransform
         global prevTargetValues
@@ -864,6 +894,7 @@ class InverseKinematicsNode():
                 targetAngles.append(tempList[6])
 
                 curArmAngles = targetAngles
+                prevArmAngles = curArmAngles
                 prevTargetTransform = targetEEPos
                 prevTargetValues = newTargetValues
             except ik.CannotReachTransform:
@@ -876,6 +907,7 @@ class InverseKinematicsNode():
 if __name__ == "__main__":
     angleCorrections = [0, 0, 0, 0, 0, 0, 0]
     curArmAngles = [0, 0, 0, 0, 0, 0, 0]
+    prevArmAngles = [0, 0, 0, 0, 0, 0, 0]
     liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
     prevTargetValues = [0, 0, 0, [250, 0, 450]] # start position for ik
     newTargetValues = prevTargetValues
@@ -887,6 +919,8 @@ if __name__ == "__main__":
     isIKEntered = False
     movementSpeed = 10/NODE_RATE
     isMovementNormalized = False
+
+    nRevTheta = [0, 0, 0, 0, 0, 0, 0]
         
     ikNode = InverseKinematicsNode()
 
