@@ -13,7 +13,7 @@ import copy
 from math import pi
 
 # Global Constants 
-NODE_RATE = 1000 
+NODE_RATE = 1000
 VECTOR_SMOOTHING = 0.5
 
 # Global Variables
@@ -132,7 +132,6 @@ class IKMode(ScriptState):
         global prevTargetTransform
         global goToPosValues
         
-        curArmAngles = self.continousInvTan(curArmAngles, prevArmAngles)
         ikNode.publishNewAngles(curArmAngles)
 
         self.updateDesiredEETransformation(prevTargetValues)
@@ -222,6 +221,7 @@ class IKMode(ScriptState):
         global prevTargetValues
         global movementSpeed
         global isMovementNormalized
+        
 
         try:
             dhTable = ik.createDHTable(curArmAngles)
@@ -230,6 +230,7 @@ class IKMode(ScriptState):
                                         prevTargetTransform)
             
             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
+            targetAngles = self.continousInvTan(targetAngles, curArmAngles)
             targetAngles[1] = targetAngles[1] - pi/2 # raises zero position of shoulder (shoulder is pointing up)
 
             maxIterations = 10
@@ -245,6 +246,7 @@ class IKMode(ScriptState):
                 targetEEPos = self.controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
                                         prevTargetTransform)
                 targetAngles = ik.inverseKinematics(dhTable, targetEEPos)
+                targetAngles = self.continousInvTan(targetAngles, curArmAngles)
 
             movementSpeed = originalSpeed
 
@@ -260,19 +262,50 @@ class IKMode(ScriptState):
             print(ex)
 
     def continousInvTan(self, armAngles, prevArmAngles):
+        ''' Makes output of atan continous instead of fliping 180 degrees
+            
+            The range of atan(x) is (-pi/2, pi/2) which causes joints in the arm
+            to flip suddenly. This function changes the angle to the its equivlanet 
+            value with the opposite sign the prevent flipping.
+            
+            Paramaters
+            ----------
+            armAngles
+                an array of angles that correspond to the arms joint
+            prevArmAngles
+                an array of angles that correspond the values of the arm joints in the
+                previous iteration
+            
+            Returns
+            -------
+            array
+                an array for the adjusted arm angles
+        '''
         global nRevTheta
+        
+        adjustedPrevAngles = copy.deepcopy(prevArmAngles)
+        adjustedPrevAngles[3] -= 2*pi*nRevTheta[3]
+        adjustedPrevAngles[5] -= 2*pi*nRevTheta[5]
 
-        deltaTheta4 = armAngles[3] - prevArmAngles[3]
-        deltaTheta6 = armAngles[5] - prevArmAngles[5]
+        deltaTheta4 = armAngles[3] - adjustedPrevAngles[3] 
+        deltaTheta6 = armAngles[5] - adjustedPrevAngles[5] 
         deltaAngles = [0, 0, 0, deltaTheta4, 0, deltaTheta6, 0]
 
         for i in range(len(deltaAngles)):
-            if prevArmAngles[i] >= 0:
-                if round(deltaAngles[i], 5) < 0: # round to 5 decimals to not worry about floating point run off
+            if adjustedPrevAngles[i] >= 0: 
+                if round(deltaAngles[i], 5) < 0 and abs(deltaAngles[i]) > pi/1.5: # round to 5 decimals to not worry about floating point run off
                     nRevTheta[i] += 1 # increase current revolution if switchted to negative from positive
+                    # print("p -> n, link: ", i + 1, ", at time: ", rospy.get_time())
+                    # print("link: ", i+1, " angles are: ", armAngles[i], ", were: ", prevArmAngles[i])
+                    # if i == 5:
+                    #     print()
             else:
-                if round(deltaAngles[i], 5) > 0:
+                if round(deltaAngles[i], 5) > 0 and abs(deltaAngles[i]) > pi/1.5:
                     nRevTheta[i] -= 1 # decrease current revolution if switched to positive from negative
+                    # print("n -> p, link: ", i + 1, ", at time: ", rospy.get_time())
+                    # print("link: ", i+1, " angles are: ", armAngles[i], ", were: ", prevArmAngles[i])
+                    # if i == 5:
+                    #     print()
 
         for i in range(len(armAngles)):
             if nRevTheta[i] != 0:
@@ -826,6 +859,7 @@ class InverseKinematicsNode():
 
         global movementSpeed
         global isMovementNormalized
+        global curArmAngles
 
         buttonsPressed = [data.x, data.o, data.triangle, 0, data.l1, data.r1, data.l2, data.r2, data.share, data.options, 0, 0, 0, 0, 0, 0, 0]
         # isButtonPressed = {"X": data.x, "CIRCLE": data.o, "TRIANGLE": data.triagle, 
