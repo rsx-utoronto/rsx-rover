@@ -32,7 +32,7 @@
     </include>
 
     <!-- Launch Velodyne lidar driver -->
-    <!-- <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch"/> -->
+    <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch"/>
 
     <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="collapse_pointcloud" output="screen" > 
         <param name="max_height" value="0.75" />
