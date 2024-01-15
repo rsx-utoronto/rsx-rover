@@ -285,7 +285,7 @@
 </joint>
 
 <joint name="Camera_Joint" type="fixed">
-  <origin xyz="-0.082325 0.028875 -0.000676" rpy="0 0 0"/>
+  <origin xyz="-0.082325 0.028875 -0.000676" rpy="3.14 -1.571 -1.571"/>
   <parent link="Link_5"/>
   <child link="Camera_link"/>
 </joint>
