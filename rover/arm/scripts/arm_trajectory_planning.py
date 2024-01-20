@@ -3,6 +3,7 @@
 import rospy
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 from std_msgs.msg import Float32MultiArray
 
 '''path[] saves incoming positions from path planning. path[0] is the first position the arm moves to.
@@ -12,11 +13,17 @@ pathHistory[] saves all positions from path planning without deleting anything.'
 
 path = []
 pathHistory = []
-simAngles = [0,0,0,0,0,0,0]
+
+x = []
+y = []
+
 # used in initializeTrajectory to check if the arm is already trying to change positions
 trajectoryRunning = False
-speedMax = 10.0
 
+# maximum average speed in deg/sec
+speedMax = 30.0
+
+simAngles = [0,0,0,0,0,0,0]
 actualAngles = [0,0,0,0,0,0,0]
 
 class quinticPolynomial:
@@ -108,21 +115,30 @@ def quinticTrajectory(posI, posF, time):
     global rate
     global simAngles
     global actualAngles
+    global x
+    global y
+
+    # matplot stuff:
+    x = [None]
+    y = [None]
 
     testTimeStart = rospy.get_time()
 
     frequency = 10
     period = 1 / frequency
+
+    # weight of each pid output
     Kp = 0.01
-    Ki = 0.0001
-    Kd = 0.01
+    Ki = 0.01
+    Kd = 0.000001
 
-    publishPos = Float32MultiArray()
+    publishPos = Float32MultiArray() # array of angles to publish
 
-    t = 0
-    k = 1
-    q = [None] * 7
-    pid = [None] * 7
+    t = 0 # time elapsed
+    k = 1 # factor that quintic polynomials are stretched by
+
+    q = [None] * 7 # array of angles calculated from polynomials
+    pid = [None] * 7 # array of pid output for each angle
 
     for i in range(6):
         # by default, initial/final velocities/accelerations are 0
@@ -148,12 +164,16 @@ def quinticTrajectory(posI, posF, time):
 
         print("end time is: ", time)
         print("curr time is: ", t)
+        
         if (k == 0):
-            k = 1 # if k is 0, error has accumulated (likely because arm stopped moving) --> this just prevents division by 0
+            k = 0.1 # if k is 0, error has accumulated (likely because arm stopped moving) --> this just prevents division by 0
 
         for i in range(6):
             q[i].changeEndTime(k)
             posI[i] = q[i].calculatePoint(t)
+
+        x.append(posI[1])
+        y.append(rospy.get_time() - testTimeStart)
 
         publishPos.data = posI
         pubArmAngles.publish(publishPos)
@@ -161,13 +181,10 @@ def quinticTrajectory(posI, posF, time):
         endTime = rospy.get_time()
         rospy.sleep(period - (startTime - endTime))
         t = t + period
-        
-    '''for i in range(6):
-        posI[i] = posF[i]
-        publishPos.data = posI
-        pubArmAngles.publish(publishPos)'''
 
     testTimeEnd = rospy.get_time()
+
+
     print("Time elapsed: ", testTimeEnd - testTimeStart)
     return
 
@@ -188,19 +205,20 @@ def initializeTrajectory(curAngles):
     global simAngles
 
     simAngles = list(curAngles.data)
-    '''fakeAngles = [] #placeholder begins
+    fakeAngles = [] #placeholder begins
 
     for i in range(6):
-        fakeAngles.append(simAngles[i] - random.randint(5, 10))'''
+        fakeAngles.append(simAngles[i] + random.randint(0,2) - 1)
 
     fakeAnglesPosition = Float32MultiArray()
-    fakeAnglesPosition.data = simAngles
+    fakeAnglesPosition.data = fakeAngles
 
     pubActualAngles.publish(fakeAnglesPosition) #placeholder ends
 
     if trajectoryRunning:
         print(list(curAngles.data))
         return
+    
     if len(path) == 0:
         return
     else:
@@ -251,5 +269,7 @@ def getAngles():
 if __name__ == '__main__':
     try:
         getAngles()
+        plt.plot(y,x)
+        plt.show()
     except rospy.ROSInterruptException:
         pass
