@@ -7,7 +7,7 @@ from ultralytics import YOLO
 from roboflow import Roboflow 
 from cv_bridge import CvBridge 
 
-API_KEY = "B90CKEnxRHNGK992SHdt"
+API_KEY = ""
 
 # create the name of publisher node 
 subscriberNodeName = "camera_sensor_subscriber"
