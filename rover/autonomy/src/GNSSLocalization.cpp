@@ -5,7 +5,6 @@
 #include <ros/ros.h>
 
 using namespace std;
-GNSSLocalization gnss;
 
 typedef struct localCoord {
     double x;
@@ -21,18 +20,25 @@ public:
     double localx;
     double localy;
     GNSSLocalization(double lat, double lon);
+    GNSSLocalization();
     localCoord getGNSSLocalization(double lat, double lon);
     void GNSSLocalizationProcess(double lat, double lon);
     double getDistance(localCoord c);
     double getBearing(localCoord c);
     double getDistance();
     double getBearing();
+    void setBase(double lat, double lon);
     // double getBearing(double lat, double lon);
 };
 
 GNSSLocalization::GNSSLocalization(double lat, double lon) {
     baseLat = lat;
     baseLon = lon;
+}
+
+GNSSLocalization::GNSSLocalization() {
+    baseLat = 0;
+    baseLon = 0;
 }
 
 void GNSSLocalization::GNSSLocalizationProcess(double lat, double lon) {
@@ -67,6 +73,13 @@ double GNSSLocalization::getDistance() {
     return sqrt(pow(localx, 2) + pow(localy, 2));
 }
 
+void GNSSLocalization::setBase(double lat, double lon) {
+    baseLat = lat;
+    baseLon = lon;
+}
+
+GNSSLocalization gnss = GNSSLocalization();
+
 void chatterCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
     gnss.GNSSLocalizationProcess(msg->latitude, msg->longitude);
     ROS_INFO("x: %f, y: %f", gnss.localx, gnss.localy);
@@ -74,7 +87,7 @@ void chatterCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
 }
 
 int main(int argc, char **argv) {
-    gnss = GNSSLocalization(37.7749, -122.4194);
+    gnss.setBase(37.7749, -122.4194);
     ros::init(argc, argv, "GNSSLocalization");
     ros::NodeHandle n;
     ros::Subscriber sub = n.subscribe("ublox_gps", 1000, chatterCallback);
