@@ -15,16 +15,16 @@ DWAPlannerROS:
   acc_lim_y: 0.0 # default: 0
   acc_lim_th: 0.32 # default: 3.2
 
-  max_vel_x: 0.3 # default: 6.0
-  min_vel_x: 0.2 # default: 0.0
+  max_vel_x: 0.7 # default: 6.0
+  min_vel_x: 0.4 # default: 0.0
   # the simuation rover does not move in y direction
   max_vel_y: 0.0 # default: 0.0
   min_vel_y: 0.0 # default: 0.0
 
-  max_vel_trans: 0.3 # default: 0.5
-  min_vel_trans: 0.2 # default: 0.1
-  max_vel_rot: 0.5
-  min_vel_rot: 0.3
+  max_vel_trans: 0.7 # default: 0.5
+  min_vel_trans: 0.4 # default: 0.1
+  max_vel_rot: 0.7
+  min_vel_rot: 0.4
 
   # Goal Tolerance Parameters
   yaw_goal_tolerance: 0.2

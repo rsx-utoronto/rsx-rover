@@ -35,6 +35,15 @@
     <!-- Launch Velodyne lidar driver -->
     <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch"/>
 
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="collapse_pointcloud" output="screen" > 
+        <param name="max_height" value="0.75" />
+        <param name="min_height" value="-1.2" />
+        <param name="range_min" value="0.75" /> 
+        <param name="range_max" value="50.0" />
+        <remap from="cloud_in" to="velodyne_points"/>
+        <remap from="/scan" to="/scan_collapsed" />
+    </node>
+
     <!-- <arg name="param_file_name"     doc="name of param file, e.g. rover" />
     <arg name="param_file_dir"      doc="directory to look for $(arg param_file_name).yaml"
                             default="$(find ublox_gps)/config" /> -->
@@ -69,4 +78,6 @@
         </rosparam>
     </node>
     <node pkg="rover" type="gps_converter.py" name="gps_converter" output="screen" />
+    <node pkg="rover" type="convert_gps_to_utm.py" name="convert_utm" output="screen" />
+    <node pkg="rover" type="transform_utm_to_map.py" name="transform_utm_map" output="screen" />
 </launch>
