@@ -4,7 +4,7 @@ import rospy
 from sensor_msgs.msg import Joy
 from std_msgs.msg import String, UInt8
 from rover.msg import ArmInputs
-import arm_servo
+import arm_serial_connector as arm_serial
 #from rover.srv import Corrections
 
 '''
@@ -49,11 +49,27 @@ class Controller():
         # 1 -> 84 degrees
         self.servo               = 0
 
+        ## Atrribute to store on/off state of gripper motor
+        # state -> angle:
+        # 0 -> off
+        # 1 -> on
+        self.gripper             = 0
+
         ## Variables for ROS publishers and subscrives
-        self.joy_sub             = rospy.Subscriber("arm/joy", Joy, self.getROSJoy)
+        self.joy_sub             = rospy.Subscriber("joy", Joy, self.getROSJoy)
         self.state_pub           = rospy.Publisher("arm_state", String, queue_size=0)
         self.input_pub           = rospy.Publisher("arm_inputs", ArmInputs, queue_size=0)
         self.killswitch_pub      = rospy.Publisher('arm_killswitch', UInt8, queue_size=0)
+
+        ## Variables for serial connections
+        # Device Names
+        # arduino_name = "1a86_USB2.0-Ser_"
+        gripper_name = "STMicroelectronics_STM32_STLink_066DFF485671664867172828"
+
+        # Device Connections
+        # arduino_connection = arm_serial.Serial_Port(device_name= arduino_name)
+        self.gripper_connection = arm_serial.Serial_Port(device_name= gripper_name)
+        self.gripper_connection.open_device_port(baudrate= 4800)
 
         # # Printing state on the console and publishing it
         # print("State:", self.state)
@@ -72,7 +88,8 @@ class Controller():
         #         print("Servo going to 63 degrees configuration")
         self.rate = rospy.Rate(1000)
 
-        triggered = 0
+        servo_triggered     = 0
+        gripper_triggered   = [0, 0]
         publishInputs = False
         while not rospy.is_shutdown():
 
@@ -85,52 +102,82 @@ class Controller():
 
                 if (abs(self.values.l_horizontal) >= 0.05 or abs(self.values.l_vertical) >= 0.05 or 
                     abs(self.values.r_horizontal) >= 0.05 or abs(self.values.r_vertical) >= 0.05 or 
-                    self.values.l1 or self.values.r1 or self.values.l2 or self.values.r2 or 
+                    self.values.l1 or self.values.r1 or self.values.l2 or self.values.r2 or
                     self.values.x or self.values.o or self.values.triangle or self.values.share
-                    or self.values.options) or self.values.r3:
+                    or self.values.options or self.values.r3):
                     # self.input_pub.publish(self.values)
                     publishInputs = True
                 else:
                     publishInputs = False
             
-                # If square is pressed, flip the servo configuration
-                if self.servo and not triggered:
-
-                    # Open the Arduino port
-                    arm_servo.open_arduino_port()
-
-                    # If Arduino port is properly opened, flip servo configurations
-                    if arm_servo.arduino_port:
-
-                        arm_servo.write_servo_high_angle()
-                        print("Servo going to "+ arm_servo.angle_high + "degrees configuration")
-                        triggered = 1
-
-                        # Close the Arduino port since it was properly opened                    
-                        arm_servo.close_arduino_port()
-                    
-                    # Make sure self.servo and triggered are reversed
-                    else:
-                        self.servo = not self.servo
-
-                elif not self.servo and triggered:
-
-                    # Open the Arduino port
-                    arm_servo.open_arduino_port()
-
-                    # If Arduino port is properly opened, flip servo configurations
-                    if arm_servo.arduino_port:
-
-                        arm_servo.write_servo_low_angle()
-                        print("Servo going to "+ arm_servo.angle_low + "degrees configuration")
-                        triggered = 0
+                # # Check if the gripper motor is on
+                # if self.gripper:
                 
-                        # Close the Arduino port since it was properly opened                    
-                        arm_servo.close_arduino_port()
+                # # Check if the gripper is off, and if so, do we want it on
+                # elif not self.gripper:
                     
-                    # Make sure self.servo and triggered are reversed
-                    else:
-                        self.servo = not self.servo
+                    # # Check if we need to turn it on
+                    # if self.values.x == 1:
+                    
+                    #     gripper_connection.open_device_port(baudrate= 4800)
+
+                    #     # If port opened successfully, send the data, close the port and then flip gripper_triggered
+                    #     if gripper_connection.device_port:
+
+                    #         gripper_connection.send_bytes(data= '2') # Message '2' is for turning the motor on/off on the ST Link chip
+                    #         gripper_connection.close_device_port()
+                    #         gripper_triggered = not gripper_triggered
+                    
+                    # # Check if we are switching directions
+                    # if self.values.o == 1:
+
+                    #     gripper_connection.open_device_port(baudrate= 4800)
+
+                    #     # If port opened successfully, send the data and then close the port
+                    #     if gripper_connection.device_port:
+
+                    #         gripper_connection.send_bytes(data= '1') # Message '1' is for switching the motor spin direction on the ST Link chip
+                    #         gripper_connection.close_device_port()
+
+                    
+                # # If square is pressed, flip the servo configuration
+                # if self.servo and not servo_triggered:
+
+                #     # Open the Arduino port
+                #     arduino_connection.open_device_port()
+
+                #     # If Arduino port is properly opened, flip servo configurations
+                #     if arduino_connection.device_port:
+
+                #         arduino_connection.send_bytes(angle_high)
+                #         print("Servo going to "+ angle_high + "degrees configuration")
+                #         servo_triggered = 1
+
+                #         # Close the Arduino port since it was properly opened                    
+                #         arduino_connection.close_device_port()
+                    
+                #     # Make sure self.servo and servo_triggered are reversed
+                #     else:
+                #         self.servo = not self.servo
+
+                # elif not self.servo and servo_triggered:
+
+                #     # Open the Arduino port
+                #     arduino_connection.open_device_port()
+
+                #     # If Arduino port is properly opened, flip servo configurations
+                #     if arduino_connection.device_port:
+
+                #         arduino_connection.send_bytes(angle_low)
+                #         print("Servo going to "+ angle_low + "degrees configuration")
+                #         servo_triggered = 0
+                
+                #         # Close the Arduino port since it was properly opened                    
+                #         arduino_connection.close_device_port()
+                    
+                #     # Make sure self.servo and servo_triggered are reversed
+                #     else:
+                #         self.servo = not self.servo
                 
                 # Control rate sleep
                 self.rate.sleep()
@@ -213,10 +260,34 @@ class Controller():
 
             elif rawAxes[6] == -1:
                 self.state = "IK"
+        
+        if self.state != 'Idle':
+
+            # Check if we need to turn it on/off
+            if self.values.x == 1:
+
+                # If port opened successfully, send the data, close the port and then flip gripper_triggered
+                if self.gripper_connection.device_port.is_open:
+                    
+                    self.gripper_connection.send_bytes(data= '2') # Message '2' is for turning the motor on/off on the ST Link chip
+                    # gripper_connection.close_device_port()
+            
+            # Check if we are switching directions
+            if self.values.o == 1:
+
+                # If port opened successfully, send the data and then close the port
+                if self.gripper_connection.device_port.is_open:
+
+                    self.gripper_connection.send_bytes(data= '1') # Message '1' is for switching the motor spin direction on the ST Link chip
+                    # gripper_connection.close_device_port()
 
         # If square is pressed, flip the servo configuration
         if rawButtons[3] == 1:
             self.servo = not self.servo
+        
+        # # If X is pressed, flip the gripper state
+        # if rawButtons[0] == 1:
+        #     self.gripper = not self.gripper
 
         # If triangle is pressed, change IK state if in overall state is IK
         if rawButtons[2] == 1 and self.state == "IK":

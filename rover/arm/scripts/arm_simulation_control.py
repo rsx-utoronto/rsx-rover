@@ -79,6 +79,17 @@ def runNewJointState(jointPublisherData):
 def displayEndEffectorTransform(endEffectorPosition, referenceLink="base_link", quaternionAngles=None):
     '''
     Publishes a tf2 transform at the End Effector Position 
+
+    Parameters
+    ----------
+    endEffectorPosition
+        The [roll, pitch, yaw, [x, y, z]] position of the end effector
+    referenceLink
+        The link you want to display the end effector transform relative to.
+        By default is the "base_link" of the arm.
+    quaternionAngles
+        A list of 4 numbers that represent a frame in space using quaternions. 
+        Use to ignore endEffectorPosition paramter. By default is None.
     '''
     br = tf2_ros.TransformBroadcaster()
     t = geometry_msgs.msg.TransformStamped()
@@ -134,7 +145,7 @@ def getFrameTransform(referenceFrame: str, targetFrame: str):
     except Exception as ex:
         print(ex)
 
-def runNewJointState2(jointPublisherData, angles):
+def runNewDesiredJointState(jointPublisherData, angles):
     '''
     Publishes the newJointState header, stamp, name, and position in a continuous while loop. 
     '''
@@ -150,22 +161,7 @@ def runNewJointState2(jointPublisherData, angles):
     # positionArray = framePosition() # Display End Effector position with a transform
     # displayEndEffectorTransform(positionArray)
 
-def runNewJointState3(jointPublisherData, angles):
-    '''
-    Publishes the newJointState header, stamp, and name for the real arm values 
-    '''
-
-    # data to be published
-    newJointState = JointState()
-    newJointState.header = Header()
-    newJointState.header.stamp = rospy.Time.now()
-    newJointState.name = ["Real_Joint_1", "Real_Joint_2", "Real_Joint_3", "Real_Joint_4", "Real_Joint_5", 
-                          "Real_Joint_6", "Real_Joint_7", "Real_Joint_8", "Real_Joint_9"]
-    # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
-    newJointState.position = angles
-    jointPublisherData.publish(newJointState)  # send data to be published
-
-def runNewJointState3(jointPublisherData, angles):
+def runNewRealJointState(jointPublisherData, angles):
     '''
     Publishes the newJointState header, stamp, and name for the real arm values 
     '''
