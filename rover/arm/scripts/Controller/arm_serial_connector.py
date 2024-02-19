@@ -33,8 +33,8 @@ class Serial_Port:
         """
 
         # Specifying the command prompt to be run on terminal and running it
-        command_prompt  = ["bash", "/home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/find_usb.sh"]
-        process         = subprocess.run(command_prompt, capture_output= True)
+        command_prompt  = "/home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/find_usb.sh"
+        process         = subprocess.run(command_prompt, capture_output= True, shell= True)
 
         # Decoding the output from the command as a list of string
         ports           = process.stdout.decode().split(sep= "\n")
@@ -57,8 +57,8 @@ class Serial_Port:
             port_name = port.split(sep= " ")[0]
 
             # Set permissions to read and write the serial port
-            command_prompt  = ["bash", "sudo chmod 666 " + port_name]
-            process         = subprocess.run(command_prompt, capture_output= True)
+            command_prompt  = "sudo chmod 666 " + port_name
+            process         = subprocess.run(command_prompt, shell= True)
 
             #initializing serial port with baudrate 9600
             self.device_port = serial.Serial(port_name, baudrate)
