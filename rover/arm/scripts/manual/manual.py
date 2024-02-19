@@ -52,7 +52,7 @@ class Manual():
 
         ## Constant Speed limits, values are chosen by trial and error #TODO
         self.SPEED_LIMIT         = [-0.01, 0.009, 0.015, 0.075, 
-                                    0.03, 0.03, 1]
+                                    0.06, 0.03, 1]
 
         ## Variable for the status, start at idle
         self.status              = "Idle"
@@ -162,8 +162,8 @@ class Manual():
         
         speed_limit (list(float)): List containing tested out manually controlled speeds for each motor
         """
-        # Apply gripper correction due to wrist roll
-        curr_goal_pos[6] -= (joy_input[4] * speed_limit[4]) * 0.5
+        # # Apply gripper correction due to wrist roll
+        # curr_goal_pos[6] -= (joy_input[4] * speed_limit[4]) * 0.5
 
         # Set controller pos based on joint speed calculations/joypos
         return list(np.array(joy_input) * np.array(speed_limit) + np.array(curr_goal_pos))
