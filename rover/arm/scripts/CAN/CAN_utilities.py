@@ -56,8 +56,8 @@ CMD_API_ALT_ENC_POS     = 0x0A4
 CMD_API_PARAM_ACCESS    = 0x300
 
 # REDUCTION Ratios
-REDUCTION               = [120, 160, 120*2, 100, 20, 20, 40]
-WRIST_RATIO             = 2
+REDUCTION               = [160, 100, 100*2, 100, 120, 120, 1] # 7th Motor is a DC motor without a gearbox
+WRIST_RATIO             = 1
 
 ########## SHARED FUNCTIONS ##########
 
@@ -286,10 +286,10 @@ def calc_differential(roll : float, pitch : float) -> tuple:
     wrist_motor2 = roll * WRIST_RATIO - pitch
 
     # correction through the gripper motor to stop the gripper from opening and closing
-    gripper_correction = roll # rotate the nut in the opposite direction same amount (no gear ratios)
+    # gripper_correction = roll # rotate the nut in the opposite direction same amount (no gear ratios)
 
     #print(roll_motor1, roll_motor2)
-    return wrist_motor1, wrist_motor2, gripper_correction
+    return wrist_motor1, wrist_motor2 # gripper_correction
 
 
 def generate_data_packet(data_list : list) -> list:
@@ -307,7 +307,8 @@ def generate_data_packet(data_list : list) -> list:
     # Angle conversion for differential system
     # Assuming the last two angles specify the angle of the differential system,
     # convert those two values to the required angles for motors 5 and 6
-    wrist_motor1, wrist_motor2, gripper_correction = calc_differential(data_list[-3], data_list[-2])
+    # wrist_motor1, wrist_motor2, gripper_correction = calc_differential(data_list[-3], data_list[-2])
+    wrist_motor1, wrist_motor2 = calc_differential(data_list[-3], data_list[-2])
     
     # Sparkmax Data list
     spark_data = []
@@ -328,7 +329,7 @@ def generate_data_packet(data_list : list) -> list:
              #print(angle)
         # For any other motor
         else:
-             angle = data_list[i]
+            angle = data_list[i]
 
         # Converting the angle to spark data
         angle = angle/360 * REDUCTION[i]

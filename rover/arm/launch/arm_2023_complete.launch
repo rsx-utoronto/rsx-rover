@@ -1,6 +1,6 @@
 <launch>
 
-   <node name="Arm_Controller" pkg="rover" type="arm_controller.py" output="screen"/>
+   <!--node name="Arm_Controller" pkg="rover" type="arm_controller.py" output="screen"/-->
 
    <node name="Arm_Manual" pkg="rover" type="manual.py" output="screen"/>
 
