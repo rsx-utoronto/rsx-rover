@@ -7,7 +7,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /RobotModel1
-        - /TF1
+        - /RobotModel1/Links1
         - /TF1/Frames1
         - /Image1
       Splitter Ratio: 0.4676470458507538
@@ -60,7 +60,7 @@ Visualization Manager:
       Collision Enabled: false
       Enabled: true
       Links:
-        All Links Enabled: true
+        All Links Enabled: false
         Camera_link:
           Alpha: 1
           Show Axes: false
@@ -119,57 +119,57 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         Real_Link_1:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         Real_Link_2:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         Real_Link_3:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         Real_Link_4:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         Real_Link_5:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         Real_Link_6:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         Real_Link_7:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         Real_Link_8:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         Real_Link_9:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         base_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -184,7 +184,7 @@ Visualization Manager:
       Frames:
         All Enabled: false
         Camera_link:
-          Value: true
+          Value: false
         Link_1:
           Value: false
         Link_2:
@@ -319,9 +319,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.37020349502563477
+      Pitch: 0.2752035856246948
       Target Frame: <Fixed Frame>
-      Yaw: 6.183579444885254
+      Yaw: 5.893576145172119
     Saved:
       - Class: rviz/Orbit
         Distance: 1.0940089225769043
@@ -361,5 +361,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 252
-  Y: 27
+  X: 502
+  Y: 56

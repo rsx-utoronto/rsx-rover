@@ -230,7 +230,7 @@ class IKMode(ScriptState):
                                         prevTargetTransform)
             
             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-            targetAngles = self.continousInvTan(targetAngles, curArmAngles)
+            # targetAngles = self.continousInvTan(targetAngles, curArmAngles)
             targetAngles[1] = targetAngles[1] - pi/2 # raises zero position of shoulder (shoulder is pointing up)
 
             maxIterations = 10
@@ -246,7 +246,7 @@ class IKMode(ScriptState):
                 targetEEPos = self.controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
                                         prevTargetTransform)
                 targetAngles = ik.inverseKinematics(dhTable, targetEEPos)
-                targetAngles = self.continousInvTan(targetAngles, curArmAngles)
+                # targetAngles = self.continousInvTan(targetAngles, curArmAngles)
 
             movementSpeed = originalSpeed
 
@@ -777,11 +777,12 @@ class InverseKinematicsNode():
 
         adjustedAngles[0] = -adjustedAngles[0]
         adjustedAngles[1] = -adjustedAngles[1]
-        # adjustedAngles[2] - -adjustedAngles[2]
-        adjustedAngles[5] = -adjustedAngles[5]
+        adjustedAngles[2] = -adjustedAngles[2]
+        adjustedAngles[4] = adjustedAngles[4]
+        adjustedAngles[5] = adjustedAngles[5]
 
         temp = adjustedAngles[5]
-        adjustedAngles[5] = -adjustedAngles[4]
+        adjustedAngles[5] = adjustedAngles[4]
         adjustedAngles[4] = temp
 
         ikAngles.data = adjustedAngles
@@ -861,7 +862,7 @@ class InverseKinematicsNode():
         global isMovementNormalized
         global curArmAngles
 
-        buttonsPressed = [data.x, data.o, data.triangle, 0, data.l1, data.r1, data.l2, data.r2, data.share, data.options, 0, 0, 0, 0, 0, 0, 0]
+        buttonsPressed = [0, 0, data.triangle, 0, data.l1, data.r1, data.l2, data.r2, data.share, data.options, 0, 0, 0, 0, 0, 0, 0]
         # isButtonPressed = {"X": data.x, "CIRCLE": data.o, "TRIANGLE": data.triagle, 
         #                         "SQUARE": 0, "L1": data.l1, "R1": data.r1, "L2": data.l2, 
         #                         "R2": data.r2, "SHARE": data.share, "OPTIONS": data.options, 
