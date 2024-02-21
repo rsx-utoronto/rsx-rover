@@ -777,7 +777,7 @@ class InverseKinematicsNode():
             adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
 
         adjustedAngles[0] = -adjustedAngles[0]
-        adjustedAngles[1] = -adjustedAngles[1]
+        adjustedAngles[1] = adjustedAngles[1]
         adjustedAngles[2] = -adjustedAngles[2]
         adjustedAngles[4] = adjustedAngles[4]
         adjustedAngles[5] = adjustedAngles[5]
@@ -808,12 +808,13 @@ class InverseKinematicsNode():
             tempList[i] = np.deg2rad(tempList[i])
 
         tempList[0] = -tempList[0]
-        tempList[1] = -tempList[1]
+        # tempList[1] = -tempList[1]
+        tempList[2] = -tempList[2]
         temp = tempList[5]
         tempList[5] = -tempList[4]
-        tempList[4] = -temp
+        tempList[4] = temp
         # tempList[5] = -tempList[5]
-        tempList[6] = tempList[6]
+        # tempList[6] = tempList[6]
         tempAngles = copy.deepcopy(list(np.subtract(np.array(tempList),np.array(savedCanAngles))))
         liveArmAngles = tempAngles
 

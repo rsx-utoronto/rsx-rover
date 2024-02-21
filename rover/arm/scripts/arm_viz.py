@@ -278,7 +278,7 @@ class ArmVisualizationNode():
 
         # undo sign inversion for motors 
         tempAngles[0] = -tempAngles[0]
-        tempAngles[1] = -tempAngles[1]
+        tempAngles[1] = tempAngles[1]
         tempAngles[5] = tempAngles[5]
 
         if self.gazebo_on:
@@ -302,7 +302,7 @@ class ArmVisualizationNode():
         tempList = list(deg2rad(list(data.data)))
 
         tempList[0] = -tempList[0]
-        tempList[1] = -tempList[1]
+        tempList[1] = tempList[1]
         temp = tempList[5]
         tempList[5] = tempList[4]
         tempList[4] = temp
