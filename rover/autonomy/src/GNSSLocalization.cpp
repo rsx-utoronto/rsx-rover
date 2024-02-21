@@ -12,14 +12,18 @@ typedef struct localCoord {
 } localCoord;
 
 class GNSSLocalization {
+private:
+    double ENx;
+    double ENy;
 public:
     double baseLat;
     double baseLon;
+    double frameBearing;
     double curLat;
     double curLon;
     double localx;
     double localy;
-    GNSSLocalization(double lat, double lon);
+    GNSSLocalization(double lat, double lon, double bearing);
     GNSSLocalization();
     localCoord getGNSSLocalization(double lat, double lon);
     void GNSSLocalizationProcess(double lat, double lon);
@@ -28,12 +32,14 @@ public:
     double getDistance();
     double getBearing();
     void setBase(double lat, double lon);
+    void setBearing(double bearing);
     // double getBearing(double lat, double lon);
 };
 
-GNSSLocalization::GNSSLocalization(double lat, double lon) {
+GNSSLocalization::GNSSLocalization(double lat, double lon, double bearing) {
     baseLat = lat;
     baseLon = lon;
+    frameBearing = bearing * M_PI / 180.0;
 }
 
 GNSSLocalization::GNSSLocalization() {
@@ -45,8 +51,10 @@ void GNSSLocalization::GNSSLocalizationProcess(double lat, double lon) {
     curLat = lat;
     curLon = lon;
     double phim = (lat + baseLat) / 2 * M_PI / 180.0;
-    localy = (lat - baseLat) * (111.13209 - 0.56605 * cos(2 * phim) + 0.00120 * cos(4 * phim));
-    localx = (lon - baseLon) * (111.41513 * cos(phim) - 0.09455 * cos(3 * phim) + 0.00012 * cos(5 * phim));
+    ENy = (lat - baseLat) * (111.13209 - 0.56605 * cos(2 * phim) + 0.00120 * cos(4 * phim)) * 1000;
+    ENx = (lon - baseLon) * (111.41513 * cos(phim) - 0.09455 * cos(3 * phim) + 0.00012 * cos(5 * phim)) * 1000;
+    localy = ENy * cos(frameBearing) + ENx * sin(frameBearing);
+    localx = ENx * cos(frameBearing) - ENy * sin(frameBearing);
 }
 
 localCoord GNSSLocalization::getGNSSLocalization(double lat, double lon) {
@@ -54,8 +62,10 @@ localCoord GNSSLocalization::getGNSSLocalization(double lat, double lon) {
     curLon = lon;
     localCoord coord;
     double phim = (lat + baseLat) / 2 * M_PI / 180.0;
-    coord.y = (lat - baseLat) * (111.13209 - 0.56605 * cos(2 * phim) + 0.00120 * cos(4 * phim));
-    coord.x = (lon - baseLon) * (111.41513 * cos(phim) - 0.09455 * cos(3 * phim) + 0.00012 * cos(5 * phim));
+    ENy = (lat - baseLat) * (111.13209 - 0.56605 * cos(2 * phim) + 0.00120 * cos(4 * phim)) * 1000;
+    ENx = (lon - baseLon) * (111.41513 * cos(phim) - 0.09455 * cos(3 * phim) + 0.00012 * cos(5 * phim)) * 1000;
+    coord.y = ENy * cos(frameBearing) + ENx * sin(frameBearing);
+    coord.x = ENx * cos(frameBearing) - ENy * sin(frameBearing);
     localx = coord.x;
     localy = coord.y;
     return coord;
@@ -76,6 +86,10 @@ double GNSSLocalization::getDistance() {
 void GNSSLocalization::setBase(double lat, double lon) {
     baseLat = lat;
     baseLon = lon;
+}
+
+void GNSSLocalization::setBearing(double bearing) {
+    frameBearing = bearing * M_PI / 180.0;
 }
 
 GNSSLocalization gnss = GNSSLocalization();
