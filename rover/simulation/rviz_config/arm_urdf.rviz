@@ -6,8 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /RobotModel1
         - /RobotModel1/Links1
+        - /TF1
         - /TF1/Frames1
         - /Image1
       Splitter Ratio: 0.4676470458507538
@@ -60,116 +60,116 @@ Visualization Manager:
       Collision Enabled: false
       Enabled: true
       Links:
-        All Links Enabled: false
-        Camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
+        All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        Link_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Link_9:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        Real_Camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: false
-        Real_Link_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: false
-        Real_Link_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: false
-        Real_Link_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: false
-        Real_Link_4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: false
-        Real_Link_5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: false
-        Real_Link_6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: false
-        Real_Link_7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: false
-        Real_Link_8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: false
-        Real_Link_9:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: false
         base_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: false
+          Value: true
+        camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_6:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_7:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_8:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_9:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        real_camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        real_link_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        real_link_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        real_link_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        real_link_4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        real_link_5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        real_link_6:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        real_link_7:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        real_link_8:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        real_link_9:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -183,47 +183,47 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        Camera_link:
-          Value: false
-        Link_1:
-          Value: false
-        Link_2:
-          Value: false
-        Link_3:
-          Value: false
-        Link_4:
-          Value: false
-        Link_5:
-          Value: false
-        Link_6:
-          Value: false
-        Link_7:
-          Value: false
-        Link_8:
-          Value: false
-        Link_9:
-          Value: false
-        Real_Camera_link:
-          Value: false
-        Real_Link_1:
-          Value: false
-        Real_Link_2:
-          Value: false
-        Real_Link_3:
-          Value: false
-        Real_Link_4:
-          Value: false
-        Real_Link_5:
-          Value: false
-        Real_Link_6:
-          Value: false
-        Real_Link_7:
-          Value: false
-        Real_Link_8:
-          Value: false
-        Real_Link_9:
-          Value: false
         base_link:
+          Value: false
+        camera_link:
+          Value: false
+        link_1:
+          Value: false
+        link_2:
+          Value: false
+        link_3:
+          Value: false
+        link_4:
+          Value: false
+        link_5:
+          Value: false
+        link_6:
+          Value: false
+        link_7:
+          Value: false
+        link_8:
+          Value: false
+        link_9:
+          Value: false
+        real_camera_link:
+          Value: false
+        real_link_1:
+          Value: false
+        real_link_2:
+          Value: false
+        real_link_3:
+          Value: false
+        real_link_4:
+          Value: false
+        real_link_5:
+          Value: false
+        real_link_6:
+          Value: false
+        real_link_7:
+          Value: false
+        real_link_8:
+          Value: false
+        real_link_9:
           Value: false
       Marker Alpha: 1
       Marker Scale: 0.5
@@ -233,34 +233,34 @@ Visualization Manager:
       Show Names: true
       Tree:
         base_link:
-          Link_1:
-            Link_2:
-              Link_3:
-                Link_4:
-                  Link_5:
-                    Camera_link:
+          link_1:
+            link_2:
+              link_3:
+                link_4:
+                  link_5:
+                    link_6:
+                      camera_link:
+                        {}
+                      link_7:
+                        {}
+                      link_9:
+                        {}
+                    link_8:
                       {}
-                    Link_6:
-                      Link_7:
+          real_link_1:
+            real_link_2:
+              real_link_3:
+                real_link_4:
+                  real_link_5:
+                    real_link_6:
+                      real_camera_link:
                         {}
-                      Link_8:
+                      real_link_7:
                         {}
-                      Link_9:
+                      real_link_9:
                         {}
-          Real_Link_1:
-            Real_Link_2:
-              Real_Link_3:
-                Real_Link_4:
-                  Real_Link_5:
-                    Real_Camera_link:
+                    real_link_8:
                       {}
-                    Real_Link_6:
-                      Real_Link_7:
-                        {}
-                      Real_Link_8:
-                        {}
-                      Real_Link_9:
-                        {}
       Update Interval: 0
       Value: true
     - Class: rviz/Image
@@ -319,9 +319,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.2752035856246948
+      Pitch: 0.36020350456237793
       Target Frame: <Fixed Frame>
-      Yaw: 5.893576145172119
+      Yaw: 5.518572807312012
     Saved:
       - Class: rviz/Orbit
         Distance: 1.0940089225769043
@@ -362,4 +362,4 @@ Window Geometry:
     collapsed: false
   Width: 1200
   X: 502
-  Y: 56
+  Y: 27

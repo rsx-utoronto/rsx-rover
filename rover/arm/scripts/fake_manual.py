@@ -64,7 +64,7 @@ class FakeManualNode():
             # tempList[1] = -tempList[1]
             # tempList[4] = -tempList[4]
             self.armAngles = tempList
-
+            print(tempList)
             anglesToPublish = Float32MultiArray()
             anglesToPublish.data = self.armAngles
             self.realJointPublisher.publish(anglesToPublish)

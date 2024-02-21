@@ -133,6 +133,7 @@ class IKMode(ScriptState):
         global goToPosValues
         
         ikNode.publishNewAngles(curArmAngles)
+        
 
         self.updateDesiredEETransformation(prevTargetValues)
 
