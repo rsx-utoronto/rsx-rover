@@ -46,7 +46,7 @@ In addition you may want to edit the `goToPosition()` and `savePosition()` in ar
 cd ~/rover_ws
 catkin_make
 source devel/setup.bash
-roslaunch rover arm_2023_rviz.launch ik_on:=true
+roslaunch rover arm_rviz.launch ik_on:=true
 ```
 
 ### Gazebo Prereqs
@@ -63,8 +63,47 @@ catkin_make
 ```
 
 ### For use in Gazebo
+The arm in gazebo comes with a 3D camera preattached to the fifth link of the arm. All you have to do to view the
+output of the 3D camera is add a PointCloud2D to rivz and then select the topic.
+
 ```
 cd ~/rover_ws
 source devel/setup.bash
-roslaunch rover arm_2023_gazebo.launch ik_on:=true
+roslaunch rover arm_gazebo.launch ik_on:=true
+```
+
+## Using Inverse Kinematics
+
+There are three ways to move the arm using the inverse kinematics node:
+  1. Sending Coodinates for the end effector target
+  2. Using a controller
+  3. Using the keyboard
+
+The following will outline how you can use each.
+
+### Sending Coordiantes
+
+In the future this functionality will go to path planning but for now it is in IK. You can give IK
+an end effector position by publishing a Float32List to the ik_targets topic. The ik_targets topic
+requires 7 element list in the following format [x, y, z, roll, pitch, yaw, gripperPos]. 
+
+### Controller Control
+Follow the [joy]([url](https://wiki.ros.org/joy/Tutorials/ConfiguringALinuxJoystick)) package tutorial and configure you joystick to work with ROS.
+```
+# run the joy_node stuff
+rosrun rover arm_controller.py # launch the arm_controllernode
+roslauch rover arm_rviz.launch # or use gazebo
+```
+
+Controls:
+- Left joystick and both bumpers control [x,y, z]
+- Right joystick upper bumpers control [roll, pitch, yaw]
+- X and O controller gripper
+
+### Keyboard Control
+The keyboard controller mimics a controller inputs using your keyboard. I recommend opening the 
+arm_keyboard_controller.py file to see what each keyboard button mimics.
+```
+rosrun rover arm_keyboard_controller.py
+roslaunch rover arm_rviz.launch # or use gazebo
 ```
