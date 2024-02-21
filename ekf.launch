@@ -1,0 +1,79 @@
+<launch>
+   <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" respawn="false" >
+    <param name="fixed_frame" value="/odom/enu" />
+    <param name="use_mag" value="false" />
+    <param name="world_frame" value="ned" />
+    <param name="remove_gravity_vector" value="true" />
+    <remap from="imu/data_raw" to="/imu" />
+    <remap from="imu/data" to="/imu/orient" />
+  </node>
+
+  <!-- robot_localization EKF node for the odom frame -->
+  <node pkg="robot_localization" type="ekf_localization_node" name="ekf_odom_node" output="screen">
+    <param name="frequency" value="20." />  
+    <param name="sensor_timeout" value="0.2" />  
+    <param name="two_d_mode" value="true" />
+    <param name="print_diagnostics" value="true" />
+    <param name="publish_tf" value="true" />
+    <!-- <param name="map_frame" value="map" /> -->
+    <param name="odom_frame" value="odom" />
+    <param name="base_link_frame" value="base_link" />
+    <param name="world_frame" value="odom" />
+    <remap from="odometry/filtered" to="/odom/ekf" />
+    <param name="imu0" value="/imu/orient" />
+    <param name="imu0_differential" value="false"/>
+    <param name="imu0_relative" value="false"/>
+    <param name="imu0_queue_size" value="10" />
+    <param name="imu0_remove_gravitational_acceleration" value="false" />
+    <rosparam param="imu0_config">[  false, false, false, 
+                                     false, false, false,
+                                     false, false, false, 
+                                     true, true, true,
+                                     true, true, true]</rosparam>
+    <param name="odom0" value="/stereo_odometry" />
+    <param name="odom0_differential" value="false"/>
+    <param name="odom0_relative" value="false"/>
+    <param name="odom0_queue_size" value="10" />
+    <rosparam param="odom0_config">[ false, false, false, 
+                                     true, true, true,
+                                     true, true, true, 
+                                     false, false, false,
+                                     false, false, false]</rosparam>
+  </node>
+
+  <!-- the config matrices have the following format 
+        [ X, Y, Z,
+          roll, pitch, yaw,
+          X', Y', Z',
+          roll', pitch', yaw',
+          X'', Y'', Z'' ]
+  -->
+
+  <!--<node pkg="robot_localization" type="navsat_transform_node" name="navsat_transform_node" respawn="true">
+
+    <param name="magnetic_declination_radians" value="0"/>
+
+    <param name="yaw_offset" value="0"/>
+
+    <remap from="/imu/data" to="/imu" />
+    <remap from="/gps/fix" to="/navsat/fix" />
+    <remap from="/odometry/filtered" to="/odom/ekf/enc_imu" />
+
+  </node>
+  
+  <node pkg="robot_localization" type="navsat_transform_node" name="random" respawn="true">
+	  <rosparam param="odomN_config">[true,  true,  false,
+                                    false, false, false,
+                                    false, false, false,
+                                    false, false, false,
+                                    false, false, false]</rosparam>
+	  <param name="odomN_differential" value="false"/>
+  </node>
+
+  <node pkg="sensor_msgs" type="NavSatFix" name="navsat" respawn="true">
+    <param name="port" value="/dev/ttyUSB0"/>
+    <param name="baud" value="19200"/>
+  </node>
+  -->
+
+</launch>
