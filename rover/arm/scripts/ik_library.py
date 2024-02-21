@@ -12,6 +12,7 @@ class CannotReachTransform(Exception):
         self.message = message
         super().__init__(self.message)
 
+
 # IK Code
 
 def createRotationMatrix(roll: float, pitch: float, yaw: float, order: str = "ypr"):
@@ -239,12 +240,12 @@ def createDHTable(jointAngles):
     '''
 
     # units in mm [r, al]
-    DHTable = np.array([[0, math.pi/2, 103, jointAngles[0]],
+    DHTable = np.array([[0, math.pi/2, 95, jointAngles[0]],
                         [360, 0, 0, jointAngles[1]],
-                        [68.5, math.pi/2, 0, jointAngles[2]],
-                        [0, -math.pi/2, 320.928, jointAngles[3]],
+                        [100, math.pi/2, 0, jointAngles[2]],
+                        [0, -math.pi/2, 340, jointAngles[3]],
                         [0, math.pi/2, 0, jointAngles[4]],
-                        [0, 0, 220.5, jointAngles[5]]]) #253.125
+                        [0, 0, 230, jointAngles[5]]]) #253.125
     
     # DHTable = np.array([[0, math.pi/2, 75, jointAngles[0]],
     #                     [375, 0, 0, jointAngles[1]],
