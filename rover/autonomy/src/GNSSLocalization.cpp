@@ -101,7 +101,7 @@ void chatterCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
 }
 
 int main(int argc, char **argv) {
-    gnss.setBase(37.7749, -122.4194);
+    gnss.setBase(37.7749, -122.4194, 0);
     ros::init(argc, argv, "GNSSLocalization");
     ros::NodeHandle n;
     ros::Subscriber sub = n.subscribe("ublox_gps", 1000, chatterCallback);
