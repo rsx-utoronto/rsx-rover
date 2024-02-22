@@ -1,29 +1,109 @@
 # Arm Code
 
-## Inverse Kinematics
+## CAN Setup
+
+To enable the CAN network, open a terminal and go the location of cloned repository
 
 ### Terminal 1
+```
+cd ~/rover-ws/src/rsx-rover/rover/arm/scripts/
+./setup_can.bash
+(Enter the password for your system)
+```
+
+### Terminal 2
+To read CAN messages on the bus, type the following on terminal:
+```
+candump can0
+```
+
+### Terminal 3 (for debugging)
+If the above command does not work, try sending a singular CAN packet on another terminal:
+```
+cansend can0 02050C80#FFFFFFFFFFFFFFFF
+```
+This is the message I usually prefer checking the candump with. If can connection is good, you should see the above message pop up in candump terminal
+
+Once CAN network is enabled and you can see candump, go back to Terminal 1 again and type:
+### Terminal 1
+```
+python3 arm_master_can.py
+```
+
+## Inverse Kinematics
+
+### Running for the First Time
 
 ```
 cd ~/rover_ws # or whatever you named the ros workspace 
 chmod +x src/rsx-rover/rover/arm/scripts/arm_master_control.py # makes file executable, only need to run the first time
-rosocre
 ```
 
-### Terminal 2
+In addition you may want to edit the `goToPosition()` and `savePosition()` in arm_master_control.py to specify the whole path of arm_positions.json.
 
-Actual Inverse Kinematics
+### For use with Real Arm
+``` 
+cd ~/rover_ws
+catkin_make
+source devel/setup.bash
+roslaunch rover arm_rviz.launch ik_on:=true
+```
+
+### Gazebo Prereqs
+
+This is only needed to allow the griper to pickup objects in gazebo. I used a [plugin](https://github.com/JenniferBuehler/gazebo-pkgs) by Jennifer Buehler to allow the end-effector pick up stuff. Run the following commands to install the plugin (I lifted them from the github)
+
+```
+sudo apt install ros-noetic-gazebo-ros ros-noetic-eigen-conversions ros-noetic-object-recognition-msgs ros-noetic-roslint
+cd ~/rover_ws/src # or whatever workspace you put the rover workspace in
+git clone https://github.com/JenniferBuehler/general-message-pkgs.git
+git clone https://github.com/JenniferBuehler/gazebo-pkgs.git
+cd ..
+catkin_make
+```
+
+### For use in Gazebo
+The arm in gazebo comes with a 3D camera preattached to the fifth link of the arm. All you have to do to view the
+output of the 3D camera is add a PointCloud2D to rivz and then select the topic.
+
 ```
 cd ~/rover_ws
 source devel/setup.bash
-rosrun rover arm_master_control.py
+roslaunch rover arm_gazebo.launch ik_on:=true
 ```
 
-### Terminal 3
+## Using Inverse Kinematics
 
-The RViz simulation
+There are three ways to move the arm using the inverse kinematics node:
+  1. Sending Coodinates for the end effector target
+  2. Using a controller
+  3. Using the keyboard
+
+The following will outline how you can use each.
+
+### Sending Coordiantes
+
+In the future this functionality will go to path planning but for now it is in IK. You can give IK
+an end effector position by publishing a Float32List to the ik_targets topic. The ik_targets topic
+requires 7 element list in the following format [x, y, z, roll, pitch, yaw, gripperPos]. 
+
+### Controller Control
+Follow the [joy]([url](https://wiki.ros.org/joy/Tutorials/ConfiguringALinuxJoystick)) package tutorial and configure you joystick to work with ROS.
 ```
-cd ~/rover_ws
-source devel/setup.bash
-roslaunch rover arm_2023_rviz.laucnh
+# run the joy_node stuff
+rosrun rover arm_controller.py # launch the arm_controllernode
+roslauch rover arm_rviz.launch # or use gazebo
+```
+
+Controls:
+- Left joystick and both bumpers control [x,y, z]
+- Right joystick upper bumpers control [roll, pitch, yaw]
+- X and O controller gripper
+
+### Keyboard Control
+The keyboard controller mimics a controller inputs using your keyboard. I recommend opening the 
+arm_keyboard_controller.py file to see what each keyboard button mimics.
+```
+rosrun rover arm_keyboard_controller.py
+roslaunch rover arm_rviz.launch # or use gazebo
 ```

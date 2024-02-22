@@ -77,7 +77,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://rover/simulation/meshes/rover_meshes/rocker_1.STL" />
+          filename="package://rover/rover/simulation/meshes/rover_meshes/rocker_1.STL" />
       </geometry>
     </collision>
   </link>
@@ -541,7 +541,7 @@
   <link name="lidar_link">
     <inertial>
       <mass value="0.425"/>
-      <origin xyz="0 0 0.03675" rpy="0 0 0" />
+      <origin xyz="0 0 0.03675" rpy="0 0 3.14" />
       <inertia ixx="0.000308429" ixy="0" ixz="0"
                 iyy="0.000308429" iyz="0" izz="0.00034589"/>
     </inertial>
@@ -677,7 +677,7 @@
 <gazebo reference="lidar_link">
     <sensor type="gpu_ray" name="os1_lidar">
       <pose>0 0 0 0 0 0</pose>
-          <visualize>true</visualize>
+          <visualize>false</visualize>
           <update_rate>10</update_rate>
           <ray>
             <scan>
@@ -688,7 +688,7 @@
                 <max_angle>3.141529</max_angle>
               </horizontal>
               <vertical>
-                <samples>64</samples>
+                <samples>2</samples>
                 <resolution>1</resolution>
                 <min_angle>-3.141529</min_angle>
                 <max_angle>-3.141529</max_angle>
@@ -702,7 +702,7 @@
           </ray>
       <plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_gpu_laser.so">
         <topicName>/rrbot/laser/scan</topicName>
-        <frameName>hokuyo_link</frameName>
+        <frameName>base_link</frameName>
       </plugin>
     </sensor>
 </gazebo>
