@@ -92,13 +92,14 @@ Follow the [joy]([url](https://wiki.ros.org/joy/Tutorials/ConfiguringALinuxJoyst
 ```
 # run the joy_node stuff
 rosrun rover arm_controller.py # launch the arm_controllernode
-roslauch rover arm_rviz.launch # or use gazebo
+roslauch rover arm_rviz.launch ik_on:=true # or use gazebo
 ```
 
 Controls:
 - Left joystick and both bumpers control [x,y, z]
 - Right joystick upper bumpers control [roll, pitch, yaw]
 - X and O controller gripper
+- Press Triangle to change IK modes
 
 ### Keyboard Control
 The keyboard controller mimics a controller inputs using your keyboard. I recommend opening the 
