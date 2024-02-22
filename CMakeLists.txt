@@ -17,6 +17,11 @@ find_package(catkin REQUIRED COMPONENTS
   message_filters
 )
 
+
+find_package(GTSAM REQUIRED)
+
+include_directories(${GTSAM_INCLUDE_DIR})
+
 find_package(PCL 1.2 REQUIRED)
 
 # Variables set by the pcl config.cmake.in file
