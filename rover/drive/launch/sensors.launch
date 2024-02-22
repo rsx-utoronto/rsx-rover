@@ -14,9 +14,11 @@
     <!-- <node pkg = "rover" name="imu_quaternion_fix" type="imu_quaternion_fix.py" output="screen"/> -->
 
     <!-- Launch Realsense driver -->
+
     <include file="$(find rover)/rover/drive/launch/realsense.launch" >
 
     </include>
+
 
     <!-- Launch Velodyne lidar driver -->
     <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch"/>
