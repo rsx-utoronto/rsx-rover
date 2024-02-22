@@ -6,15 +6,19 @@
         <remap from="tf" to="tf_ekf"/>
     </node> 
     <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster" args="-0.2 0 0.6 0 0 0 1 base_link gps_link 100"/>
-    <node pkg="tf" type="static_transform_publisher" name="camera_broadcaster" args="-0.2 0 0.8 0 0 0 1 base_link camera_link 100" />
-    <node pkg="tf" type="static_transform_publisher" name="zed_broadcaster" args="-0.2 0 0.8 0 0 0 1 base_link zed2_base_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="camera_broadcaster" args="-0.2 0 0.8 -1.57 0 0 base_link camera_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="zed_broadcaster" args="-0.2 0 0.8 -1.57 0 0 base_link zed2_base_link 100" />
 
     <!-- Launch GPS and IMU drivers-->
     <include file="$(find inertial_sense_ros)/launch/test.launch"/>
     <!-- <node pkg = "rover" name="imu_quaternion_fix" type="imu_quaternion_fix.py" output="screen"/> -->
 
     <!-- Launch Realsense driver -->
-    <include file="$(find rover)/rover/drive/launch/realsense.launch" />
+
+    <include file="$(find rover)/rover/drive/launch/realsense.launch" >
+
+    </include>
+
 
     <!-- Launch Velodyne lidar driver -->
     <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch"/>
