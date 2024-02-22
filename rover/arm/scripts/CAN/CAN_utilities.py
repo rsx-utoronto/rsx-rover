@@ -56,7 +56,7 @@ CMD_API_ALT_ENC_POS     = 0x0A4
 CMD_API_PARAM_ACCESS    = 0x300
 
 # REDUCTION Ratios
-REDUCTION               = [160, 100, 100*2, 100, 120, 120, 1] # 7th Motor is a DC motor without a gearbox
+REDUCTION               = [160, 100, 100*2, 100, 120, 120] # 7th Motor is a DC motor without a gearbox
 WRIST_RATIO             = 1
 
 ########## SHARED FUNCTIONS ##########
@@ -323,10 +323,6 @@ def generate_data_packet(data_list : list) -> list:
         elif i + 1 == 6:
              angle = wrist_motor2
 
-        # Specific angle for gripper
-        elif i + 1 == 7:
-             angle = data_list[i] #+ gripper_correction
-             #print(angle)
         # For any other motor
         else:
             angle = data_list[i]
