@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import rospy
 from sensor_msgs.msg import Imu
 
@@ -12,6 +13,8 @@ class ImuDataToENU:
 
     def imu_callback(self, data):
         transformed = Imu()
+        transformed.header.stamp = data.header.stamp
+        transformed.header.frame_id = 'base_link'
         transformed.linear_acceleration.x = data.linear_acceleration.x
         transformed.linear_acceleration.y = data.linear_acceleration.z
         transformed.linear_acceleration.z = -data.linear_acceleration.y

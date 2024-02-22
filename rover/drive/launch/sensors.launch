@@ -6,30 +6,16 @@
         <remap from="tf" to="tf_ekf"/>
     </node> 
     <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster" args="-0.2 0 0.6 0 0 0 1 base_link gps_link 100"/>
-    <node pkg="tf" type="static_transform_publisher" name="camera_broadcaster" args="-0.2 0 0.8 0 0 0 1 base_link camera_link 100" />
-    <node pkg="tf" type="static_transform_publisher" name="zed_broadcaster" args="-0.2 0 0.8 0 0 0 1 base_link zed2_base_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="camera_broadcaster" args="-0.2 0 0.8 -1.57 0 0 base_link camera_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="zed_broadcaster" args="-0.2 0 0.8 -1.57 0 0 base_link zed2_base_link 100" />
 
     <!-- Launch GPS and IMU drivers-->
     <include file="$(find inertial_sense_ros)/launch/test.launch"/>
     <!-- <node pkg = "rover" name="imu_quaternion_fix" type="imu_quaternion_fix.py" output="screen"/> -->
 
     <!-- Launch Realsense driver -->
-    <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
-        <arg name="enable_infra"  value="true"/>
-        <arg name="enable_infra1"  value="true"/>
-        <arg name="enable_infra2"  value="true"/>
-        <arg name="depth_width"   value="640"/>
-        <arg name="depth_height"  value="480"/> 
-        <arg name="depth_fps"    value="15"/>     
-        <arg name="infra_width"   value="640"/>
-        <arg name="infra_height"  value="480"/>
-        <arg name="infra_fps"    value="15"/>
-        <arg name="infra_rgb"   value="false"/>
-        <arg name="enable_sync" value="true"/>
-        <arg name="align_depth" value="true"/>
-        <arg name="enable_accel" value="true"/>
-        <arg name="enable_gyro"  value="true"/>
-        <arg name="unite_imu_method" value="true"/> 
+    <include file="$(find rover)/rover/drive/launch/realsense.launch" >
+
     </include>
 
     <!-- Launch Velodyne lidar driver -->

@@ -1,18 +1,21 @@
 <launch>
+   
    <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" >
     <param name="publish_tf" value="false" />
     <param name="use_mag" value="false" />
     <param name="world_frame" value="enu" />
-    <param name="remove_gravity_vector" value="true" />
+    <!-- <param name="remove_gravity_vector" value="false" /> -->
     <remap from="imu/data_raw" to="/imu/enu" />
     <remap from="imu/data" to="/imu/orient" />
   </node>
+  
+  <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />
 
   <!-- robot_localization EKF node for the odom frame -->
   <node pkg="robot_localization" type="ekf_localization_node" name="ekf_odom_node" output="screen">
     <param name="frequency" value="10." />  
     <param name="sensor_timeout" value="0.2" />  
-    <param name="two_d_mode" value="true" />
+    <param name="two_d_mode" value="false" />
     <param name="print_diagnostics" value="true" />
     <param name="publish_tf" value="true" />
     <!-- <param name="map_frame" value="map" /> -->
@@ -24,7 +27,7 @@
     <param name="imu0_differential" value="false"/>
     <param name="imu0_relative" value="false"/>
     <param name="imu0_queue_size" value="10" />
-    <param name="imu0_remove_gravitational_acceleration" value="false" />
+    <param name="imu0_remove_gravitational_acceleration" value="true" />
     <rosparam param="imu0_config">[  false, false, false, 
                                      false, false, false,
                                      false, false, false, 
