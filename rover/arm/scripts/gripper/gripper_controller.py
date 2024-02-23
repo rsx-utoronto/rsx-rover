@@ -8,7 +8,7 @@ from rover.msg import ArmInputs
 from std_msgs.msg import *
 from arm_serial_connector import *
 
-GRIPPER_CONVERSION = 64 # 64 encoder ticks result in 1 rotation of the gripper motor
+GRIPPER_CONVERSION = 32 # 32 encoder ticks result in 1 rotation of the gripper motor
 GRIPPER_REDUCTION  = 30 # 30:1 Gear ratio on the gripper motor
 
 class Gripper():
@@ -40,16 +40,15 @@ class Gripper():
         self.gripper_pos         = 0
 
         # Set speed limit for the gripper
-        self.gripper_speed       = 0.6
+        self.gripper_speed       = 1.5
 
-        # Variable to to hold current roll angle (pos)
-        self.current_roll_pos    = 0
+        # Variable to to hold gripper roll positions (angles)
+        self.gripper_roll        = 0
 
         ## Variables for ROS publishers and subscribers
         self.state_sub           = rospy.Subscriber("arm_state", String, self.CallbackState)
         self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)
         self.SafePos_sub 		 = rospy.Subscriber("arm_safe_goal_pos", Float32MultiArray, self.CallbackSafePos)
-        self.CurrPos_sub         = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.CallbackCurrPos)
 
     def CallbackState (self, state: String) -> None:
         """
@@ -64,20 +63,7 @@ class Gripper():
 
         # Updates state
         self.state = state.data
-    
-    def CallbackCurrPos(self, CurrPos_data : Float32MultiArray) -> None:
-        """
-        (Float32MultiArray) -> (None)
 
-        Receives and stores data from CURR_POS topic into CURR_POS attribute
-
-        @parameters
-
-        CurrPos_data (Float32MultiArray): List containing current angles (degrees) of each motor
-        """
-
-        # Store the received current position values
-        self.current_roll_pos = CurrPos_data.data
     
     def CallbackInput (self, inputs: ArmInputs) -> None:
         """
@@ -124,15 +110,21 @@ class Gripper():
 
         data (Float32MultiArray) : The data from the topic is stored in this parameter
         """
-
         # Get the data
-        gripper_roll    = list(data.data)[-3]
+        new_gripper_roll        = list(data.data)[-2]
 
         # Get the difference between current gripper goal pos and goal gripper pos
-        difference      = gripper_roll - self.current_roll_pos
+        difference          = new_gripper_roll - self.gripper_roll
+
+        # Update the self.gripper_roll if changed
+        if difference != 0:
+            self.gripper_roll = new_gripper_roll
+        
+        # Set new gripper position
+        self.gripper_pos    = self.gripper_pos + difference
 
         # Calculate the ticks for the motor
-        gripper_ticks   = int((self.gripper_pos - difference) / 360 * GRIPPER_CONVERSION * GRIPPER_REDUCTION)
+        gripper_ticks       = int((self.gripper_pos) / 360 * GRIPPER_CONVERSION * GRIPPER_REDUCTION)
         
         # Send the correction to the gripper motor
         self.gripper_connection.send_bytes(data= str(gripper_ticks) + '\n')
