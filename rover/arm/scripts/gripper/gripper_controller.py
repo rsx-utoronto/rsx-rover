@@ -22,15 +22,15 @@ class Gripper():
         
         ## Variables for serial connection
         # Gripper port
-        self.gripper_connection = arm_serial.Serial_Port(device_name= gripper_name)
+        self.gripper_connection = Serial_Port(device_name= gripper_name)
         self.gripper_connection.open_device_port(baudrate= 115200)
 
         # Servo controller port
-        self.servo_connection = arm_serial.Serial_Port(device_name= servo_name)
+        self.servo_connection = Serial_Port(device_name= servo_name)
         self.servo_connection.open_device_port(baudrate= 9600)
 
         # Device Connections
-        # arduino_connection = arm_serial.Serial_Port(device_name= arduino_name)
+        # arduino_connection = Serial_Port(device_name= arduino_name)
 
         ## General variables
         # Start with "Idle"
