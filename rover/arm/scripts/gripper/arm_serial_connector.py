@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Original code by: Rudaina Khalil
 # Last modified by: Abhay Verma (vabhay.12601@gmail.com)
 
