@@ -17,7 +17,7 @@
     <!-- Launch Drive Node -->
     <node pkg="rover" type="drive_sender_node" name="manual_control_node" output="screen" /> 
 
-    <node pkg="rover" type="gps_converter.py" name="gps_converter" output="screen" />
-    <node pkg="rover" type="convert_gps_to_utm.py" name="convert_utm" output="screen" />
+    <!-- <node pkg="rover" type="gps_converter.py" name="gps_converter" output="screen" /> -->
+    <!-- <node pkg="rover" type="convert_gps_to_utm.py" name="convert_utm" output="screen" /> -->
 
 </launch>

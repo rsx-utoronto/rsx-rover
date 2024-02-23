@@ -1,0 +1,46 @@
+<launch>
+
+    <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter" output="screen">
+        <param name="use_mag" type="bool" value="false"/>
+        <param name="publish_tf" type="bool" value="false"/>
+        <param name="world_frame" type="string" value="enu"/>
+        <remap from="imu/data_raw" to="/camera/imu"/>
+        <remap from="imu/data" to="/rtabmap/imu"/>
+    </node>
+
+    <include file="$(find rtabmap_launch)/launch/rtabmap.launch">
+        <arg name="rtabmap_args"  value="--delete_db_on_start"/>
+        <!-- RGB-Depth -->
+        <arg name="rgb_topic"  value="/camera/color/image_raw"/>
+        <arg name="depth_topic"  value="/camera/depth/image_rect_raw"/>
+        <arg name="camera_info_topic" value="/camera/color/camera_info"/>
+        <arg name="wait_imu_to_init" value="true"/>
+        <arg name="imu_topic"  value="/rtabmap/imu"/>
+        <arg name="rtabmap_viz"		value="true"/>
+		<arg name="rviz"			value="false"/>
+        <!-- <arg name="stereo" value="true"/> -->
+
+        <!-- IR-Depth -->
+        <!-- <arg name="rgb_topic"  value="/camera/infra1/image_rect_raw"/>
+        <arg name="depth_topic"  value="/camera/depth/image_rect_raw"/>
+        <arg name="camera_info_topic" value="/camera/infra1/camera_info"/>
+        <arg name="wait_imu_to_init" value="true"/>
+        <arg name="imu_topic"  value="/rtabmap/imu"/>
+        <arg name="rtabmap_viz"		value="true"/>
+		<arg name="rviz"			value="false"/> -->
+
+        <!-- Stereo IR -->
+        <!-- <arg name="left_image_topic"  value="/camera/infra1/image_rect_raw"/>
+        <arg name="right_image_topic"  value="/camera/infra2/image_rect_raw"/>
+        <arg name="left_camera_info_topic" value="/camera/infra1/camera_info"/>
+        <arg name="right_camera_info_topic" value="/camera/infra2/camera_info"/>
+        <arg name="wait_imu_to_init" value="true"/>
+        <arg name="imu_topic"  value="/rtabmap/imu"/>
+        <arg name="stereo" value="true"/> -->
+        <!-- This seems to be more finnicky thab IR-Depth -->
+        
+
+
+
+    </include>
+</launch>

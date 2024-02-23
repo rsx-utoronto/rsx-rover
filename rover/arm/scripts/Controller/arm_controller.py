@@ -55,8 +55,8 @@ class Controller():
         # 1 -> on
         self.gripper             = 0
 
-        ## Variables for ROS publishers and subscribers
-        self.joy_sub             = rospy.Subscriber("joy", Joy, self.getROSJoy)
+        ## Variables for ROS publishers and subscrives
+        self.joy_sub             = rospy.Subscriber("arm/joy", Joy, self.getROSJoy)
         self.state_pub           = rospy.Publisher("arm_state", String, queue_size=0)
         self.input_pub           = rospy.Publisher("arm_inputs", ArmInputs, queue_size=0)
         self.killswitch_pub      = rospy.Publisher('arm_killswitch', UInt8, queue_size=0)

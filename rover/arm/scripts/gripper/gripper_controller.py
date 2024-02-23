@@ -6,7 +6,7 @@
 import rospy
 from rover.msg import ArmInputs
 from std_msgs.msg import *
-import arm_serial_connector as arm_serial
+from arm_serial_connector import *
 
 GRIPPER_CONVERSION = 64 # 64 encoder ticks result in 1 rotation of the gripper motor
 GRIPPER_REDUCTION  = 30 # 30:1 Gear ratio on the gripper motor

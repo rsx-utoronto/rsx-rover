@@ -270,14 +270,14 @@ class Safety_Node():
         # TODO
         # Limits for position safety (Need to test these values)
         #limit = [1.25, 1.25, 1.25, 20, 1.25, 1.25, 1.25]
-        limit = [5, 5, 5, 10, 10, 10, 40]
+        limit = [5, 5, 5, 10, 10, 10]
 
         if not pos:
             pos = self.GOAL_POS
 
         # Going through each element of GOAL_POS
         #for i in range(len(self.GOAL_POS)):
-        for i in [0, 1, 2, 3, 4, 5, 6]:    
+        for i in [0, 1, 2, 3, 4, 5]:    
             # Doing position comparisons for safety
             if (abs(pos[i] - self.CURR_POS[i]) > limit[i]):
 
