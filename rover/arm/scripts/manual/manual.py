@@ -26,8 +26,7 @@ class Manual():
         # 3 - Right analog vertical
         # 4 - L1 / R1 
         # 5 - L2 / R2 (analog)
-        # 6 - X / circle
-        self.controller_input    = [0, 0, 0, 0, 0, 0, 0]
+        self.controller_input    = [0, 0, 0, 0, 0, 0]
 
         ## Buffer for storing and publishing goal position
         # Idx - Associated Motor:
@@ -39,7 +38,7 @@ class Manual():
         # 5 - Motor 16 (Wrist 2)
         # 6 - Motor 17 (End Effector Open/Close)
         self.goal_pos            = Float32MultiArray()
-        self.goal_pos.data       = [0, 0, 0, 0, 0, 0, 0]
+        self.goal_pos.data       = [0, 0, 0, 0, 0, 0]
 
         ## Buffer to hold error messages and offsets
         # Message Descriptions:
@@ -47,12 +46,12 @@ class Manual():
         # 1 -> Faraway position
         # 2 -> Exceeding Max Current
         # 3 -> Hitting Limit Switch
-        self.error_messages      = [0, 0, 0, 0, 0, 0, 0]
-        self.error_offsets       = [0, 0, 0, 0, 0, 0, 0]
+        self.error_messages      = [0, 0, 0, 0, 0, 0]
+        self.error_offsets       = [0, 0, 0, 0, 0, 0]
 
         ## Constant Speed limits, values are chosen by trial and error #TODO
         self.SPEED_LIMIT         = [-0.01, 0.009, 0.015, 0.075, 
-                                    0.09, 0.09, 1]
+                                    0.09, 0.09]
 
         ## Variable for the status, start at idle
         self.status              = "Idle"

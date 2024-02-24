@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Original code by: Rudaina Khalil
 # Last modified by: Abhay Verma (vabhay.12601@gmail.com)
 
@@ -38,10 +40,10 @@ class Serial_Port:
 
         # Decoding the output from the command as a list of string
         ports           = process.stdout.decode().split(sep= "\n")
-
+        
         # Checking if our device is present
         for port in ports:
-
+            
             # If it is present, break out of the loop with that name
             if self.device_name in port:
                 break
@@ -66,7 +68,7 @@ class Serial_Port:
         else:
 
             # Keep global device_port as None
-            print("\nDevice cannot be found\n")
+            print("\n" + self.device_name + " cannot be found\n")
         
 
     def send_bytes(self, data):
