@@ -13,10 +13,9 @@ typedef struct localCoord {
 } localCoord;
 
 class GNSSTargetAid {
-private:
+public:
     double ENx;
     double ENy;
-public:
     double targetLat;
     double targetLon;
     double frameBearing;
@@ -97,12 +96,15 @@ GNSSTargetAid gnss = GNSSTargetAid();
 
 void chatterCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
     gnss.GNSSLocalizationProcess(msg->latitude, msg->longitude);
-    ROS_INFO("x: %f, y: %f", gnss.localx, gnss.localy);
-    ROS_INFO("distance: %f, bearing: %f", gnss.getDistance(), gnss.getBearing());
+    ROS_INFO("targetLat: %f, targetLon: %f", gnss.targetLat, gnss.targetLon);
+    ROS_INFO("curLat: %f, curLon: %f", gnss.curLat, gnss.curLon);
+    ROS_INFO("move East by [m]: %f, move North by [m]: %f", gnss.ENx, gnss.ENy);
+    ROS_INFO("x(to move to the right by [m]): %f, y(to move forward by [m]): %f", gnss.localx, gnss.localy);
+    ROS_INFO("distance to target [m]: %f, bearing to target [degree]: %f", gnss.getDistance(), gnss.getBearing());
 }
 
 void magCallback(const sensor_msgs::MagneticField::ConstPtr& msg) {
-    gnss.setBearing(atan2(-msg->magnetic_field.y, msg->magnetic_field.x) * 180.0 / M_PI);
+    gnss.setBearing(atan2(msg->magnetic_field.y, -msg->magnetic_field.x) * 180.0 / M_PI);
 }
 
 void targetCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
