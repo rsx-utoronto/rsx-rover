@@ -12,7 +12,7 @@ while wifi_scanner == 2560:
 print("Connected")
 
 # WEB SCRAPING TO GET THE LOCATION ============================================================================
-url = 'http://10.0.0.1:80'
+url = 'http://10.10.11.1:80'
 html_page = requests.get(url).text
 print(html_page)
 data = html_page.split("<br>")
