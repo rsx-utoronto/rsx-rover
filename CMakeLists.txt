@@ -234,3 +234,7 @@ target_link_libraries(GNSSLocalization ${catkin_LIBRARIES})
 
 # catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
 #  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+catkin_install_python(PROGRAMS rover/autonomy/scripts/gps_target_waypoint_updater.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

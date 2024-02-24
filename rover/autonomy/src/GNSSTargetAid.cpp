@@ -3,6 +3,7 @@
 #include <iostream>
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
+#include <sensor_msgs/MagneticField.h>
 
 using namespace std;
 
@@ -51,8 +52,8 @@ void GNSSTargetAid::GNSSLocalizationProcess(double lat, double lon) {
     curLat = lat;
     curLon = lon;
     double phim = (lat + targetLat) / 2 * M_PI / 180.0;
-    ENy = (lat - targetLat) * (111.13209 - 0.56605 * cos(2 * phim) + 0.00120 * cos(4 * phim)) * 1000;
-    ENx = (lon - targetLon) * (111.41513 * cos(phim) - 0.09455 * cos(3 * phim) + 0.00012 * cos(5 * phim)) * 1000;
+    ENy = (targetLat - lat) * (111.13209 - 0.56605 * cos(2 * phim) + 0.00120 * cos(4 * phim)) * 1000;
+    ENx = (targetLon - lon) * (111.41513 * cos(phim) - 0.09455 * cos(3 * phim) + 0.00012 * cos(5 * phim)) * 1000;
     localy = ENy * cos(frameBearing) + ENx * sin(frameBearing);
     localx = ENx * cos(frameBearing) - ENy * sin(frameBearing);
 }
@@ -62,8 +63,8 @@ localCoord GNSSTargetAid::getGNSSLocalization(double lat, double lon) {
     curLon = lon;
     localCoord coord;
     double phim = (lat + targetLat) / 2 * M_PI / 180.0;
-    ENy = (lat - targetLat) * (111.13209 - 0.56605 * cos(2 * phim) + 0.00120 * cos(4 * phim)) * 1000;
-    ENx = (lon - targetLon) * (111.41513 * cos(phim) - 0.09455 * cos(3 * phim) + 0.00012 * cos(5 * phim)) * 1000;
+    ENy = (targetLat - lat) * (111.13209 - 0.56605 * cos(2 * phim) + 0.00120 * cos(4 * phim)) * 1000;
+    ENx = (targetLon - lon) * (111.41513 * cos(phim) - 0.09455 * cos(3 * phim) + 0.00012 * cos(5 * phim)) * 1000;
     coord.y = ENy * cos(frameBearing) + ENx * sin(frameBearing);
     coord.x = ENx * cos(frameBearing) - ENy * sin(frameBearing);
     localx = coord.x;
@@ -100,12 +101,22 @@ void chatterCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
     ROS_INFO("distance: %f, bearing: %f", gnss.getDistance(), gnss.getBearing());
 }
 
+void magCallback(const sensor_msgs::MagneticField::ConstPtr& msg) {
+    gnss.setBearing(atan2(-msg->magnetic_field.y, msg->magnetic_field.x) * 180.0 / M_PI);
+}
+
+void targetCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
+    gnss.setTarget(msg->latitude, msg->longitude);
+}
+
 int main(int argc, char **argv) {
     gnss.setTarget(43.139199, -79.114206);
     gnss.setBearing(0);
     ros::init(argc, argv, "GNSSLocalization");
     ros::NodeHandle n;
     ros::Subscriber sub = n.subscribe("/ublox/fix", 1000, chatterCallback);
+    ros::Subscriber subm = n.subscribe("/zed/zed_node/imu/mag", 10, magCallback);
+    ros::Subscriber subt = n.subscribe("/gps_target", 10, targetCallback);
     ros::Publisher pub = n.advertise<nav_msgs::Odometry>("GPSOdometry", 1000);
     ros::Rate loop_rate(10);
     while (ros::ok()) {
