@@ -5,7 +5,7 @@ from sensor_msgs.msg import NavSatFix
 
 class GPSRecorder:
     def __init__(self):
-        self.gps_sub = rospy.Subscriber('/gps/fix', NavSatFix, self.callback)
+        self.gps_sub = rospy.Subscriber('/ublox/fix', NavSatFix, self.callback)
         self.gps_data_file = open('gps_data.txt', 'w')
         self.r = rospy.Rate(0.1)
 
