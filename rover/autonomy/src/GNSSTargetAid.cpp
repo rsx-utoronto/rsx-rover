@@ -45,6 +45,7 @@ GNSSTargetAid::GNSSTargetAid(double lat, double lon, double bearing) {
 GNSSTargetAid::GNSSTargetAid() {
     targetLat = 0;
     targetLon = 0;
+    frameBearing = 0;
 }
 
 void GNSSTargetAid::GNSSLocalizationProcess(double lat, double lon) {
@@ -112,8 +113,8 @@ void targetCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
 }
 
 int main(int argc, char **argv) {
-    gnss.setTarget(43.139199, -79.114206);
-    gnss.setBearing(0);
+    // gnss.setTarget(43.139199, -79.114206);
+    // gnss.setBearing(0);
     ros::init(argc, argv, "GNSSLocalization");
     ros::NodeHandle n;
     ros::Subscriber sub = n.subscribe("/ublox/fix", 1000, chatterCallback);
