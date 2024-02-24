@@ -2,22 +2,22 @@
 
 ## CAN Setup
 
-To enable the CAN network, open a terminal and go the location of cloned repository
+To enable the CAN network, open a terminal and type the following (assuming you have the repository cloned)
 
 ### Terminal 1
 ```
-cd ~/rover-ws/src/rsx-rover/rover/arm/scripts/
+cd ~/rover-ws/src/rsx-rover/scripts/utils/gen/setup_can.bash
 ./setup_can.bash
 (Enter the password for your system)
 ```
 
-### Terminal 2
+### Terminal 2 (Optional Step)
 To read CAN messages on the bus, type the following on terminal:
 ```
 candump can0
 ```
 
-### Terminal 3 (for debugging)
+#### Terminal 3 (for debugging)
 If the above command does not work, try sending a singular CAN packet on another terminal:
 ```
 cansend can0 02050C80#FFFFFFFFFFFFFFFF
@@ -27,8 +27,44 @@ This is the message I usually prefer checking the candump with. If can connectio
 Once CAN network is enabled and you can see candump, go back to Terminal 1 again and type:
 ### Terminal 1
 ```
-python3 arm_master_can.py
+roscore
 ```
+
+### Terminal 2 (Assuming your joy node is setup. Refer to joy wiki for instructions on that)
+```
+rosrun joy joy_node
+```
+
+#### Terminal 3 (Optional)
+To check whether joy node is receiving inputs properly, run the following command
+```
+rostopic echo joy
+```
+
+### Terminal 3/4
+Launch arm_controlller, manual and safety nodes
+```
+roslaunch rover arm_2023_complete.launch
+```
+
+### Terminal 4/5
+For gripper control, run gripper code
+```
+python3 ~/rover_ws/src/rsx-rover/rover/arm/scripts/gripper/gripper_controller.py
+```
+
+### Terminal 5/6
+Run CAN_recv node (before CAN_send)
+```
+rosrun rover CAN_recv.py
+```
+
+### Terminal 6/7
+Run CAN_recv node (before CAN_send)
+```
+rosrun rover CAN_send.py
+```
+Enjoy! You will be able to directly use Manual mode
 
 ## Inverse Kinematics
 
@@ -92,13 +128,14 @@ Follow the [joy]([url](https://wiki.ros.org/joy/Tutorials/ConfiguringALinuxJoyst
 ```
 # run the joy_node stuff
 rosrun rover arm_controller.py # launch the arm_controllernode
-roslauch rover arm_rviz.launch # or use gazebo
+roslauch rover arm_rviz.launch ik_on:=true # or use gazebo
 ```
 
 Controls:
 - Left joystick and both bumpers control [x,y, z]
 - Right joystick upper bumpers control [roll, pitch, yaw]
 - X and O controller gripper
+- Press Triangle to change IK modes
 
 ### Keyboard Control
 The keyboard controller mimics a controller inputs using your keyboard. I recommend opening the 

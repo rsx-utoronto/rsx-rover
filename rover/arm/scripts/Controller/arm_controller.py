@@ -4,7 +4,7 @@ import rospy
 from sensor_msgs.msg import Joy
 from std_msgs.msg import String, UInt8
 from rover.msg import ArmInputs
-import arm_serial_connector as arm_serial
+# import arm_serial_connector as arm_serial
 #from rover.srv import Corrections
 
 '''
@@ -56,7 +56,7 @@ class Controller():
         self.gripper             = 0
 
         ## Variables for ROS publishers and subscrives
-        self.joy_sub             = rospy.Subscriber("joy", Joy, self.getROSJoy)
+        self.joy_sub             = rospy.Subscriber("arm/joy", Joy, self.getROSJoy)
         self.state_pub           = rospy.Publisher("arm_state", String, queue_size=0)
         self.input_pub           = rospy.Publisher("arm_inputs", ArmInputs, queue_size=0)
         self.killswitch_pub      = rospy.Publisher('arm_killswitch', UInt8, queue_size=0)
@@ -68,8 +68,8 @@ class Controller():
 
         # Device Connections
         # arduino_connection = arm_serial.Serial_Port(device_name= arduino_name)
-        self.gripper_connection = arm_serial.Serial_Port(device_name= gripper_name)
-        self.gripper_connection.open_device_port(baudrate= 4800)
+        # self.gripper_connection = arm_serial.Serial_Port(device_name= gripper_name)
+        # self.gripper_connection.open_device_port(baudrate= 4800)
 
         # # Printing state on the console and publishing it
         # print("State:", self.state)
@@ -88,8 +88,6 @@ class Controller():
         #         print("Servo going to 63 degrees configuration")
         self.rate = rospy.Rate(1000)
 
-        servo_triggered     = 0
-        gripper_triggered   = [0, 0]
         publishInputs = False
         while not rospy.is_shutdown():
 
@@ -238,8 +236,11 @@ class Controller():
         self.values.r2              = -0.5 * rawAxes[5] + 0.5
         self.values.x               = rawButtons[0]
         self.values.o               = rawButtons[1]
+        self.values.triangle        = rawButtons[2]
+        self.values.square          = rawButtons[3]
         self.values.share           = rawButtons[8]
         self.values.options         = rawButtons[9]
+        self.values.l3              = rawButtons[11]
         self.values.r3              = rawButtons[12]
 
         # Check if analog sticks are not moving and triggers are not pressed 
@@ -261,36 +262,36 @@ class Controller():
             elif rawAxes[6] == -1:
                 self.state = "IK"
         
-        if self.state != 'Idle':
+        # if self.state != 'Idle':
 
-            # Check if we need to turn it on/off
-            if self.values.x == 1:
+        #     # Check if we need to turn it on/off
+        #     if self.values.x == 1:
 
-                # If port opened successfully, send the data, close the port and then flip gripper_triggered
-                if self.gripper_connection.device_port.is_open:
+        #         # If port opened successfully, send the data, close the port and then flip gripper_triggered
+        #         if self.gripper_connection.device_port.is_open:
                     
-                    self.gripper_connection.send_bytes(data= '2') # Message '2' is for turning the motor on/off on the ST Link chip
-                    # gripper_connection.close_device_port()
+        #             self.gripper_connection.send_bytes(data= '2') # Message '2' is for turning the motor on/off on the ST Link chip
+        #             # gripper_connection.close_device_port()
             
-            # Check if we are switching directions
-            if self.values.o == 1:
+        #     # Check if we are switching directions
+        #     if self.values.o == 1:
 
-                # If port opened successfully, send the data and then close the port
-                if self.gripper_connection.device_port.is_open:
+        #         # If port opened successfully, send the data and then close the port
+        #         if self.gripper_connection.device_port.is_open:
 
-                    self.gripper_connection.send_bytes(data= '1') # Message '1' is for switching the motor spin direction on the ST Link chip
-                    # gripper_connection.close_device_port()
+        #             self.gripper_connection.send_bytes(data= '1') # Message '1' is for switching the motor spin direction on the ST Link chip
+        #             # gripper_connection.close_device_port()
 
-        # If square is pressed, flip the servo configuration
-        if rawButtons[3] == 1:
-            self.servo = not self.servo
+        # # If square is pressed, flip the servo configuration
+        # if self.values.square == 1:
+        #     self.servo = not self.servo
         
         # # If X is pressed, flip the gripper state
         # if rawButtons[0] == 1:
         #     self.gripper = not self.gripper
 
         # If triangle is pressed, change IK state if in overall state is IK
-        if rawButtons[2] == 1 and self.state == "IK":
+        if self.values.triangle == 1 and self.state == "IK":
             self.values.triangle = 1
         else:
             self.values.triangle = 0
