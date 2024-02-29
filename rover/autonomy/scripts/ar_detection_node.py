@@ -14,8 +14,9 @@ bridge = CvBridge()
 class ARucoTagDetectionNode():
 
     def __init__(self):
-        self.image_topic = "/camera/color/image_raw"
-        self.info_topic = "/camera/color/camera_info"
+        # self.image_topic = "/camera/color/image_raw"
+        self.image_topic = "/zed2i/zed_node/rgb/image_rect_color"
+        self.info_topic = "/zed2i/zed_node/rgb/camera_info"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
         self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
@@ -54,7 +55,7 @@ class ARucoTagDetectionNode():
     # from CIRC rules, 4*4_50
     # https://circ.cstag.ca/2022/rules/#autonomy-guidelines:~:text=All%20ArUco%20markers%20will%20be%20from%20the%204x4_50%20dictionary.%20They%20range%20from%20marker%200%20to%2049.
 
-    def findArucoMarkers(self, img, markerSize=4, totalMarkers=50, draw=True):
+    def findArucoMarkers(self, img, markerSize=4, totalMarkers=100, draw=True):
         imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         key = getattr(aruco, 'DICT_' + str(markerSize) + 'X' + str(markerSize) + "_" + str(totalMarkers))
         arucoDict = aruco.Dictionary_get(key)
@@ -100,15 +101,6 @@ class ARucoTagDetectionNode():
         if ids is not None:
             self.updated_state_msg.AR_TAG_DETECTED = True
             self.updated_state_msg.curr_AR_ID = int(best_detection)
-<<<<<<< HEAD
-
-            # Transform into a goal in the odom frame
-
-            # lookup baselink to camera link transform 
-            # lookup baselink to odom transform 
-            # transform the 4x4 pose to the odom frame and publish below
-=======
->>>>>>> aeaeaf1b0767fef3f3885392d519140d60c3fd9e
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
             self.updated_state_msg.curr_AR_ID = -1

@@ -17,7 +17,7 @@ m.title('Science Team Drill Controls')  #window title
 
 #connect to arduino
 try:
-    ser = ser.Serial("COM8", 9600)
+    ser = ser.Serial("/dev/ttyACM0", 9600)
     time.sleep(0.5)
 except ser.serialutil.SerialException:
     print("Arduino not connected")
@@ -68,6 +68,13 @@ drill_1_FWD_slow = tk.Button(m, text='Drill CW slow',
                         font= ('Helvetica 20 bold'),
                         command= lambda:send_data(b'o'))
 
+drill_l_FWD_prec = tk.Button(m, text='CW precision', 
+                        width=BUTTONWIDTH*2,
+                        height= BUTTONHEIGHT, 
+                        bg="lightblue",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data(b'j'))
+
 #Counter clockwise speed adjustment
 drill_1_REV_fast = tk.Button(m, text='Drill CCW fast', 
                         width=BUTTONWIDTH,
@@ -82,6 +89,13 @@ drill_1_REV_slow = tk.Button(m, text='Drill CCW slow',
                         bg="lightblue",
                         font= ('Helvetica 20 bold'),
                         command= lambda:send_data(b'r'))
+
+drill_l_REV_prec = tk.Button(m, text='CCW precision', 
+                        width=BUTTONWIDTH*2,
+                        height= BUTTONHEIGHT, 
+                        bg="lightblue",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data(b't'))
 
 #attach bit
 drill_1_attachbit = tk.Button(m, text='Attach Bit', 
@@ -100,12 +114,56 @@ drill_1_removebit = tk.Button(m, text='Remove Bit',
                         command= lambda:send_data(b'n'))
 
 #Rotate bit changer
-rotate_bitchanger = tk.Button(m, text='Rotate Bit Changer', 
-                        width=BUTTONWIDTH*4,
+# B1 = tk.Button(m, text='B1', 
+#                         width=5,
+#                         height= BUTTONHEIGHT, 
+#                         bg="pink",
+#                         font= ('Helvetica 20 bold'),
+#                         command= lambda:send_data(b'b1'))
+# B2 = tk.Button(m, text='B2', 
+#                         width=5,
+#                         height= BUTTONHEIGHT, 
+#                         bg="pink",
+#                         font= ('Helvetica 20 bold'),
+#                         command= lambda:send_data(b'b2'))
+# B4 = tk.Button(m, text='B4', 
+#                         width=5,
+#                         height= BUTTONHEIGHT, 
+#                         bg="pink",
+#                         font= ('Helvetica 20 bold'),
+#                         command= lambda:send_data(b'b4'))
+# B5 = tk.Button(m, text='B5', 
+#                         width=5,
+#                         height= BUTTONHEIGHT, 
+#                         bg="pink",
+#                         font= ('Helvetica 20 bold'),
+#                         command= lambda:send_data(b'b5'))
+
+# ##rotate changer
+f = tk.Button(m, text='BC FWD', 
+                        width=5,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'f5'))
+                        command= lambda:send_data(b'f'))
+# i = tk.Button(m, text='BC FWD small', 
+#                         width=5,
+#                         height= BUTTONHEIGHT, 
+#                         bg="pink",
+#                         font= ('Helvetica 20 bold'),
+#                         command= lambda:send_data(b'i'))
+g = tk.Button(m, text='BC REV', 
+                        width=5,
+                        height= BUTTONHEIGHT, 
+                        bg="pink",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data(b'g'))
+# y = tk.Button(m, text='BC REV small', 
+#                         width=5,
+#                         height= BUTTONHEIGHT, 
+#                         bg="pink",
+#                         font= ('Helvetica 20 bold'),
+#                         command= lambda:send_data(b'y'))
 
 fastdown = tk.Button(m, text='fast/down', 
                         width=BUTTONWIDTH*4,
@@ -123,6 +181,9 @@ tk.Grid.columnconfigure(m, index = 2, weight = 1)
 tk.Grid.rowconfigure(m, 2,weight = 1)
 tk.Grid.columnconfigure(m, index = 3, weight = 1)
 tk.Grid.rowconfigure(m, 3,weight = 1)
+tk.Grid.rowconfigure(m, 4,weight = 1)
+tk.Grid.rowconfigure(m, 5,weight = 1)
+tk.Grid.rowconfigure(m, 6,weight = 1)
 
 #place buttons
 drill_1_up.grid(row=0,column=0,columnspan=2,sticky="NSEW")
@@ -135,10 +196,22 @@ drill_1_FWD_slow.grid(row=2,column=1,sticky="NSEW")
 drill_1_REV_fast.grid(row=2,column=2,sticky="NSEW")
 drill_1_REV_slow.grid(row=2,column=3,sticky="NSEW")
 
-drill_1_attachbit.grid(row=4,column=0,columnspan=2,sticky="NSEW")
-drill_1_removebit.grid(row=4,column=2,columnspan=2,sticky="NSEW")
+drill_1_attachbit.grid(row=5,column=0,columnspan=2,sticky="NSEW")
+drill_1_removebit.grid(row=5,column=2,columnspan=2,sticky="NSEW")
 
-rotate_bitchanger.grid(row=5,column=0,columnspan=4,sticky="NSEW")
+drill_l_FWD_prec.grid(row=4,column=0,columnspan=2,sticky="NSEW")
+drill_l_REV_prec.grid(row=4,column=2,columnspan=2,sticky="NSEW")
+
+# B1.grid(row=6,column=0,columnspan=1,sticky="NSEW")
+# B2.grid(row=6,column=1,columnspan=1,sticky="NSEW")
+# B4.grid(row=6,column=2,columnspan=1,sticky="NSEW")
+# B5.grid(row=6,column=3,columnspan=1,sticky="NSEW")
+
+
+f.grid(row=6,column=0,columnspan=1,sticky="NSEW")
+# i.grid(row=7,column=1,columnspan=1,sticky="NSEW")
+g.grid(row=6,column=2,columnspan=1,sticky="NSEW")
+# y.grid(row=7,column=3,columnspan=1,sticky="NSEW")
 
 fastdown.grid(row=3,column=0,columnspan=4,sticky="NSEW")
 
