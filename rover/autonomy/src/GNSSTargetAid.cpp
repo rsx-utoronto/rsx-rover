@@ -101,7 +101,8 @@ void chatterCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
     ROS_INFO("curLat: %f, curLon: %f", gnss.curLat, gnss.curLon);
     ROS_INFO("move East by [m]: %f, move North by [m]: %f", gnss.ENx, gnss.ENy);
     ROS_INFO("x(to move to the right by [m]): %f, y(to move forward by [m]): %f", gnss.localx, gnss.localy);
-    ROS_INFO("distance to target [m]: %f, bearing to target [degree]: %f", gnss.getDistance(), gnss.getBearing());
+    localCoord glo = {gnss.ENx, gnss.ENy};
+    ROS_INFO("distance to target [m]: %f, bearing to target [degree]: %f, global bearing to target [degree] %f", gnss.getDistance(), gnss.getBearing(), gnss.getBearing({glo}));
     ROS_INFO("curr bearing %f", gnss.frameBearing);
 }
 
@@ -119,7 +120,7 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "GNSSLocalization");
     ros::NodeHandle n;
     ros::Subscriber sub = n.subscribe("/ublox/fix", 1000, chatterCallback);
-    ros::Subscriber subm = n.subscribe("/zed/zed_node/imu/mag", 10, magCallback);
+    ros::Subscriber subm = n.subscribe("/zed2i/zed_node/imu/mag", 10, magCallback);
     ros::Subscriber subt = n.subscribe("/gps_target", 10, targetCallback);
     ros::Publisher pub = n.advertise<nav_msgs::Odometry>("GPSOdometry", 1000);
     ros::Rate loop_rate(10);

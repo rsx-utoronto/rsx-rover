@@ -25,7 +25,7 @@ public:
 
 	ros::NodeHandle nh;
 	double robot_radius = 0.8;
-	double MAX_LINEAR_SPEED = 2.5; // 2.5 speed est * 0.65 from rough calibration
+	double MAX_LINEAR_SPEED = 2.5*5; // 5 times because of gear ratio // 2.5 speed est * 0.65 from rough calibration
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
 	double gear = 0; // set to 0 initially
 	ros::Publisher drive_pub;
