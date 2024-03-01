@@ -70,7 +70,7 @@ class StateMachineNode:
         if goal_type == "gps":
             # Convert to a goal in metres in the odom frame
             get_gps = GPS_to_UTM(lat=req.x, lon=req.y)
-            goal = get_gps.convertGPSToOdom()
+            goal = get_gps.convertGPStoOdom()
 
             try:
                 if goal == None:
