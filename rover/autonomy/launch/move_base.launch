@@ -2,8 +2,8 @@
 
    <arg name="no_static_map" default="false" />
    <arg name="command_velocity_topic" default="/drive" />
-   <arg name="odom_topic" default="/aft_mapped_to_init" />
-   <arg name="pose_topic" default="/aft_mapped_to_init" />
+   <arg name="odom_topic" default="/rtabmap/odom" />
+   <arg name="pose_topic" default="/rtabmap/odom" />
 
    <include file="$(find rover)/rover/autonomy/launch/gmapping.launch" />
    <!-- <include file="$(find rover)/rover/autonomy/launch/hector_slam_occupancy_grid.launch" />    -->
