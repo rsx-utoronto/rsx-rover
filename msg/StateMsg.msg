@@ -13,4 +13,6 @@ bool AR_SCANNED
 int16 curr_AR_ID
 geometry_msgs/Pose curr_AR_pose
 bool MANUAL_ENABLED
+bool GROUND_OBJECT_FOUND
+bool GROUND_OBJECT_REACHED
 

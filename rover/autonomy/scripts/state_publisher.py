@@ -20,6 +20,7 @@ class StateMachineNode:
         self.radio_state_sub = rospy.Subscriber("/radio_node/rover_state", StateMsg, self.radio_state_callback)
         self.gui_state_sub = rospy.Subscriber("/gui_node/rover_state", StateMsg, self.gui_state_callback)
         self.sm_state_sub = rospy.Subscriber("/sm_node/rover_state", StateMsg, self.sm_state_callback)
+        self.ground_state_sub = rospy.Subscriber("/ground_node/rover_state", StateMsg, self.ground_state_callback)
 
     def gps_state_callback(self, msg):
         self.state_msg.GPS_GOAL_REACHED = msg.GPS_GOAL_REACHED
@@ -34,6 +35,10 @@ class StateMachineNode:
     def radio_state_callback(self, msg):
         self.state_msg.RADIO_BEACON_DETECTED_BEACON_DETECTED = msg.RADIO_BEACON_DETECTED
         self.state_msg.radio_beacon_goal = msg.radio_beacon_goal
+
+    def ground_state_callback(self, msg):
+        self.state_msg.GROUND_OBJECT_FOUND = msg.GROUND_OBJECT_FOUND
+        self.state_msg.GROUND_OBJECT_REACHED = msg.GROUND_OBJECT_REACHED
 
     def gui_state_callback(self, msg):
         self.state_msg.rover_mode = msg.rover_mode
