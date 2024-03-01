@@ -12,7 +12,7 @@ class GPSCheckerNode():
 
     def __init__(self):
         # CHANGE
-        self.curr_subscriber = rospy.Subscriber("/aft_mapped_to_init", Odometry, self.curr_callback)
+        self.curr_subscriber = rospy.Subscriber("/stereo_odometry", Odometry, self.curr_callback)
         self.goal_subscriber = rospy.Subscriber("/rover_state", StateMsg, self.goal_callback)
         self.state_publisher = rospy.Publisher('/gps_checker_node/rover_state', StateMsg, queue_size=10)
         self.state_msg_old = StateMsg()
