@@ -6,7 +6,7 @@
             <param name="dev" value="/dev/input/js1"/>
         </node>
     </group>
- 
+
     <group ns="software">
         <node pkg="joy" type="joy_node" name="joy_node">
             <param name="dev" value="/dev/input/js0"/>
@@ -14,6 +14,6 @@
     </group>
 
     <!-- Launch GUI -->
-    <!--node pkg="rover" type="rover_gui.py" name="rover_gui" output="screen"/-->
+    <!-- <node pkg="rover" type="rover_gui.py" name="rover_gui" output="screen"/> -->
 
 </launch>
