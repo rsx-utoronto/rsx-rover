@@ -74,9 +74,13 @@ while not rospy.is_shutdown():
 
     angle_integral += angle_error
     angle_derivative = ((angle_error)- (previous_angle_error))
+    if angle_integral > 5:
+        angle_integral = 5
     angle_correction = (Kpa*angle_error) + (Kia*angle_integral) + (Kda*angle_derivative)
     pos_integral += pos_error
     pos_derivative = ((pos_error)- (previous_pos_error))
+    if pos_integral > 5:
+        pos_integral = 5
     pos_correction = (Kpp*pos_error) + (Kip*pos_integral) + (Kdp*pos_derivative)
 
     previous_pos_error = pos_error
