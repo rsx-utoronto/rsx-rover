@@ -28,7 +28,7 @@ def newOdom(msg):
 
 rospy.init_node("speed_controller")
 
-sub = rospy.Subscriber("/aft_mapped_to_init", Odometry, newOdom)
+sub = rospy.Subscriber("/stereo_odometry", Odometry, newOdom) # launch zed camera
 pub = rospy.Publisher("drive", Twist, queue_size = 1)
 pub_error = rospy.Publisher("/robot_base_velocity_controller/error", Float32, queue_size = 1)
 
