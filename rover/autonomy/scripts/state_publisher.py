@@ -10,11 +10,12 @@ class StateMachineNode:
     def __init__(self):
 
         self.state_msg = StateMsg()
-        self.state_msg.rover_mode = "MANUAL"
+        self.state_msg.rover_mode = "AUTONOMY"#"MANUAL"
 
         self.state_pub = rospy.Publisher("/rover_state", StateMsg, queue_size=1000)
         self.gps_state_sub = rospy.Subscriber("/gps_checker_node/rover_state", StateMsg, self.gps_state_callback)
         self.aruco_state_sub = rospy.Subscriber("/aruco_node/rover_state", StateMsg, self.aruco_state_callback)
+        self.aruco_scanned_sub = rospy.Subscriber("aruco_scanned_node/rover_state", StateMsg, self.aruco_scanned_callback)
         self.light_state_sub = rospy.Subscriber("/light_node/rover_state", StateMsg, self.aruco_state_callback)
         self.radio_state_sub = rospy.Subscriber("/radio_node/rover_state", StateMsg, self.radio_state_callback)
         self.gui_state_sub = rospy.Subscriber("/gui_node/rover_state", StateMsg, self.gui_state_callback)
@@ -25,6 +26,10 @@ class StateMachineNode:
 
     def aruco_state_callback(self, msg):
         self.state_msg.curr_AR_ID = msg.curr_AR_ID
+        self.state_msg.AR_TAG_DETECTED = msg.AR_TAG_DETECTED
+
+    def aruco_scanned_callback(self, msg):
+        self.state_msg.AR_SCANNED = msg.AR_SCANNED
 
     def radio_state_callback(self, msg):
         self.state_msg.RADIO_BEACON_DETECTED_BEACON_DETECTED = msg.RADIO_BEACON_DETECTED

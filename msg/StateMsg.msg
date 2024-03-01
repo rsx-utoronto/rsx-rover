@@ -9,6 +9,7 @@ bool RADIO_BEACON_DETECTED
 geometry_msgs/PoseStamped light_beacon_goal 
 geometry_msgs/PoseStamped radio_beacon_goal
 geometry_msgs/PoseStamped sign_goal
+bool AR_SCANNED
 int16 curr_AR_ID
 geometry_msgs/Pose curr_AR_pose
 bool MANUAL_ENABLED

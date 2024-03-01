@@ -20,6 +20,7 @@ class ARucoTagDetectionNode():
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
         self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         self.aruco_pub = rospy.Publisher('aruco_node/rover_state', StateMsg, queue_size=10)
+        self.scanned_pub = rospy.Publisher('aruco_scanned_node/rover_state', StateMsg, queue_size=10)
         self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
         self.bridge = CvBridge()
         self.current_state = StateMsg()
@@ -30,6 +31,7 @@ class ARucoTagDetectionNode():
         self.K = None
         self.D = None
         self.updated_state_msg = StateMsg()
+        self.scanned_state_smg = StateMsg()
 
     def image_callback(self, ros_image):
         try:
@@ -79,6 +81,7 @@ class ARucoTagDetectionNode():
 
             best_detection = ids[0][0]
             rospy.loginfo(f"An AR tag was detected with the ID {best_detection}")
+            self.scanned_state_smg.AR_SCANNED = True
             bboxs = bboxs[0]
             if draw:
                 for bbox, id in zip(bboxs, ids):
@@ -100,20 +103,13 @@ class ARucoTagDetectionNode():
         if ids is not None:
             self.updated_state_msg.AR_TAG_DETECTED = True
             self.updated_state_msg.curr_AR_ID = int(best_detection)
-<<<<<<< HEAD
-
-            # Transform into a goal in the odom frame
-
-            # lookup baselink to camera link transform 
-            # lookup baselink to odom transform 
-            # transform the 4x4 pose to the odom frame and publish below
-=======
->>>>>>> aeaeaf1b0767fef3f3885392d519140d60c3fd9e
+            self.scanned_state_smg.AR_SCANNED = False
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
             self.updated_state_msg.curr_AR_ID = -1
 
         self.aruco_pub.publish(self.updated_state_msg)
+        self.scanned_pub.publish(self.scanned_state_smg)
 
 
 def main():
