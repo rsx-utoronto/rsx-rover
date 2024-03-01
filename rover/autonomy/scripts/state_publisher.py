@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
+import time
 from rover.msg import StateMsg
 from rover.srv import AddGoal
 from std_msgs.msg import String
@@ -13,6 +14,10 @@ class StateMachineNode:
         self.state_msg.rover_mode = "AUTONOMY"#"MANUAL"
 
         self.state_pub = rospy.Publisher("/rover_state", StateMsg, queue_size=1000)
+        t = time.time()
+        while (time.time() - t) < 15:
+            print("Passing time")
+            pass
         self.gps_state_sub = rospy.Subscriber("/gps_checker_node/rover_state", StateMsg, self.gps_state_callback)
         self.aruco_state_sub = rospy.Subscriber("/aruco_node/rover_state", StateMsg, self.aruco_state_callback)
         self.aruco_scanned_sub = rospy.Subscriber("aruco_scanned_node/rover_state", StateMsg, self.aruco_scanned_callback)

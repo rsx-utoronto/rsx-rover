@@ -2,6 +2,7 @@
 
 import rospy
 import cv2
+import time
 import cv2.aruco as aruco
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
@@ -19,10 +20,14 @@ class ARucoTagDetectionNode():
         self.info_topic = "/zed2i/zed_node/rgb/camera_info"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
-        self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         self.aruco_pub = rospy.Publisher('aruco_node/rover_state', StateMsg, queue_size=10)
         self.scanned_pub = rospy.Publisher('aruco_scanned_node/rover_state', StateMsg, queue_size=10)
         self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
+        t = time.time()
+        while (time.time() - t) < 15:
+            print("Passing time")
+            pass
+        self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         self.bridge = CvBridge()
         self.current_state = StateMsg()
         self.curr_aruco_detections = {}

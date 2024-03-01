@@ -2,6 +2,7 @@
 
 import rospy
 import smach 
+import time
 import numpy as np
 from smach_ros import SimpleActionState
 from rover.msg import StateMsg
@@ -22,9 +23,13 @@ class StateMachineNode:
     """
     def __init__(self, num_gps_goals):
 
-        self.state_subscriber = rospy.Subscriber('/rover_state', StateMsg, self.state_callback)
         self.state_publisher = rospy.Publisher('/sm_node/rover_state', StateMsg, queue_size=10)
         self.add_goal_srv = rospy.Service('add_goal', AddGoal, self.handle_add_goal)
+        t = time.time()
+        while (time.time() - t) < 15:
+            print("Passing time")
+            pass
+        self.state_subscriber = rospy.Subscriber('/rover_state', StateMsg, self.state_callback)
         self.MODE = "IDLE"
         self.GPS_goals = np.zeros((1,3))
         self.curr_goal = PoseStamped()

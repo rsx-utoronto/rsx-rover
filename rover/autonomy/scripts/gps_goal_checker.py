@@ -2,6 +2,7 @@
 
 import rospy
 import smach 
+import time
 from smach_ros import SimpleActionState
 from rover.msg import StateMsg
 from nav_msgs.msg import Odometry
@@ -12,9 +13,13 @@ class GPSCheckerNode():
 
     def __init__(self):
         # CHANGE
+        self.state_publisher = rospy.Publisher('/gps_checker_node/rover_state', StateMsg, queue_size=10)
+        t = time.time()
+        while (time.time() - t) < 15:
+            print("Passing time")
+            pass
         self.curr_subscriber = rospy.Subscriber("/stereo_odometry", Odometry, self.curr_callback)
         self.goal_subscriber = rospy.Subscriber("/rover_state", StateMsg, self.goal_callback)
-        self.state_publisher = rospy.Publisher('/gps_checker_node/rover_state', StateMsg, queue_size=10)
         self.state_msg_old = StateMsg()
         self.updated_state_msg = StateMsg()
         self.curr_pos = np.zeros((0,3))
