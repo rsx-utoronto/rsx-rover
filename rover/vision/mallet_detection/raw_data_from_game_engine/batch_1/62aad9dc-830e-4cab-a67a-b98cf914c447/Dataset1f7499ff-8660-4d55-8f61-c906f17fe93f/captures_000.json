@@ -1,0 +1,7955 @@
+{
+  "version": "0.0.1",
+  "captures": [
+    {
+      "id": "75529dc1-7891-4944-b5b4-fb34d333588f",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 0,
+      "timestamp": 0.0166,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.507263,
+          21.5905361,
+          502.665283
+        ],
+        "rotation": [
+          0.11086183,
+          0.0,
+          0.0,
+          0.993835866
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_2.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 547.0,
+              "y": 636.0,
+              "width": 118.0,
+              "height": 30.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "022c22e6-4a11-4643-a3fe-f2d00827e264",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 1,
+      "timestamp": 0.0332,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.490021,
+          21.5905361,
+          502.6819
+        ],
+        "rotation": [
+          0.110249452,
+          0.104315393,
+          -0.0116363233,
+          0.9883461
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_3.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 246.0,
+              "y": 649.0,
+              "width": 125.0,
+              "height": 31.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "eb3996a5-4b3c-4624-aece-417d461233fa",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 2,
+      "timestamp": 0.0498,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.492645,
+          21.5905361,
+          502.678864
+        ],
+        "rotation": [
+          0.110435739,
+          0.08705048,
+          -0.009710433,
+          0.9900161
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_4.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 298.0,
+              "y": 645.0,
+              "width": 123.0,
+              "height": 31.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "79c9eb2f-a423-451c-aee5-fb2b2107000a",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 3,
+      "timestamp": 0.0664,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.495026,
+          21.5905361,
+          502.676331
+        ],
+        "rotation": [
+          0.110571153,
+          0.07192176,
+          -0.008022832,
+          0.9912301
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_5.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 342.0,
+              "y": 642.0,
+              "width": 122.0,
+              "height": 31.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "3252799a-503a-4f7e-a690-5b690e967126",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 4,
+      "timestamp": 0.083,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.493164,
+          21.5905361,
+          502.678284
+        ],
+        "rotation": [
+          0.110468969,
+          0.08359416,
+          -0.009324881,
+          0.990314
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_6.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 308.0,
+              "y": 644.0,
+              "width": 123.0,
+              "height": 31.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c54d91ea-8575-43f7-b450-e3c3dffcf1ba",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 5,
+      "timestamp": 0.0995999947,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.490936,
+          21.5905361,
+          502.680817
+        ],
+        "rotation": [
+          0.110318482,
+          0.09827602,
+          -0.0109626353,
+          0.988965
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_7.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 264.0,
+              "y": 647.0,
+              "width": 125.0,
+              "height": 31.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c2fc1a96-d5ee-47ba-9930-6357aad808e9",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 6,
+      "timestamp": 0.116199993,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.490662,
+          21.5905361,
+          502.681122
+        ],
+        "rotation": [
+          0.110299185,
+          0.100001939,
+          -0.0111551592,
+          0.988791943
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_8.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 259.0,
+              "y": 648.0,
+              "width": 125.0,
+              "height": 31.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dbf3c416-c9a8-47d6-9207-c8cabb46aab0",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 7,
+      "timestamp": 0.1328,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.490875,
+          21.5905342,
+          502.680878
+        ],
+        "rotation": [
+          0.110313684,
+          0.09870751,
+          -0.0110107679,
+          0.9889219
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_9.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 263.0,
+              "y": 648.0,
+              "width": 124.0,
+              "height": 30.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2c906daa-355f-4e4f-9f23-2c229ee4957e",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 8,
+      "timestamp": 0.1494,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.49118,
+          21.5905342,
+          502.6805
+        ],
+        "rotation": [
+          0.110337444,
+          0.09654979,
+          -0.010770075,
+          0.9891349
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_10.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 270.0,
+              "y": 647.0,
+              "width": 124.0,
+              "height": 31.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "73cbc960-10ce-4177-bf34-7a04f7d7b43b",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 9,
+      "timestamp": 0.166,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.492432,
+          21.5905342,
+          502.6791
+        ],
+        "rotation": [
+          0.110422932,
+          0.0883463249,
+          -0.009854983,
+          0.9899013
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_11.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 294.0,
+              "y": 645.0,
+              "width": 123.0,
+              "height": 31.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2e0cd233-5569-47ee-a757-5d1741ea0691",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 10,
+      "timestamp": 0.182599992,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.493317,
+          21.5905342,
+          502.678131
+        ],
+        "rotation": [
+          0.11047706,
+          0.08272989,
+          -0.009228473,
+          0.990386546
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_12.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 310.0,
+              "y": 644.0,
+              "width": 123.0,
+              "height": 31.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c4e4e063-8de4-4252-b314-03565d1eb0db",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 11,
+      "timestamp": 0.199199989,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.495972,
+          21.5905342,
+          502.675323
+        ],
+        "rotation": [
+          0.1106181,
+          0.06586536,
+          -0.007347244,
+          0.9916509
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_13.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 360.0,
+              "y": 641.0,
+              "width": 121.0,
+              "height": 31.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f84ff9c1-5e24-480f-b62a-83ab1bb63102",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 12,
+      "timestamp": 0.215799987,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.497467,
+          21.5905342,
+          502.673859
+        ],
+        "rotation": [
+          0.110680781,
+          0.0567762479,
+          -0.00633335859,
+          0.992212832
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_14.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 386.0,
+              "y": 640.0,
+              "width": 121.0,
+              "height": 30.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f2066021-6ca3-4b56-84da-862e74ae88fe",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 13,
+      "timestamp": 0.232399985,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.498016,
+          21.5905342,
+          502.6733
+        ],
+        "rotation": [
+          0.110702217,
+          0.053312432,
+          -0.005946972,
+          0.992405
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_15.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 396.0,
+              "y": 640.0,
+              "width": 120.0,
+              "height": 30.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "5e3d2bcb-b3fd-47d0-b82b-1786d242e203",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 14,
+      "timestamp": 0.248999983,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.487579,
+          21.5898972,
+          502.674
+        ],
+        "rotation": [
+          0.110719852,
+          0.05028105,
+          -0.005608823,
+          0.992563069
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_16.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 408.0,
+              "y": 639.0,
+              "width": 121.0,
+              "height": 30.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9af293e2-9250-459d-85a3-b2c0a3ee8761",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 15,
+      "timestamp": 0.2656,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.472046,
+          21.5889816,
+          502.661072
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_17.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 416.0,
+              "y": 637.0,
+              "width": 120.0,
+              "height": 30.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1c458dbf-95e0-40ab-9954-e511d12ab112",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 16,
+      "timestamp": 0.2822,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.45047,
+          21.5877228,
+          502.6434
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_18.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 424.0,
+              "y": 634.0,
+              "width": 120.0,
+              "height": 30.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "6bd93513-d9b3-44b1-9d58-e8fa2990ee60",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 17,
+      "timestamp": 0.298800021,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.42395,
+          21.5861759,
+          502.621674
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_19.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 434.0,
+              "y": 630.0,
+              "width": 118.0,
+              "height": 30.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "051b553a-bb6c-42c2-8a18-f87d077a6bdd",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 18,
+      "timestamp": 0.315400034,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.39328,
+          21.5843868,
+          502.5966
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_20.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 445.0,
+              "y": 625.0,
+              "width": 118.0,
+              "height": 30.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "eb8ff565-2abe-43da-95a9-572474164f50",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 19,
+      "timestamp": 0.332000047,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.3592,
+          21.5823956,
+          502.5687
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_21.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 456.0,
+              "y": 621.0,
+              "width": 118.0,
+              "height": 29.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aff3f696-7635-450f-aca5-1619cd32ee89",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 20,
+      "timestamp": 0.34860006,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.322235,
+          21.5802422,
+          502.538422
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_22.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 469.0,
+              "y": 616.0,
+              "width": 117.0,
+              "height": 29.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f666c7e9-1da6-4b77-b5be-3be0ea36c7dd",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 21,
+      "timestamp": 0.365200073,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.282867,
+          21.5779438,
+          502.506226
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_23.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 482.0,
+              "y": 611.0,
+              "width": 116.0,
+              "height": 28.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a71e87c9-5e59-4749-a5f7-360f6bb05aef",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 22,
+      "timestamp": 0.3818001,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.241516,
+          21.5762882,
+          502.472382
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_24.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 496.0,
+              "y": 606.0,
+              "width": 115.0,
+              "height": 28.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9256a4a6-8192-4041-a6e0-9fcd8f73cd57",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 23,
+      "timestamp": 0.3984001,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.1985,
+          21.5762882,
+          502.437164
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_25.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 510.0,
+              "y": 600.0,
+              "width": 114.0,
+              "height": 28.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d92fc5ab-df74-4ca1-89aa-7bfa8be9c949",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 24,
+      "timestamp": 0.4150001,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.154083,
+          21.5762882,
+          502.400818
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_26.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 525.0,
+              "y": 596.0,
+              "width": 113.0,
+              "height": 27.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "818dffe8-b593-4615-a401-7d4a094b126a",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 25,
+      "timestamp": 0.431600124,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.108521,
+          21.5762882,
+          502.3635
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_27.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 539.0,
+              "y": 591.0,
+              "width": 112.0,
+              "height": 27.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1f8059be-7f97-4821-be47-bbbb7c524323",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 26,
+      "timestamp": 0.448200136,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.061981,
+          21.5774765,
+          502.3254
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_28.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 553.0,
+              "y": 586.0,
+              "width": 112.0,
+              "height": 27.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "49b78d3d-c15d-40ea-bd90-8026a8522a92",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 27,
+      "timestamp": 0.464800149,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          481.014648,
+          21.5786057,
+          502.286682
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_29.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 568.0,
+              "y": 582.0,
+              "width": 110.0,
+              "height": 26.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d34734b8-b127-4116-9e17-615794b14a53",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 28,
+      "timestamp": 0.481400162,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.966644,
+          21.5796642,
+          502.247375
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_30.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 582.0,
+              "y": 577.0,
+              "width": 110.0,
+              "height": 26.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7473def9-4a59-4e68-ab1b-39046fb089fb",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 29,
+      "timestamp": 0.498000175,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.91806,
+          21.5794315,
+          502.207642
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_31.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 597.0,
+              "y": 572.0,
+              "width": 108.0,
+              "height": 26.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a80052f5-8151-4dc7-ab13-66eb831c5da3",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 30,
+      "timestamp": 0.514600158,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.869019,
+          21.57917,
+          502.16748
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_32.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 611.0,
+              "y": 567.0,
+              "width": 108.0,
+              "height": 26.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "8ab767f5-a2b3-4d31-b35c-0b02d8299648",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 31,
+      "timestamp": 0.5312002,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.81958,
+          21.5789089,
+          502.127
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_33.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 625.0,
+              "y": 563.0,
+              "width": 107.0,
+              "height": 24.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1be33261-a55c-4b46-aa87-c033c83ff495",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 32,
+      "timestamp": 0.5478002,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.755585,
+          21.5762787,
+          502.133423
+        ],
+        "rotation": [
+          0.11072471,
+          0.04941486,
+          -0.0055122,
+          0.99260664
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_34.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 645.0,
+              "y": 562.0,
+              "width": 107.0,
+              "height": 25.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d17d53c2-c34a-4261-98d3-a95f47c5ba6b",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 33,
+      "timestamp": 0.5644002,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.690674,
+          21.5747948,
+          502.140381
+        ],
+        "rotation": [
+          0.110704795,
+          0.0528794043,
+          -0.005898668,
+          0.992428064
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_35.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 654.0,
+              "y": 561.0,
+              "width": 108.0,
+              "height": 25.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "49f14a20-5aa8-46c9-8435-65dbdd26e775",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 34,
+      "timestamp": 0.5810002,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.625244,
+          21.5709438,
+          502.148132
+        ],
+        "rotation": [
+          0.110672392,
+          0.058075,
+          -0.00647823326,
+          0.9921376
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_36.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 660.0,
+              "y": 560.0,
+              "width": 107.0,
+              "height": 24.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "238ccfbf-7ae9-4ba0-842d-3086088bd127",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 35,
+      "timestamp": 0.5976002,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.558441,
+          21.567627,
+          502.1567
+        ],
+        "rotation": [
+          0.110636957,
+          0.06326901,
+          -0.007057622,
+          0.99182
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_37.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 665.0,
+              "y": 558.0,
+              "width": 108.0,
+              "height": 25.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "477f2c45-fd67-4bc5-b387-91adda98c3da",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 36,
+      "timestamp": 0.614200234,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.4912,
+          21.56354,
+          502.1666
+        ],
+        "rotation": [
+          0.110571153,
+          0.07192175,
+          -0.008022831,
+          0.9912301
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_38.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 661.0,
+              "y": 557.0,
+              "width": 107.0,
+              "height": 24.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f902c4b1-4163-476c-a9eb-037e0a5895f2",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 37,
+      "timestamp": 0.630800247,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.4242,
+          21.56055,
+          502.177551
+        ],
+        "rotation": [
+          0.110500842,
+          0.0801368,
+          -0.008939214,
+          0.990599751
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_39.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 658.0,
+              "y": 555.0,
+              "width": 107.0,
+              "height": 24.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "222504b0-a05c-4058-af5a-3181375345a6",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 38,
+      "timestamp": 0.64740026,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.355957,
+          21.5584965,
+          502.191254
+        ],
+        "rotation": [
+          0.11032325,
+          0.09784449,
+          -0.0109144971,
+          0.989007652
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_40.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 628.0,
+              "y": 554.0,
+              "width": 107.0,
+              "height": 24.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "21b16b8f-0c34-4e9b-b02a-c8550df1f626",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 39,
+      "timestamp": 0.6640003,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.2892,
+          21.5567379,
+          502.206177
+        ],
+        "rotation": [
+          0.110197634,
+          0.108626857,
+          -0.0121172648,
+          0.9878816
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_41.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 617.0,
+              "y": 553.0,
+              "width": 108.0,
+              "height": 24.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "babcbfa9-56b4-469e-a011-ccce01d746d0",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 40,
+      "timestamp": 0.6806003,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.22345,
+          21.55485,
+          502.221771
+        ],
+        "rotation": [
+          0.110115968,
+          0.115090154,
+          -0.0128382416,
+          0.9871495
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_42.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 619.0,
+              "y": 552.0,
+              "width": 107.0,
+              "height": 24.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "41dfc4e8-2463-435d-b060-3c7204584ed6",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 41,
+      "timestamp": 0.6972003,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.157623,
+          21.5529613,
+          502.2386
+        ],
+        "rotation": [
+          0.109999739,
+          0.123700172,
+          -0.0137986839,
+          0.9861075
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_43.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 615.0,
+              "y": 551.0,
+              "width": 107.0,
+              "height": 24.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "57523ddc-dcae-4b9e-b066-b09bdbe6d591",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 42,
+      "timestamp": 0.7138003,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.0923,
+          21.5510864,
+          502.256226
+        ],
+        "rotation": [
+          0.109900728,
+          0.130581439,
+          -0.0145662855,
+          0.985219955
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_44.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 616.0,
+              "y": 550.0,
+              "width": 107.0,
+              "height": 25.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "3b4535b1-7d6b-4c3b-b278-02a925b59cea",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 43,
+      "timestamp": 0.7304003,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          480.027,
+          21.552515,
+          502.275146
+        ],
+        "rotation": [
+          0.109769426,
+          0.139174014,
+          -0.0155247832,
+          0.9840429
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_45.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 612.0,
+              "y": 550.0,
+              "width": 106.0,
+              "height": 26.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a869bd29-a7e5-4972-a7ac-308a883f12d0",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 44,
+      "timestamp": 0.747000337,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.961151,
+          21.55291,
+          502.2965
+        ],
+        "rotation": [
+          0.109512031,
+          0.154613525,
+          -0.017247051,
+          0.9817354
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_46.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 588.0,
+              "y": 550.0,
+              "width": 106.0,
+              "height": 26.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "de9d614d-b4cd-4360-8713-7c70c2f5666c",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 45,
+      "timestamp": 0.763600349,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.896332,
+          21.5498829,
+          502.319366
+        ],
+        "rotation": [
+          0.1092769,
+          0.167450786,
+          -0.0186790414,
+          0.9796275
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_47.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 571.0,
+              "y": 549.0,
+              "width": 107.0,
+              "height": 27.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "8040182f-edcf-42db-a67d-56143aa0ca2d",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 46,
+      "timestamp": 0.780200362,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.832581,
+          21.54677,
+          502.3432
+        ],
+        "rotation": [
+          0.109101146,
+          0.176419929,
+          -0.0196795445,
+          0.97805196
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_48.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 566.0,
+              "y": 548.0,
+              "width": 106.0,
+              "height": 28.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "68ff6c3f-bff5-469e-8f25-a5141edd4458",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 47,
+      "timestamp": 0.7968004,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.768982,
+          21.5445042,
+          502.3687
+        ],
+        "rotation": [
+          0.108861744,
+          0.187929839,
+          -0.0209634677,
+          0.975905836
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_49.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 553.0,
+              "y": 548.0,
+              "width": 106.0,
+              "height": 28.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "043abddb-33bb-4796-ad31-e8f934f685e3",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 48,
+      "timestamp": 0.8134004,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.706482,
+          21.5450573,
+          502.394836
+        ],
+        "rotation": [
+          0.108703248,
+          0.195163518,
+          -0.02177038,
+          0.974485
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_50.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 552.0,
+              "y": 548.0,
+              "width": 106.0,
+              "height": 28.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "295e3c7b-26f9-4d3f-8143-14676aa6643f",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 49,
+      "timestamp": 0.8300004,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.6445,
+          21.5475922,
+          502.4217
+        ],
+        "rotation": [
+          0.108558439,
+          0.201537281,
+          -0.02248137,
+          0.9731868
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_51.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 554.0,
+              "y": 549.0,
+              "width": 106.0,
+              "height": 29.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f6bb884e-dfb1-4d73-b0a4-36a181a47fea",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 50,
+      "timestamp": 0.8466004,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.5829,
+          21.5501385,
+          502.4493
+        ],
+        "rotation": [
+          0.108419083,
+          0.207478359,
+          -0.0231440924,
+          0.971937537
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_52.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 558.0,
+              "y": 550.0,
+              "width": 105.0,
+              "height": 29.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "baa8716b-c308-4453-8338-f1774127bf60",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 51,
+      "timestamp": 0.8632004,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.5213,
+          21.54911,
+          502.478271
+        ],
+        "rotation": [
+          0.108202472,
+          0.216375366,
+          -0.02413655,
+          0.9699957
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_53.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 552.0,
+              "y": 550.0,
+              "width": 105.0,
+              "height": 29.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0225f375-a3d2-419b-b8ee-4c6624fb64e9",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 52,
+      "timestamp": 0.879800439,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.460266,
+          21.54569,
+          502.508362
+        ],
+        "rotation": [
+          0.107976757,
+          0.2252542,
+          -0.0251269769,
+          0.9679722
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_54.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 547.0,
+              "y": 549.0,
+              "width": 105.0,
+              "height": 30.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d23119ad-da05-4b1c-81c1-d5bf96e4b276",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 53,
+      "timestamp": 0.896400452,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.39975,
+          21.5457172,
+          502.539642
+        ],
+        "rotation": [
+          0.10773059,
+          0.23453553,
+          -0.0261623077,
+          0.9657654
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_55.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 540.0,
+              "y": 549.0,
+              "width": 105.0,
+              "height": 30.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e645b584-8f9e-4b7f-8b79-75c2c2a03f41",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 54,
+      "timestamp": 0.913000464,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.339233,
+          21.5455551,
+          502.5735
+        ],
+        "rotation": [
+          0.107294194,
+          0.2500959,
+          -0.0278980564,
+          0.9618533
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_56.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 515.0,
+              "y": 549.0,
+              "width": 105.0,
+              "height": 32.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "15b5d532-fb88-4184-b492-cae0aeb8667d",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 55,
+      "timestamp": 0.9296005,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.279175,
+          21.5454674,
+          502.6111
+        ],
+        "rotation": [
+          0.106567234,
+          0.2739383,
+          -0.0305576622,
+          0.955336332
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_57.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 465.0,
+              "y": 551.0,
+              "width": 105.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dd162105-75a3-42c5-8220-2033782a934b",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 56,
+      "timestamp": 0.9462005,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.222321,
+          21.544714,
+          502.6478
+        ],
+        "rotation": [
+          0.1063513,
+          0.280601054,
+          -0.03130089,
+          0.9534007
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_58.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 466.0,
+              "y": 551.0,
+              "width": 105.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ca16ffeb-3256-47a6-8cd8-5cf3ac2e73ad",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 57,
+      "timestamp": 0.9628005,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.165833,
+          21.5428181,
+          502.68573
+        ],
+        "rotation": [
+          0.106060036,
+          0.289325178,
+          -0.03227406,
+          0.9507895
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_59.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 461.0,
+              "y": 551.0,
+              "width": 104.0,
+              "height": 34.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "62e1a027-2a9e-45f7-8cfc-770ef867f270",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 58,
+      "timestamp": 0.9794005,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.110352,
+          21.5441017,
+          502.723755
+        ],
+        "rotation": [
+          0.105903909,
+          0.2938853,
+          -0.0327827372,
+          0.949389935
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_60.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 468.0,
+              "y": 552.0,
+              "width": 104.0,
+              "height": 34.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "8e56a16c-0e8f-4dc2-9dc9-e5e862f60611",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 59,
+      "timestamp": 0.9960005,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.055176,
+          21.5446072,
+          502.7626
+        ],
+        "rotation": [
+          0.105701678,
+          0.29967925,
+          -0.03342905,
+          0.947577
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_61.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 471.0,
+              "y": 553.0,
+              "width": 104.0,
+              "height": 34.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "5b03ef46-fbef-4d0d-afa8-87ebe99fc4ac",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 60,
+      "timestamp": 1.01260054,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          479.000519,
+          21.5450783,
+          502.801819
+        ],
+        "rotation": [
+          0.105540015,
+          0.304223835,
+          -0.0339359976,
+          0.9461277
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_62.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 479.0,
+              "y": 553.0,
+              "width": 102.0,
+              "height": 35.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f9dba280-8b30-438a-a936-0f8f84455770",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 61,
+      "timestamp": 1.02920055,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.946167,
+          21.5479431,
+          502.841949
+        ],
+        "rotation": [
+          0.105315648,
+          0.3104097,
+          -0.0346260257,
+          0.944116354
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_63.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 481.0,
+              "y": 554.0,
+              "width": 102.0,
+              "height": 35.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0e0aef74-eceb-4515-8b09-7dd3f43df28f",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 62,
+      "timestamp": 1.04580057,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.8923,
+          21.5509071,
+          502.8828
+        ],
+        "rotation": [
+          0.105086766,
+          0.316582233,
+          -0.0353145674,
+          0.9420645
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_64.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 483.0,
+              "y": 556.0,
+              "width": 102.0,
+              "height": 35.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "199f84f1-dea3-4b75-a1b0-9ea2af2a3787",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 63,
+      "timestamp": 1.06240058,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.8392,
+          21.5524521,
+          502.923584
+        ],
+        "rotation": [
+          0.104978405,
+          0.3194581,
+          -0.03563537,
+          0.9410931
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_65.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 496.0,
+              "y": 556.0,
+              "width": 101.0,
+              "height": 36.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "90894a6f-411f-4aef-b150-f4379d00cdc9",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 64,
+      "timestamp": 1.07900059,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.786438,
+          21.5518742,
+          502.9644
+        ],
+        "rotation": [
+          0.104916051,
+          0.321100175,
+          -0.0358185433,
+          0.9405341
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_66.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 512.0,
+              "y": 556.0,
+              "width": 100.0,
+              "height": 36.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f7f7f259-4f72-46f4-a82b-12851392a1d4",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 65,
+      "timestamp": 1.09560061,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.733734,
+          21.5506153,
+          503.005554
+        ],
+        "rotation": [
+          0.10482192,
+          0.32356137,
+          -0.03609309,
+          0.9396903
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_67.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 525.0,
+              "y": 556.0,
+              "width": 100.0,
+              "height": 36.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1b3747da-cb6a-43ce-b1d4-c2d859a4d6f6",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 66,
+      "timestamp": 1.11220062,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.6813,
+          21.5494976,
+          503.046936
+        ],
+        "rotation": [
+          0.104742937,
+          0.3256107,
+          -0.03632169,
+          0.9389822
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_68.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 540.0,
+              "y": 556.0,
+              "width": 100.0,
+              "height": 36.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "08222c04-b097-48f0-b798-aad9c07f8da1",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 67,
+      "timestamp": 1.12880063,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.629059,
+          21.5500221,
+          503.08844
+        ],
+        "rotation": [
+          0.104679376,
+          0.32724902,
+          -0.0365044437,
+          0.9384124
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_69.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 556.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 36.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "72c048d4-c906-4496-9dbf-cf9613d57616",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 68,
+      "timestamp": 1.14540064,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.576965,
+          21.55285,
+          503.13
+        ],
+        "rotation": [
+          0.104631506,
+          0.3284771,
+          -0.0366414376,
+          0.9379833
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_70.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 573.0,
+              "y": 557.0,
+              "width": 99.0,
+              "height": 36.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fc2b2f3c-6b7e-4d21-9901-b77fb96fe321",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 69,
+      "timestamp": 1.16200066,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.525024,
+          21.5558758,
+          503.171722
+        ],
+        "rotation": [
+          0.10458345,
+          0.329704672,
+          -0.0367783681,
+          0.9375525
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_71.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 590.0,
+              "y": 558.0,
+              "width": 98.0,
+              "height": 36.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "48834524-3183-4dd6-87ce-b6e9c159ea53",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 70,
+      "timestamp": 1.17860067,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.473175,
+          21.5589,
+          503.213562
+        ],
+        "rotation": [
+          0.104535222,
+          0.330931664,
+          -0.03691524,
+          0.93712014
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_72.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 608.0,
+              "y": 559.0,
+              "width": 97.0,
+              "height": 36.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1f9e24a0-e062-443d-b711-f3e3eb0b1baf",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 71,
+      "timestamp": 1.19520068,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.473022,
+          21.5588989,
+          503.214233
+        ],
+        "rotation": [
+          0.104421981,
+          0.333792359,
+          -0.03723435,
+          0.936104953
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_73.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 599.0,
+              "y": 558.0,
+              "width": 97.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "27b83f2c-ab6a-46cf-aba5-c28c28da5097",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 72,
+      "timestamp": 1.21180069,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.4815,
+          21.5584011,
+          503.207581
+        ],
+        "rotation": [
+          0.104373142,
+          0.3350174,
+          -0.0373710059,
+          0.935667157
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_74.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 592.0,
+              "y": 558.0,
+              "width": 97.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d722dbce-289c-473c-8b6e-9d2a18711378",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 73,
+      "timestamp": 1.22840071,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.497,
+          21.55749,
+          503.195221
+        ],
+        "rotation": [
+          0.104291365,
+          0.337057948,
+          -0.03759862,
+          0.934934
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_75.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 579.0,
+              "y": 558.0,
+              "width": 98.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ee610a7f-5f0f-4dbf-8796-e736ebae0438",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 74,
+      "timestamp": 1.24500072,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.5183,
+          21.5562363,
+          503.1782
+        ],
+        "rotation": [
+          0.104159489,
+          0.340319455,
+          -0.0379624441,
+          0.9337518
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_76.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 561.0,
+              "y": 558.0,
+              "width": 98.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "17dcbb99-4b1b-4924-94c3-0a7efbc59413",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 75,
+      "timestamp": 1.26160073,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.5445,
+          21.5547066,
+          503.156433
+        ],
+        "rotation": [
+          0.1041097,
+          0.3415414,
+          -0.0380987525,
+          0.9333055
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_77.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 546.0,
+              "y": 557.0,
+              "width": 98.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "43540eb0-9a93-4574-86ea-adfcca076927",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 76,
+      "timestamp": 1.27820075,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.574677,
+          21.55294,
+          503.131042
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_78.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 531.0,
+              "y": 557.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "88c9f1b7-fa27-4694-8519-8b5d51968214",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 77,
+      "timestamp": 1.29480076,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_79.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "42852d07-6eb3-4db0-b194-1701110da292",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 78,
+      "timestamp": 1.31140077,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_80.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "56606824-a8fd-4264-8d13-46817990b93e",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 79,
+      "timestamp": 1.32800078,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_81.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "223c31ea-2d8f-4564-b94b-9d460c1b766a",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 80,
+      "timestamp": 1.3446008,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_82.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "df455f94-6d45-46de-b903-92072c4482ef",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 81,
+      "timestamp": 1.36120081,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_83.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c500dd3d-7480-43b1-8cc2-038e63b3622a",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 82,
+      "timestamp": 1.37780082,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_84.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cfbdc415-841c-4ce1-9105-eba0e616b5b2",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 83,
+      "timestamp": 1.39440084,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_85.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "73863f26-1114-4922-a4bf-9117cb3fc55c",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 84,
+      "timestamp": 1.41100085,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_86.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "6a7351a5-c848-4636-b9f5-fe7c14934360",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 85,
+      "timestamp": 1.42760086,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_87.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c042c711-90f0-4ffe-b031-1d0c0f051738",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 86,
+      "timestamp": 1.44420087,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_88.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aff26e6d-700a-47ba-85b0-23b8eaa8112b",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 87,
+      "timestamp": 1.46080089,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_89.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e28bfdb9-1b57-4384-9731-d9b5aa796f6d",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 88,
+      "timestamp": 1.4774009,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_90.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b4dfd6a5-b24d-413d-ae23-a5d89c277444",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 89,
+      "timestamp": 1.49400091,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608276,
+          21.5505733,
+          503.10257
+        ],
+        "rotation": [
+          0.104076415,
+          0.342355758,
+          -0.03818959,
+          0.9330071
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_91.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 517.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 37.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a3e88cb1-45c6-4d9a-a3c0-e13f36aad646",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 90,
+      "timestamp": 1.51060092,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.608978,
+          21.5505733,
+          503.0995
+        ],
+        "rotation": [
+          0.104599483,
+          0.329295576,
+          -0.036732737,
+          0.9376962
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_92.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 557.0,
+              "y": 556.0,
+              "width": 99.0,
+              "height": 36.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "35b2b9a4-a7d3-4052-9c93-15cbfc84477b",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 91,
+      "timestamp": 1.52720094,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.610931,
+          21.5505733,
+          503.092377
+        ],
+        "rotation": [
+          0.1057308,
+          0.298852324,
+          -0.033336807,
+          0.947838068
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_93.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 647.0,
+              "y": 556.0,
+              "width": 100.0,
+              "height": 34.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "69f7f75d-985b-4b6b-bde5-216881273052",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 92,
+      "timestamp": 1.543801,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.61203,
+          21.5505733,
+          503.088959
+        ],
+        "rotation": [
+          0.1062414,
+          0.28392747,
+          -0.03167195,
+          0.952415347
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_94.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 691.0,
+              "y": 557.0,
+              "width": 100.0,
+              "height": 34.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "495373b6-45d9-4e2a-8afe-e0272ccd2350",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 93,
+      "timestamp": 1.560401,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.612579,
+          21.5505733,
+          503.087372
+        ],
+        "rotation": [
+          0.1064734,
+          0.276855022,
+          -0.0308830217,
+          0.9544952
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_95.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 712.0,
+              "y": 557.0,
+              "width": 100.0,
+              "height": 34.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "83b7695c-5666-4731-a90d-d5f60f197d7b",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 94,
+      "timestamp": 1.577001,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.6129,
+          21.5505733,
+          503.086426
+        ],
+        "rotation": [
+          0.106607139,
+          0.2726876,
+          -0.03041815,
+          0.9556941
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_96.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 725.0,
+              "y": 558.0,
+              "width": 99.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "72df492e-5d5d-4538-8009-331422786035",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 95,
+      "timestamp": 1.593601,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.613129,
+          21.5505733,
+          503.085876
+        ],
+        "rotation": [
+          0.106686413,
+          0.2701847,
+          -0.03013895,
+          0.956404746
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_97.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 732.0,
+              "y": 558.0,
+              "width": 100.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b9a83f42-43f9-4fb5-bd34-28a21753196f",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 96,
+      "timestamp": 1.610201,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.613342,
+          21.5505733,
+          503.085327
+        ],
+        "rotation": [
+          0.10676495,
+          0.2676799,
+          -0.0298595428,
+          0.957108855
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_98.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 739.0,
+              "y": 558.0,
+              "width": 100.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "890b7a9b-caa2-4f0f-ba8a-97bb334e81b8",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 97,
+      "timestamp": 1.626801,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.613464,
+          21.5505733,
+          503.085052
+        ],
+        "rotation": [
+          0.106803939,
+          0.2664268,
+          -0.02971976,
+          0.9574583
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_99.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 743.0,
+              "y": 558.0,
+              "width": 100.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2ea1b84e-3bcf-4555-8018-3a1f01712dd5",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 98,
+      "timestamp": 1.643401,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.6134,
+          21.5505733,
+          503.085144
+        ],
+        "rotation": [
+          0.10679096,
+          0.266844541,
+          -0.0297663584,
+          0.957341969
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_100.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 742.0,
+              "y": 558.0,
+              "width": 100.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "5770e70c-8366-4289-99d0-ca3178f7c5e5",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 99,
+      "timestamp": 1.660001,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.6133,
+          21.5505733,
+          503.085419
+        ],
+        "rotation": [
+          0.106751904,
+          0.26809746,
+          -0.029906122,
+          0.9569919
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_101.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 738.0,
+              "y": 558.0,
+              "width": 100.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b15fecab-5fd2-4e42-8408-06e41c469ca8",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 100,
+      "timestamp": 1.676601,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.613129,
+          21.5505733,
+          503.085876
+        ],
+        "rotation": [
+          0.106686413,
+          0.270184666,
+          -0.0301389471,
+          0.956404746
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_102.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 732.0,
+              "y": 558.0,
+              "width": 100.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "259132ca-81af-4c16-9254-1e75f393958a",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 101,
+      "timestamp": 1.69320107,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.613068,
+          21.5505733,
+          503.08606
+        ],
+        "rotation": [
+          0.106660068,
+          0.2710192,
+          -0.0302320383,
+          0.956168652
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_103.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 729.0,
+              "y": 558.0,
+              "width": 100.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "457fbf47-b962-4ca2-8ed3-748b022370d2",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 102,
+      "timestamp": 1.70980108,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.612946,
+          21.5505733,
+          503.086334
+        ],
+        "rotation": [
+          0.1066204,
+          0.27227056,
+          -0.0303716268,
+          0.955813
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_104.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 726.0,
+              "y": 558.0,
+              "width": 100.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fca9811b-82c4-46da-bab1-565b5f3ee30c",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 103,
+      "timestamp": 1.72640109,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.612946,
+          21.5505733,
+          503.086334
+        ],
+        "rotation": [
+          0.1066204,
+          0.27227056,
+          -0.0303716268,
+          0.955813
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_105.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 726.0,
+              "y": 558.0,
+              "width": 100.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "477af599-6e67-460e-b982-96c3d720755f",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 104,
+      "timestamp": 1.7430011,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.612946,
+          21.5505733,
+          503.086334
+        ],
+        "rotation": [
+          0.1066204,
+          0.27227056,
+          -0.0303716268,
+          0.955813
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_106.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 726.0,
+              "y": 558.0,
+              "width": 100.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d18330d8-104e-48f9-bbaf-81117a5cd784",
+      "sequence_id": "9f3ce959-d9f1-4e2c-92fc-78e48bd6d713",
+      "step": 105,
+      "timestamp": 1.75960112,
+      "sensor": {
+        "sensor_id": "camera",
+        "ego_id": "ego",
+        "modality": "camera",
+        "translation": [
+          478.612946,
+          21.5505733,
+          503.086334
+        ],
+        "rotation": [
+          0.1066204,
+          0.27227056,
+          -0.0303716268,
+          0.955813
+        ],
+        "camera_intrinsic": [
+          [
+            2.37030125,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            4.213869,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -1.00080037
+          ]
+        ],
+        "projection": "perspective"
+      },
+      "ego": {
+        "ego_id": "ego",
+        "translation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "velocity": null,
+        "acceleration": null
+      },
+      "filename": "RGBb9a59704-743c-42e9-8e56-905349606811/rgb_107.png",
+      "format": "PNG",
+      "annotations": [
+        {
+          "id": "bounding box",
+          "annotation_definition": "bounding box",
+          "values": [
+            {
+              "label_id": 1,
+              "label_name": "newhammer",
+              "instance_id": 1,
+              "x": 726.0,
+              "y": 558.0,
+              "width": 100.0,
+              "height": 33.0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
