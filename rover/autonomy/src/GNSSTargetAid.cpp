@@ -4,6 +4,7 @@
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 #include <sensor_msgs/MagneticField.h>
+#include <sensor_msgs/Imu.h>
 
 using namespace std;
 
