@@ -11,20 +11,20 @@ NavfnROS:
 
 DWAPlannerROS:
   # Robot configuration parameters  
-  acc_lim_x: 0.5 # default: 5
+  acc_lim_x: 2.5 # 0.5 # default: 5
   acc_lim_y: 0.0 # default: 0
-  acc_lim_th: 0.32 # default: 3.2
+  acc_lim_th: 1.9 # 0.32 # default: 3.2
 
-  max_vel_x: 0.7 # default: 6.0
-  min_vel_x: 0.4 # default: 0.0
+  max_vel_x: 3.5 # 0.7 # default: 6.0
+  min_vel_x: 2.0 # 0.4 # default: 0.0
   # the simuation rover does not move in y direction
   max_vel_y: 0.0 # default: 0.0
   min_vel_y: 0.0 # default: 0.0
 
-  max_vel_trans: 0.7 # default: 0.5
-  min_vel_trans: 0.4 # default: 0.1
-  max_vel_rot: 0.7
-  min_vel_rot: 0.4
+  max_vel_trans: 3.5 # 0.7 # default: 0.5
+  min_vel_trans: 2.0 # 0.4 # default: 0.1
+  max_vel_rot: 3.5 # 0.7
+  min_vel_rot: 2.0 # 0.4
 
   # Goal Tolerance Parameters
   yaw_goal_tolerance: 0.2

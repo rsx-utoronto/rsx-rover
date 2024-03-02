@@ -15,8 +15,8 @@ class ARucoTagDetectionNode():
 
     def __init__(self):
         # self.image_topic = "/camera/color/image_raw"
-        self.image_topic = "/zed2i/zed_node/rgb/image_rect_color"
-        self.info_topic = "/zed2i/zed_node/rgb/camera_info"
+        self.image_topic = "/zed_node/rgb/image_rect_color"
+        self.info_topic = "/zed_node/rgb/camera_info"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
         self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
