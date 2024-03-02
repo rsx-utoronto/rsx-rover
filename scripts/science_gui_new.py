@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import serial as ser
 import time
 import tkinter as tk
