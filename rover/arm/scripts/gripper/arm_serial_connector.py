@@ -71,22 +71,36 @@ class Serial_Port:
             print("\n" + self.device_name + " cannot be found\n")
         
 
-    def send_bytes(self, data):
+    def send_bytes(self, data : str):
         """
         (None) -> (None)
 
         Tell servo to go to high angle (angle_high)
         """
 
+        # if data[-1] != "\n":
+        #     data += "\n"
+
         # Checking if device port is valid
         if self.device_port:
 
             # Write data value to device port
-            self.device_port.write(bytes(data, 'utf-8'))
+            print(data, type(data))
+            self.device_port.write(data.encode('utf-8'))
 
         else:
             print("\nPort not connected")
+    
+    def read_bytes(self):
+        """
+        
+        """
 
+        if self.device_port:
+
+            # Read data value coming to the device port
+            data = self.device_port.read(size= 100)
+            print(str(data, encoding='ascii'))
 
     def set_permissions(self):
         """

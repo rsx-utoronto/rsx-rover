@@ -158,7 +158,7 @@ class IKMode(ScriptState):
 
         '''
 
-        jointSpeeds = [0.005, 0.003, 0.01, 0.075, 0.075, 0.0375, 0.04]
+        jointSpeeds = [0.005, 0.003, 0.01, 0.075, 0.075, 0.0375]
         angleDelta = list(np.subtract(np.array(newArmAngles), np.array(curArmAngles)))
         # slowedDownAngles = copy.deepcopy(newArmAngles)
 
@@ -251,7 +251,7 @@ class IKMode(ScriptState):
 
             movementSpeed = originalSpeed
 
-            targetAngles.append(self.controlGripperAngle(isButtonPressed, curArmAngles))
+            # targetAngles.append(self.controlGripperAngle(isButtonPressed, curArmAngles))
 
             prevArmAngles = curArmAngles
             curArmAngles = targetAngles
@@ -660,7 +660,7 @@ class InverseKinematicsNode():
             "angle3":curArmAngles[3],
             "angle4":curArmAngles[4],
             "angle5":curArmAngles[5],
-            "gripperAngle":curArmAngles[6]
+            # "gripperAngle":curArmAngles[6]
             }
 
             with open('arm_positions.json','r+') as file:
@@ -771,16 +771,16 @@ class InverseKinematicsNode():
         global savedCanAngles
 
         ikAngles = Float32MultiArray()
-        adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
+        adjustedAngles = [0, 0, 0, 0, 0, 0]
         for i in range(adjustedAngles.__len__()):
-            adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] + savedCanAngles[i]
+            adjustedAngles[i] = newJointAngles[i] #- angleCorrections[i] + savedCanAngles[i]
             adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
 
         adjustedAngles[0] = -adjustedAngles[0]
         adjustedAngles[1] = adjustedAngles[1]
         adjustedAngles[2] = -adjustedAngles[2]
         adjustedAngles[4] = adjustedAngles[4]
-        adjustedAngles[5] = adjustedAngles[5]
+        adjustedAngles[5] = -adjustedAngles[5]
 
         temp = adjustedAngles[5]
         adjustedAngles[5] = adjustedAngles[4]
@@ -804,7 +804,7 @@ class InverseKinematicsNode():
 
         tempList = list(data.data)
 
-        for i in range(7):
+        for i in range(6):
             tempList[i] = np.deg2rad(tempList[i])
 
         tempList[0] = -tempList[0]
@@ -815,8 +815,8 @@ class InverseKinematicsNode():
         tempList[4] = temp
         # tempList[5] = -tempList[5]
         # tempList[6] = tempList[6]
-        tempAngles = copy.deepcopy(list(np.subtract(np.array(tempList),np.array(savedCanAngles))))
-        liveArmAngles = tempAngles
+        # tempAngles = copy.deepcopy(list(np.subtract(np.array(tempList),np.array(savedCanAngles))))
+        liveArmAngles = tempList#tempAngles
 
     def onStateUpdate(self, data):
         ''' Callback function for arm_state rostopic
@@ -842,10 +842,10 @@ class InverseKinematicsNode():
                 print(type(self.scriptMode).__name__)
 
                 savedCanAngles = copy.deepcopy(liveArmAngles) 
-                liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
-                curArmAngles = [0, 0, 0, 0, 0, 0, 0]
+                liveArmAngles = [0, 0, 0, 0, 0, 0]
+                curArmAngles = [0, 0, 0, 0, 0, 0]
 
-                dhTable = ik.createDHTable([0, pi/2, 0, 0, 0, 0, 0])
+                dhTable = ik.createDHTable([0, pi/2, 0, 0, 0, 0])
                 prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
 
                 [newRoll, newPitch, newYaw] = ik.calculateRotationAngles(prevTargetTransform)
@@ -942,16 +942,16 @@ class InverseKinematicsNode():
 # Main Area
 
 if __name__ == "__main__":
-    angleCorrections = [0, 0, 0, 0, 0, 0, 0]
-    curArmAngles = [0, 0, 0, 0, 0, 0, 0]
-    prevArmAngles = [0, 0, 0, 0, 0, 0, 0]
-    liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
+    angleCorrections = [0, 0, 0, 0, 0, 0]
+    curArmAngles = [0, 0, 0, 0, 0, 0]
+    prevArmAngles = [0, 0, 0, 0, 0, 0]
+    liveArmAngles = [0, 0, 0, 0, 0, 0]
     prevTargetValues = [0, 0, 0, [250, 0, 450]] # start position for ik
     newTargetValues = prevTargetValues
     prevTargetTransform = ik.createEndEffectorTransform(prevTargetValues[0], prevTargetValues[1],
                                                         prevTargetValues[2], prevTargetValues[3])
-    goToPosValues = [False, [0, 0, 0, 0, 0, 0, 0]]
-    savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
+    goToPosValues = [False, [0, 0, 0, 0, 0, 0]]
+    savedCanAngles = [0, 0, 0, 0, 0, 0]
 
     isIKEntered = False
     movementSpeed = 10/NODE_RATE

@@ -279,7 +279,7 @@
   <axis xyz="-0.0 0.0 1.0"/>
 </joint>
 
-<joint name="Joint_7" type="continuous">
+<joint name="Joint_7" type="fixed">
   <origin xyz="-0.067262 0.062967 0.064" rpy="0 0 0"/>
   <parent link="link_6"/>
   <child link="link_7"/>
@@ -292,14 +292,14 @@
   <child link="link_8"/>
 </joint>
 
-<joint name="Joint_8" type="continuous">
+<joint name="Joint_8" type="fixed">
   <origin xyz="0.091471 0.011052 0.064" rpy="0 0 0"/>
   <parent link="link_6"/>
   <child link="link_9"/>
   <axis xyz="0.173648 -0.984808 -0.0"/>
 </joint>
 
-<joint name="Joint_9" type="continuous">
+<joint name="Joint_9" type="fixed">
   <origin xyz="-0.005 -0.092 0.064" rpy="0 0 0"/>
   <parent link="link_6"/>
   <child link="camera_link"/>
@@ -560,7 +560,7 @@
   <axis xyz="-0.0 0.0 1.0"/>
 </joint>
 
-<joint name="Real_Joint_7" type="continuous">
+<joint name="Real_Joint_7" type="fixed">
   <origin xyz="-0.067262 0.062967 0.064" rpy="0 0 0"/>
   <parent link="real_link_6"/>
   <child link="real_link_7"/>
@@ -573,14 +573,14 @@
   <child link="real_link_8"/>
 </joint>
 
-<joint name="Real_Joint_8" type="continuous">
+<joint name="Real_Joint_8" type="fixed">
   <origin xyz="0.091471 0.011052 0.064" rpy="0 0 0"/>
   <parent link="real_link_6"/>
   <child link="real_link_9"/>
   <axis xyz="0.173648 -0.984808 -0.0"/>
 </joint>
 
-<joint name="Real_Joint_9" type="continuous">
+<joint name="Real_Joint_9" type="fixed">
   <origin xyz="-0.005 -0.092 0.064" rpy="0 0 0"/>
   <parent link="real_link_6"/>
   <child link="real_camera_link"/>
