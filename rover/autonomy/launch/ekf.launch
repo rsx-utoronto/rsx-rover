@@ -1,19 +1,23 @@
 <launch>
-   
-   <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" >
+  <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_ekf" args="-0.2 0 0.6 0 0 0 1 base_link gps 100">
+        <remap from="tf" to="tf_ekf"/>
+  </node> 
+  <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster" args="-0.2 0 0.6 0 0 0 1 base_link gps 100"/>
+
+  <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />
+
+  <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" >
     <param name="publish_tf" value="false" />
     <param name="use_mag" value="false" />
     <param name="world_frame" value="enu" />
-    <!-- <param name="remove_gravity_vector" value="false" /> -->
+    <remap from="imu/mag" to="/zed_node/imu/mag" />
     <remap from="imu/data_raw" to="/imu/enu" />
     <remap from="imu/data" to="/imu/orient" />
   </node>
-  
-  <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />
 
   <!-- robot_localization EKF node for the odom frame -->
   <node pkg="robot_localization" type="ekf_localization_node" name="ekf_odom_node" output="screen">
-    <param name="frequency" value="10." />  
+    <param name="frequency" value="30." />  
     <param name="sensor_timeout" value="0.2" />  
     <param name="two_d_mode" value="false" />
     <param name="print_diagnostics" value="true" />
@@ -40,6 +44,15 @@
     <rosparam param="odom0_config">[ true, true, true, 
                                      false, false, false,
                                      false, false, false, 
+                                     false, false, false,
+                                     false, false, false]</rosparam>
+    <param name="twist0" value="ublox/fix_velocity" />
+    <param name="twist0_differential" value="false"/>
+    <param name="twist0_relative" value="false"/>
+    <param name="twist0_queue_size" value="10" />
+    <rosparam param="twist0_config">[ false, false, false, 
+                                     false, false, false,
+                                     true, true, true, 
                                      false, false, false,
                                      false, false, false]</rosparam>
   </node>
