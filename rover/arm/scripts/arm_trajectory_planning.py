@@ -253,6 +253,7 @@ def updateSimAngles(simAngles_):
     simAngles = list(simAngles_.data)
     print("curr angles: ", simAngles)
 
+    # -----------------------------------------------------
     fakeAngles = [] #placeholder begins
 
     for i in range(7):
@@ -262,6 +263,7 @@ def updateSimAngles(simAngles_):
     fakeAnglesPosition.data = fakeAngles
 
     pubActualAngles.publish(fakeAnglesPosition) #placeholder ends
+    # -----------------------------------------------------
     return
 
 def updateActualAngles(actualAngles_):
@@ -279,10 +281,16 @@ def getAngles():
     pubArmAngles = rospy.Publisher("/arm_goal_pos", Float32MultiArray, queue_size=10)
     rate = rospy.Rate(10)
 
+    # -----------------------------------------------------
     pubActualAngles = rospy.Publisher("/ARM_ACTUAL_POSITION", Float32MultiArray, queue_size=10)
+    # -----------------------------------------------------
+
     rospy.Subscriber("/PATH_PLANNING", Float32MultiArray, savePathPlanning, queue_size=10)
     rospy.Subscriber("/arm_goal_pos", Float32MultiArray, updateSimAngles, queue_size=1000000000)
+    
+    # -----------------------------------------------------
     rospy.Subscriber("/ARM_ACTUAL_POSITION", Float32MultiArray, updateActualAngles, queue_size=10)
+    # -----------------------------------------------------
     
     # ARM_ACTUAL_POSITION is also a placeholder for sensor data
     controlArm()
