@@ -26,8 +26,7 @@ class Manual():
         # 3 - Right analog vertical
         # 4 - L1 / R1 
         # 5 - L2 / R2 (analog)
-        # 6 - X / circle
-        self.controller_input    = [0, 0, 0, 0, 0, 0, 0]
+        self.controller_input    = [0, 0, 0, 0, 0, 0]
 
         ## Buffer for storing and publishing goal position
         # Idx - Associated Motor:
@@ -39,7 +38,7 @@ class Manual():
         # 5 - Motor 16 (Wrist 2)
         # 6 - Motor 17 (End Effector Open/Close)
         self.goal_pos            = Float32MultiArray()
-        self.goal_pos.data       = [0, 0, 0, 0, 0, 0, 0]
+        self.goal_pos.data       = [0, 0, 0, 0, 0, 0]
 
         ## Buffer to hold error messages and offsets
         # Message Descriptions:
@@ -47,23 +46,37 @@ class Manual():
         # 1 -> Faraway position
         # 2 -> Exceeding Max Current
         # 3 -> Hitting Limit Switch
-        self.error_messages      = [0, 0, 0, 0, 0, 0, 0]
-        self.error_offsets       = [0, 0, 0, 0, 0, 0, 0]
+        self.error_messages      = [0, 0, 0, 0, 0, 0]
+        self.error_offsets       = [0, 0, 0, 0, 0, 0]
 
         ## Constant Speed limits, values are chosen by trial and error #TODO
-        self.SPEED_LIMIT         = [-0.0075, 0.009, 0.015, 0.075, 
-                                    0.025, 0.025, 0.24]
+        self.SPEED_LIMIT         = [-0.01, 0.009, 0.015, 0.075, 
+                                    0.09, 0.09]
 
         ## Variable for the status, start at idle
         self.status              = "Idle"
 
+        # ## ROS topics: publishing and subscribing
+        # self.error               = rospy.Subscriber("arm_error_msg", UInt8MultiArray, self.CallbackError)
+        # self.state               = rospy.Subscriber("arm_state", String, self.CallbackState)
+        # self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)
+        # self.err_offset          = rospy.Subscriber("arm_error_offset", Float32MultiArray, self.CallbackErrOffset)
+        # self.goal                = rospy.Publisher("arm_goal_pos", Float32MultiArray)
+        # #self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 0)
+
         ## ROS topics: publishing and subscribing
-        self.error               = rospy.Subscriber("arm_error_msg", UInt8MultiArray, self.CallbackError)
+        self.goal                = rospy.Publisher("arm_goal_pos", Float32MultiArray)
         self.state               = rospy.Subscriber("arm_state", String, self.CallbackState)
         self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)
+
+        t = time.time()
+        while (time.time() - t) < 10:
+            print("Passing time")
+            pass
         self.err_offset          = rospy.Subscriber("arm_error_offset", Float32MultiArray, self.CallbackErrOffset)
-        self.goal                = rospy.Publisher("arm_goal_pos", Float32MultiArray)
+        self.error               = rospy.Subscriber("arm_error_msg", UInt8MultiArray, self.CallbackError)
         #self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 0)
+
 
     def CallbackError (self, errors: UInt8MultiArray) -> None:
         """
@@ -131,7 +144,6 @@ class Manual():
         self.controller_input[3] = inputs.r_horizontal
         self.controller_input[4] = inputs.l1 - inputs.r1
         self.controller_input[5] = inputs.l2 - inputs.r2
-        self.controller_input[6] = inputs.x - inputs.o
 
         # Print Statement for console view
         #print("State:", self.status)
@@ -163,8 +175,8 @@ class Manual():
         
         speed_limit (list(float)): List containing tested out manually controlled speeds for each motor
         """
-        # Apply gripper correction due to wrist roll
-        curr_goal_pos[6] -= (joy_input[4] * speed_limit[4]) * 0.5
+        # # Apply gripper correction due to wrist roll
+        # curr_goal_pos[6] -= (joy_input[4] * speed_limit[4]) * 0.5
 
         # Set controller pos based on joint speed calculations/joypos
         return list(np.array(joy_input) * np.array(speed_limit) + np.array(curr_goal_pos))

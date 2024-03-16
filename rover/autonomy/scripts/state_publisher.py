@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
+import time
 from rover.msg import StateMsg
 from rover.srv import AddGoal
 from std_msgs.msg import String
@@ -10,29 +11,39 @@ class StateMachineNode:
     def __init__(self):
 
         self.state_msg = StateMsg()
-        self.state_msg.rover_mode = "MANUAL"
+        self.state_msg.rover_mode = "AUTONOMY"#"MANUAL"
 
         self.state_pub = rospy.Publisher("/rover_state", StateMsg, queue_size=1000)
+        t = time.time()
+        while (time.time() - t) < 15:
+            print("Passing time")
+            pass
         self.gps_state_sub = rospy.Subscriber("/gps_checker_node/rover_state", StateMsg, self.gps_state_callback)
         self.aruco_state_sub = rospy.Subscriber("/aruco_node/rover_state", StateMsg, self.aruco_state_callback)
+        self.aruco_scanned_sub = rospy.Subscriber("aruco_scanned_node/rover_state", StateMsg, self.aruco_scanned_callback)
         self.light_state_sub = rospy.Subscriber("/light_node/rover_state", StateMsg, self.aruco_state_callback)
         self.radio_state_sub = rospy.Subscriber("/radio_node/rover_state", StateMsg, self.radio_state_callback)
         self.gui_state_sub = rospy.Subscriber("/gui_node/rover_state", StateMsg, self.gui_state_callback)
         self.sm_state_sub = rospy.Subscriber("/sm_node/rover_state", StateMsg, self.sm_state_callback)
+        self.ground_state_sub = rospy.Subscriber("/ground_node/rover_state", StateMsg, self.ground_state_callback)
 
     def gps_state_callback(self, msg):
         self.state_msg.GPS_GOAL_REACHED = msg.GPS_GOAL_REACHED
 
     def aruco_state_callback(self, msg):
-<<<<<<< HEAD
-        self.state_msg.AR_TAG_DETECTED = msg.AR_TAG_DETECTED
-=======
->>>>>>> aeaeaf1b0767fef3f3885392d519140d60c3fd9e
         self.state_msg.curr_AR_ID = msg.curr_AR_ID
+        self.state_msg.AR_TAG_DETECTED = msg.AR_TAG_DETECTED
+
+    def aruco_scanned_callback(self, msg):
+        self.state_msg.AR_SCANNED = msg.AR_SCANNED
 
     def radio_state_callback(self, msg):
         self.state_msg.RADIO_BEACON_DETECTED_BEACON_DETECTED = msg.RADIO_BEACON_DETECTED
         self.state_msg.radio_beacon_goal = msg.radio_beacon_goal
+
+    def ground_state_callback(self, msg):
+        self.state_msg.GROUND_OBJECT_FOUND = msg.GROUND_OBJECT_FOUND
+        self.state_msg.GROUND_OBJECT_REACHED = msg.GROUND_OBJECT_REACHED
 
     def gui_state_callback(self, msg):
         self.state_msg.rover_mode = msg.rover_mode

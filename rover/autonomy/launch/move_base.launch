@@ -2,18 +2,18 @@
 
    <arg name="no_static_map" default="false" />
    <arg name="command_velocity_topic" default="/drive" />
-   <arg name="odom_topic" default="/aft_mapped_to_init" />
-   <arg name="pose_topic" default="/aft_mapped_to_init" />
+   <arg name="odom_topic" default="/rtabmap/odom" />
+   <arg name="pose_topic" default="/rtabmap/odom" />
 
    <include file="$(find rover)/rover/autonomy/launch/gmapping.launch" />
    <!-- <include file="$(find rover)/rover/autonomy/launch/hector_slam_occupancy_grid.launch" />    -->
    <!-- <node pkg="tf" type="static_transform_publisher" name="laser_odom_to_map" args="0 0 0 0 0 0 map laser_odom 100" /> -->
 
 
-   <!-- <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
-      <remap from="/ouster/points" to="cloud_in" />
+   <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+      <remap from="/zed_node/point_cloud/cloud_registered" to="cloud_in" />
       <remap from="/scan" to="scan" />
-   </node> -->
+   </node>
    <!-- <remap from="cloud_in" to="/ouster/points" /> -->
 
    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">

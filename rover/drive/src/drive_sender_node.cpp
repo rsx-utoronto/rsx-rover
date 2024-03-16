@@ -25,7 +25,7 @@ public:
 
 	ros::NodeHandle nh;
 	double robot_radius = 0.8;
-	double MAX_LINEAR_SPEED = 1.625; // 2.5 speed est * 0.65 from rough calibration
+	double MAX_LINEAR_SPEED = 2.5*5; // 5 times because of gear ratio // 2.5 speed est * 0.65 from rough calibration
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
 	double gear = 0; // set to 0 initially
 	ros::Publisher drive_pub;
@@ -36,6 +36,7 @@ public:
 	geometry_msgs::Twist twist;
 	bool MANUAL_ENABLED = true;
 	bool KILL_PRESSED = false;
+	bool gear_pressed = false;
 };
 
 TeleopRover::TeleopRover()
@@ -97,23 +98,35 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 			lin_vel = 0;
 		}
 
-		// Encoding values for gear selection (range 0 - 1)
-		if (joy->buttons[dec_speed] == 1) // reduce
+		if (gear_pressed)
 		{
-			if (gear >= 0.1)
-				gear -= 0.1;
-			else
-				gear = 0;
+			if (joy->buttons[dec_speed] != 1 && joy->buttons[inc_speed] != 1)
+			{
+				gear_pressed = false;
+			}
 		}
-		else if (joy->buttons[inc_speed] == 1) // increase
+		else
 		{
-			if (gear <= 0.9)
-				gear += 0.1;
-			else
-				gear = 1;
+			// Encoding values for gear selection (range 0 - 1)
+			if (joy->buttons[dec_speed] == 1) // reduce
+			{
+				if (gear >= 0.03)
+					gear -= 0.03;
+				else
+					gear = 0;
+				gear_pressed = true;
+			}
+			else if (joy->buttons[inc_speed] == 1) // increase
+			{
+				if (gear <= 0.97)
+					gear += 0.03;
+				else
+					gear = 1;
+				gear_pressed = true;
+			}
 		}
-
-		lin_vel = lin_vel * gear;
+		
+		lin_vel = -lin_vel * gear;
 		turnFactor_x = turnFactor_x * gear;
 		ROS_INFO("Linear velocity: %f", (lin_vel/100));
 		twist.linear.x = static_cast<double>(lin_vel/(double)255.0)*MAX_LINEAR_SPEED; // Should be in range of -MAX_LINEAR_SPEED to +MAX_LINEAR_SPEED 

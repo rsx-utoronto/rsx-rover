@@ -2,8 +2,6 @@
 <robot name="Arm_2023" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
 <xacro:include filename="$(find rover)/rover/simulation/urdfs/Arm_2023/materials.xacro" />
-<xacro:include filename="$(find rover)/rover/simulation/urdfs/Arm_2023/Arm_2023.trans" />
-<xacro:include filename="$(find rover)/rover/simulation/urdfs/Arm_2023/Arm_2023.gazebo" />
 <link name="base_link">
   <inertial>
     <origin xyz="0.049999999999908465 0.03732491617294113 0.003125" rpy="0 0 0"/>
@@ -245,7 +243,7 @@
 </joint>
 
 <joint name="Joint_2" type="continuous">
-  <origin xyz="-0.025 0.003125 0.09765" rpy="-1.57 0 0"/>
+  <origin xyz="-0.025 0.003125 0.09765" rpy="0 0 0"/>
   <parent link="Link_1"/>
   <child link="Link_2"/>
   <axis xyz="1.0 0.0 -0.0"/>
@@ -255,7 +253,7 @@
   <origin xyz="0.0 0.0 0.365" rpy="-1.57 0 0"/>
   <parent link="Link_2"/>
   <child link="Link_3"/>
-  <axis xyz="1.0 -0.0 0.0"/>
+  <axis xyz="-1.0 -0.0 0.0"/>
 </joint>
 
 <joint name="Joint_4" type="continuous">
@@ -526,7 +524,7 @@
 </joint>
 
 <joint name="Real_Joint_2" type="continuous">
-  <origin xyz="-0.025 0.003125 0.09765" rpy="-1.57 0 0"/>
+  <origin xyz="-0.025 0.003125 0.09765" rpy="0 0 0"/>
   <parent link="Real_Link_1"/>
   <child link="Real_Link_2"/>
   <axis xyz="1.0 0.0 -0.0"/>
@@ -550,14 +548,14 @@
   <origin xyz="0.007325 -0.028875 0.276776" rpy="0 0 0"/>
   <parent link="Real_Link_4"/>
   <child link="Real_Link_5"/>
-  <axis xyz="-0.0 1.0 -0.0"/>
+  <axis xyz="-0.0 -1.0 -0.0"/>
 </joint>
 
 <joint name="Real_Joint_6" type="continuous">
   <origin xyz="-0.007325 0.028875 0.025" rpy="0 0 0"/>
   <parent link="Real_Link_5"/>
   <child link="Real_Link_6"/>
-  <axis xyz="-0.0 0.0 1.0"/>
+  <axis xyz="-0.0 0.0 -1.0"/>
 </joint>
 
 <joint name="Real_Joint_7" type="continuous">

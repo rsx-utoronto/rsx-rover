@@ -1,0 +1,1 @@
+model is in /runs/detect/yolov8n_custom5/weights/best.pt

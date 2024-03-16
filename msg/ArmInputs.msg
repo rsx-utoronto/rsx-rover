@@ -9,6 +9,8 @@ float32 r2
 int8 x
 int8 o
 int8 triangle
+int8 square
 int8 share
 int8 options
 int8 r3
+int8 l3

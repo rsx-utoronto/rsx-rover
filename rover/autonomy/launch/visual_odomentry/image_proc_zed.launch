@@ -1,0 +1,11 @@
+<launch>
+
+    <group ns="zed2i/zed_node">
+        <node pkg="stereo_image_proc" type="stereo_image_proc" name="rectify_zed">
+            <remap from="left/image_raw" to="rgb/image_raw"/>
+            <remap from="left/camera_info" to="rgb/camera_info"/>
+        </node>
+
+    </group>
+
+</launch>

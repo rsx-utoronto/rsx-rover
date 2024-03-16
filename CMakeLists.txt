@@ -17,6 +17,11 @@ find_package(catkin REQUIRED COMPONENTS
   message_filters
 )
 
+
+#find_package(GTSAM REQUIRED)
+
+#include_directories(${GTSAM_INCLUDE_DIR})
+
 find_package(PCL 1.2 REQUIRED)
 
 # Variables set by the pcl config.cmake.in file
@@ -220,6 +225,12 @@ include_directories(
 add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
 target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 
+add_executable(GNSSLocalization rover/autonomy/src/GNSSLocalization.cpp)
+target_link_libraries(GNSSLocalization ${catkin_LIBRARIES})
+
+add_executable(GNSSTargetAid rover/autonomy/src/GNSSTargetAid.cpp)
+target_link_libraries(GNSSTargetAid ${catkin_LIBRARIES})
+
 # add_executable(lidar_pcl_subscriber rover/autonomy/scripts/point_cloud_subscriber.cpp rover/autonomy/scripts/pcl_traversibility_score.cpp rover/autonomy/scripts/segment_pcl.cpp)
 # target_link_libraries(lidar_pcl_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
@@ -231,3 +242,7 @@ target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 
 # catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
 #  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+catkin_install_python(PROGRAMS rover/autonomy/scripts/gps_target_waypoint_updater.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
