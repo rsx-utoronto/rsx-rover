@@ -4,8 +4,41 @@
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 #include <sensor_msgs/MagneticField.h>
+#include <sensor_msgs/Imu.h>
 
 using namespace std;
+
+struct Quaternion {
+    double w, x, y, z;
+};
+
+struct EulerAngles {
+    double roll, pitch, yaw;
+};
+
+// this implementation assumes normalized quaternion
+// converts to Euler angles in 3-2-1 sequence
+EulerAngles ToEulerAngles(Quaternion q) {
+    EulerAngles angles;
+
+    // roll (x-axis rotation)
+    double sinr_cosp = 2 * (q.w * q.x + q.y * q.z);
+    double cosr_cosp = 1 - 2 * (q.x * q.x + q.y * q.y);
+    angles.roll = std::atan2(sinr_cosp, cosr_cosp);
+
+    // pitch (y-axis rotation)
+    double sinp = std::sqrt(1 + 2 * (q.w * q.y - q.x * q.z));
+    double cosp = std::sqrt(1 - 2 * (q.w * q.y - q.x * q.z));
+    angles.pitch = 2 * std::atan2(sinp, cosp) - M_PI / 2;
+
+    // yaw (z-axis rotation)
+    double siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+    double cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
+    angles.yaw = std::atan2(siny_cosp, cosy_cosp);
+
+    return angles;
+}
+
 
 typedef struct localCoord {
     double x;
@@ -23,6 +56,8 @@ public:
     double curLon;
     double localx;
     double localy;
+    double offset = NULL;
+    double initial_heading = 0;
     GNSSTargetAid(double lat, double lon, double bearing);
     GNSSTargetAid();
     localCoord getGNSSLocalization(double lat, double lon);
@@ -33,6 +68,7 @@ public:
     double getBearing();
     void setTarget(double lat, double lon);
     void setBearing(double bearing);
+    void setBearingFromGyro(double bearing);
     // double getBearing(double lat, double lon);
 };
 
@@ -93,6 +129,10 @@ void GNSSTargetAid::setBearing(double bearing) {
     frameBearing = bearing * M_PI / 180.0;
 }
 
+void GNSSTargetAid::setBearingFromGyro(double bearing) {
+    frameBearing = bearing * M_PI / 180.0 + offset;
+}
+
 GNSSTargetAid gnss = GNSSTargetAid();
 
 void chatterCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
@@ -114,13 +154,28 @@ void targetCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
     gnss.setTarget(msg->latitude, msg->longitude);
 }
 
+void gyroCallback(const sensor_msgs::Imu::ConstPtr& msg) {
+    Quaternion q;
+    q.w = msg->orientation.w;
+    q.x = msg->orientation.x;
+    q.y = msg->orientation.y;
+    q.z = msg->orientation.z;
+    EulerAngles e = ToEulerAngles(q);
+    if (gnss.offset == NULL) {
+        gnss.offset = - e.yaw - gnss.initial_heading;
+    } else {
+        gnss.setBearingFromGyro(e.yaw * 180.0 / M_PI);
+    }
+}
+
 int main(int argc, char **argv) {
     // gnss.setTarget(43.139199, -79.114206);
     // gnss.setBearing(0);
     ros::init(argc, argv, "GNSSLocalization");
     ros::NodeHandle n;
     ros::Subscriber sub = n.subscribe("/ublox/fix", 1000, chatterCallback);
-    ros::Subscriber subm = n.subscribe("/zed2i/zed_node/imu/mag", 10, magCallback);
+    // ros::Subscriber subm = n.subscribe("/zed2i/zed_node/imu/mag", 10, magCallback);
+    ros::Subscriber subg = n.subscribe("/zed2i/zed_node/imu/data", 10, gyroCallback);
     ros::Subscriber subt = n.subscribe("/gps_target", 10, targetCallback);
     ros::Publisher pub = n.advertise<nav_msgs::Odometry>("GPSOdometry", 1000);
     ros::Rate loop_rate(10);

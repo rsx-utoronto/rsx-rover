@@ -2,6 +2,7 @@
 
 import rospy
 import cv2
+import time
 import cv2.aruco as aruco
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
@@ -19,9 +20,14 @@ class ARucoTagDetectionNode():
         self.info_topic = "/zed_node/rgb/camera_info"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
-        self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         self.aruco_pub = rospy.Publisher('aruco_node/rover_state', StateMsg, queue_size=10)
+        self.scanned_pub = rospy.Publisher('aruco_scanned_node/rover_state', StateMsg, queue_size=10)
         self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
+        t = time.time()
+        while (time.time() - t) < 15:
+            print("Passing time")
+            pass
+        self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         self.bridge = CvBridge()
         self.current_state = StateMsg()
         self.curr_aruco_detections = {}
@@ -31,6 +37,7 @@ class ARucoTagDetectionNode():
         self.K = None
         self.D = None
         self.updated_state_msg = StateMsg()
+        self.scanned_state_smg = StateMsg()
 
     def image_callback(self, ros_image):
         try:
@@ -80,6 +87,7 @@ class ARucoTagDetectionNode():
 
             best_detection = ids[0][0]
             rospy.loginfo(f"An AR tag was detected with the ID {best_detection}")
+            self.scanned_state_smg.AR_SCANNED = True
             bboxs = bboxs[0]
             if draw:
                 for bbox, id in zip(bboxs, ids):
@@ -101,11 +109,13 @@ class ARucoTagDetectionNode():
         if ids is not None:
             self.updated_state_msg.AR_TAG_DETECTED = True
             self.updated_state_msg.curr_AR_ID = int(best_detection)
+            self.scanned_state_smg.AR_SCANNED = False
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
             self.updated_state_msg.curr_AR_ID = -1
 
         self.aruco_pub.publish(self.updated_state_msg)
+        self.scanned_pub.publish(self.scanned_state_smg)
 
 
 def main():

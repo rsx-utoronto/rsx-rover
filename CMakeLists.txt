@@ -18,9 +18,9 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 
-find_package(GTSAM REQUIRED)
+#find_package(GTSAM REQUIRED)
 
-include_directories(${GTSAM_INCLUDE_DIR})
+#include_directories(${GTSAM_INCLUDE_DIR})
 
 find_package(PCL 1.2 REQUIRED)
 

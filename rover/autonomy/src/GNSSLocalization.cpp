@@ -4,6 +4,8 @@
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 
+#include "rover/StateMsg.h"
+
 using namespace std;
 
 typedef struct localCoord {
@@ -101,18 +103,30 @@ void chatterCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
 }
 
 int main(int argc, char **argv) {
+    const double THRESHOLD = 3;
+
     gnss.setTarget(43.139199, -79.114206);
     gnss.setBearing(0);
     ros::init(argc, argv, "GNSSLocalization");
     ros::NodeHandle n;
     ros::Subscriber sub = n.subscribe("/ublox/fix", 1000, chatterCallback);
     ros::Publisher pub = n.advertise<nav_msgs::Odometry>("GPSOdometry", 1000);
+
+    // State machine publisher
+    rover::StateMsg stateMsg;
+    ros::Publisher statePublisher = n.advertise<rover::StateMsg>("/gps_checker_node/rover_state", 10);
+
     ros::Rate loop_rate(10);
     while (ros::ok()) {
         ros::spinOnce();
         nav_msgs::Odometry msg;
         msg.pose.pose.position.x = gnss.localx;
         msg.pose.pose.position.y = gnss.localy;
+
+        // State machine message
+        stateMsg.GPS_GOAL_REACHED = (gnss.getDistance() < THRESHOLD) ?true :false;
+        statePublisher.publish(stateMsg);
+
         pub.publish(msg);
         loop_rate.sleep();
     }
