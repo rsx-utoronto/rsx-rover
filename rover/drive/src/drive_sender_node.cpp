@@ -28,6 +28,7 @@ public:
 	double MAX_LINEAR_SPEED = 2.5*5; // 5 times because of gear ratio // 2.5 speed est * 0.65 from rough calibration
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
 	double gear = 0; // set to 0 initially
+	bool CircleMode = false; // the mode of the rover toggled by the circle button
 	ros::Publisher drive_pub;
 	ros::Subscriber joy_sub;
 	ros::Subscriber net_sub;
@@ -83,7 +84,6 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 		int UpDown = 7; // up down buttons axis of joystick
 		int RightLeft = 6; // right left buttons axis of joystick
 		int CircleButton = 1; // the circle button of the joystick
-		bool CircleMode = false; // the mode of the rover toggled by the circle button
 		int dec_speed = 4;
 		int inc_speed = 5;
 
