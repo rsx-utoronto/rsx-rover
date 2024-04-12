@@ -69,10 +69,10 @@ class Manual():
         self.state               = rospy.Subscriber("arm_state", String, self.CallbackState)
         self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)
 
-        t = time.time()
-        while (time.time() - t) < 10:
-            print("Passing time")
-            pass
+        # t = time.time()
+        # while (time.time() - t) < 10:
+        #     print("Passing time")
+        #     pass
         self.err_offset          = rospy.Subscriber("arm_error_offset", Float32MultiArray, self.CallbackErrOffset)
         self.error               = rospy.Subscriber("arm_error_msg", UInt8MultiArray, self.CallbackError)
         #self.SafePos_pub          = rospy.Publisher("arm_safe_goal_pos", Float32MultiArray, queue_size= 0)
