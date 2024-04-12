@@ -80,6 +80,10 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 		int L2 = 2;
 		int LS_x = 0; // x axis of joystick
 		int LS_y = 1; // y axis of joystick
+		int UpDown = 7; // up down buttons axis of joystick
+		int RightLeft = 6; // right left buttons axis of joystick
+		int CircleButton = 1; // the circle button of the joystick
+		bool CircleMode = false; // the mode of the rover toggled by the circle button
 		int dec_speed = 4;
 		int inc_speed = 5;
 
@@ -89,6 +93,16 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 		double turnFactor_x = static_cast<double>(joy->axes[LS_x]);
 		double turnFactor_y = static_cast<double>(joy->axes[LS_y]);
 		double lin_vel;
+
+		// if the circle button is currently pressed use the up down arrows to get turnFactors, i.e., the movement directions for rover
+		if (joy->buttons[CircleButton] == 1) {
+			CircleMode = !CircleMode;
+		}
+		if (CircleMode) {
+			turnFactor_x = static_cast<double>(joy->axes[RightLeft]);
+			turnFactor_y = static_cast<double>(joy->axes[UpDown]);
+		}
+		ROS_INFO("Circle Mode: %d", (CircleMode));
 
 		// Encoding value from joystick 
 
