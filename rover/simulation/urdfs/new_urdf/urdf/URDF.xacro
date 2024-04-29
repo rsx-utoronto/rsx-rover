@@ -1,0 +1,616 @@
+<?xml version="1.0" ?>
+<robot name="rover" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:include filename="$(find rover)/rover/simulation/urdfs/new_urdf/urdf/materials.xacro" />
+<xacro:include filename="$(find rover)/rover/simulation/urdfs/new_urdf/urdf/URDF.trans" />
+<xacro:include filename="$(find rover)/rover/simulation/urdfs/new_urdf/urdf/URDF.gazebo" />
+<link name="base_link">
+  <inertial>
+    <origin xyz="0.2030004530778456 0.4094602646641391 0.08344650099796158" rpy="0 0 0"/>
+    <mass value="425.371875"/>
+    <inertia ixx="26.635369" iyy="6.009264" izz="30.595758" ixy="0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component2_1">
+  <inertial>
+    <origin xyz="-0.18749954692215454 0.4250002646641398 -4.990020383843774e-07" rpy="0 0 0"/>
+    <mass value="2.168850798135477"/>
+    <inertia ixx="0.284413" iyy="0.088583" izz="0.362574" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.3905 0.01554 -0.083447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.3905 0.01554 -0.083447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component3_1">
+  <inertial>
+    <origin xyz="-0.13790474642618658 0.06250026466414045 -0.08113096585253107" rpy="0 0 0"/>
+    <mass value="2.018051405898664"/>
+    <inertia ixx="0.008585" iyy="0.015264" izz="0.015962" ixy="0.0" iyz="0.0" ixz="-0.006638"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.0145 0.00854 -0.028447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.0145 0.00854 -0.028447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component3_2">
+  <inertial>
+    <origin xyz="-0.13790475138102531 -0.06249973533585985 -0.08113095743031673" rpy="0 0 0"/>
+    <mass value="2.018051405898664"/>
+    <inertia ixx="0.008585" iyy="0.015264" izz="0.015962" ixy="-0.0" iyz="-0.0" ixz="-0.006638"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.0145 -0.11646 -0.138447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_2.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.0145 -0.11646 -0.138447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_2.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component3_3">
+  <inertial>
+    <origin xyz="0.14427394458122922 0.06250026466413727 -0.0691753235486097" rpy="0 0 0"/>
+    <mass value="2.018051405898664"/>
+    <inertia ixx="0.007519" iyy="0.015264" izz="0.017029" ixy="0.0" iyz="0.0" ixz="0.005921"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.4205 -0.70246 -0.138447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_3.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.4205 -0.70246 -0.138447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_3.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component3_4">
+  <inertial>
+    <origin xyz="0.14427394458123055 -0.06249973533586284 -0.06917532354860871" rpy="0 0 0"/>
+    <mass value="2.018051405898664"/>
+    <inertia ixx="0.007519" iyy="0.015264" izz="0.017029" ixy="0.0" iyz="0.0" ixz="0.005921"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.4205 -0.82746 -0.028447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_4.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.4205 -0.82746 -0.028447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_4.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component3_5">
+  <inertial>
+    <origin xyz="-0.12849710580748033 0.06250026466413694 -0.09533346319668393" rpy="0 0 0"/>
+    <mass value="2.018051405898664"/>
+    <inertia ixx="0.010072" iyy="0.015264" izz="0.014476" ixy="0.0" iyz="0.0" ixz="-0.007268"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.0145 -0.70246 -0.138447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_5.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.0145 -0.70246 -0.138447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_5.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component3_6">
+  <inertial>
+    <origin xyz="-0.12849710580748203 -0.06249973533586339 -0.09533346319668291" rpy="0 0 0"/>
+    <mass value="2.018051405898664"/>
+    <inertia ixx="0.010072" iyy="0.015264" izz="0.014476" ixy="0.0" iyz="-0.0" ixz="-0.007268"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.0145 -0.82746 -0.028447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_6.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.0145 -0.82746 -0.028447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_6.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component3_7">
+  <inertial>
+    <origin xyz="0.11826667711625238 -0.06249973533585961 -0.1077645790719911" rpy="0 0 0"/>
+    <mass value="2.018051405898664"/>
+    <inertia ixx="0.011569" iyy="0.015264" izz="0.012978" ixy="0.0" iyz="-0.0" ixz="0.007561"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.4205 -0.11646 -0.138447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_7.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.4205 -0.11646 -0.138447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_7.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component3_8">
+  <inertial>
+    <origin xyz="0.1182667378009592 -0.06249973533585963 -0.10776462114803925" rpy="0 0 0"/>
+    <mass value="2.018051405898664"/>
+    <inertia ixx="0.011569" iyy="0.015264" izz="0.012978" ixy="-0.0" iyz="0.0" ixz="0.007561"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.4205 -0.11646 -0.028447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_8.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.4205 -0.11646 -0.028447" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component3_8.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<!-- <link name="Component4_1">
+  <inertial>
+    <origin xyz="-0.04643916407988419 0.04150026466413681 -0.053672714373982494" rpy="0 0 0"/>
+    <mass value="5.812853028093868"/>
+    <inertia ixx="0.010137" iyy="0.010033" izz="0.007534" ixy="0.0" iyz="-0.0" ixz="-2.2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.271495 -0.72346 0.052219" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.271495 -0.72346 0.052219" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link> -->
+
+<link name="Component4_1">
+  <inertial>
+    <origin xyz="-0.04643916407988419 0.04150026466413681 0.056327285626017506" rpy="0 0 0"/>
+    <mass value="5.812853028093868"/>
+    <inertia ixx="0.010137" iyy="0.010033" izz="0.007534" ixy="0.0" iyz="-0.0" ixz="-2.2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.271495 -0.72346 0.162219" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.271495 -0.72346 0.162219" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+<!-- 
+<link name="Component4_5">
+  <inertial>
+    <origin xyz="-0.04643944875362749 0.04150026466413929 -0.05367271261391099" rpy="0 0 0"/>
+    <mass value="5.812853028093868"/>
+    <inertia ixx="0.010137" iyy="0.010033" izz="0.007534" ixy="0.0" iyz="-0.0" ixz="-2.2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.29031 -0.01246 0.023814" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_5.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.29031 -0.01246 0.023814" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_5.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link> -->
+
+<link name="Component4_5">
+  <inertial>
+    <origin xyz="-0.04643944875362749 0.04150026466413929 0.056327287386089" rpy="0 0 0"/>
+    <mass value="5.812853028093868"/>
+    <inertia ixx="0.010137" iyy="0.010033" izz="0.007534" ixy="0.0" iyz="-0.0" ixz="-2.2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.29031 -0.01246 0.133814" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_5.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.29031 -0.01246 0.133814" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_5.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<!-- <link name="Component4_6">
+  <inertial>
+    <origin xyz="0.04643993264180568 -0.04149973533586149 -0.05367243977007653" rpy="0 0 0"/>
+    <mass value="5.812853028093868"/>
+    <inertia ixx="0.010137" iyy="0.010033" izz="0.007534" ixy="0.0" iyz="0.0" ixz="2.2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.709047 -0.80646 -9.7e-05" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_6.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.709047 -0.80646 -9.7e-05" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_6.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link> -->
+
+<link name="Component4_6">
+  <inertial>
+    <origin xyz="0.04643993264180568 -0.04149973533586149 0.05632756022992347" rpy="0 0 0"/>
+    <mass value="5.812853028093868"/>
+    <inertia ixx="0.010137" iyy="0.010033" izz="0.007534" ixy="0.0" iyz="0.0" ixz="2.2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.709047 -0.80646 0.109903" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_6.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.709047 -0.80646 0.109903" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_6.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<!-- <link name="Component4_7">
+  <inertial>
+    <origin xyz="0.04643939662040353 -0.04149973533585915 -0.053671952436318435" rpy="0 0 0"/>
+    <mass value="5.812853028093868"/>
+    <inertia ixx="0.010137" iyy="0.010033" izz="0.007534" ixy="0.0" iyz="0.0" ixz="2.2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.657033 -0.09546 0.077082" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_7.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.657033 -0.09546 0.077082" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_7.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link> -->
+
+<link name="Component4_7">
+  <inertial>
+    <origin xyz="0.04643939662040353 -0.04149973533585915 0.056328047563681566" rpy="0 0 0"/>
+    <mass value="5.812853028093868"/>
+    <inertia ixx="0.010137" iyy="0.010033" izz="0.007534" ixy="0.0" iyz="0.0" ixz="2.2e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.657033 -0.09546 0.187082" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_7.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.657033 -0.09546 0.187082" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component4_7.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component6_1">
+  <inertial>
+    <origin xyz="0.04000662155948154 2.6466413671766276e-07 -1.88551750254784e-07" rpy="0 0 0"/>
+    <mass value="60.40834995900035"/>
+    <inertia ixx="0.925192" iyy="0.494809" izz="0.494809" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.799047 -0.76496 0.053653" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.799047 -0.76496 0.053653" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component6_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component6_2">
+  <inertial>
+    <origin xyz="0.04000608553807916 2.646641409920214e-07 2.9878200677457833e-07" rpy="0 0 0"/>
+    <mass value="60.40834995900035"/>
+    <inertia ixx="0.925192" iyy="0.494809" izz="0.494809" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.747033 -0.05396 0.130832" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component6_2.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.747033 -0.05396 0.130832" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component6_2.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component6_3">
+  <inertial>
+    <origin xyz="-0.04000585299756021 2.6466413716175197e-07 -4.631556547174398e-07" rpy="0 0 0"/>
+    <mass value="60.40834995900035"/>
+    <inertia ixx="0.925192" iyy="0.494809" izz="0.494809" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.361495 -0.76496 0.105969" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component6_3.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.361495 -0.76496 0.105969" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component6_3.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component6_4">
+  <inertial>
+    <origin xyz="-0.040006137671303454 2.6466414013853745e-07 -4.6139558465552177e-07" rpy="0 0 0"/>
+    <mass value="60.40834995900035"/>
+    <inertia ixx="0.925192" iyy="0.494809" izz="0.494809" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.38031 -0.05396 0.077564" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component6_4.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.38031 -0.05396 0.077564" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://rover/rover/simulation/urdfs/new_urdf/meshes/Component6_4.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="Rigid_1" type="fixed">
+  <origin xyz="0.3905 -0.01554 0.083447" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="Component2_1"/>
+</joint>
+
+<joint name="Revolute_2" type="continuous">
+  <origin xyz="-0.405 0.007 -0.055" rpy="0 0 0"/>
+  <parent link="Component2_1"/>
+  <child link="Component3_1"/>
+  <axis xyz="0.0 1.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_3" type="continuous">
+  <origin xyz="-0.405 0.132 0.055" rpy="0 0 0"/>
+  <parent link="Component2_1"/>
+  <child link="Component3_2"/>
+  <axis xyz="-0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_4" type="continuous">
+  <origin xyz="0.03 0.718 0.055" rpy="0 0 0"/>
+  <parent link="Component2_1"/>
+  <child link="Component3_3"/>
+  <axis xyz="-0.0 -1.0 0.0"/>
+</joint>
+
+<joint name="Revolute_5" type="continuous">
+  <origin xyz="0.03 0.843 -0.055" rpy="0 0 0"/>
+  <parent link="Component2_1"/>
+  <child link="Component3_4"/>
+  <axis xyz="0.0 1.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_6" type="continuous">
+  <origin xyz="-0.405 0.718 0.055" rpy="0 0 0"/>
+  <parent link="Component2_1"/>
+  <child link="Component3_5"/>
+  <axis xyz="0.0 1.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_7" type="continuous">
+  <origin xyz="-0.405 0.843 -0.055" rpy="0 0 0"/>
+  <parent link="Component2_1"/>
+  <child link="Component3_6"/>
+  <axis xyz="-0.0 -1.0 0.0"/>
+</joint>
+
+<joint name="Revolute_8" type="continuous">
+  <origin xyz="0.03 0.132 0.055" rpy="0 0 0"/>
+  <parent link="Component2_1"/>
+  <child link="Component3_7"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="Revolute_9" type="continuous">
+  <origin xyz="0.03 0.132 -0.055" rpy="0 0 0"/>
+  <parent link="Component2_1"/>
+  <child link="Component3_8"/>
+  <axis xyz="0.0 1.0 0.0"/>
+</joint>
+
+<joint name="Revolute_22" type="continuous">
+  <origin xyz="-0.256995 0.021 -0.300666" rpy="0 0 0"/>
+  <parent link="Component3_5"/>
+  <child link="Component4_1"/>
+  <axis xyz="0.0 1.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_23" type="continuous">
+  <origin xyz="-0.256995 -0.104 -0.190666" rpy="0 0 0"/>
+  <parent link="Component3_6"/>
+  <child link="Component4_1"/>
+  <axis xyz="0.0 1.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_24" type="continuous">
+  <origin xyz="-0.27581 -0.104 -0.272261" rpy="0 0 0"/>
+  <parent link="Component3_2"/>
+  <child link="Component4_5"/>
+  <axis xyz="-0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_25" type="continuous">
+  <origin xyz="-0.27581 0.021 -0.162261" rpy="0 0 0"/>
+  <parent link="Component3_1"/>
+  <child link="Component4_5"/>
+  <axis xyz="0.0 1.0 -0.0"/>
+</joint>
+
+
+<joint name="Revolute_26" type="continuous">
+  <origin xyz="0.288547 0.104 -0.24835" rpy="0 0 0"/>
+  <parent link="Component3_3"/>
+  <child link="Component4_6"/>
+  <axis xyz="0.0 1.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_27" type="continuous">
+  <origin xyz="0.288547 -0.021 -0.13835" rpy="0 0 0"/>
+  <parent link="Component3_4"/>
+  <child link="Component4_6"/>
+  <axis xyz="0.0 1.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_28" type="continuous">
+  <origin xyz="0.236533 -0.021 -0.325529" rpy="0 0 0"/>
+  <parent link="Component3_7"/>
+  <child link="Component4_7"/>
+  <axis xyz="-0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_29" type="continuous">
+  <origin xyz="0.236533 -0.021 -0.215529" rpy="0 0 0"/>
+  <parent link="Component3_8"/>
+  <child link="Component4_7"/>
+  <axis xyz="-0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_30" type="continuous">
+  <origin xyz="0.09 -0.0415 0.05625" rpy="0 0 0"/>
+  <parent link="Component4_6"/>
+  <child link="Component6_1"/>
+  <axis xyz="-1.0 -0.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_31" type="continuous">
+  <origin xyz="0.09 -0.0415 0.05625" rpy="0 0 0"/>
+  <parent link="Component4_7"/>
+  <child link="Component6_2"/>
+  <axis xyz="-1.0 -0.0 0.0"/>
+</joint>
+
+<joint name="Revolute_32" type="continuous">
+  <origin xyz="-0.09 0.0415 0.05625" rpy="0 0 0"/>
+  <parent link="Component4_1"/>
+  <child link="Component6_3"/>
+  <axis xyz="1.0 0.0 -0.0"/>
+</joint>
+
+<joint name="Revolute_33" type="continuous">
+  <origin xyz="-0.09 0.0415 0.05625" rpy="0 0 0"/>
+  <parent link="Component4_5"/>
+  <child link="Component6_4"/>
+  <axis xyz="1.0 0.0 -0.0"/>
+</joint>
+
+</robot>
