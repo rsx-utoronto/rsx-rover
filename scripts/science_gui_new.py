@@ -1,4 +1,4 @@
-##
+#!/usr/bin/env python3
 
 import serial as ser
 import time
@@ -19,7 +19,7 @@ m.title('Science Team Drill Controls')  #window title
 
 #connect to arduino
 try:
-    ser = ser.Serial("/dev/ttyUSB1", 9600)
+    ser = ser.Serial("COM4", 9600)
     time.sleep(0.5)
 except ser.serialutil.SerialException:
     print("Arduino not connected")
