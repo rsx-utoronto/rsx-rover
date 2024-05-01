@@ -231,7 +231,7 @@ class IKMode(ScriptState):
                                         prevTargetTransform)
             
             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-            # targetAngles = self.continousInvTan(targetAngles, curArmAngles)
+            targetAngles = self.continousInvTan(targetAngles, curArmAngles)
             targetAngles[1] = targetAngles[1] - pi/2 # raises zero position of shoulder (shoulder is pointing up)
 
             maxIterations = 10
@@ -290,7 +290,7 @@ class IKMode(ScriptState):
 
         deltaTheta4 = armAngles[3] - adjustedPrevAngles[3] 
         deltaTheta6 = armAngles[5] - adjustedPrevAngles[5] 
-        deltaAngles = [0, 0, 0, deltaTheta4, 0, deltaTheta6, 0]
+        deltaAngles = [0, 0, 0, deltaTheta4, 0, deltaTheta6]
 
         for i in range(len(deltaAngles)):
             if adjustedPrevAngles[i] >= 0: 
