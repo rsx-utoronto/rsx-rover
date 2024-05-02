@@ -1,5 +1,5 @@
 talons:
-  back_left:
+  mid_left:
     id: 3
     P: 0.0
     I: 0.0
@@ -11,12 +11,12 @@ talons:
     I: 0.015
     D: 175.0
     inverted: True
-  # mid_left:
-  #   id: 5
-  #   P: 3.0
-  #   I: 0.015
-  #   D: 175.0
-  #   inverted: False
+  back_left:
+    id: 5
+    P: 3.0
+    I: 0.0
+    D: 0.0
+    inverted: False
   # mid_right:
   #   id: 2
   #   P: 3.0
