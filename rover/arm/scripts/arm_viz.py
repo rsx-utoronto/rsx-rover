@@ -282,6 +282,9 @@ class ArmVisualizationNode():
         tempAngles[5] = tempAngles[5]
 
         if self.gazebo_on:
+            tempAngles.append(0)
+            tempAngles.append(0)
+            tempAngles.append(0)
             moveInGazebo(self.gazeboPublisher, tempAngles)
         else:
             runNewDesiredJointState(self.jointPublisher, tempAngles)
@@ -299,23 +302,21 @@ class ArmVisualizationNode():
             data.data contains 7 floats that describe the arms current
             position.
         '''
-        tempList = list(deg2rad(list(data.data)))
+        if not self.gazebo_on: 
+            tempList = list(deg2rad(list(data.data)))
 
-        tempList[0] = -tempList[0]
-        tempList[1] = tempList[1]
-        temp = tempList[5]
-        tempList[5] = tempList[4]
-        tempList[4] = temp
-        # tempList[5] = -tempList[5]
-        # tempList[6] = tempList[6]
-        tempAngles = list(subtract(array(tempList), array(self.savedCanAngles)))
+            tempList[0] = -tempList[0]
+            tempList[1] = tempList[1]
+            temp = tempList[5]
+            tempList[5] = tempList[4]
+            tempList[4] = temp
+            # tempList[5] = -tempList[5]
+            # tempList[6] = tempList[6]
+            tempAngles = list(subtract(array(tempList), array(self.savedCanAngles)))
 
-        self.liveArmAngles = deepcopy(tempAngles)
+            self.liveArmAngles = deepcopy(tempAngles)
 
-        tempAngles.append(tempAngles[6])
-        tempAngles.append(tempAngles[6])
-
-        runNewRealJointState(self.jointPublisher, tempAngles)
+            runNewRealJointState(self.jointPublisher, tempAngles)
 if __name__ == "__main__":  # if used rosrun on this script then ...
     try:
         ArmVizNode = ArmVisualizationNode()
