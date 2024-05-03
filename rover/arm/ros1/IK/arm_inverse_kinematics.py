@@ -231,7 +231,7 @@ class IKMode(ScriptState):
                                         prevTargetTransform)
             
             targetAngles = ik.inverseKinematics(dhTable, targetEEPos) 
-            targetAngles = self.continousInvTan(targetAngles, curArmAngles)
+            # targetAngles = self.continousInvTan(targetAngles, curArmAngles)
             targetAngles[1] = targetAngles[1] - pi/2 # raises zero position of shoulder (shoulder is pointing up)
 
             maxIterations = 10
@@ -247,11 +247,11 @@ class IKMode(ScriptState):
                 targetEEPos = self.controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
                                         prevTargetTransform)
                 targetAngles = ik.inverseKinematics(dhTable, targetEEPos)
-                targetAngles = self.continousInvTan(targetAngles, curArmAngles)
+                # targetAngles = self.continousInvTan(targetAngles, curArmAngles)
 
             movementSpeed = originalSpeed
 
-            # targetAngles.append(self.controlGripperAngle(isButtonPressed, curArmAngles))
+            targetAngles.append(self.controlGripperAngle(isButtonPressed, curArmAngles))
 
             prevArmAngles = curArmAngles
             curArmAngles = targetAngles
@@ -290,7 +290,7 @@ class IKMode(ScriptState):
 
         deltaTheta4 = armAngles[3] - adjustedPrevAngles[3] 
         deltaTheta6 = armAngles[5] - adjustedPrevAngles[5] 
-        deltaAngles = [0, 0, 0, deltaTheta4, 0, deltaTheta6]
+        deltaAngles = [0, 0, 0, deltaTheta4, 0, deltaTheta6, 0]
 
         for i in range(len(deltaAngles)):
             if adjustedPrevAngles[i] >= 0: 
@@ -703,7 +703,7 @@ class InverseKinematicsNode():
 
             # retrievePos = input("Enter Position Name to Retrieve: ")
             retrievePos = posName.positionName
-            tempAngles = [0, 0, 0, 0, 0, 0]
+            tempAngles = [0, 0, 0, 0, 0, 0, 0]
 
             with open('arm_positions.json','r') as file:
                 found = False
@@ -771,7 +771,7 @@ class InverseKinematicsNode():
         global savedCanAngles
 
         ikAngles = Float32MultiArray()
-        adjustedAngles = [0, 0, 0, 0, 0, 0]
+        adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
         for i in range(adjustedAngles.__len__()):
             adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] + savedCanAngles[i]
             adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
@@ -780,7 +780,7 @@ class InverseKinematicsNode():
         adjustedAngles[1] = adjustedAngles[1]
         adjustedAngles[2] = -adjustedAngles[2]
         adjustedAngles[4] = adjustedAngles[4]
-        adjustedAngles[5] = -adjustedAngles[5]
+        adjustedAngles[5] = adjustedAngles[5]
 
         temp = adjustedAngles[5]
         adjustedAngles[5] = adjustedAngles[4]
@@ -804,7 +804,7 @@ class InverseKinematicsNode():
 
         tempList = list(data.data)
 
-        for i in range(len(tempList)):
+        for i in range(7):
             tempList[i] = np.deg2rad(tempList[i])
 
         tempList[0] = -tempList[0]
@@ -842,8 +842,8 @@ class InverseKinematicsNode():
                 print(type(self.scriptMode).__name__)
 
                 savedCanAngles = copy.deepcopy(liveArmAngles) 
-                liveArmAngles = [0, 0, 0, 0, 0, 0]
-                curArmAngles = [0, 0, 0, 0, 0, 0]
+                liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
+                curArmAngles = [0, 0, 0, 0, 0, 0, 0]
 
                 dhTable = ik.createDHTable([0, pi/2, 0, 0, 0, 0, 0])
                 prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
@@ -942,22 +942,22 @@ class InverseKinematicsNode():
 # Main Area
 
 if __name__ == "__main__":
-    angleCorrections = [0, 0, 0, 0, 0, 0]
-    curArmAngles = [0, 0, 0, 0, 0, 0]
-    prevArmAngles = [0, 0, 0, 0, 0, 0]
-    liveArmAngles = [0, 0, 0, 0, 0, 0]
+    angleCorrections = [0, 0, 0, 0, 0, 0, 0]
+    curArmAngles = [0, 0, 0, 0, 0, 0, 0]
+    prevArmAngles = [0, 0, 0, 0, 0, 0, 0]
+    liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
     prevTargetValues = [0, 0, 0, [250, 0, 450]] # start position for ik
     newTargetValues = prevTargetValues
     prevTargetTransform = ik.createEndEffectorTransform(prevTargetValues[0], prevTargetValues[1],
                                                         prevTargetValues[2], prevTargetValues[3])
-    goToPosValues = [False, [0, 0, 0, 0, 0, 0]]
-    savedCanAngles = [0, 0, 0, 0, 0, 0]
+    goToPosValues = [False, [0, 0, 0, 0, 0, 0, 0]]
+    savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
 
     isIKEntered = False
     movementSpeed = 10/NODE_RATE
     isMovementNormalized = False
 
-    nRevTheta = [0, 0, 0, 0, 0, 0]
+    nRevTheta = [0, 0, 0, 0, 0, 0, 0]
         
     ikNode = InverseKinematicsNode()
 

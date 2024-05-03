@@ -156,7 +156,7 @@ def runNewDesiredJointState(jointPublisherData, angles):
     newJointState = JointState()
     newJointState.header = Header()
     newJointState.header.stamp = rospy.Time.now()
-    newJointState.name = ["Joint_1", "Joint_2", "Joint_3", "Joint_4", "Joint_5", "Joint_6", "Joint_7", "Joint_8", "Joint_9"]
+    newJointState.name = ["Joint_1", "Joint_2", "Joint_3", "Joint_4", "Joint_5", "Joint_6"]
     # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
     newJointState.position = angles
     jointPublisherData.publish(newJointState)  # send data to be published
@@ -221,13 +221,13 @@ class ArmVisualizationNode():
     def __init__(self):
         rospy.init_node("arm_viz")
 
-        self.liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
-        self.savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
+        self.liveArmAngles = [0, 0, 0, 0, 0, 0]
+        self.savedCanAngles = [0, 0, 0, 0, 0, 0]
 
         self.curMode = "Idle"
         self.gazebo_on =  rospy.get_param("/gazebo_on")
         self.ikEntered = False
-
+    
         # ROS Topic Setup
         if self.gazebo_on:
             self.gazeboPublisher = startGazeboJointControllers(9)
@@ -268,8 +268,8 @@ class ArmVisualizationNode():
         '''
         tempAngles = list(deg2rad(list(data.data)))
         tempAngles = list(subtract(array(tempAngles), -1*array(self.savedCanAngles)))
-        tempAngles.append(tempAngles[6]) # make gripper angles equal
-        tempAngles.append(tempAngles[6]) # make gripper angles equal
+        # tempAngles.append(tempAngles[6]) # make gripper angles equal
+        # tempAngles.append(tempAngles[6]) # make gripper angles equal
 
         # unswap angles to match with joint order
         temp = tempAngles[5]
