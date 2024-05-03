@@ -237,5 +237,7 @@ target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 add_executable(arm_point_cloud_assembler rover/arm/src/arm_point_cloud_assembler.cpp)
 target_link_libraries(arm_point_cloud_assembler ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
+add_executable(arm_pcl rover/arm/src/arm_pcl.cpp)
+target_link_libraries(arm_pcl ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 # catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
 #  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
