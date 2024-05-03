@@ -7,6 +7,14 @@
 #include <pcl/common/io.h>
 #include <pcl/filters/voxel_grid.h>
 
+#include <pcl_ros/transforms.h>
+#include <tf2_ros/transform_listener.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Twist.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/message_filter.h>
+
+
 class PointCloudAssembler{
 	private:
 		ros::Timer fiveSecTimer;
@@ -20,11 +28,14 @@ class PointCloudAssembler{
 		pcl::PointCloud<pcl::PointXYZ> currentPointCloud;
 		sensor_msgs::PointCloud2 currentPCMes;
 
+		tf2_ros::Buffer tfBuffer;
+		tf2_ros::TransformListener tfListener;
+
 		bool isFirstTime = true;
 		bool isAllowedToUpdate = true;
     
 	public: 
-		PointCloudAssembler(){
+		PointCloudAssembler(): tfListener(tfBuffer){
 			pointCloudOutPub = node.advertise<sensor_msgs::PointCloud2>("/arm/assembled_point_cloud", 1);
 			otherCloudPub = node.advertise<sensor_msgs::PointCloud2>("/arm/other_cloud", 1);
 			filteredCloudPub = node.advertise<sensor_msgs::PointCloud2>("/arm/filtered_cloud", 1);
@@ -33,7 +44,7 @@ class PointCloudAssembler{
 			fiveSecTimer = node.createTimer(ros::Duration(2,0), &PointCloudAssembler::fiveSecTimerCallback, this);
 		}
 
-			void fiveSecTimerCallback(const ros::TimerEvent& e){
+		void fiveSecTimerCallback(const ros::TimerEvent& e){
 			isAllowedToUpdate = true;
 		}
 
@@ -46,21 +57,36 @@ class PointCloudAssembler{
 			pcl::PointCloud<pcl::PointXYZ>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZ>);
 			pcl::VoxelGrid<pcl::PointXYZ> voxelFilter;
 			voxelFilter.setInputCloud(pclInPtr);
-			voxelFilter.setLeafSize(0.1, 0.1, 0.1);
+			voxelFilter.setLeafSize(0.2, 0.2, 0.2);
 			voxelFilter.filter(*filteredCloud);
 
-			if(isFirstTime){
-				currentPointCloud = *filteredCloud;
-			  	isFirstTime = false;
-				ROS_INFO("First time!");
-			}
-			else currentPointCloud += *filteredCloud;
-
+			std::string targetFrame = "base_link";
 			sensor_msgs::PointCloud2 output, filteredOutput;
-			pcl::toROSMsg(currentPointCloud, output);
+
+			try{
+				// ROS_INFO("I made it here pt1");
+				// std::cout << "cout works" << std::endl;
+				geometry_msgs::TransformStamped tfStamped = tfBuffer.lookupTransform(targetFrame, input->header.frame_id, ros::Time(0));
+				// ROS_INFO("I made it here pt2");
+
+				pcl::PointCloud<pcl::PointXYZ> baseLinkCloud;
+				pcl_ros::transformPointCloud(*filteredCloud, baseLinkCloud, tfStamped.transform);
+				if(isFirstTime){
+					currentPointCloud = baseLinkCloud;
+			  		isFirstTime = false;
+					ROS_INFO("First time!");
+				}
+				else currentPointCloud += baseLinkCloud;
+				pcl::toROSMsg(currentPointCloud, output);
+				output.header.frame_id = targetFrame;
+				pointCloudOutPub.publish(output);
+				// ROS_INFO("filtered cloud published at base");
+			}	
+			catch (tf2::TransformException &e){
+				// ROS_WARN("%s", e.what());
+			}
+
 			pcl::toROSMsg(*filteredCloud, filteredOutput);
-			// output.header = input->header;
-			pointCloudOutPub.publish(output);
 			filteredCloudPub.publish(filteredOutput);
 
 			// ROS_INFO("I WAS ALLOWED TO UPDATE");
