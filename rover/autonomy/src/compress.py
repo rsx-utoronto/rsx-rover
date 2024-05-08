@@ -8,54 +8,32 @@ import io
 from PIL import Image as imagepillow
 import cv2 
 
-def callback(data):
-    
-    # Compressed image quality (0 - 100)    
-    quality = 1
+QUALITY = 1
+PUBLISH_RATE = 15
+INPUT_TOPIC = '/zed/zed_node/rgb/image_rect_color'
+OUTPUT_TOPIC = 'c_stream'
 
-    # Publishing rate (should be lower than publishing rate of the image_rect_color topic)
-    publishRate = 15
-    
-    bridge = CvBridge()
+class compressedImage():
 
-    cstream = rospy.Publisher('cstream', Image, queue_size=10)
-    rate = rospy.Rate(publishRate) # publish at 5hz        
+    def __init__(self):
+        self.inStream = rospy.Subscriber(INPUT_TOPIC, Image, self.callback, queue_size = 1)
+        self.outStream = rospy.Publisher(OUTPUT_TOPIC, Image, queue_size=1)
+        self.bridge = CvBridge()
+        self.rate = rospy.Rate(PUBLISH_RATE)
 
-    # while not rospy.is_shutdown():
+    def callback(self, data):
+        raw = self.bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
+        
+        _ , compressedBuffer = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, QUALITY])  
+        decBuffer = cv2.imdecode(compressedBuffer, 1)
 
-    raw = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
-    
-    # Save to disk
-    # cv2.imwrite('compress.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, quality])
-    # cv2.imwrite("raw.jpg", raw, [cv2.IMWRITE_JPEG_QUALITY, 100]) 
+        compressed_msg = self.bridge.cv2_to_imgmsg(decBuffer, encoding="passthrough")
 
-    # In memory compression (encode and decode)
-    _ , compressedBuffer = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, quality])  
-    decBuffer = cv2.imdecode(compressedBuffer, 1)
+        self.outStream.publish(compressed_msg)
 
-    compressed_msg = bridge.cv2_to_imgmsg(decBuffer, encoding="passthrough")
-
-    cstream.publish(compressed_msg)
-
-    rate.sleep()
-
-    # Compression comparsion
-    
-    # rawSize = rawBuffer.size
-    # compressedSize = compressedBuffer.size
-    # print(f"Raw Size: {rawSize}, Compressed Size: {compressedSize}")
-    # print(f"Reduction: {(rawSize - compressedSize) / rawSize * 100}%")    
-
-def subscriber():
-
-    rospy.init_node('compressnode', anonymous=True)
-
-    # Subscribe to the topic "/zed/zed_node/rgb/image_rect_color" with the message type Image
-    # Envoke callback
-    rospy.Subscriber('/zed/zed_node/rgb/image_rect_color', Image, callback)
-
-    # Keep running node
-    rospy.spin()
+        self.rate.sleep()
 
 if __name__ == '__main__':
-    subscriber()
+    rospy.init_node('compressnode', anonymous=True)
+    compressedImage()
+    rospy.spin()
