@@ -3,7 +3,6 @@
 import rospy
 import numpy as np
 import ik_library as ik
-# import arm_viz as viz
 import geometry_msgs.msg
 import tf_conversions
 import tf2_ros
@@ -993,7 +992,7 @@ if __name__ == "__main__":
     newTargetValues = prevTargetValues
     prevTargetTransform = ik.createEndEffectorTransform(prevTargetValues[0], prevTargetValues[1],
                                                         prevTargetValues[2], prevTargetValues[3])
-    goToPosValues = [False, [0, 0, 0, 0, 0, 0, ]]
+    goToPosValues = [False, [0, 0, 0, 0, 0, 0]]
     savedCanAngles = [0, 0, 0, 0, 0, 0]
 
     isIKEntered = False
