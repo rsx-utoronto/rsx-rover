@@ -11,11 +11,12 @@ the real arm isn't plugged in an manual is needed
 class FakeManualNode():
     def __init__(self) -> None:
         rospy.init_node("fake_manual")
-        self.armAngles = [0, 0, 0, 0, 0, 0, 0]
+        self.armAngles = [0, 0, 0, 0, 0, 0]
 
         self.jointPublisher = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
         self.realJointPublisher = rospy.Publisher("arm_curr_pos", Float32MultiArray, queue_size=10)
         self.curState = "Idle"
+        self.scale = 0.0001
 
         rospy.Subscriber("arm_state", String, self.updateStates)
         rospy.Subscriber("arm_goal_pos", Float32MultiArray, self.updateRealAngles)
@@ -38,13 +39,12 @@ class FakeManualNode():
         '''
 
         if self.curState == "Manual":
-            self.armAngles[0] += data.l_horizontal
-            self.armAngles[1] += data.l_vertical
-            self.armAngles[2] += data.r_horizontal
-            self.armAngles[3] += data.r_vertical
-            self.armAngles[4] += data.l1 - data.r1
-            self.armAngles[5] += data.l2 - data.r2
-            self.armAngles[6] += data.x - data.o
+            self.armAngles[0] += data.l_horizontal*self.scale
+            self.armAngles[1] += data.l_vertical*self.scale
+            self.armAngles[2] += data.r_horizontal*self.scale
+            self.armAngles[3] += data.r_vertical*self.scale
+            self.armAngles[4] += (data.l1 - data.r1)*self.scale
+            self.armAngles[5] += (data.l2 - data.r2)*self.scale
 
             anglesToPublish = Float32MultiArray()
             anglesToPublish.data = self.armAngles
