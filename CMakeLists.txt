@@ -243,7 +243,7 @@ target_link_libraries(GNSSTargetAid ${catkin_LIBRARIES})
 # add_executable(grid_map_subscriber rover/autonomy/scripts/grid_map_node.cc)
 # target_link_libraries(grid_map_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${G})
 
-add_executable(arm_point_cloud_assembler rover/arm/src/arm_point_cloud_assembler.cpp)
+add_executable(arm_point_cloud_assembler rover/arm/ros1/arm_point_cloud_assembler.cpp)
 target_link_libraries(arm_point_cloud_assembler ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 # catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py

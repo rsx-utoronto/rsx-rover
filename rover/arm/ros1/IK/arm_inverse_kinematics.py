@@ -3,7 +3,10 @@
 import rospy
 import numpy as np
 import ik_library as ik
-import arm_viz as viz
+# import arm_viz as viz
+import geometry_msgs.msg
+import tf_conversions
+import tf2_ros
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header, Float32MultiArray, String
 from rover.msg import ArmInputs
@@ -96,7 +99,47 @@ class ScriptState():
         '''
         tempTarget = self.createDesiredEETarget(newTargetValues)
         referenceLink = "base_link" # link to base end effector transform off of
-        viz.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
+        self.displayEndEffectorTransform(tempTarget, referenceLink) # display target transform
+
+    def displayEndEffectorTransform(self, endEffectorPosition, referenceLink="base_link", quaternionAngles=None):
+        '''
+        Publishes a tf2 transform at the End Effector Position 
+
+        Parameters
+        ----------
+        endEffectorPosition
+            The [roll, pitch, yaw, [x, y, z]] position of the end effector
+        referenceLink
+            The link you want to display the end effector transform relative to.
+            By default is the "base_link" of the arm.
+        quaternionAngles
+            A list of 4 numbers that represent a frame in space using quaternions. 
+            Use to ignore endEffectorPosition paramter. By default is None.
+        '''
+        br = tf2_ros.TransformBroadcaster()
+        t = geometry_msgs.msg.TransformStamped()
+        t.header.frame_id = referenceLink
+        t.child_frame_id = "target_position"
+
+        posArray = endEffectorPosition
+        t.header.stamp = rospy.Time.now()
+        t.transform.translation.x = posArray[3][0]
+        t.transform.translation.y = posArray[3][1]
+        t.transform.translation.z = posArray[3][2]
+        
+        q = tf_conversions.transformations.quaternion_from_euler(posArray[0], posArray[1], posArray[2], 'sxyz')
+        if quaternionAngles != None:
+            q = quaternionAngles
+            t.transform.rotation.x = q.x
+            t.transform.rotation.y = q.y
+            t.transform.rotation.z = q.z
+            t.transform.rotation.w = q.w
+        else:
+            t.transform.rotation.x = q[0]
+            t.transform.rotation.y = q[1]
+            t.transform.rotation.z = q[2]
+            t.transform.rotation.w = q[3]
+        br.sendTransform(t)
 
 class ForwardKin(ScriptState):
     ''' The Forward Kinematics Mode
@@ -251,7 +294,7 @@ class IKMode(ScriptState):
 
             movementSpeed = originalSpeed
 
-            targetAngles.append(self.controlGripperAngle(isButtonPressed, curArmAngles))
+            # targetAngles.append(self.controlGripperAngle(isButtonPressed, curArmAngles))
 
             prevArmAngles = curArmAngles
             curArmAngles = targetAngles
@@ -358,7 +401,7 @@ class DefaultIK(IKMode):
     def updateDesiredEETransformation(self, newTargetValues):
         tempTarget = self.createDesiredEETarget(newTargetValues)
         tempTarget[1] = 0
-        viz.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
+        self.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
 
 class GlobalIK(IKMode):
     ''' The Global IK mode
@@ -414,7 +457,7 @@ class GlobalIK(IKMode):
     def updateDesiredEETransformation(self, newTargetValues):
         tempTarget = self.createDesiredEETarget(newTargetValues) 
         tempTarget[:3] = [0, 0, 0] # don't rotate global axis
-        viz.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
+        self.displayEndEffectorTransform(tempTarget, "base_link") # display target transform
 
 class RotRelativeIK(IKMode):
     ''' The Relative Rotation IK mode
@@ -464,7 +507,7 @@ class RotRelativeIK(IKMode):
 
     def updateDesiredEETransformation(self, newTargetValues):
         tempTarget = [0, 0 , pi, [0, 0, 198*0.47/450]] # Display frame relative to tip of of end effector
-        viz.displayEndEffectorTransform(tempTarget, "Link_6")
+        self.displayEndEffectorTransform(tempTarget, "Link_6")
         
 class RelativeIK(RotRelativeIK):
     ''' The Relative IK mode
@@ -703,7 +746,7 @@ class InverseKinematicsNode():
 
             # retrievePos = input("Enter Position Name to Retrieve: ")
             retrievePos = posName.positionName
-            tempAngles = [0, 0, 0, 0, 0, 0, 0]
+            tempAngles = [0, 0, 0, 0, 0, 0]
 
             with open('arm_positions.json','r') as file:
                 found = False
@@ -771,7 +814,7 @@ class InverseKinematicsNode():
         global savedCanAngles
 
         ikAngles = Float32MultiArray()
-        adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
+        adjustedAngles = [0, 0, 0, 0, 0, 0]
         for i in range(adjustedAngles.__len__()):
             adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] + savedCanAngles[i]
             adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
@@ -780,7 +823,7 @@ class InverseKinematicsNode():
         adjustedAngles[1] = adjustedAngles[1]
         adjustedAngles[2] = -adjustedAngles[2]
         adjustedAngles[4] = adjustedAngles[4]
-        adjustedAngles[5] = adjustedAngles[5]
+        adjustedAngles[5] = -adjustedAngles[5]
 
         temp = adjustedAngles[5]
         adjustedAngles[5] = adjustedAngles[4]
@@ -804,7 +847,7 @@ class InverseKinematicsNode():
 
         tempList = list(data.data)
 
-        for i in range(7):
+        for i in range(len(tempList)):
             tempList[i] = np.deg2rad(tempList[i])
 
         tempList[0] = -tempList[0]
@@ -842,8 +885,8 @@ class InverseKinematicsNode():
                 print(type(self.scriptMode).__name__)
 
                 savedCanAngles = copy.deepcopy(liveArmAngles) 
-                liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
-                curArmAngles = [0, 0, 0, 0, 0, 0, 0]
+                liveArmAngles = [0, 0, 0, 0, 0, 0]
+                curArmAngles = [0, 0, 0, 0, 0, 0]
 
                 dhTable = ik.createDHTable([0, pi/2, 0, 0, 0, 0, 0])
                 prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
@@ -928,7 +971,7 @@ class InverseKinematicsNode():
                 targetEEPos = ik.createEndEffectorTransform(tempList[5], tempList[4], tempList[3], newTargetValues[3])
                 targetAngles = ik.inverseKinematics(dhTable, targetEEPos)
                 targetAngles[1] -= pi/2
-                targetAngles.append(tempList[6])
+                # targetAngles.append(tempList[6])
 
                 curArmAngles = targetAngles
                 prevArmAngles = curArmAngles
@@ -942,22 +985,22 @@ class InverseKinematicsNode():
 # Main Area
 
 if __name__ == "__main__":
-    angleCorrections = [0, 0, 0, 0, 0, 0, 0]
-    curArmAngles = [0, 0, 0, 0, 0, 0, 0]
-    prevArmAngles = [0, 0, 0, 0, 0, 0, 0]
-    liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
+    angleCorrections = [0, 0, 0, 0, 0, 0]
+    curArmAngles = [0, 0, 0, 0, 0, 0]
+    prevArmAngles = [0, 0, 0, 0, 0, 0]
+    liveArmAngles = [0, 0, 0, 0, 0, 0]
     prevTargetValues = [0, 0, 0, [250, 0, 450]] # start position for ik
     newTargetValues = prevTargetValues
     prevTargetTransform = ik.createEndEffectorTransform(prevTargetValues[0], prevTargetValues[1],
                                                         prevTargetValues[2], prevTargetValues[3])
-    goToPosValues = [False, [0, 0, 0, 0, 0, 0, 0]]
-    savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
+    goToPosValues = [False, [0, 0, 0, 0, 0, 0, ]]
+    savedCanAngles = [0, 0, 0, 0, 0, 0]
 
     isIKEntered = False
     movementSpeed = 10/NODE_RATE
     isMovementNormalized = False
 
-    nRevTheta = [0, 0, 0, 0, 0, 0, 0]
+    nRevTheta = [0, 0, 0, 0, 0, 0]
         
     ikNode = InverseKinematicsNode()
 
