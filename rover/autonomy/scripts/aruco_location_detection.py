@@ -19,6 +19,16 @@ from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import numpy as np
 import tf2_ros
 
+cap=cv2.VideoCapture('/home/ubuntu/Downloads/IMG_9602.mov')
+while (cap.isOpened()):
+    ret, frame = cap.read()
+    cv2.imshow('frame',frame)
+    if cv2.waitKey(1) & OxFF == ord('q'):
+        break
+    
+    cap.release()
+    cv2.destroyAllWindows()
+    
 class image_converter:
 
     def __init__(self):
@@ -80,7 +90,6 @@ class image_converter:
             rospy.logwarn("Could not find the transform between base_link and map")
             return None
         
-
 
     def brightest_spot(self, data):
 
