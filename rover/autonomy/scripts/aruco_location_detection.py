@@ -30,7 +30,7 @@ class image_converter:
         # self.depth_sub = rospy.Subscriber("/camera/depth/image_rect_raw", Image, self.depth_callback)        
         self.depth_sub = rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", Image, self.depth_callback)        
         self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.brightest_spot)
-        self.first_image = True
+        self.first_image = True # first image it sees
         self.count = 0
         self.beacon_detected = False
 
@@ -98,7 +98,7 @@ class image_converter:
         image = self.curr_img
         radius = int(41)
         orig = self.curr_img.copy()
-        diff = cv2.absdiff(self.curr_img, self.prev_img)
+        diff = cv2.absdiff(self.curr_img, self.prev_img) #subtract images 
         filtered_image = diff # self.thresholding(diff)
         # print("filtered_image = ", filtered_image)
         lower_bound = 253
@@ -109,7 +109,7 @@ class image_converter:
         
         ## load the image and convert it to grayscale
         
-        gray = cv2.cvtColor(filtered_image, cv2.COLOR_RGB2GRAY)  # For a coloured image
+        #gray = cv2.cvtColor(filtered_image, cv2.COLOR_RGB2GRAY)  # For a coloured image
         # filtered_image = self.colour_search_and_masking(gray, (lower_bound, lower_bound, lower_bound), (upper_bound, upper_bound, upper_bound)) # amber colour in greyscale is (189, 189, 189) 
 
         # perform a naive attempt to find the (x, y) coordinates of
