@@ -1,15 +1,26 @@
-import rospy
 import math
 import numpy as np
+import roslib
+roslib.load_manifest('sensor_msgs')
+import sys
+import time
+import rospy
 import cv2
 from std_msgs.msg import Float32, Bool
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import Twist, TransformStamped
+from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
+from std_srvs.srv import Empty, EmptyResponse
+from rover.msg import StateMsg
+
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
+import numpy as np
+import tf2_ros
+
 
 
 class image_converter:
-
     def __init__(self):
         self.image_pub = rospy.Publisher("/camera/color/image_raw_new",Image, queue_size=1)
         self.spot_pub = rospy.Publisher("/beacon_spot_depth", Float32, queue_size=1)
@@ -26,7 +37,6 @@ class image_converter:
 
 
 def brightest_spot(self, data):
-
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8") # change to bgr8 for a coloured image and mono8 for greyscale
             if self.first_image:
