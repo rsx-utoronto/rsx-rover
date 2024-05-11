@@ -5,7 +5,7 @@ from sensor_msgs.msg import Image
 import cv2 
 import json
 from ultralytics import YOLO
-from roboflow import Roboflow 
+# from roboflow import Roboflow 
 from cv_bridge import CvBridge 
 
 # create the name of publisher node 
