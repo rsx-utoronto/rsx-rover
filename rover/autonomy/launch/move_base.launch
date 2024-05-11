@@ -1,6 +1,6 @@
 <launch>   
 
-   <arg name="no_static_map" default="true" />
+   <arg name="no_static_map" default="false" />
    <arg name="command_velocity_topic" default="/drive" />
    <arg name="odom_topic" default="/rtabmap/odom" />
    <arg name="pose_topic" default="/rtabmap/odom" />
@@ -9,6 +9,7 @@
    <arg name="use_map_topic" default="true"/>
    <arg name="scan_topic" default="/scan_collapsed" />
    <arg name="map_topic" default="rtabmap/grid_map" />
+   <arg name="global_costmap_topic" default="/move_base/global_costmap/costmap" />
 
    <!-- <include file="$(find rover)/rover/autonomy/launch/gmapping.launch" /> -->
    <!-- <include file="$(find rover)/rover/autonomy/launch/hector_slam_occupancy_grid.launch" />    -->
@@ -44,13 +45,14 @@
 
    <!--  ****** Maps *****  -->
   
-	<!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/white.yaml" output="screen">
-               <param name="frame_id" value="map"/>
-	</node>  -->
+	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/white.yaml" output="screen">
+         <param name="frame_id" value="map"/>
+         <remap from="/map" to="$(arg map_topic)" />
+	</node> 
 
 
 
-   <include file="$(find rover)/rover/autonomy/launch/robot_loc.launch"/>
+   <!-- <include file="$(find rover)/rover/autonomy/launch/robot_loc.launch"/> -->
    <!-- <include file="$(find lego_loam)/launch/run.launch" /> -->
 
    <!-- <node pkg="amcl" type="amcl" name="amcl">

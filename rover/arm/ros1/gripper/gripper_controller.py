@@ -8,7 +8,7 @@ from rover.msg import ArmInputs
 from std_msgs.msg import *
 from arm_serial_connector import *
 
-GRIPPER_CONVERSION = 32 # 32 encoder ticks result in 1 rotation of the gripper motor
+GRIPPER_CONVERSION = 64 # 64 encoder ticks result in 1 rotation of the gripper motor
 GRIPPER_REDUCTION  = 30 # 30:1 Gear ratio on the gripper motor
 
 class Gripper():
@@ -23,7 +23,7 @@ class Gripper():
         ## Variables for serial connection
         # Gripper port
         self.gripper_connection = Serial_Port(device_name= gripper_name)
-        self.gripper_connection.open_device_port(baudrate= 115200)
+        self.gripper_connection.open_device_port(baudrate= 9600)
 
         # Servo controller port
         self.servo_connection = Serial_Port(device_name= servo_name)
@@ -40,7 +40,7 @@ class Gripper():
         self.gripper_pos         = 0
 
         # Set speed limit for the gripper
-        self.gripper_speed       = 1.5
+        self.gripper_speed       = 5
 
         # Variable to to hold gripper roll positions (angles)
         self.gripper_roll        = 0
@@ -85,15 +85,15 @@ class Gripper():
         # Get inputs for the gripper and update the position
         gripper_input           = inputs.x - inputs.o
         self.gripper_pos        = gripper_input * self.gripper_speed + self.gripper_pos
-
+        
         servo_config_flip       = inputs.square
 
         gripper_ticks           = int(self.gripper_pos / 360 * GRIPPER_CONVERSION * GRIPPER_REDUCTION)
         # Checking the state, only proceed if not in Idle
         if self.state != "Idle":
-
+            print('goal callback', str(gripper_ticks))
             # Send the new position
-            self.gripper_connection.send_bytes(data= str(gripper_ticks) + '\n')
+            self.gripper_connection.send_bytes(data= str(gripper_ticks) + 'x')
             
             if self.servo_connection.device_port:
                 # TODO Add servo functionality here for future use
@@ -125,9 +125,9 @@ class Gripper():
 
         # Calculate the ticks for the motor
         gripper_ticks       = int((self.gripper_pos) / 360 * GRIPPER_CONVERSION * GRIPPER_REDUCTION)
-        
+        print('safe goal callback', str(gripper_ticks))
         # Send the correction to the gripper motor
-        self.gripper_connection.send_bytes(data= str(gripper_ticks) + '\n')
+        self.gripper_connection.send_bytes(data= str(gripper_ticks) + 'x')
 
 
 if __name__ == "__main__":
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     try:
         rospy.init_node("Arm_Gripper")
         
-        Gripper_Node = Gripper()
+        Gripper_Node = Gripper(gripper_name= '1a86_USB2.0-Serial')
 
         rospy.spin()
 

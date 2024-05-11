@@ -10,7 +10,7 @@
         <arg name="imu_topic"  value="/zed_node/imu/data"/>
         <arg name="frame_id" value="base_link"/>
         <arg name="approx_sync" value="false"/>
-        <arg name="rtabmap_viz"		value="true"/>
+        <arg name="rtabmap_viz"		value="false"/>
 		<arg name="rviz"			value="false"/>
     </include>
 
