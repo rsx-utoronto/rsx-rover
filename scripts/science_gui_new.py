@@ -5,7 +5,7 @@ import time
 import tkinter as tk
 
 BUTTONWIDTH = 20
-BUTTONHEIGHT = 2
+BUTTONHEIGHT = 20
 
 #send data over serial bus, and print incoming data
 def send_data(letter):
