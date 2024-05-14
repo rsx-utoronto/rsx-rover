@@ -20,7 +20,7 @@ import tf2_ros
 import os
 
 # we read in the template we are searching the images for
-TEMPLATE = cv2.imread('template.png', cv2.IMREAD_COLOR)
+TEMPLATE = cv2.imread('Aruco_Frame.png', cv2.IMREAD_COLOR)
 # the algorithm cv2 will use to detect templates
 METHOD = cv2.TM_CCOEFF_NORMED
 # the threshold of similarity between the template and part of an image that
