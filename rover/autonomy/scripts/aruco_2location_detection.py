@@ -30,7 +30,7 @@ THRESHOLD = 0.6
 # note that the colour is set to (0,255,0) that is the colour green
 COLOUR = (0,255,0)
 # where we get out images to analyze
-FOLDER = "images"
+FOLDER = "images" 
 
 
 def detect_template(template, image, h, w):
@@ -46,10 +46,14 @@ def detect_template(template, image, h, w):
     :return: A list of tuples of the form (a,b), where a is the x coordinate
         and b the y coordinate of the bottom left corner of a found template
     """
+              
+    diff = cv2.subtract(template, image)
+    
     # matchTemplate will go through every pixel (possible) in the image and
     # determine how closely the template match to the patch of the image at
     # said pixel of the same height and width as template, the output is the
     # percentage match
+    
     result = cv2.matchTemplate(image, template, METHOD)
 
     # the corners of the template matches found
