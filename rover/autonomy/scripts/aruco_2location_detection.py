@@ -17,7 +17,6 @@ from rover.msg import StateMsg
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import numpy as np
 import tf2_ros
-
 import os
 
 # we read in the template we are searching the images for
