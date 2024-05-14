@@ -112,6 +112,8 @@ def resize_image(image, h, w):
     :param h: The integer height of the new image
     :param w: The integer width of the new image
     """
+
+    resize imag eup 
     pass
 def make_mask (image, template, h, w):
     
