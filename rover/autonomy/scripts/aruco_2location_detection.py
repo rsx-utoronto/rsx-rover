@@ -130,19 +130,31 @@ def resize_image(image, h, w):
 
 def make_mask (image, template, h, w):
     
-    h_template, w_template, 
-    w, h = template.shape[:-1]
-    templateGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    ret, mask = cv2.threshold(templateGray, 200, 255, cv2.THRESH_BINARY)
-    mask_inv = cv2.bitwise_not(mask)
-    mask_inv = cv2.cvtColor(mask_inv,cv2.COLOR_GRAY2RGB)
+    h_template, w_template, c_template = im.template
+    h_image, w_image, c_image = im.image
+    if (h_template == h_image & w_image == w_template):
+        w, h = template.shape[:-1]
+        templateGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+        ret, mask = cv2.threshold(templateGray, 200, 255, cv2.THRESH_BINARY)
+        mask_inv = cv2.bitwise_not(mask)
+        mask_inv = cv2.cvtColor(mask_inv,cv2.COLOR_GRAY2RGB)
+        method = cv2.TM_SQDIFF 
+        result = cv2.matchTemplate(image, template, method, None, mask=mask_inv) 
+    else:
+        image_resized=resize_image(image, h, w)
+        w, h = template.shape[:-1]
+        templateGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+        ret, mask = cv2.threshold(templateGray, 200, 255, cv2.THRESH_BINARY)
+        mask_inv = cv2.bitwise_not(mask)
+        mask_inv = cv2.cvtColor(mask_inv,cv2.COLOR_GRAY2RGB)
+        method = cv2.TM_SQDIFF 
+        result = cv2.matchTemplate(image_resized, template, method, None, mask=mask_inv) 
 
-    print(image.shape, image.dtype)
-    print(template.shape, template.dtype)
-    print(mask_inv.shape, mask_inv.dtype)
+   # print(image.shape, image.dtype)
+   # print(template.shape, template.dtype)
+   # print(mask_inv.shape, mask_inv.dtype)
 
-    method = cv2.TM_SQDIFF 
-    result = cv2.matchTemplate(image, template, method, None, mask=mask_inv)    
+       
 
 def load_images(folder):
     """
