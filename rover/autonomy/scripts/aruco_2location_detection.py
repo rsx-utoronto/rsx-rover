@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import math
 import numpy as np
 import roslib
@@ -31,6 +33,13 @@ THRESHOLD = 0.6
 COLOUR = (0,255,0)
 # where we get out images to analyze
 FOLDER = "images" 
+
+def publish_image():
+    #rospy.init_node('image publisher', anonymous=True)
+    image_sub= rospy.Subscriber("/camera/color/image_raw", Image, queue_size=1)
+    image_pub= rospy.Publisher("/camera/color/image_raw", Image, queue_size=1)
+    bridge = CvBridge()
+    ros_image =bridge.cv2_to_imgmsg(TEMPLATE, encoding='bgr8')
 
 
 def detect_template(template, image, h, w):
@@ -178,6 +187,7 @@ def load_images(folder):
 
 
 if __name__ == "__main__":
+    publish_image()
     # we get the height and width of the template
     h, w = TEMPLATE.shape[:2]
 
@@ -188,3 +198,4 @@ if __name__ == "__main__":
         fileName = FOLDER + f"/result_{names[i]}"
         locs = detect_template(TEMPLATE, images[i], h, w)
         draw_match_boundaries(images[i],locs,fileName, h, w)
+        print("working")
