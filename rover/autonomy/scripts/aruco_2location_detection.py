@@ -74,16 +74,16 @@ def detect_template(template, image, h, w):
         # these pixels within are less likely to be the template since they were
         # not the max_loc, thus we set their values in result to 0 so they are
         # below the threshold for a match.
-        if max_val > THRESHOLD:
-            # all pixels within the bounds of the patch at max_loc have their
-            # result set to 0
-            result[max_loc[1] - h // 2:max_loc[1] + h // 2 + 1, max_loc[0] - w // 2:max_loc[0] + w // 2 + 1] = 0
-            # we found a template match so append the location to found
-            found.append(max_loc)
+    if max_val > THRESHOLD:
+        # all pixels within the bounds of the patch at max_loc have their
+        # result set to 0
+        result[max_loc[1] - h // 2:max_loc[1] + h // 2 + 1, max_loc[0] - w // 2:max_loc[0] + w // 2 + 1] = 0
+        # we found a template match so append the location to found
+        found.append(max_loc)
 
     # we return the locations of all the template matches found
     return found
-
+#take where confidence is max. of ots abpce thresthhold, return that. take the one that is most confident. 
 
 def draw_match_boundaries(image, locations, fileName, h, w):
     """
@@ -103,7 +103,6 @@ def draw_match_boundaries(image, locations, fileName, h, w):
         image = cv2.rectangle(image,(x,y), (x+w+1, y+h+1), COLOUR)
     cv2.imwrite(fileName, image)
 
-
 def resize_image(image, h, w):
     """
     This function resizes an image to a given height and width.
@@ -111,12 +110,27 @@ def resize_image(image, h, w):
     :param image: The cv2 image we are resizing
     :param h: The integer height of the new image
     :param w: The integer width of the new image
-    """
+    """    
+    h_image, w_image, c = im.shape
+    if h_image > h: 
+    #sizing down 
+        down_points = (w, h)
+        image_resized = cv2.resize(image, down_points, interpolation= cv2.INTER_LINEAR)
+    else: 
+    #sizing up 
+        up_points = (w, h)
+        image_resized= cv2.resize(image, up_points, interpolation = cv2.INTER_LINEAR)
 
-    resize imag eup 
-    pass
+    return image_resized
+
+    #want to:
+    #resize image up 
+    #max: furthest image will be (smallest it wil be)
+    #minimum: within 2 meters 
+
 def make_mask (image, template, h, w):
     
+    h_template, w_template, 
     w, h = template.shape[:-1]
     templateGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     ret, mask = cv2.threshold(templateGray, 200, 255, cv2.THRESH_BINARY)
