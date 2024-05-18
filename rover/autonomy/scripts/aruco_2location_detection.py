@@ -17,7 +17,6 @@ from std_srvs.srv import Empty, EmptyResponse
 from rover.msg import StateMsg
 
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
-import numpy as np
 import tf2_ros
 import os
 
@@ -33,13 +32,14 @@ THRESHOLD = 0.6
 COLOUR = (0,255,0)
 # where we get out images to analyze
 FOLDER = "images" 
+global cv_image
 
 def publish_image():
     try:
     #rospy.init_node('image publisher', anonymous=True)
         print(TEMPLATE)
         image_pub= rospy.Publisher("/camera/color/image_raw", Image, queue_size=1)
-        mage_sub= rospy.Subscriber("/camera/color/image_raw", Image, queue_size=1)
+        image_sub= rospy.Subscriber("/camera/color/image_raw", Image, queue_size=1)
         bridge = CvBridge()
         ros_image =bridge.cv2_to_imgmsg(TEMPLATE, encoding='bgr8')
         image_pub.publish(ros_image)
@@ -71,6 +71,8 @@ def detect_template(template, image, h, w):
     # percentage match
     
     result = cv2.matchTemplate(image, template, METHOD)
+    print("result")
+    print(result)
 
     # the corners of the template matches found
     found = []
@@ -101,7 +103,7 @@ def detect_template(template, image, h, w):
     return found
 #take where confidence is max. of ots abpce thresthhold, return that. take the one that is most confident. 
 
-def draw_match_boundaries(image, locations, fileName, h, w):
+def draw_match_boundaries(image, locations, h, w):
     """
     This function draws a box around at the specified location of the image,
     with a height h and width w. The now edited image gets saved to fileName.
@@ -113,13 +115,19 @@ def draw_match_boundaries(image, locations, fileName, h, w):
     :param h: The integer height of the boxes
     :param w: The integer width of the boxes
     """
-    # for each location we will draw a bounding box of given height and width
+    # for each location we will draglobal cv_imagew a bounding box of given height and width
     for location in locations:
         x,y = location
         image = cv2.rectangle(image,(x,y), (x+w+1, y+h+1), COLOUR)
-    cv2.imwrite(fileName, image)
+    # cv2.imwrite(fileName, image)
+    pub = rospy.Publisher('aruco_detect', Image, anonymous=True)
+    bridge = CvBridge()
+    ros_image = bridge.cv2_to_imgmsg(TEMPLATE, encoding='bgr8')
+    pub.publish(ros_image)
+
 
 def resize_image(image, h, w):
+    print("h",h)
     """
     This function resizes an image to a given height and width.
 
@@ -171,6 +179,16 @@ def make_mask (image, template, h, w):
    # print(mask_inv.shape, mask_inv.dtype)
 
        
+def image_callback(msg):
+    bridge = CvBridge()
+    global cv_image
+    try:
+        cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+        cv2.imshow("view", cv_image)
+        cv2.waitKey(30)
+    except Exception as e:
+        rospy.logerr("Could not convert from '{}' to 'bgr8'".format(msg.encoding))
+
 
 def load_images(folder):
     """
@@ -181,6 +199,7 @@ def load_images(folder):
     :param folder: The location of the images.
     :return: A list of cv2 images and a list of the corresponding image names.
     """
+    global cv_image
     dir_list = os.listdir(folder)
     images = []
     names = []
@@ -195,15 +214,28 @@ def load_images(folder):
 
 if __name__ == "__main__":
     rospy.init_node('aruco_location')
-    publish_image()
+    rospy.loginfo("Node 'image_listener' initialized")
+    
+    cv2.namedWindow("view")
+
+    rospy.Subscriber("camera/image", Image, image_callback)
+    rospy.spin()
+
+    # publish_image()
     # we get the height and width of the template
     h, w = TEMPLATE.shape[:2]
 
     # get all the images we want to analyze and open as cv2 images
-    images, names = load_images(FOLDER)
+    # images, names = load_images(FOLDER)
 
-    for i in range(len(images)):
-        fileName = FOLDER + f"/result_{names[i]}"
-        locs = detect_template(TEMPLATE, images[i], h, w)
-        draw_match_boundaries(images[i],locs,fileName, h, w)
-        print("working")
+    # for i in range(len(images)):
+    #     fileName = FOLDER + f"/result_{names[i]}"
+    #     locs = detect_template(TEMPLATE, images[i], h, w)
+    #     draw_match_boundaries(images[i],locs,fileName, h, w)
+    #     print("working")
+    
+    locs = detect_template(TEMPLATE, cv_image, h, w)
+    print(locs)
+    draw_match_boundaries(cv_image,locs, h, w)
+    
+    cv2.destroyAllWindows()
