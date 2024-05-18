@@ -91,7 +91,7 @@ class aruco_detector:
             and b the y coordinate of the bottom left corner of a found template
         """
 
-        resized = self.resize_image(img, h, w)
+        h_new, w_new, resized = self.resize_image(img, h, w)
         diff = cv2.subtract(self.template, resized)
         # detect_template() missing ly the template match to the patch of the image at
         # said pixel of the same height and width as template, the output is the
@@ -123,12 +123,12 @@ class aruco_detector:
         if max_val > self.threshold:
             # all pixels within the bounds of the patch at max_loc have their
             # result set to 0
-            result[max_loc[1] - h // 2:max_loc[1] + h // 2 + 1, max_loc[0] - w // 2:max_loc[0] + w // 2 + 1] = 0
+            result[max_loc[1] - h_new // 2:max_loc[1] + h_new // 2 + 1, max_loc[0] - w_new // 2:max_loc[0] + w_new // 2 + 1] = 0
             # we found a template match so append the location to found
             found.append(max_loc)
         print("smthng found")
         # we return the locations of all the template matches found
-        self.draw_match_boundaries(resized,h,w,found)
+        self.draw_match_boundaries(resized,h_new,w_new,found)
     #take where confidence is max. of ots abpce thresthhold, return that. take the one that is most confident. 
 
     def draw_match_boundaries(self,image,h,w,locs):
@@ -152,9 +152,9 @@ class aruco_detector:
             x,y = location
             image = cv2.rectangle(image,(x,y), (x+w+1, y+h+1), self.colour)
         # cv2.imwrite(fileName, image)
-        pub = rospy.Publisher('aruco_detect', Image, anonymous=True)
+        pub = rospy.Publisher('aruco_detect', Image, queue_size= 10)
         bridge = CvBridge()
-        ros_image = bridge.cv2_to_imgmsg(self.template, encoding='bgr8')
+        ros_image = bridge.cv2_to_imgmsg(image, encoding='bgr8')
         pub.publish(ros_image)
         print("draw match boundaries is bounding")
 
