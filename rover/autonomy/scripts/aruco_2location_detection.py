@@ -22,7 +22,7 @@ import tf2_ros
 import os
 
 # we read in the template we are searching the images for
-TEMPLATE = cv2.imread('Aruco_Frame.png', cv2.IMREAD_COLOR)
+TEMPLATE = cv2.imread('/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/Aruco_Frame.png', cv2.IMREAD_COLOR)
 # the algorithm cv2 will use to detect templates
 METHOD = cv2.TM_CCOEFF_NORMED
 # the threshold of similarity between the template and part of an image that
@@ -35,11 +35,18 @@ COLOUR = (0,255,0)
 FOLDER = "images" 
 
 def publish_image():
+    try:
     #rospy.init_node('image publisher', anonymous=True)
-    image_sub= rospy.Subscriber("/camera/color/image_raw", Image, queue_size=1)
-    image_pub= rospy.Publisher("/camera/color/image_raw", Image, queue_size=1)
-    bridge = CvBridge()
-    ros_image =bridge.cv2_to_imgmsg(TEMPLATE, encoding='bgr8')
+        print(TEMPLATE)
+        image_pub= rospy.Publisher("/camera/color/image_raw", Image, queue_size=1)
+        mage_sub= rospy.Subscriber("/camera/color/image_raw", Image, queue_size=1)
+        bridge = CvBridge()
+        ros_image =bridge.cv2_to_imgmsg(TEMPLATE, encoding='bgr8')
+        image_pub.publish(ros_image)
+        rospy.spin()
+    except CvBridgeError as e:
+        print(e)
+        
 
 
 def detect_template(template, image, h, w):
@@ -187,6 +194,7 @@ def load_images(folder):
 
 
 if __name__ == "__main__":
+    rospy.init_node('aruco_location')
     publish_image()
     # we get the height and width of the template
     h, w = TEMPLATE.shape[:2]
