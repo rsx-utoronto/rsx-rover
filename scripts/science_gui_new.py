@@ -209,25 +209,25 @@ TTCW = tk.Button(m, text='TT CW',
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'j'))
+                        command= lambda:send_data(b'>'))
 TTCCW = tk.Button(m, text='TT CCW', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'j'))
+                        command= lambda:send_data(b'<'))
 smallCW = tk.Button(m, text='Small CW', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'j'))
+                        command= lambda:send_data(b')'))
 smallCCW = tk.Button(m, text='Small CCW', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'j'))
+                        command= lambda:send_data(b'('))
 
 # Specify Grid
 tk.Grid.columnconfigure(m, index = 0, weight = 1)
