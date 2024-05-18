@@ -38,7 +38,7 @@ class aruco_detector:
     def __init__(self):
         self.image_pub = rospy.Publisher("/camera/color/image_raw",Image, queue_size=1)
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.brightest_spot)
+        self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.image_callback, queue_size=1)
         self.template = cv2.imread('/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/Aruco_Frame.png', cv2.IMREAD_COLOR)
         self.method = cv2.TM_CCOEFF_NORMED
         self.threshold = 0.6
@@ -46,16 +46,19 @@ class aruco_detector:
         bridge = CvBridge()
         self.ros_image = bridge.cv2_to_imgmsg(self.template, encoding='bgr8')
         self.image_pub.publish (self.ros_image)
-        self.cv_image = None
 
     def image_callback(self, msg):
+        print("image_callback is working")
         bridge = CvBridge()
         try:
-            self.cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
-            cv2.imshow("view", self.cv_image)
+            cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+            print(cv_image)
+            cv2.imshow("view", cv_image)
             cv2.waitKey(30)
         except Exception as e:
             rospy.logerr("Could not convert from '{}' to 'bgr8'".format(msg.encoding))
+        else: 
+            self.detect_template(cv_image)
 
 
 #no longer using this: 
@@ -73,7 +76,7 @@ class aruco_detector:
 #     except CvBridgeError as e:
 #         print(e)
 
-    def detect_template(self, h, w):
+    def detect_template(self, img, h, w):
         """
         This function takes as input a template and an image. It searches the image
         for said template and returns the bottom left corner of each of the
@@ -87,14 +90,16 @@ class aruco_detector:
             and b the y coordinate of the bottom left corner of a found template
         """
                 
-        diff = cv2.subtract(self.template, self.cv_image)
+        
+        diff = cv2.subtract(self.template, img)
         
         # matchTemplate will go through every pixel (possible) in the image and
         # determine how closely the template match to the patch of the image at
         # said pixel of the same height and width as template, the output is the
         # percentage match
         
-        result = cv2.matchTemplate(self.cv_image, self.template, self.method)
+        result = cv2.matchTemplate(img, self.template, self.method)
+
         print("result")
         print(result)
 
@@ -122,12 +127,12 @@ class aruco_detector:
             result[max_loc[1] - h // 2:max_loc[1] + h // 2 + 1, max_loc[0] - w // 2:max_loc[0] + w // 2 + 1] = 0
             # we found a template match so append the location to found
             found.append(max_loc)
-
+        print("smthng found")
         # we return the locations of all the template matches found
         return found
     #take where confidence is max. of ots abpce thresthhold, return that. take the one that is most confident. 
 
-    def draw_match_boundaries(self, image, locations, h, w):
+    def draw_match_boundaries(self):
         """
         This function draws a box around at the specified location of the image,
         with a height h and width w. The now edited image gets saved to fileName.
@@ -139,8 +144,15 @@ class aruco_detector:
         :param h: The integer height of the boxes
         :param w: The integer width of the boxes
         """
+
+        print("HEY")
+        h, w = self.template.shape[:2]
+        print ("h,w", h,w)
+        locs = self.detect_template( h,w)
+        
+        print(locs)
         # for each location we will draglobal cv_imagew a bounding box of given height and width
-        for location in locations:
+        for location in locs:
             x,y = location
             image = cv2.rectangle(image,(x,y), (x+w+1, y+h+1), self.colour)
         # cv2.imwrite(fileName, image)
@@ -148,6 +160,7 @@ class aruco_detector:
         bridge = CvBridge()
         ros_image = bridge.cv2_to_imgmsg(self.template, encoding='bgr8')
         pub.publish(ros_image)
+        print("draw match boundaries is bounding")
 
 
     def resize_image(image, h, w):
@@ -176,28 +189,28 @@ class aruco_detector:
         #max: furthest image will be (smallest it wil be)
         #minimum: within 2 meters 
 
-    def make_mask (image, template, h, w):
+    def make_mask (self, image, h, w):
         #this function takes image and tempalte dimensions, checks if theyre equal, resizes if they're not equal, the it masks the templ
         
         h_template, w_template, c_template = im.template
         h_image, w_image, c_image = im.image
         if (h_template == h_image & w_image == w_template):
-            w, h = template.shape[:-1]
-            templateGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+            w, h = self.template.shape[:-1]
+            templateGray = cv2.cvtColor(self.template, cv2.COLOR_BGR2GRAY)
             ret, mask = cv2.threshold(templateGray, 200, 255, cv2.THRESH_BINARY)
             mask_inv = cv2.bitwise_not(mask)
             mask_inv = cv2.cvtColor(mask_inv,cv2.COLOR_GRAY2RGB)
             method = cv2.TM_SQDIFF 
-            result = cv2.matchTemplate(image, template, method, None, mask=mask_inv) 
+            result = cv2.matchTemplate(image, self.template, method, None, mask=mask_inv) 
         else:
-            image_resized=resize_image(image, h, w)
-            w, h = template.shape[:-1]
-            templateGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+            image_resized=self.resize_image(image, h, w)
+            w, h = self.template.shape[:-1]
+            templateGray = cv2.cvtColor(self.template, cv2.COLOR_BGR2GRAY)
             ret, mask = cv2.threshold(templateGray, 200, 255, cv2.THRESH_BINARY)
             mask_inv = cv2.bitwise_not(mask)
             mask_inv = cv2.cvtColor(mask_inv,cv2.COLOR_GRAY2RGB)
             method = cv2.TM_SQDIFF 
-            result = cv2.matchTemplate(image_resized, template, method, None, mask=mask_inv) 
+            result = cv2.matchTemplate(image_resized, self.template, method, None, mask=mask_inv) 
 
     # print(image.shape, image.dtype)
     # print(template.shape, template.dtype)
@@ -224,21 +237,25 @@ class aruco_detector:
 
     #     return images, names
 
-    def main (self):
-        h, w = self.template.shape[:2]
-        locs = detect_template(self.template, self.cv_image, h, w)
-        print(locs)
-        draw_match_boundaries(self.cv_image,locs, h, w)
+    # def run (self):
+    #     print("HEY")
+    #     h, w = self.template.shape[:2]
+    #     print ("h,w", h,w)
+    #     locs = self.detect_template()
+        
+    #     print(locs)
+    #     self.draw_match_boundaries(self.cv_image,locs, h, w)
     
 
 
 if __name__ == "__main__":
     while not rospy.is_shutdown():
-        rospy.init_node('aruco_location')    
+        rospy.init_node('aruco_location')   
         rospy.loginfo("Node 'image_listener' initialized")
-        aruco_detector()
         cv2.namedWindow("view")
-        rospy.Subscriber("camera/image", Image, image_callback)
+        aruco_detector().draw_match_boundaries()
+        print("6 works")
+        
         rospy.spin()
 
     #     h, w = self.template.shape[:2]
@@ -256,4 +273,4 @@ if __name__ == "__main__":
     # print(locs)
     # draw_match_boundaries(cv_image,locs, h, w)
     
-    cv2.destroyAllWindows()
+    #cv2.destroyAllWindows() commented this out....
