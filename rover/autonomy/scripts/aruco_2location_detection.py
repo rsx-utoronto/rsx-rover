@@ -36,10 +36,13 @@ import os
 
 class aruco_detector:
     def __init__(self):
+        path = os.path.dirname(os.path.abspath(__file__))
+        template_path = os.path.join(path, 'Aruco_Frame.png')
+        self.template = cv2.imread(template_path, cv2.IMREAD_COLOR)
         self.template_pub = rospy.Publisher("/camera/color/image_raw",Image, queue_size=10)
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/zed_node/rgb/image_rect_color", Image, self.image_callback)
-        self.template = cv2.imread('/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/Aruco_Frame.png', cv2.IMREAD_COLOR)
+        # self.template = cv2.imread('/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/Aruco_Frame.png', cv2.IMREAD_COLOR)
         self.method = cv2.TM_CCOEFF_NORMED
         self.threshold = 0.6
         self.colour = (0,255,0)
@@ -49,18 +52,13 @@ class aruco_detector:
 
     def image_callback(self, msg):
         print("image_callback is working")
-        bridge = CvBridge()
         try:
-            self.cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
-            # print(self.cv_image)
-            cv2.imshow("view", self.cv_image)
-            cv2.waitKey(30)
+            self.cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         except Exception as e:
             rospy.logerr("Could not convert from '{}' to 'bgr8'".format(msg.encoding))
-        else: 
+        else:
             print("going into detect")
             self.detect_template(self.cv_image)
-
 
 #no longer using this: 
 
@@ -90,7 +88,7 @@ class aruco_detector:
         :return: A list of tuples of the form (a,b), where a is the x coordinate
             and b the y coordinate of the bottom left corner of a found template
         """
-
+        print ("at detect_template")
         h_new, w_new, resized = self.resize_image(img, h, w)
         diff = cv2.subtract(self.template, resized)
         # detect_template() missing ly the template match to the patch of the image at
@@ -143,21 +141,14 @@ class aruco_detector:
         :param h: The integer height of the boxes
         :param w: The integer width of the boxes
         """
-
-        
-        
-
-        # for each location we will draglobal cv_imagew a bounding box of given height and width
+        # for each location we will draw global cv_image w a bounding box of given height and width
         for location in locs:
             x,y = location
             image = cv2.rectangle(image,(x,y), (x+w+1, y+h+1), self.colour)
-        # cv2.imwrite(fileName, image)
         pub = rospy.Publisher('aruco_detect', Image, queue_size= 10)
-        bridge = CvBridge()
-        ros_image = bridge.cv2_to_imgmsg(image, encoding='bgr8')
+        ros_image = self.bridge.cv2_to_imgmsg(image, encoding='bgr8')
         pub.publish(ros_image)
         print("draw match boundaries is bounding")
-
 
     def resize_image(self, image, h, w):
         """
@@ -190,10 +181,10 @@ class aruco_detector:
         #minimum: within 2 meters 
 
     def make_mask (self, image, h, w):
-        #this function takes image and tempalte dimensions, checks if theyre equal, resizes if they're not equal, the it masks the templ
+        #this function takes image and template dimensions, checks if theyre equal, resizes if they're not equal, the it masks the templ
         
-        h_template, w_template, c_template = im.template
-        h_image, w_image, c_image = im.image
+        h_template, w_template, c_template = image.template
+        h_image, w_image, c_image = image.image
         if (h_template == h_image & w_image == w_template):
             w, h = self.template.shape[:-1]
             templateGray = cv2.cvtColor(self.template, cv2.COLOR_BGR2GRAY)
@@ -246,17 +237,12 @@ class aruco_detector:
         print(locs)
         self.draw_match_boundaries(self.cv_image,locs, h, w)
     
-
-
 if __name__ == "__main__":
     while not rospy.is_shutdown():
         rospy.init_node('aruco_location')   
         rospy.loginfo("Node 'image_listener' initialized")
         cv2.namedWindow("view")
         ad = aruco_detector()
-        # ad.run()
-        print("6 works")
-        
         rospy.spin()
 
     #     h, w = self.template.shape[:2]
