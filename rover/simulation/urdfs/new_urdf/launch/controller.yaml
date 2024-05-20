@@ -1,0 +1,87 @@
+URDF_controller:
+  # Publish all joint states -----------------------------------
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 50
+
+  # Position Controllers --------------------------------------
+  Revolute 2_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_2
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 3_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_3
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 4_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_4
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 5_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_5
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 6_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_6
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 7_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_7
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 8_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_8
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 9_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_9
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 22_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_22
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 23_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_23
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 24_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_24
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 25_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_25
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 26_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_26
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 27_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_27
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 28_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_28
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 29_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_29
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 30_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_30
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 31_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_31
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 32_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_32
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  Revolute 33_position_controller:
+    type: velocity_controllers/JointPositionController
+    joint: Revolute_33
+    pid: {p: 100.0, i: 0.01, d: 10.0}
