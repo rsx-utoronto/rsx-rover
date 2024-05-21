@@ -1,4 +1,4 @@
-#!/usr/bin/env python3 
+
 
 import serial as ser
 import time
@@ -138,21 +138,35 @@ sensor = tk.Button(m, text='Sensor',
                         bg="pink",
                         font= ('Helvetica 20 bold'),
                         command= lambda:send_data(b'ow'))
+lastpos = tk.Button(m, text='Empty', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="pink",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data(b'ow'))
 hole = tk.Button(m, text='Hole', 
-                        width=BUTTONWIDTH*2,
+                        width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
                         command= lambda:send_data(b'h'))
 
+##Measure
+temperature = tk.Button(m, text='Temperature and Humidity', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="purple",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data(b'&'))
+
 ##Small steps for bit changer
-tinycw = tk.Button(m, text='Small CW', 
+tinycw = tk.Button(m, text='Bit Changer Small CW', 
                         width=BUTTONWIDTH*2,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
                         command= lambda:send_data(b'k'))
-tinyccw = tk.Button(m, text='Small CCW', 
+tinyccw = tk.Button(m, text='Bit Changer Small CCW', 
                         width=BUTTONWIDTH*2,
                         height= BUTTONHEIGHT, 
                         bg="pink",
@@ -204,30 +218,58 @@ pump2 = tk.Button(m, text='Pump 2',
                         command= lambda:send_data(b'j'))
 
 ## analysis module
-TTCW = tk.Button(m, text='TT CW', 
+TTCW = tk.Button(m, text='Test Tube CW', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
                         command= lambda:send_data(b'>'))
-TTCCW = tk.Button(m, text='TT CCW', 
+TTCCW = tk.Button(m, text='Test Tube CCW', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
                         command= lambda:send_data(b'<'))
-smallCW = tk.Button(m, text='Small CW', 
+smallCW = tk.Button(m, text='Test Tube Small CW', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
                         command= lambda:send_data(b')'))
-smallCCW = tk.Button(m, text='Small CCW', 
+smallCCW = tk.Button(m, text='Test Tube Small CCW', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
                         command= lambda:send_data(b'('))
+
+lighton = tk.Button(m, text='Light On', ##]
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="white",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data(b']'))
+lightoff = tk.Button(m, text='Light Off', ##]
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="white",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data(b'['))
+
+##PMT
+shutter_open = tk.Button(m, text='Open Shutter', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="pink",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data(b','))
+shutter_close = tk.Button(m, text='Close Shutter', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="pink",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data(b'.'))
+
 
 # Specify Grid
 tk.Grid.columnconfigure(m, index = 0, weight = 1)
@@ -247,7 +289,8 @@ tk.Grid.rowconfigure(m, 4,weight = 1)
 tk.Grid.rowconfigure(m, 5,weight = 1)
 tk.Grid.rowconfigure(m, 6,weight = 1)
 tk.Grid.rowconfigure(m, 7,weight = 1)
-#tk.Grid.rowconfigure(m, 8,weight = 1)
+tk.Grid.rowconfigure(m, 8,weight = 1)
+tk.Grid.rowconfigure(m, 9,weight = 1)
 
 #place buttons
 delay_100.grid(row=0,column=0,columnspan=2,sticky="NSEW")
@@ -269,22 +312,30 @@ narrow.grid(row=3,column=2,columnspan=1,sticky="NSEW")
 deep.grid(row=3,column=3,columnspan=1,sticky="NSEW")
 camera.grid(row=3,column=4,columnspan=1,sticky="NSEW")
 sensor.grid(row=3,column=5,columnspan=1,sticky="NSEW")
-hole.grid(row=3,column=6,columnspan=2,sticky="NSEW")
+lastpos.grid(row=3,column=6,columnspan=1,sticky="NSEW")
+hole.grid(row=3,column=7,columnspan=1,sticky="NSEW")
 
 tinycw.grid(row=4,column=0,columnspan=4,sticky="NSEW")
 tinyccw.grid(row=4,column=4,columnspan=4,sticky="NSEW")
 
-valve1.grid(row=5,column=0,columnspan=2,sticky="NSEW")
-valve2.grid(row=5,column=2,columnspan=2,sticky="NSEW")
-valve3.grid(row=5,column=4,columnspan=2,sticky="NSEW")
-valve4.grid(row=5,column=6,columnspan=2,sticky="NSEW")
+temperature.grid(row=5,column=0,columnspan=8,sticky="NSEW")
 
-pump1.grid(row=6,column=0,columnspan=4,sticky="NSEW")
-pump2.grid(row=6,column=4,columnspan=4,sticky="NSEW")
+valve1.grid(row=6,column=0,columnspan=2,sticky="NSEW")
+valve2.grid(row=6,column=2,columnspan=2,sticky="NSEW")
+valve3.grid(row=6,column=4,columnspan=2,sticky="NSEW")
+valve4.grid(row=6,column=6,columnspan=2,sticky="NSEW")
 
-TTCW.grid(row=7,column=0,columnspan=2,sticky="NSEW")
-TTCCW.grid(row=7,column=2,columnspan=2,sticky="NSEW")
-smallCW.grid(row=7,column=4,columnspan=2,sticky="NSEW")
-smallCCW.grid(row=7,column=6,columnspan=2,sticky="NSEW")
+pump1.grid(row=7,column=0,columnspan=4,sticky="NSEW")
+pump2.grid(row=7,column=4,columnspan=4,sticky="NSEW")
+
+TTCW.grid(row=8,column=0,columnspan=2,sticky="NSEW")
+TTCCW.grid(row=8,column=2,columnspan=2,sticky="NSEW")
+smallCW.grid(row=8,column=4,columnspan=2,sticky="NSEW")
+smallCCW.grid(row=8,column=6,columnspan=2,sticky="NSEW")
+
+lighton.grid(row=9,column=0,columnspan=2,sticky="NSEW")
+lightoff.grid(row=9,column=2,columnspan=2,sticky="NSEW")
+shutter_open.grid(row=9,column=4,columnspan=2,sticky="NSEW")
+shutter_close.grid(row=9,column=6,columnspan=2,sticky="NSEW")
 
 m.mainloop()
