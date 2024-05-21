@@ -43,7 +43,7 @@ class aruco_detector:
         template_path = os.path.join(path, 'aruco_20.png')
         self.template = cv2.imread(template_path, cv2.IMREAD_COLOR)
         self.method = cv2.TM_CCOEFF_NORMED
-        self.threshold = 0.43
+        self.threshold = 0.4
         self.colour = (0,255,0)
         bridge = CvBridge()
         self.ros_image = bridge.cv2_to_imgmsg(self.template, encoding='bgr8')
@@ -109,9 +109,24 @@ class aruco_detector:
         max_max_val = 0
         max_max_loc = (0,0)
         resized_image = cv2.resize(img, (1280,720), interpolation= cv2.INTER_LINEAR)
+        tol = 20
+        rg = np.abs(resized_image[:,:,0]-resized_image[:,:,1])
+        rb = np.abs(resized_image[:,:,0]-resized_image[:,:,2])        
+        gb = np.abs(resized_image[:,:,1]-resized_image[:,:,2])
+        mask = (rg > tol) | (rb > tol) | (gb > tol)
+        resized_image[mask]=[0,0,255]
+        # hsv = cv2.cvtColor(resized_image, cv2.COLOR_BGR2HSV) # convert image to HSV color space
+        # hsv = np.array(hsv, dtype = np.float64)
+        # hsv[:,:,1] = hsv[:,:,1]*1.5 # scale pixel values up for channel 1
+        # hsv[:,:,1][hsv[:,:,1]>255]  = 255
+        # hsv[:,:,2] = hsv[:,:,2]*1.5 # scale pixel values up for channel 2
+        # hsv[:,:,2][hsv[:,:,2]>255]  = 255
+        # hsv = np.array(hsv, dtype = np.uint8)
+        # resized_image = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
         h_box, w_box = h, w
 
-        for i in range (5, 35, 5):
+        for i in range (2, 35, 5):
             new_h = int((h/50)*i)
             new_w = int((w/50)*i)
             resized_template= cv2.resize(self.template, (new_w,new_h), interpolation= cv2.INTER_LINEAR)
@@ -121,15 +136,6 @@ class aruco_detector:
             # path = os.path.dirname(os.path.abspath(__file__))
             # img_path = os.path.join(path, 'aruco_phone2.jpg')
             # img = cv2.imread(img_path, cv2.IMREAD_COLOR)
-
-            # hsv = cv2.cvtColor(resized_image, cv2.COLOR_BGR2HSV) # convert image to HSV color space
-            # hsv = np.array(hsv, dtype = np.float64)
-            # hsv[:,:,1] = hsv[:,:,1]*1.15 # scale pixel values up for channel 1
-            # hsv[:,:,1][hsv[:,:,1]>255]  = 255
-            # hsv[:,:,2] = hsv[:,:,2]*1.15 # scale pixel values up for channel 2
-            # hsv[:,:,2][hsv[:,:,2]>255]  = 255
-            # hsv = np.array(hsv, dtype = np.uint8)
-            # resized_image = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR) # converting back to BGR used by OpenCV
 
             # res = np.zeros(resized_image.shape, np.uint8) # creating blank mask for result
             # l = 15 # the lower range of Hue we want
@@ -143,7 +149,17 @@ class aruco_detector:
             #     res[:, :, i] = res2 # storing grayscale mask to all three slices
             # resized_image = cv2.bitwise_or(res1, res) # joining grayscale and color regions
 
+            # b,g,r = cv2.split(resized_image)
+            # b[:] = 0
+            # r[:] = 0
+            # green_ver = cv2.merge((b,g,r))
+            # b_t, g_t, r_t = cv2.split(resized_template)
+            # b_t[:] = 0
+            # r_t[:] = 0
+            # green_ver_t = cv2.merge((b_t, g_t, r_t))
+            # result = cv2.matchTemplate(green_ver, green_ver_t, self.method)
 
+            # result = cv2.matchTemplate(inv_ri, resized_template, self.method)
             result = cv2.matchTemplate(resized_image, resized_template, self.method)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
             # print("max_val", max_val)
@@ -161,6 +177,8 @@ class aruco_detector:
             print("smthng found")
             self.draw_match_boundaries(resized_image,h_box,w_box,found)
         else:
+            found = [(0,0)]
+            self.draw_match_boundaries(resized_image,h_box,w_box,found)
             print("nothing found")
 
         
@@ -198,10 +216,6 @@ class aruco_detector:
         #     self.draw_match_boundaries(resized,h_new,w_new,found)
         #     #take where confidence is max. of ots abpce thresthhold, return that. take the one that is most confident. 
     
-
-
-
-
     def draw_match_boundaries(self,image,h,w,locs):
         """
         This function draws a box around at the specified location of the image,
