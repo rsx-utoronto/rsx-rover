@@ -200,8 +200,8 @@ class aruco_detector:
     def make_mask (self, image, h, w):
         #this function takes image and template dimensions, checks if theyre equal, resizes if they're not equal, the it masks the templ
         
-        h_template, w_template, c_template = image.template
-        h_image, w_image, c_image = image.image
+        h_template, w_template, c_template = self.template.shape 
+        h_image, w_image, c_image = image.shape 
         if (h_template == h_image & w_image == w_template):
             w, h = self.template.shape[:-1]
             templateGray = cv2.cvtColor(self.template, cv2.COLOR_BGR2GRAY)
