@@ -43,6 +43,7 @@ class aruco_detector:
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/zed_node/rgb/image_rect_color", Image, self.image_callback)
         # self.template = cv2.imread('/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/Aruco_Frame.png', cv2.IMREAD_COLOR)
+        self.count = 0
         self.method = cv2.TM_CCOEFF_NORMED
         self.threshold = 0.6
         self.colour = (0,255,0)
@@ -50,14 +51,18 @@ class aruco_detector:
         self.ros_image = bridge.cv2_to_imgmsg(self.template, encoding='bgr8')
         self.template_pub.publish(self.ros_image)
 
+        # self.max_val = 2
+        self.stored_max_val = 0
+        self.stored_max_loc = (0,0)
+
     def image_callback(self, msg):
-        print("image_callback is working")
+        # print("image_callback is working")
         try:
             self.cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         except Exception as e:
             rospy.logerr("Could not convert from '{}' to 'bgr8'".format(msg.encoding))
         else:
-            print("going into detect")
+            # print("going into detect")
             self.detect_template(self.cv_image)
 
 #no longer using this: 
@@ -88,43 +93,54 @@ class aruco_detector:
         :return: A list of tuples of the form (a,b), where a is the x coordinate
             and b the y coordinate of the bottom left corner of a found template
         """
-        print ("at detect_template")
+        self.count +=1
+        print (self.count)
         h_new, w_new, resized = self.resize_image(img, h, w)
         diff = cv2.subtract(self.template, resized)
+
         # detect_template() missing ly the template match to the patch of the image at
         # said pixel of the same height and width as template, the output is the
         # percentage match
         
         result = cv2.matchTemplate(img, self.template, self.method)
 
-        print("result")
-        print(result)
+        # print("result")
+        # print(result)
 
         # the corners of the template matches found
         found = []
 
         # set max val to 1 to start with, so it is above the threshold, and we
         # search for instances of the template above the threshold
-        max_val = 1
-
+    
         # this function will loop until there are no more potential template matches
-        while max_val > self.threshold:
-            # we find the values and the location of the min and max in result
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-
-            # If the max_val is greater than the threshold, then we do not want some
+        # while max_val > self.threshold:
+        #     # we find the values and the location of the min and max in result
+        #     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+        #     # If the max_val is greater than the threshold, then we do not want some
             # pixel which would be withindetect_template() missing  the bounds of the patch the matched at
             # max_loc to the template to also be labelled as a template. Note that
             # these pixels within are less likely to be the template since they were
             # not the max_loc, thus we set their values in result to 0 so they are
             # below the threshold for a match.
-        if max_val > self.threshold:
+        
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+        if max_val < self.threshold:
+            return        
+        while max_val > self.threshold:
+            print ("READ",max_val, self.stored_max_val, max_loc, self.stored_max_loc)
+            if max_val > self.stored_max_val:
+                self.stored_max_val = max_val
+                self.stored_max_loc = max_loc
+            print ("READ2",self.max_val, self.stored_max_val, max_loc, self.stored_max_loc)
             # all pixels within the bounds of the patch at max_loc have their
             # result set to 0
+        if self.stored_max_val > self.threshold:
+            print ("in if,", max_loc)
             result[max_loc[1] - h_new // 2:max_loc[1] + h_new // 2 + 1, max_loc[0] - w_new // 2:max_loc[0] + w_new // 2 + 1] = 0
             # we found a template match so append the location to found
             found.append(max_loc)
-        print("smthng found")
+            print("smthng found", found, "max", max_loc)
         # we return the locations of all the template matches found
         self.draw_match_boundaries(resized,h_new,w_new,found)
     #take where confidence is max. of ots abpce thresthhold, return that. take the one that is most confident. 
@@ -145,6 +161,7 @@ class aruco_detector:
         for location in locs:
             x,y = location
             image = cv2.rectangle(image,(x,y), (x+w+1, y+h+1), self.colour)
+            print ("Drawing")
         pub = rospy.Publisher('aruco_detect', Image, queue_size= 10)
         ros_image = self.bridge.cv2_to_imgmsg(image, encoding='bgr8')
         pub.publish(ros_image)
@@ -161,17 +178,17 @@ class aruco_detector:
         h_image, w_image, c = image.shape
         if h_image > h: 
         #sizing down 
-            print ("shit 1 working")
+            # print ("shit 1 working")
             down_points = (w, h)
             image_resized = cv2.resize(image, down_points, interpolation= cv2.INTER_LINEAR)
             h_new, w_new = h_image, w_image
         else: 
         #sizing up 
             up_points = (w, h)
-            print ("shit 2 working", w, h)
+            # print ("shit 2 working", w, h)
             image_resized= cv2.resize(image, up_points, interpolation = cv2.INTER_LINEAR)
-            print("it resized")
-            print(image_resized.shape)
+            # print("it resized")
+            # print(image_resized.shape)
             h_new, w_new = h, w
         return h_new, w_new, image_resized
 
