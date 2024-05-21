@@ -80,6 +80,13 @@ class aruco_detector:
 #     except CvBridgeError as e:
 #         print(e)
 
+    def hsv(self, img, l, u):
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        lower = np.array([l,128,128]) # setting lower HSV value
+        upper = np.array([u,255,255]) # setting upper HSV value
+        mask = cv2.inRange(hsv, lower, upper) # generating mask
+        return mask
+
     def detect_template(self, img, h, w):
         """
         This function takes as input a template and an image. It searches the image
@@ -123,6 +130,18 @@ class aruco_detector:
             # hsv[:,:,2][hsv[:,:,2]>255]  = 255
             # hsv = np.array(hsv, dtype = np.uint8)
             # resized_image = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR) # converting back to BGR used by OpenCV
+
+            # res = np.zeros(resized_image.shape, np.uint8) # creating blank mask for result
+            # l = 15 # the lower range of Hue we want
+            # u = 30 # the upper range of Hue we want
+            # mask = self.hsv(resized_image, l, u)
+            # inv_mask = cv2.bitwise_not(mask) # inverting mask
+            # gray = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
+            # res1 = cv2.bitwise_and(resized_image, resized_image, mask= mask) # region which has to be in color
+            # res2 = cv2.bitwise_and(gray, gray, mask= inv_mask) # region which has to be in grayscale
+            # for i in range(3):
+            #     res[:, :, i] = res2 # storing grayscale mask to all three slices
+            # resized_image = cv2.bitwise_or(res1, res) # joining grayscale and color regions
 
 
             result = cv2.matchTemplate(resized_image, resized_template, self.method)
