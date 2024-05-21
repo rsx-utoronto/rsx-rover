@@ -1,8 +1,7 @@
 <launch>
-    <node pkg="tf" type="static_transform_publisher" name="zed_broadcaster" args="-0.2 0 0.8 -1.57 0 0 base_link zed2_base_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="zed_broadcaster" args="-0.34 0.15 0.7 0 0 0 base_link zed2_base_link 100" />
 
-    <node pkg="zed_wrapper" type="zed_no_tf" name="zed_camera"/>
-
+   <include file="$(find zed_wrapper)/launch/zed_no_tf.launch"/>
 
     <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="collapse_pointcloud" output="screen" > 
         <param name="max_height" value="0.75" />
@@ -13,3 +12,4 @@
         <!-- <remap from="/scan" to="/scan_collapsed" /> -->
     </node>
 
+</launch>
