@@ -14,8 +14,11 @@ bridge = CvBridge()
 class ARucoTagDetectionNode():
 
     def __init__(self):
-        self.image_topic = "/camera/color/image_raw"
-        self.info_topic = "/camera/color/camera_info"
+        self.image_topic = "/zed_node/rgb/image_rect_color"
+        self.info_topic = "/zed_node/rgb/camera_info"
+
+        # self.image_topic = "/camera/color/image_raw"
+        # self.info_topic = "/camera/color/camera_info"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
         self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
@@ -100,15 +103,6 @@ class ARucoTagDetectionNode():
         if ids is not None:
             self.updated_state_msg.AR_TAG_DETECTED = True
             self.updated_state_msg.curr_AR_ID = int(best_detection)
-<<<<<<< HEAD
-
-            # Transform into a goal in the odom frame
-
-            # lookup baselink to camera link transform 
-            # lookup baselink to odom transform 
-            # transform the 4x4 pose to the odom frame and publish below
-=======
->>>>>>> aeaeaf1b0767fef3f3885392d519140d60c3fd9e
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
             self.updated_state_msg.curr_AR_ID = -1
