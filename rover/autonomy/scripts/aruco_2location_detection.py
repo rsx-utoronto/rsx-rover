@@ -181,7 +181,7 @@ class aruco_detector:
             # print ("shit 1 working")
             down_points = (w, h)
             image_resized = cv2.resize(image, down_points, interpolation= cv2.INTER_LINEAR)
-            h_new, w_new = h_image, w_image
+            h_new, w_new = h_image, w_image #this isn't interpolating it to the size. it should be: h_new, w_new = image_resized.shape[:-1]
         else: 
         #sizing up 
             up_points = (w, h)
@@ -189,7 +189,7 @@ class aruco_detector:
             image_resized= cv2.resize(image, up_points, interpolation = cv2.INTER_LINEAR)
             # print("it resized")
             # print(image_resized.shape)
-            h_new, w_new = h, w
+            h_new, w_new = h, w #this isn't interpolating it to the size. it should be: h_new, w_new = image_resized.shape[:-1]
         return h_new, w_new, image_resized
 
         #want to:
@@ -211,7 +211,7 @@ class aruco_detector:
             method = cv2.TM_SQDIFF 
             result = cv2.matchTemplate(image, self.template, method, None, mask=mask_inv) 
         else:
-            image_resized=self.resize_image(image, h, w)
+            image_resized=self.resize_image(image, h, w) #should add 3 vars here to take the three results of image_resized
             w, h = self.template.shape[:-1]
             templateGray = cv2.cvtColor(self.template, cv2.COLOR_BGR2GRAY)
             ret, mask = cv2.threshold(templateGray, 200, 255, cv2.THRESH_BINARY)
