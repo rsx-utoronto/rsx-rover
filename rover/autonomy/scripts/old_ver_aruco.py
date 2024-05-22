@@ -22,28 +22,33 @@ import os
 
 class aruco_detector:
     def __init__(self):
-        self.template_pub1 = rospy.Publisher("/camera/color/image_raw",Image, queue_size=10)
-        self.template_pub2 = rospy.Publisher("/camera/color/image_raw",Image, queue_size=10)
+        self.template_pub = rospy.Publisher("/camera/color/image_raw",Image, queue_size=10)
+        # self.template_pub2 = rospy.Publisher("/camera/color/image_raw",Image, queue_size=10)
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/zed_node/rgb/image_rect_color", Image, self.image_callback)
         path = os.path.dirname(os.path.abspath(__file__))
         template_path = os.path.join(path, 'aruco_F.png')
         self.template = cv2.imread(template_path, cv2.IMREAD_COLOR)
-        self.mask = self.make_mask (self.template, self.template.shape[0], self.template.shape[1])
-        template1_path = os.path.join(path, 'aruco_shade.png')
-        self.template1 = cv2.imread(template1_path, cv2.IMREAD_COLOR)
+        self.mask = self.make_mask (path, self.template, self.template.shape[0], self.template.shape[1])
+        # template1_path = os.path.join(path, 'aruco_shade.png')
+        # self.template1 = cv2.imread(template1_path, cv2.IMREAD_COLOR)
 
-        template2_path = os.path.join(path, 'aruco_shade.png')
-        self.template2 = cv2.imread(template2_path, cv2.IMREAD_COLOR) 
+        # template2_path = os.path.join(path, 'aruco_shade.png')
+        # self.template2 = cv2.imread(template2_path, cv2.IMREAD_COLOR) 
         
-        self.check = False
-        self.method = cv2.TM_CCOEFF_NORMED
-        self.threshold = 0.4
+        # self.check = False
+        self.method =cv2.TM_CCORR_NORMED
+        self.method2=cv2.TM_SQDIFF
+        #self.method2= cv2.TM_SQDIFF_NORMED
+        self.threshold = 0.4 # 0.4
         self.colour = (0,255,0)
         bridge = CvBridge()
-        self.ros_image1 = bridge.cv2_to_imgmsg(self.template1, encoding='bgr8')
-        self.ros_image2 = bridge.cv2_to_imgmsg(self.template2, encoding='bgr8')
-        self.template_pub1.publish(self.ros_image1)
+        self.ros_image = bridge.cv2_to_imgmsg(self.template, encoding='bgr8')
+        self.template_pub.publish(self.ros_image)
+    
+        # self.ros_image1 = bridge.cv2_to_imgmsg(self.template1, encoding='bgr8')
+        # self.ros_image2 = bridge.cv2_to_imgmsg(self.template2, encoding='bgr8')
+        # self.template_pub1.publish(self.ros_image1)
     
 
     def image_callback(self, msg):
@@ -81,69 +86,55 @@ class aruco_detector:
         max_max_val = 0
         max_max_loc = (0,0)
         resized_image = cv2.resize(img, (2560,1440), interpolation= cv2.INTER_LINEAR)       
-
         # initialize box for boundary
         h_box, w_box = h, w
 
-        for i in range (2, 7):
+        # tol = 100
+            
+        # # difference calculations between RGB values
+        # rg = np.abs(resized_image[:,:,0]-resized_image[:,:,1])
+        # rb = np.abs(resized_image[:,:,0]-resized_image[:,:,2])        
+        # gb = np.abs(resized_image[:,:,1]-resized_image[:,:,2])
+
+        # # all values outside of greyscale will be made red    
+        # mask = (rg > tol) | (rb > tol) | (gb > tol)
+        # resized_image[mask]=[0,0,255]
+    
+        for i in range (2, 7):  # range to resize image
             new_h = int(h*i)
             new_w = int(w*i)
-            #resized_template= cv2.resize(self.template, (new_w,new_h), interpolation= cv2.INTER_LINEAR)
-            # result = cv2.matchTemplate(resized_image, resized_template, self.method)
+            resized_image= cv2.resize(self.cv_image, (new_w,new_h), interpolation= cv2.INTER_LINEAR) 
+            result = cv2.matchTemplate(resized_image, self.template, self.method2, None, self.mask)
 
-            resized_image = cv2.resize(img, (new_w,new_h), interpolation= cv2.INTER_LINEAR)
-            if self.check == False:
-                result = cv2.matchTemplate(resized_image, self.template1, self.method)
-                h_box, w_box =  self.template1.shape[0]*i, self.template1.shape[1]*i 
-                print ("1, hbox, wbox", h_box, w_box )
-            else:
-                result = cv2.matchTemplate(resized_image, self.template2, self.method) 
-                h_box, w_box =  self.template2.shape[0]*i, self.template2.shape[1]*i
-                print ("2, hbox, wbox", h_box, w_box )
+            result_normalized = cv2.normalize(result, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+        
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result_normalized)
+            print (min_val)
 
-             # tol is tolerance for greyscale
-            tol = 100
-            
-            # difference calculations between RGB values
-            rg = np.abs(resized_image[:,:,0]-resized_image[:,:,1])
-            rb = np.abs(resized_image[:,:,0]-resized_image[:,:,2])        
-            gb = np.abs(resized_image[:,:,1]-resized_image[:,:,2])
+        #     if max_val > self.threshold:
+        #         if max_val > max_max_val:
+        #             max_max_loc = max_loc
+        #             max_max_val = max_val
 
-        # all values outside of greyscale will be made red    
-        mask = (rg > tol) | (rb > tol) | (gb > tol)
-        resized_image[mask]=[0,0,255]
+        #             if max_val > 0.45:
+        #                 self.check = True
+        #                 print ("Using shaded template")
 
-        # initialize box for boundary
-        h_box, w_box = h, w
-
-        for i in range (2, 35, 5):
-            new_h = int((h/50)*i)
-            new_w = int((w/50)*i)
-            resized_template= cv2.resize(self.template, (new_w,new_h), interpolation= cv2.INTER_LINEAR)
-            result = cv2.matchTemplate(resized_image, resized_template, self.method)
-            
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-            # print("max_val", max_val)
-            if max_val > self.threshold:
-                if max_val > max_max_val:
-                    max_max_loc = max_loc
-                    max_max_val = max_val
-
-                    if max_val > 0.45:
-                        self.check = True
-                        print ("Using shaded template")
-
-        if max_max_val > self.threshold:
-            print("max_max_loc", max_max_loc, "max_max_val", max_max_val)
-            found = []
-            result[max_max_loc[1] - h // 2 : max_max_loc[1] + h // 2 + 1, max_max_loc[0] - w // 2 : max_max_loc[0] + w // 2 + 1] = 0
-            found.append(max_max_loc)
-            print("smthng found")
-            self.draw_match_boundaries(resized_image,h_box,w_box,found)
-        else:
-            # found = [(0,0)]
-            # self.draw_match_boundaries(resized_image,h_box,w_box,found)
-            print("nothing found")
+        # if max_max_val > self.threshold:
+        #     print("max_max_loc", max_max_loc, "max_max_val", max_max_val)
+        #     found = []
+        #     result_normalized[max_max_loc[1] - h // 2 : max_max_loc[1] + h // 2 + 1, max_max_loc[0] - w // 2 : max_max_loc[0] + w // 2 + 1] = 0
+        #     found.append(max_max_loc)
+        #     print("")
+        #     print("FOUND STUFF")
+        #     print("")
+        #     self.draw_match_boundaries(resized_image,h_box,w_box,found)
+        # else:
+        #     # found = [(0,0)]
+        #     # self.draw_match_boundaries(resized_image,h_box,w_box,found)
+        #     print("")
+        #     print("NOTHING DETECTED")
+        #     print("")
 
     def draw_match_boundaries(self,image,h,w,locs):
         """
@@ -159,12 +150,14 @@ class aruco_detector:
         """
         print ("locations", locs)
 
+
+
         # for each location we will draglobal cv_imagew a bounding box of given height and width
         for location in locs:
             x,y = location
             image = cv2.rectangle(image,(x,y), (x+w+1, y+h+1), self.colour)
             print (w,h,(x+w+1, y+h+1))
-            cv2.imshow("result", image)
+            cv2.imshow("result_normalized", image)
             cv2.imwrite("aruco_phone1_detected.jpg", image)
         pub = rospy.Publisher('aruco_detect', Image, queue_size= 10)
         bridge = CvBridge()
@@ -174,18 +167,31 @@ class aruco_detector:
         print("draw match boundaries is bounding")
  
 
-    def make_mask (self, image, h, w):
+    def make_mask (self, path, image, h, w):
         #this function takes image and template dimensions, checks if theyre equal, resizes if they're not equal, the it masks the templ
-        w, h = image.shape[:-1]
-
+        
         templateGray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) #convery to gray scale
 
-        ret, mask = cv2.threshold(templateGray, 200, 255, cv2.THRESH_BINARY)
+left tp white corner 140, 44
+right bt white corner 209, 75 (from bottom)
+right bt black corner (76. 76)
 
+
+        Create a mask for the borders
+        mask = np.zeros((tag_size, tag_size), dtype=np.uint8)
+
+        Outer white border
+        mask[:, :] = 255
+        mask[-outer_border_size:, :] = 255
+        mask[:, :outer_border_size] = 255
+        mask[:, -outer_border_size:] = 255
+
+        ret, mask = cv2.threshold(templateGray, 255, 0, cv2.THRESH_BINARY)
         mask_inv = cv2.bitwise_not(mask)
-        mask_inv = cv2.cvtColor(mask_inv,cv2.COLOR_GRAY2RGB) #convert back to RGB
-
-        return mask_inv
+        mask_conv = cv2.cvtColor(mask_inv,cv2.COLOR_GRAY2RGB) #convert back to RGB
+        print ("make_mask made")
+        cv2.imwrite(os.path.join(path, 'CHECK.png'), mask_conv)
+        return mask_conv
 
 
 if __name__ == "__main__":
