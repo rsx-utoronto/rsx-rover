@@ -3,24 +3,140 @@
 import serial as ser
 import time
 import tkinter as tk
+import os
 
 BUTTONWIDTH = 5
 BUTTONHEIGHT = 2
 
+BAUDRATE = 9600
+PORT     = 'COM5'
+PERIOD   = 5 # Assuming we are getting 1 output over serial every second
+
+
+class Serial_Port:
+    """
+    Making a class to deal with serial ports
+    """
+
+    def __init__(self, device_name : str) -> None:
+        """
+        (String) -> (None)
+
+        Initializing the class by setting device variables. 
+        Do an initial attempt at connection right at the start.
+        """
+
+        # Setting up some variables
+        self.device_port = None
+        self.device_name = device_name
+
+    def open_device_port(self, baudrate= BAUDRATE):
+        """
+        (None) -> (None)
+
+        Establishes the connection between the code and the
+        serial port.
+        """
+
+        #initializing serial port with baudrate 9600
+        self.device_port = ser.Serial(self.device_name, baudrate, timeout= 2)
+    
+    def send_bytes(self, data : str):
+        """
+        (String) -> (None)
+
+        Send bytes over the serial port
+        """
+
+        # Checking if device port is valid
+        if self.device_port:
+
+            # Write data value to device port
+            self.device_port.write(data.encode('utf-8'))
+
+        else:
+            print("\nPort not connected")
+    
+    def read_bytes(self, endline : str = '\n'):
+        if self.device_port:
+
+            # Read data value coming to the device port
+            data = self.device_port.read_until(expected= endline.encode('utf-8'))
+            return str(data, encoding= 'utf-8')
+        
+        else:
+            print("\nPort not connected")
+            return ""
+    def close_device_port(self):
+        """
+        (None) -> (None)
+
+        Closes device port 
+        """
+
+        # Checking if device port is valid
+        if self.device_port:
+
+            # Close the device port and set device_port global back to 0
+            self.device_port.close()
+            self.device_port = None
+        
+        else:
+            print("\nPort not connected\n")
+
 #send data over serial bus, and print incoming data
-def send_data(letter):
-    ser.write(letter)
+def send_data(letter, connection : Serial_Port):
+    connection.send_bytes(letter)
     #change the bit number to 16 if you remove the print statements in the arduino code
-    print(ser.read(26)) 
+    print(connection.read_bytes())
+
+def get_temp_humidity(connection : Serial_Port):
+
+    # Creating a txt file to store the data
+    data_file = open("Temperatureandhumidity.txt", "a")
+
+    # Read temperature value for the time period (assuming a reading is sent every second)
+    for i in range(PERIOD):
+        temperature = connection.read_bytes(endline= 'Ft')
+        connection.device_port.reset_input_buffer()
+        # if ('Sensor' in temperature):
+        data_file.write(temperature[ : ])
+        print(temperature[ : ])
+        # else:
+            # i -= 1
+
+    data_file.close()
+
+def get_PMT(connection : Serial_Port):
+
+    # Creating a txt file to store the data
+    data_file = open("PMT.txt", "a")
+
+    # Read temperature value for the time period (assuming a reading is sent every second)
+    for i in range(PERIOD):
+        voltage = connection.read_bytes(endline= 'pmt')
+        connection.device_port.reset_input_buffer()
+        # if ('Sensor' in temperature):
+        data_file.write(voltage[ : ])
+        print(voltage[ : ])
+        # else:
+            # i -= 1
+
+    data_file.close()
 
 
 m=tk.Tk()  #main window
 m.title('Science Team Drill Controls')  #window title
 
 #connect to arduino
+# Create Serial Connection object
+connection = Serial_Port(PORT)
+
 try:
-    ser = ser.Serial("COM4", 9600)
+    # Open the serial connectioon
+    connection.open_device_port(baudrate= BAUDRATE)
     time.sleep(0.5)
+    
 except ser.serialutil.SerialException:
     print("Arduino not connected")
 
@@ -30,25 +146,25 @@ delay_100 = tk.Button(m, text='D: 100',
                         height= BUTTONHEIGHT, 
                         bg="orange",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'z100'))
+                        command= lambda:send_data('z100', connection))
 delay_500 = tk.Button(m, text='D: 500', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="orange",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'z500'))
+                        command= lambda:send_data('z500', connection))
 delay_1000 = tk.Button(m, text='D: 1000', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="orange",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'z1000'))
+                        command= lambda:send_data('z1000', connection))
 delay_3000 = tk.Button(m, text='D: 3000', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="orange",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'z3000'))
+                        command= lambda:send_data('z3000', connection))
 
 #Drill 1 Up
 drill_up = tk.Button(m, text='Drill Up', 
@@ -56,28 +172,28 @@ drill_up = tk.Button(m, text='Drill Up',
                        height= BUTTONHEIGHT, 
                        bg="yellow",
                        font= ('Helvetica 20 bold'),
-                       command= lambda:send_data(b'u'))
+                       command= lambda:send_data('u', connection))
 #Drill 1 Down
 drill_down = tk.Button(m, text='Drill Down', 
                          width=BUTTONWIDTH*2,
                          height= BUTTONHEIGHT, 
                          bg="yellow",
                          font= ('Helvetica 20 bold'),
-                         command= lambda:send_data(b'd'))
+                         command= lambda:send_data('d', connection))
 #Drill 1 FWD
 drill_FWD = tk.Button(m, text='Drill CW', #this is usually what we want
                         width=BUTTONWIDTH*2, 
                         height= BUTTONHEIGHT,
                         bg="yellow",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'c'))
+                        command= lambda:send_data('c', connection))
 #Drill 1 REV
 drill_REV = tk.Button(m, text='Drill CCW', 
                         width=BUTTONWIDTH*2,
                         height= BUTTONHEIGHT, 
                         bg="yellow",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'x'))
+                        command= lambda:send_data('x', connection))
 #   
 #attach bit
 drill_attachbit = tk.Button(m, text='Attach Bit', 
@@ -85,7 +201,7 @@ drill_attachbit = tk.Button(m, text='Attach Bit',
                         height= BUTTONHEIGHT, 
                         bg="yellow",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'f'))
+                        command= lambda:send_data('f', connection))
 
 #remove bit
 drill_removebit = tk.Button(m, text='Remove Bit', 
@@ -93,7 +209,7 @@ drill_removebit = tk.Button(m, text='Remove Bit',
                         height= BUTTONHEIGHT, 
                         bg="yellow",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'g'))
+                        command= lambda:send_data('g', connection))
 
 # ##rotate changer
 surface1 = tk.Button(m, text='Surface 1', 
@@ -101,63 +217,56 @@ surface1 = tk.Button(m, text='Surface 1',
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'ow'))
+                        command= lambda:send_data('ow', connection))
 surface2 = tk.Button(m, text='Surface 2', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'ow'))
+                        command= lambda:send_data('ow', connection))
 narrow = tk.Button(m, text='Narrow', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'ow'))
+                        command= lambda:send_data('ow', connection))
 deep = tk.Button(m, text='Deep', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'ow'))
+                        command= lambda:send_data('ow', connection))
 narrow = tk.Button(m, text='Narrow', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'ow'))
+                        command= lambda:send_data('ow', connection))
 camera = tk.Button(m, text='Camera', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'ow'))
+                        command= lambda:send_data('ow', connection))
 sensor = tk.Button(m, text='Sensor', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'ow'))
+                        command= lambda:send_data('ow', connection))
 lastpos = tk.Button(m, text='Empty', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'ow'))
+                        command= lambda:send_data('ow', connection))
 hole = tk.Button(m, text='Hole', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'h'))
+                        command= lambda:send_data('h', connection))
 
-##Measure
-temperature = tk.Button(m, text='Temperature and Humidity', 
-                        width=BUTTONWIDTH,
-                        height= BUTTONHEIGHT, 
-                        bg="purple",
-                        font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'&'))
 
 ##Small steps for bit changer
 tinycw = tk.Button(m, text='Bit Changer Small CW', 
@@ -165,13 +274,28 @@ tinycw = tk.Button(m, text='Bit Changer Small CW',
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'k'))
+                        command= lambda:send_data('k', connection))
 tinyccw = tk.Button(m, text='Bit Changer Small CCW', 
                         width=BUTTONWIDTH*2,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'l'))
+                        command= lambda:send_data('l', connection))
+
+#Temperature sensor
+tempsensor = tk.Button(m, text='Temp and Humidity', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="green",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:get_temp_humidity(connection))
+
+PMT = tk.Button(m, text='PMT', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="green",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:get_PMT(connection))
 
 ##analysis
 # testtube = tk.Button(m, text='Test Tube', 
@@ -185,37 +309,37 @@ valve1 = tk.Button(m, text='Valve 1',
                         height= BUTTONHEIGHT, 
                         bg="lightblue",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'v'))
+                        command= lambda:send_data('v', connection))
 valve2 = tk.Button(m, text='Valve 2', 
                         width=BUTTONWIDTH*2,
                         height= BUTTONHEIGHT, 
                         bg="lightblue",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'b'))
+                        command= lambda:send_data('b', connection))
 valve3 = tk.Button(m, text='Valve 3', 
                         width=BUTTONWIDTH*2,
                         height= BUTTONHEIGHT, 
                         bg="lightblue",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'n'))
+                        command= lambda:send_data('n', connection))
 valve4 = tk.Button(m, text='Valve 4', 
                         width=BUTTONWIDTH*2,
                         height= BUTTONHEIGHT, 
                         bg="lightblue",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'm'))
+                        command= lambda:send_data('m', connection))
 pump1 = tk.Button(m, text='Pump 1', 
                         width=BUTTONWIDTH*4,
                         height= BUTTONHEIGHT, 
                         bg="lightblue",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'i'))
+                        command= lambda:send_data('i', connection))
 pump2 = tk.Button(m, text='Pump 2', 
                         width=BUTTONWIDTH*4,
                         height= BUTTONHEIGHT, 
                         bg="lightblue",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'j'))
+                        command= lambda:send_data('j', connection))
 
 ## analysis module
 TTCW = tk.Button(m, text='Test Tube CW', 
@@ -223,38 +347,38 @@ TTCW = tk.Button(m, text='Test Tube CW',
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'>'))
+                        command= lambda:send_data('>', connection))
 TTCCW = tk.Button(m, text='Test Tube CCW', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'<'))
+                        command= lambda:send_data('<', connection))
 smallCW = tk.Button(m, text='Test Tube Small CW', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b')'))
+                        command= lambda:send_data(')', connection))
 smallCCW = tk.Button(m, text='Test Tube Small CCW', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="lightgreen",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'('))
+                        command= lambda:send_data('(', connection))
 
 lighton = tk.Button(m, text='Light On', ##]
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="white",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b']'))
+                        command= lambda:send_data(']', connection))
 lightoff = tk.Button(m, text='Light Off', ##]
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="white",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'['))
+                        command= lambda:send_data('[', connection))
 
 ##PMT
 shutter_open = tk.Button(m, text='Open Shutter', 
@@ -262,13 +386,13 @@ shutter_open = tk.Button(m, text='Open Shutter',
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b','))
+                        command= lambda:send_data(',', connection))
 shutter_close = tk.Button(m, text='Close Shutter', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data(b'.'))
+                        command= lambda:send_data('.', connection))
 
 
 # Specify Grid
@@ -318,7 +442,8 @@ hole.grid(row=3,column=7,columnspan=1,sticky="NSEW")
 tinycw.grid(row=4,column=0,columnspan=4,sticky="NSEW")
 tinyccw.grid(row=4,column=4,columnspan=4,sticky="NSEW")
 
-temperature.grid(row=5,column=0,columnspan=8,sticky="NSEW")
+tempsensor.grid(row=5,column=0,columnspan=4,sticky="NSEW")
+PMT.grid(row=5,column=4,columnspan=4,sticky="NSEW")
 
 valve1.grid(row=6,column=0,columnspan=2,sticky="NSEW")
 valve2.grid(row=6,column=2,columnspan=2,sticky="NSEW")
