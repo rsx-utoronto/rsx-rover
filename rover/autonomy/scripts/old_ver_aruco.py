@@ -91,11 +91,11 @@ class aruco_detector:
             resized_image = cv2.resize(img, (new_w,new_h), interpolation= cv2.INTER_LINEAR)
             if self.check == False:
                 result = cv2.matchTemplate(resized_image, self.template1, self.method)
-                h_box, w_box =  self.template1.shape[0], self.template1.shape[1] 
+                h_box, w_box =  self.template1.shape[0]*i, self.template1.shape[1]*i 
                 print ("1, hbox, wbox", h_box, w_box )
             else:
                 result = cv2.matchTemplate(resized_image, self.template2, self.method) 
-                h_box, w_box =  self.template2.shape[0], self.template2.shape[1] 
+                h_box, w_box =  self.template2.shape[0]*i, self.template2.shape[1]*i
                 print ("2, hbox, wbox", h_box, w_box )
 
              # tol is tolerance for greyscale
@@ -124,7 +124,7 @@ class aruco_detector:
         if max_max_val > self.threshold:
             print("max_max_loc", max_max_loc, "max_max_val", max_max_val)
             found = []
-            # result[max_max_loc[1] - h // 2 : max_max_loc[1] + h // 2 + 1, max_max_loc[0] - w // 2 : max_max_loc[0] + w // 2 + 1] = 0
+            result[max_max_loc[1] - h // 2 : max_max_loc[1] + h // 2 + 1, max_max_loc[0] - w // 2 : max_max_loc[0] + w // 2 + 1] = 0
             found.append(max_max_loc)
             print("smthng found")
             self.draw_match_boundaries(resized_image,h_box,w_box,found)
@@ -152,8 +152,8 @@ class aruco_detector:
             x,y = location
             image = cv2.rectangle(image,(x,y), (x+w+1, y+h+1), self.colour)
             print (w,h,(x+w+1, y+h+1))
-            # cv2.imshow("result", image)
-            # cv2.imwrite("aruco_phone1_detected.jpg", image)
+            cv2.imshow("result", image)
+            cv2.imwrite("aruco_phone1_detected.jpg", image)
         pub = rospy.Publisher('aruco_detect', Image, queue_size= 10)
         bridge = CvBridge()
         im_resize = cv2.resize(image, (640, 360), interpolation= cv2.INTER_LINEAR)
