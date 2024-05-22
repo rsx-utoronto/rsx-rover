@@ -22,19 +22,29 @@ import os
 
 class aruco_detector:
     def __init__(self):
-        self.template_pub = rospy.Publisher("/camera/color/image_raw",Image, queue_size=10)
+        self.template_pub1 = rospy.Publisher("/camera/color/image_raw",Image, queue_size=10)
+        self.template_pub2 = rospy.Publisher("/camera/color/image_raw",Image, queue_size=10)
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/zed_node/rgb/image_rect_color", Image, self.image_callback)
         path = os.path.dirname(os.path.abspath(__file__))
         template_path = os.path.join(path, 'aruco_F.png')
         self.template = cv2.imread(template_path, cv2.IMREAD_COLOR)
         self.mask = self.make_mask (self.template, self.template.shape[0], self.template.shape[1])
+        template1_path = os.path.join(path, 'aruco_shade.png')
+        self.template1 = cv2.imread(template1_path, cv2.IMREAD_COLOR)
+
+        template2_path = os.path.join(path, 'aruco_shade.png')
+        self.template2 = cv2.imread(template2_path, cv2.IMREAD_COLOR) 
+        
+        self.check = False
         self.method = cv2.TM_CCOEFF_NORMED
         self.threshold = 0.4
         self.colour = (0,255,0)
         bridge = CvBridge()
-        self.ros_image = bridge.cv2_to_imgmsg(self.template, encoding='bgr8')
-        self.template_pub.publish(self.ros_image)
+        self.ros_image1 = bridge.cv2_to_imgmsg(self.template1, encoding='bgr8')
+        self.ros_image2 = bridge.cv2_to_imgmsg(self.template2, encoding='bgr8')
+        self.template_pub1.publish(self.ros_image1)
+    
 
     def image_callback(self, msg):
         # print("image_callback is working")
@@ -45,10 +55,13 @@ class aruco_detector:
             rospy.logerr("Could not convert from '{}' to 'bgr8'".format(msg.encoding))
         else: 
             print("going into detect")
-            print ("template coords [height, width]", self.template.shape)            
-            print ("img coords [height, width]", self.cv_image.shape)
+           # print ("template coords [height, width]", self.template.shape)            
+            # print ("img coords [height, width]", self.cv_image.shape)
+           # print ("shade [height, width]", self.template2.shape)
+            
             # TEMPLATE CHANGE
-            self.detect_template(self.cv_image, self.template.shape[0], self.template.shape[1])
+            self.detect_template(self.cv_image, self.cv_image.shape[0], self.cv_image.shape[1])
+    
 
             # self.detect_template(self.cv_image, self.cv_image.shape[0], self.cv_image.shape[1])
 
@@ -67,19 +80,38 @@ class aruco_detector:
         """
         max_max_val = 0
         max_max_loc = (0,0)
-        resized_image = cv2.resize(img, (2560,1440), interpolation= cv2.INTER_LINEAR)
+        resized_image = cv2.resize(img, (2560,1440), interpolation= cv2.INTER_LINEAR)       
 
-        # tol is tolerance for greyscale
-        # tol = 20
-        
-        # # difference calculations between RGB values
-        # rg = np.abs(resized_image[:,:,0]-resized_image[:,:,1])
-        # rb = np.abs(resized_image[:,:,0]-resized_image[:,:,2])        
-        # gb = np.abs(resized_image[:,:,1]-resized_image[:,:,2])
+        # initialize box for boundary
+        h_box, w_box = h, w
 
-        # # all values outside of greyscale will be made red    
-        # mask = (rg > tol) | (rb > tol) | (gb > tol)
-        # resized_image[mask]=[0,0,255]
+        for i in range (2, 7):
+            new_h = int(h*i)
+            new_w = int(w*i)
+            #resized_template= cv2.resize(self.template, (new_w,new_h), interpolation= cv2.INTER_LINEAR)
+            # result = cv2.matchTemplate(resized_image, resized_template, self.method)
+
+            resized_image = cv2.resize(img, (new_w,new_h), interpolation= cv2.INTER_LINEAR)
+            if self.check == False:
+                result = cv2.matchTemplate(resized_image, self.template1, self.method)
+                h_box, w_box =  self.template1.shape[0]*i, self.template1.shape[1]*i 
+                print ("1, hbox, wbox", h_box, w_box )
+            else:
+                result = cv2.matchTemplate(resized_image, self.template2, self.method) 
+                h_box, w_box =  self.template2.shape[0]*i, self.template2.shape[1]*i
+                print ("2, hbox, wbox", h_box, w_box )
+
+             # tol is tolerance for greyscale
+            tol = 100
+            
+            # difference calculations between RGB values
+            rg = np.abs(resized_image[:,:,0]-resized_image[:,:,1])
+            rb = np.abs(resized_image[:,:,0]-resized_image[:,:,2])        
+            gb = np.abs(resized_image[:,:,1]-resized_image[:,:,2])
+
+        # all values outside of greyscale will be made red    
+        mask = (rg > tol) | (rb > tol) | (gb > tol)
+        resized_image[mask]=[0,0,255]
 
         # initialize box for boundary
         h_box, w_box = h, w
@@ -96,7 +128,10 @@ class aruco_detector:
                 if max_val > max_max_val:
                     max_max_loc = max_loc
                     max_max_val = max_val
-                    h_box, w_box = new_h, new_w
+
+                    if max_val > 0.45:
+                        self.check = True
+                        print ("Using shaded template")
 
         if max_max_val > self.threshold:
             print("max_max_loc", max_max_loc, "max_max_val", max_max_val)
@@ -106,8 +141,8 @@ class aruco_detector:
             print("smthng found")
             self.draw_match_boundaries(resized_image,h_box,w_box,found)
         else:
-            found = [(0,0)]
-            self.draw_match_boundaries(resized_image,h_box,w_box,found)
+            # found = [(0,0)]
+            # self.draw_match_boundaries(resized_image,h_box,w_box,found)
             print("nothing found")
 
     def draw_match_boundaries(self,image,h,w,locs):
@@ -128,8 +163,9 @@ class aruco_detector:
         for location in locs:
             x,y = location
             image = cv2.rectangle(image,(x,y), (x+w+1, y+h+1), self.colour)
-            # cv2.imshow("result", image)
-            # cv2.imwrite("aruco_phone1_detected.jpg", image)
+            print (w,h,(x+w+1, y+h+1))
+            cv2.imshow("result", image)
+            cv2.imwrite("aruco_phone1_detected.jpg", image)
         pub = rospy.Publisher('aruco_detect', Image, queue_size= 10)
         bridge = CvBridge()
         im_resize = cv2.resize(image, (640, 360), interpolation= cv2.INTER_LINEAR)
