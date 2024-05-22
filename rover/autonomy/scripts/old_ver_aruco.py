@@ -26,8 +26,9 @@ class aruco_detector:
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/zed_node/rgb/image_rect_color", Image, self.image_callback)
         path = os.path.dirname(os.path.abspath(__file__))
-        template_path = os.path.join(path, 'aruco_20.png')
+        template_path = os.path.join(path, 'aruco_F.png')
         self.template = cv2.imread(template_path, cv2.IMREAD_COLOR)
+        self.mask = self.make_mask (self.template, self.template.shape[0], self.template.shape[1])
         self.method = cv2.TM_CCOEFF_NORMED
         self.threshold = 0.4
         self.colour = (0,255,0)
@@ -69,16 +70,16 @@ class aruco_detector:
         resized_image = cv2.resize(img, (2560,1440), interpolation= cv2.INTER_LINEAR)
 
         # tol is tolerance for greyscale
-        tol = 20
+        # tol = 20
         
-        # difference calculations between RGB values
-        rg = np.abs(resized_image[:,:,0]-resized_image[:,:,1])
-        rb = np.abs(resized_image[:,:,0]-resized_image[:,:,2])        
-        gb = np.abs(resized_image[:,:,1]-resized_image[:,:,2])
+        # # difference calculations between RGB values
+        # rg = np.abs(resized_image[:,:,0]-resized_image[:,:,1])
+        # rb = np.abs(resized_image[:,:,0]-resized_image[:,:,2])        
+        # gb = np.abs(resized_image[:,:,1]-resized_image[:,:,2])
 
-        # all values outside of greyscale will be made red    
-        mask = (rg > tol) | (rb > tol) | (gb > tol)
-        resized_image[mask]=[0,0,255]
+        # # all values outside of greyscale will be made red    
+        # mask = (rg > tol) | (rb > tol) | (gb > tol)
+        # resized_image[mask]=[0,0,255]
 
         # initialize box for boundary
         h_box, w_box = h, w
@@ -136,6 +137,21 @@ class aruco_detector:
         pub.publish(ros_image)
         print("draw match boundaries is bounding")
  
+
+    def make_mask (self, image, h, w):
+        #this function takes image and template dimensions, checks if theyre equal, resizes if they're not equal, the it masks the templ
+        w, h = image.shape[:-1]
+
+        templateGray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) #convery to gray scale
+
+        ret, mask = cv2.threshold(templateGray, 200, 255, cv2.THRESH_BINARY)
+
+        mask_inv = cv2.bitwise_not(mask)
+        mask_inv = cv2.cvtColor(mask_inv,cv2.COLOR_GRAY2RGB) #convert back to RGB
+
+        return mask_inv
+
+
 if __name__ == "__main__":
     while not rospy.is_shutdown():
         rospy.init_node('aruco_location')   
