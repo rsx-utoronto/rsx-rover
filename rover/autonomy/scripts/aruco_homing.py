@@ -1,4 +1,9 @@
+#!/usr/bin/python3
+
 import numpy as np
+import rospy
+from geometry_msgs.msg import Twist
+from std_msgs.msg import Int32MultiArray
 
 class Aimer:
 
@@ -20,11 +25,13 @@ class Aimer:
         self.aruco_min_area_uncert = aruco_min_area_uncert
         self.linear_pid = PID(0.1, 0.01, 0.01) # change pid constants
         self.angular_pid = PID(0.1, 0.01, 0.01) # change pid constants
+        self.linear_v = 0
+        self.angular_v = 0
 
     def update(self, aruco_top_left: tuple, aruco_top_right: tuple, 
-               aruco_bottom_left: tuple, aruco_bottom_right: tuple) -> tuple: # return linear_v, angular_v
+               aruco_bottom_left: tuple, aruco_bottom_right: tuple) -> None: # return linear_v, angular_v
         if aruco_top_left == None or aruco_top_right == None or aruco_bottom_left == None or aruco_bottom_right == None:
-            return 0, 0
+            self.linear_v, self.angular_v = 0, 0
         aruco_x = (aruco_top_left[0] + aruco_top_right[0] + aruco_bottom_left[0] + aruco_bottom_right[0]) / 4
         if abs(aruco_x - self.target_x) > self.aruco_min_x_uncert:
             out_angular = self.angular_pid.update(self.target_x - aruco_x)
@@ -37,7 +44,7 @@ class Aimer:
         else:
             out_linear = 0
             self.linear_pid.reset()
-        return min(self.max_linear_v, out_linear), min(self.max_angular_v, out_angular)
+        self.linear_v, self.angular_v =  min(self.max_linear_v, out_linear), min(self.max_angular_v, out_angular)
 
     def calculate_area(aruco_top_left: tuple, aruco_top_right: tuple, 
                        aruco_bottom_left: tuple, aruco_bottom_right: tuple) -> float:
@@ -79,3 +86,30 @@ class PID:
 
     def reset(self) -> None:
         self.error_sum = 0
+
+class AimerROS(Aimer):
+    def __init__(self, frame_width: int, frame_height: int, min_aruco_area: float, 
+                 aruco_min_x_uncert: float, aruco_min_area_uncert: float,
+                 max_linear_v: float, max_angular_v: float) -> None:
+        super().__init__(frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v)
+        
+    def rosUpdate(self, data: Int32MultiArray) -> None:
+        aruco_top_left = (data.data[0], data.data[1])
+        aruco_top_right = (data.data[2], data.data[3])
+        aruco_bottom_left = (data.data[4], data.data[5])
+        aruco_bottom_right = (data.data[6], data.data[7])
+        self.update(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right)
+
+def main():
+    rospy.init_node('aruco_homing', anonymous=True)
+    pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+    aimer = AimerROS(640, 480, 1000, 50, 100, 0.5, 0.5) # change constants
+    rospy.Subscriber('aruco_corners', Int32MultiArray, callback=aimer.rosUpdate) # change topic name
+    # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
+    rate = rospy.Rate(10)
+    while not rospy.is_shutdown():
+        twist = Twist()
+        twist.linear.x = aimer.linear_v
+        twist.angular.z = aimer.angular_v
+        pub.publish(twist)
+        rate.sleep()
