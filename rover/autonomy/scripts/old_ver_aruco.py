@@ -109,7 +109,7 @@ class aruco_detector:
             result_normalized = cv2.normalize(result, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
         
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result_normalized)
-            print (min_val)
+            print (min_val, max_val)
 
         #     if max_val > self.threshold:
         #         if max_val > max_max_val:
@@ -169,30 +169,16 @@ class aruco_detector:
 
     def make_mask (self, path, image, h, w):
         #this function takes image and template dimensions, checks if theyre equal, resizes if they're not equal, the it masks the templ
-        
-        templateGray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) #convery to gray scale
+        mask = np.zeros((h, w), dtype=np.uint8)
 
-left tp white corner 140, 44
-right bt white corner 209, 75 (from bottom)
-right bt black corner (76. 76)
-
-
-        Create a mask for the borders
-        mask = np.zeros((tag_size, tag_size), dtype=np.uint8)
-
-        Outer white border
-        mask[:, :] = 255
-        mask[-outer_border_size:, :] = 255
-        mask[:, :outer_border_size] = 255
-        mask[:, -outer_border_size:] = 255
-
-        ret, mask = cv2.threshold(templateGray, 255, 0, cv2.THRESH_BINARY)
-        mask_inv = cv2.bitwise_not(mask)
-        mask_conv = cv2.cvtColor(mask_inv,cv2.COLOR_GRAY2RGB) #convert back to RGB
+        mask[44:140, 140:748] = 255
+        mask[540:638, 140:748] = 255
+        mask[140:550, 140:230] = 255
+        mask[140:550, 640:748] = 255
+        mask_conv = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
         print ("make_mask made")
         cv2.imwrite(os.path.join(path, 'CHECK.png'), mask_conv)
         return mask_conv
-
 
 if __name__ == "__main__":
     while not rospy.is_shutdown():
