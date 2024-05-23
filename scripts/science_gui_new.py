@@ -9,7 +9,7 @@ BUTTONWIDTH = 5
 BUTTONHEIGHT = 2
 
 BAUDRATE = 9600
-PORT     = 'COM5'
+PORT     = 'COM7'
 PERIOD   = 5 # Assuming we are getting 1 output over serial every second
 
 
@@ -57,9 +57,10 @@ class Serial_Port:
         else:
             print("\nPort not connected")
     
-    def read_bytes(self, endline : str = '\n'):
+    def read_bytes(self, endline : str = '\n'): #endline : str = '\n'
         if self.device_port:
-
+            # data = self.device_port.readlines()
+            # specificline = data[i]
             # Read data value coming to the device port
             data = self.device_port.read_until(expected= endline.encode('utf-8'))
             return str(data, encoding= 'utf-8')
@@ -97,7 +98,7 @@ def get_temp_humidity(connection : Serial_Port):
 
     # Read temperature value for the time period (assuming a reading is sent every second)
     for i in range(PERIOD):
-        temperature = connection.read_bytes(endline= 'Ft')
+        temperature = connection.read_bytes(endline= 'Ft') #endline= 'Ft'
         connection.device_port.reset_input_buffer()
         # if ('Sensor' in temperature):
         data_file.write(temperature[ : ])
@@ -114,11 +115,14 @@ def get_PMT(connection : Serial_Port):
 
     # Read temperature value for the time period (assuming a reading is sent every second)
     for i in range(PERIOD):
-        voltage = connection.read_bytes(endline= 'pmt')
+        voltage = connection.read_bytes(endline= 'PMT')
+        #voltage2 = connection.read_bytes(2)
         connection.device_port.reset_input_buffer()
         # if ('Sensor' in temperature):
         data_file.write(voltage[ : ])
+        #data_file.write(voltage2[ : ])
         print(voltage[ : ])
+        #print(voltage2[ : ])
         # else:
             # i -= 1
 
@@ -140,31 +144,46 @@ try:
 except ser.serialutil.SerialException:
     print("Arduino not connected")
 
+
+#Emergency
+estop = tk.Button(m, text='E-STOP', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="red",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data('s', connection))
+reset = tk.Button(m, text='Reset', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="red",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data('z', connection))
+
 ##change delays
 delay_100 = tk.Button(m, text='D: 100', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="orange",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('z100', connection))
+                        command= lambda:send_data('1', connection))
 delay_500 = tk.Button(m, text='D: 500', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="orange",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('z500', connection))
+                        command= lambda:send_data('2', connection))
 delay_1000 = tk.Button(m, text='D: 1000', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="orange",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('z1000', connection))
+                        command= lambda:send_data('3', connection))
 delay_3000 = tk.Button(m, text='D: 3000', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="orange",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('z3000', connection))
+                        command= lambda:send_data('4', connection))
 
 #Drill 1 Up
 drill_up = tk.Button(m, text='Drill Up', 
@@ -217,49 +236,43 @@ surface1 = tk.Button(m, text='Surface 1',
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('ow', connection))
+                        command= lambda:send_data('q', connection))
 surface2 = tk.Button(m, text='Surface 2', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('ow', connection))
+                        command= lambda:send_data('w', connection))
 narrow = tk.Button(m, text='Narrow', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('ow', connection))
+                        command= lambda:send_data('e', connection))
 deep = tk.Button(m, text='Deep', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('ow', connection))
-narrow = tk.Button(m, text='Narrow', 
-                        width=BUTTONWIDTH,
-                        height= BUTTONHEIGHT, 
-                        bg="pink",
-                        font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('ow', connection))
+                        command= lambda:send_data('r', connection))
 camera = tk.Button(m, text='Camera', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('ow', connection))
+                        command= lambda:send_data('t', connection))
 sensor = tk.Button(m, text='Sensor', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('ow', connection))
+                        command= lambda:send_data('y', connection))
 lastpos = tk.Button(m, text='Empty', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('ow', connection))
+                        command= lambda:send_data('a', connection))
 hole = tk.Button(m, text='Hole', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
@@ -270,19 +283,31 @@ hole = tk.Button(m, text='Hole',
 
 ##Small steps for bit changer
 tinycw = tk.Button(m, text='Bit Changer Small CW', 
-                        width=BUTTONWIDTH*2,
+                        width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
                         command= lambda:send_data('k', connection))
 tinyccw = tk.Button(m, text='Bit Changer Small CCW', 
-                        width=BUTTONWIDTH*2,
+                        width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="pink",
                         font= ('Helvetica 20 bold'),
                         command= lambda:send_data('l', connection))
+resetbc = tk.Button(m, text='Reset Bit Changer', 
+                        width=BUTTONWIDTH*2,
+                        height= BUTTONHEIGHT, 
+                        bg="pink",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data('o', connection))
 
 #Temperature sensor
+tempon = tk.Button(m, text='Temp Sensor On', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="green",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data('&', connection))
 tempsensor = tk.Button(m, text='Temp and Humidity', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
@@ -290,7 +315,13 @@ tempsensor = tk.Button(m, text='Temp and Humidity',
                         font= ('Helvetica 20 bold'),
                         command= lambda:get_temp_humidity(connection))
 
-PMT = tk.Button(m, text='PMT', 
+PMT = tk.Button(m, text='PMT On/Off', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="green",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data('p', connection))
+PMTdata = tk.Button(m, text='PMT Data', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="green",
@@ -415,52 +446,59 @@ tk.Grid.rowconfigure(m, 6,weight = 1)
 tk.Grid.rowconfigure(m, 7,weight = 1)
 tk.Grid.rowconfigure(m, 8,weight = 1)
 tk.Grid.rowconfigure(m, 9,weight = 1)
+tk.Grid.rowconfigure(m, 10,weight = 1)
 
 #place buttons
-delay_100.grid(row=0,column=0,columnspan=2,sticky="NSEW")
-delay_500.grid(row=0,column=2,columnspan=2,sticky="NSEW")
-delay_1000.grid(row=0,column=4,columnspan=2,sticky="NSEW")
-delay_3000.grid(row=0,column=6,columnspan=2,sticky="NSEW")
+estop.grid(row=0,column=0,columnspan=4,sticky="NSEW")
+reset.grid(row=0,column=4,columnspan=4,sticky="NSEW")
 
-drill_up.grid(row=1,column=0,columnspan=2,sticky="NSEW")
-drill_down.grid(row=1,column=2,columnspan=2,sticky="NSEW")
-drill_FWD.grid(row=1,column=4,columnspan=2,sticky="NSEW")
-drill_REV.grid(row=1,column=6,columnspan=2,sticky="NSEW")
+delay_100.grid(row=1,column=0,columnspan=2,sticky="NSEW")
+delay_500.grid(row=1,column=2,columnspan=2,sticky="NSEW")
+delay_1000.grid(row=1,column=4,columnspan=2,sticky="NSEW")
+delay_3000.grid(row=1,column=6,columnspan=2,sticky="NSEW")
 
-drill_attachbit.grid(row=2,column=0,columnspan=4,sticky="NSEW")
-drill_removebit.grid(row=2,column=4,columnspan=4,sticky="NSEW")
+drill_up.grid(row=2,column=0,columnspan=2,sticky="NSEW")
+drill_down.grid(row=2,column=2,columnspan=2,sticky="NSEW")
+drill_FWD.grid(row=2,column=4,columnspan=2,sticky="NSEW")
+drill_REV.grid(row=2,column=6,columnspan=2,sticky="NSEW")
 
-surface1.grid(row=3,column=0,columnspan=1,sticky="NSEW")
-surface2.grid(row=3,column=1,columnspan=1,sticky="NSEW")
-narrow.grid(row=3,column=2,columnspan=1,sticky="NSEW")
-deep.grid(row=3,column=3,columnspan=1,sticky="NSEW")
-camera.grid(row=3,column=4,columnspan=1,sticky="NSEW")
-sensor.grid(row=3,column=5,columnspan=1,sticky="NSEW")
-lastpos.grid(row=3,column=6,columnspan=1,sticky="NSEW")
-hole.grid(row=3,column=7,columnspan=1,sticky="NSEW")
+drill_attachbit.grid(row=3,column=0,columnspan=4,sticky="NSEW")
+drill_removebit.grid(row=3,column=4,columnspan=4,sticky="NSEW")
 
-tinycw.grid(row=4,column=0,columnspan=4,sticky="NSEW")
-tinyccw.grid(row=4,column=4,columnspan=4,sticky="NSEW")
+surface1.grid(row=4,column=0,columnspan=1,sticky="NSEW")
+surface2.grid(row=4,column=1,columnspan=1,sticky="NSEW")
+narrow.grid(row=4,column=2,columnspan=1,sticky="NSEW")
+deep.grid(row=4,column=3,columnspan=1,sticky="NSEW")
+camera.grid(row=4,column=4,columnspan=1,sticky="NSEW")
+sensor.grid(row=4,column=5,columnspan=1,sticky="NSEW")
+lastpos.grid(row=4,column=6,columnspan=1,sticky="NSEW")
+hole.grid(row=4,column=7,columnspan=1,sticky="NSEW")
 
-tempsensor.grid(row=5,column=0,columnspan=4,sticky="NSEW")
-PMT.grid(row=5,column=4,columnspan=4,sticky="NSEW")
+tinycw.grid(row=5,column=0,columnspan=2,sticky="NSEW")
+tinyccw.grid(row=5,column=2,columnspan=2,sticky="NSEW")
+resetbc.grid(row=5,column=4,columnspan=4,sticky="NSEW")
 
-valve1.grid(row=6,column=0,columnspan=2,sticky="NSEW")
-valve2.grid(row=6,column=2,columnspan=2,sticky="NSEW")
-valve3.grid(row=6,column=4,columnspan=2,sticky="NSEW")
-valve4.grid(row=6,column=6,columnspan=2,sticky="NSEW")
+tempon.grid(row=6,column=0,columnspan=2,sticky="NSEW")
+tempsensor.grid(row=6,column=2,columnspan=2,sticky="NSEW")
+PMT.grid(row=6,column=4,columnspan=2,sticky="NSEW")
+PMTdata.grid(row=6,column=6,columnspan=2,sticky="NSEW")
 
-pump1.grid(row=7,column=0,columnspan=4,sticky="NSEW")
-pump2.grid(row=7,column=4,columnspan=4,sticky="NSEW")
+valve1.grid(row=7,column=0,columnspan=2,sticky="NSEW")
+valve2.grid(row=7,column=2,columnspan=2,sticky="NSEW")
+valve3.grid(row=7,column=4,columnspan=2,sticky="NSEW")
+valve4.grid(row=7,column=6,columnspan=2,sticky="NSEW")
 
-TTCW.grid(row=8,column=0,columnspan=2,sticky="NSEW")
-TTCCW.grid(row=8,column=2,columnspan=2,sticky="NSEW")
-smallCW.grid(row=8,column=4,columnspan=2,sticky="NSEW")
-smallCCW.grid(row=8,column=6,columnspan=2,sticky="NSEW")
+pump1.grid(row=8,column=0,columnspan=4,sticky="NSEW")
+pump2.grid(row=8,column=4,columnspan=4,sticky="NSEW")
 
-lighton.grid(row=9,column=0,columnspan=2,sticky="NSEW")
-lightoff.grid(row=9,column=2,columnspan=2,sticky="NSEW")
-shutter_open.grid(row=9,column=4,columnspan=2,sticky="NSEW")
-shutter_close.grid(row=9,column=6,columnspan=2,sticky="NSEW")
+TTCW.grid(row=9,column=0,columnspan=2,sticky="NSEW")
+TTCCW.grid(row=9,column=2,columnspan=2,sticky="NSEW")
+smallCW.grid(row=9,column=4,columnspan=2,sticky="NSEW")
+smallCCW.grid(row=9,column=6,columnspan=2,sticky="NSEW")
+
+lighton.grid(row=10,column=0,columnspan=2,sticky="NSEW")
+lightoff.grid(row=10,column=2,columnspan=2,sticky="NSEW")
+shutter_open.grid(row=10,column=4,columnspan=2,sticky="NSEW")
+shutter_close.grid(row=10,column=6,columnspan=2,sticky="NSEW")
 
 m.mainloop()
