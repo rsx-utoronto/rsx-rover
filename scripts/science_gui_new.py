@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 import serial as ser
 import time
@@ -11,7 +10,6 @@ BUTTONHEIGHT = 2
 BAUDRATE = 9600
 PORT     = 'COM7'
 PERIOD   = 5 # Assuming we are getting 1 output over serial every second
-
 
 class Serial_Port:
     """
@@ -86,9 +84,21 @@ class Serial_Port:
             print("\nPort not connected\n")
 
 #send data over serial bus, and print incoming data
-def send_data(letter, connection : Serial_Port):
+def send_data(letter, connection : Serial_Port, expected_result : str = None):
     connection.send_bytes(letter)
     #change the bit number to 16 if you remove the print statements in the arduino code
+    TIMEOUT = time.time()
+    while True:
+        if not expected_result:
+            break
+        data = connection.read_bytes()
+        if expected_result in data:
+            print(data)
+            break
+        elif time.time() - TIMEOUT > 2:
+            print("Timeout")
+            break
+
     print(connection.read_bytes())
 
 def get_temp_humidity(connection : Serial_Port):
@@ -98,7 +108,15 @@ def get_temp_humidity(connection : Serial_Port):
 
     # Read temperature value for the time period (assuming a reading is sent every second)
     for i in range(PERIOD):
-        temperature = connection.read_bytes(endline= 'Ft') #endline= 'Ft'
+        TIMEOUT = time.time()
+        while True:
+            temperature = connection.read_bytes() #endline= 'Ft'
+            if "Temp" in temperature:
+                break
+            elif time.time()-TIMEOUT >2:
+                print("Timeout")
+                break
+
         connection.device_port.reset_input_buffer()
         # if ('Sensor' in temperature):
         data_file.write(temperature[ : ])
@@ -115,7 +133,14 @@ def get_PMT(connection : Serial_Port):
 
     # Read temperature value for the time period (assuming a reading is sent every second)
     for i in range(PERIOD):
-        voltage = connection.read_bytes(endline= 'PMT')
+        TIMEOUT = time.time()
+        while True:
+            voltage = connection.read_bytes()
+            if "PMT" in voltage:
+                break
+            elif time.time()-TIMEOUT>2:
+                print("Timeout")
+                break
         #voltage2 = connection.read_bytes(2)
         connection.device_port.reset_input_buffer()
         # if ('Sensor' in temperature):

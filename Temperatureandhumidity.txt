@@ -1,0 +1,10 @@
+Humidity: nan%  Temperature: nan°C nan°F  Heat index: nan°C nan°F
+Humidity: nan%  Temperature: nan°C nan°F  Heat index: nan°C nan°F
+Humidity: nan%  Temperature: nan°C nan°F  Heat index: nan°C nan°F
+Humidity: nan%  Temperature: nan°C nan°F  Heat index: nan°C nan°F
+Humidity: nan%  Temperature: nan°C nan°F  Heat index: nan°C nan°F
+Humidity: nan%  Temperature: nan°C nan°F  Heat index: nan°C nan°F
+Humidity: nan%  Temperature: nan°C nan°F  Heat index: nan°C nan°F
+Humidity: nan%  Temperature: nan°C nan°F  Heat index: nan°C nan°F
+Humidity: nan%  Temperature: nan°C nan°F  Heat index: nan°C nan°F
+Humidity: nan%  Temperature: nan°C nan°F  Heat index: nan°C nan°F
