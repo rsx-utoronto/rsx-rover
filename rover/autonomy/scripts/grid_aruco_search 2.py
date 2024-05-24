@@ -18,7 +18,7 @@ class grid_search():
         self.y = 0.0
         self.theta = 0.0
         self.init = 0.0
-        self.sub = rospy.Subscriber("/rtabmap/odom", Odometry, newOdom) # launch zed camera
+        self.sub = rospy.Subscriber("/rtabmap/odom", Odometry, self.newOdom) # launch zed camera
         self.pub = rospy.Publisher("drive", Twist, queue_size = 1)
         self.pub_error = rospy.Publisher("/robot_base_velocity_controller/error", Float32, queue_size = 1)
         self.speed = Twist()
