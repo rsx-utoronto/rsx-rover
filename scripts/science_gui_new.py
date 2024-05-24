@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 
 import serial as ser
 import time
@@ -96,7 +96,7 @@ def send_data(letter, connection : Serial_Port, expected_result : str = None):
         if expected_result in data:
             print(data)
             break
-        elif time.time() - TIMEOUT > 2:
+        elif time.time() - TIMEOUT > 5:
             print("Timeout")
             break
 
@@ -114,7 +114,7 @@ def get_temp_humidity(connection : Serial_Port):
             temperature = connection.read_bytes() #endline= 'Ft'
             if "Temp" in temperature:
                 break
-            elif time.time()-TIMEOUT >2:
+            elif time.time()-TIMEOUT >5:
                 print("Timeout")
                 break
 
@@ -137,20 +137,14 @@ def get_PMT(connection : Serial_Port):
         TIMEOUT = time.time()
         while True:
             voltage = connection.read_bytes()
-            if "PMT" in voltage:
+            if "lkj" in voltage:
                 break
-            elif time.time()-TIMEOUT>2:
+            elif time.time()-TIMEOUT>8:
                 print("Timeout")
                 break
-        #voltage2 = connection.read_bytes(2)
         connection.device_port.reset_input_buffer()
-        # if ('Sensor' in temperature):
         data_file.write(voltage[ : ])
-        #data_file.write(voltage2[ : ])
         print(voltage[ : ])
-        #print(voltage2[ : ])
-        # else:
-            # i -= 1
 
     data_file.close()
 
