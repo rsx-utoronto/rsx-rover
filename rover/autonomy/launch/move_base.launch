@@ -2,16 +2,23 @@
 
    <arg name="no_static_map" default="false" />
    <arg name="command_velocity_topic" default="/drive" />
-   <arg name="odom_topic" default="/aft_mapped_to_init" />
-   <arg name="pose_topic" default="/aft_mapped_to_init" />
+   <arg name="odom_topic" default="rtabmap/odom" />
+   <arg name="pose_topic" default="rtabmap/odom" />
 
-   <include file="$(find rover)/rover/autonomy/launch/gmapping.launch" />
+
+   <arg name="use_map_topic" default="true"/>
+   <arg name="scan_topic" default="/scan_collapsed" />
+   <!-- <arg name="map_topic" default="rtabmap/grid_map" /> -->
+   <arg name="map_topic" default="map" />
+   <arg name="global_costmap_topic" default="/move_base/global_costmap/costmap" />
+
+   <!-- <include file="$(find rover)/rover/autonomy/launch/gmapping.launch" /> -->
    <!-- <include file="$(find rover)/rover/autonomy/launch/hector_slam_occupancy_grid.launch" />    -->
    <!-- <node pkg="tf" type="static_transform_publisher" name="laser_odom_to_map" args="0 0 0 0 0 0 map laser_odom 100" /> -->
 
 
    <!-- <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
-      <remap from="/ouster/points" to="cloud_in" />
+      <remap from="/zed_node/point_cloud/cloud_registered" to="cloud_in" />
       <remap from="/scan" to="scan" />
    </node> -->
    <!-- <remap from="cloud_in" to="/ouster/points" /> -->
@@ -32,23 +39,22 @@
       <remap from="cmd_vel" to="$(arg command_velocity_topic)" />
       <remap from="odom" to="$(arg odom_topic)" />
       <remap from="/amcl_pose" to="$(arg pose_topic)" />
+      <remap from="/map" to="$(arg map_topic)" />
 
       <!-- <rosparam file="$(find rover)/rover/autonomy/config/costmap_converter.yaml" command="load" /> -->
    </node>
 
    <!--  ****** Maps *****  -->
   
-	<!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/white.yaml" output="screen">
-               <param name="frame_id" value="map"/>
-	</node>  -->
-
-   <arg name="use_map_topic" default="true"/>
-   <arg name="scan_topic" default="/scan_collapsed" />
-   <arg name="map_topic" default="map" />
+	<node name="map_server" pkg="map_server" type="map_server" args="$(find rover)/rover/simulation/maps/white.yaml" output="screen">
+         <param name="frame_id" value="map"/>
+         <remap from="/map" to="$(arg map_topic)" />
+	</node> 
 
 
-   <include file="$(find rover)/rover/autonomy/launch/robot_loc.launch"/>
-   <include file="$(find lego_loam)/launch/run.launch" />
+
+   <!-- <include file="$(find rover)/rover/autonomy/launch/robot_loc.launch"/> -->
+   <!-- <include file="$(find lego_loam)/launch/run.launch" /> -->
 
    <!-- <node pkg="amcl" type="amcl" name="amcl">
       <rosparam file="$(find rover)/rover/autonomy/config/amcl_params.yaml" command="load" />

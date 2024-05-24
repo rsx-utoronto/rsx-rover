@@ -7,13 +7,13 @@
     <!-- <node pkg="rover" type="rover_gui.py" name="GUI" output="screen"/> -->
 
     <!-- Launch Main State Machine Node -->
-    <!-- <node pkg="rover" type="state_machine.py" name="state_machine_node" output="screen">
+    <node pkg="rover" type="state_machine.py" name="state_machine_node" output="screen">
         <param name="num_gps_goals" value="7"/>
-    </node> -->
+    </node>
     <!-- Launch Auxillary Nodes -->
     <!-- <node pkg="rover" type="gps_goal_checker.py" name="gps_checker_node" output="screen"/> -->
     <node pkg="rover" type="nuc_comms_check.py" name="comms_check_node" output="screen"/>
     <!-- Network Failsafe -->
-    <!-- <node pkg="rover" type="network_failsafe.py" name="network_failsafe" output="screen"/> -->
+    <node pkg="rover" type="network_failsafe.py" name="network_failsafe" output="screen"/>
 
 </launch>

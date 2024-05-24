@@ -2,6 +2,7 @@
 
 import rospy
 import smach 
+import time
 import numpy as np
 from smach_ros import SimpleActionState
 from rover.msg import StateMsg
@@ -22,11 +23,15 @@ class StateMachineNode:
     """
     def __init__(self, num_gps_goals):
 
-        self.state_subscriber = rospy.Subscriber('/rover_state', StateMsg, self.state_callback)
         self.state_publisher = rospy.Publisher('/sm_node/rover_state', StateMsg, queue_size=10)
         self.add_goal_srv = rospy.Service('add_goal', AddGoal, self.handle_add_goal)
+        t = time.time()
+        while (time.time() - t) < 15:
+            print("Passing time")
+            pass
+        self.state_subscriber = rospy.Subscriber('/rover_state', StateMsg, self.state_callback)
         self.MODE = "IDLE"
-        self.GPS_goals = np.zeros((0,3))
+        self.GPS_goals = np.zeros((1,3))
         self.curr_goal = PoseStamped()
         self.num_gps_goals = num_gps_goals
         self.GPS_counter = 0
@@ -44,7 +49,9 @@ class StateMachineNode:
         self.rover_aruco_scan = self.RoverArucoScan(self)
         self.rover_light_beacon_scan = self.RoverLightBeaconScan(self)
         self.rover_transition = self.RoverTransition(self)
-
+        # 2024, NEW STATES FOR URC
+        self.rover_ground_search = self.RoverGroundSearch(self)
+        self.rover_ground_approach = self.RoverGroundApproach(self)
     def state_callback(self, state_msg):
         """
         Callback for "/rover_state" topic 
@@ -56,6 +63,9 @@ class StateMachineNode:
         self.ar_tag_detected = state_msg.AR_TAG_DETECTED
         self.curr_ar_tag = state_msg.curr_AR_ID
         self.MISSION_OVER = state_msg.MISSION_OVER
+        self.aruco_scan_complete = state_msg.AR_SCANNED
+        self.GROUND_OBJECT_FOUND = state_msg.GROUND_OBJECT_FOUND
+        self.GROUND_OBJECT_REACHED = state_msg.GROUND_OBJECT_REACHED
     
     def handle_add_goal(self, req):
         """
@@ -67,7 +77,7 @@ class StateMachineNode:
         if goal_type == "gps":
             # Convert to a goal in metres in the odom frame
             get_gps = GPS_to_UTM(lat=req.x, lon=req.y)
-            goal = get_gps.convertGPSToOdom()
+            goal = get_gps.convertGPStoOdom()
 
             try:
                 if goal == None:
@@ -131,6 +141,8 @@ class StateMachineNode:
     def convertGoals(self):
 
         goal_list = []
+
+        rospy.loginfo(self.GPS_goals)
 
         for curr_goal in self.GPS_goals:
 
@@ -245,8 +257,7 @@ class StateMachineNode:
 
         def execute(self, userdata):
             rospy.loginfo('Executing state RoverTransition')
-            self.sm.state_msg_raw.GPS_GOAL_REACHED = False
-            self.sm.state_publisher.publish(self.sm.state_msg_raw)
+
             if self.sm.MODE == "MANUAL":
                 return "MOVE_TO_MANUAL"
             
@@ -254,7 +265,7 @@ class StateMachineNode:
                 return "MOVE_TO_IDLE"
             
             # Check if the expected number of GPS goals has been visited
-            if self.sm.GPS_counter == self.sm.num_GPS_goals - 1: 
+            if self.sm.GPS_counter == self.sm.num_gps_goals - 1: 
                 return "MISSION_OVER"
 
             print(f"The GPS goal {self.sm.curr_goal} \n was reached. Moving to next GPS goal.")
@@ -272,7 +283,7 @@ class StateMachineNode:
         When move base is in process of being executed
         """
         def __init__(self, sm_node):
-            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL', 'MOVE_TO_IDLE', 'TRAVERSING', 'ARUCO_TRAVERSE', 'GPS_GOAL_REACHED'])
+            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL', 'MOVE_TO_IDLE', 'TRAVERSING', 'ARUCO_TRAVERSE', 'OBJECT_FOUND', 'GPS_GOAL_REACHED'])
             self.counter = 0
             self.sm = sm_node
 
@@ -282,7 +293,9 @@ class StateMachineNode:
                 return 'MOVE_TO_MANUAL'
             if self.sm.MODE == "IDLE":
                 return 'MOVE_TO_IDLE'
-            if self.sm.ar_tag_detected and not self.sm.GPS_GOAL_REACHED:
+            if self.sm.ar_tag_detected and not self.sm.GPS_GOAL_REACHED: #edit for gps
+                return 'ARUCO_TRAVERSE'
+            if self.sm.GROUND_OBJECT_FOUND and not self.sm.GPS_GOAL_REACHED: #while going to GPS if it sees an object it goes into approach
                 return 'ARUCO_TRAVERSE'
             if self.sm.GPS_GOAL_REACHED:
                 return 'GPS_GOAL_REACHED'
@@ -299,8 +312,10 @@ class StateMachineNode:
             self.counter = 0
             self.sm = sm_node
 
+
         def execute(self, userdata):
             rospy.loginfo('Executing state ArucoTraverse')
+
             # Your state execution goes here
             if self.sm.GPS_GOAL_REACHED:
                 return 'GPS_GOAL_REACHED'
@@ -316,7 +331,7 @@ class StateMachineNode:
         When the current GPS goal has been reached
         """
         def __init__(self, sm_node):
-            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL','MOVE_TO_IDLE','ARUCO_FOUND','SEARCHING'])
+            smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL','MOVE_TO_IDLE', 'OBJECT_FOUND', 'SEARCHING_OBJECT','ARUCO_FOUND','SEARCHING'])
             self.counter = 0
             self.sm = sm_node
 
@@ -328,15 +343,22 @@ class StateMachineNode:
             if self.sm.MODE == "IDLE":
                 return "MOVE_TO_IDLE"
             
+            # go into ground search or not
+            if self.sm.GROUND_OBJECT_FOUND == True:
+                return "OBJECT_FOUND"
+            
+            elif self.sm.GROUND_OBJECT_FOUND == False:
+                return "SEARCHING_OBJECT"
+
             # If the GPS goal has been reached and the AR tag has been detected, move to transition to start the next leg
             if self.sm.ar_tag_detected == True:
-
                 return "ARUCO_FOUND"
-            
+
             # If the AR has not been found, do an automatic routine to rotate the rover the try to locate the AR tag
             if self.sm.ar_tag_detected == False:
-                
                 return "SEARCHING"
+            
+            
              
     class RoverArucoScan(smach.State):
 
@@ -344,13 +366,11 @@ class StateMachineNode:
             smach.State.__init__(self, outcomes=['MOVE_TO_MANUAL','MOVE_TO_IDLE', 'SCAN_COMPLETE', 'STAY'])
             self.counter = 0
             self.sm = sm_node
-            self.sm.aruco_scan_complete = False
 
 
         def execute(self, userdata):
             rospy.loginfo('Executing state ArucoScan')
-            
-            # Add the actionlib execution for Aruco scanning
+
             if self.sm.aruco_scan_complete:
                 return 'SCAN_COMPLETE'  
             if self.sm.MODE == "MANUAL":
@@ -379,14 +399,57 @@ class StateMachineNode:
                 return 'MOVE_TO_MANUAL'
             if self.sm.MODE == "IDLE":
                 return 'MOVE_TO_IDLE'
-            else:
+            else:   
                 return 'STAY' 
+
+
+    # New States
+    class RoverGroundSearch(smach.State):
+
+        def __init__(self, sm_node):
+            smach.State.__init__(self, outcomes=['OBJECT_FOUND', 'MOVE_TO_MANUAL', 'MOVE_TO_IDLE', 'KEEP_SEARCHING'])
+            self.count = 0
+            self.sm = sm_node
+
+        def execute(self, userdata):
+            rospy.loginfo('Executing state GroundSearch')
+
+            # Your state execution goes here
+            if self.sm.GROUND_OBJECT_FOUND:
+                return 'OBJECT_FOUND'
+            if self.sm.MODE == "MANUAL":
+                return 'MOVE_TO_MANUAL'
+            if self.sm.MODE == "IDLE":
+                return 'MOVE_TO_IDLE'
+            else:
+                return 'GROUND_SEARCH'
+            
+    class RoverGroundApproach(smach.State):
+
+        def __init__(self, sm_node):
+            smach.State.__init__(self, outcomes=['OBJECT_REACHED', 'MOVE_TO_MANUAL', 'MOVE_TO_IDLE', 'KEEP_APPROACHING'])
+            self.count = 0
+            self.sm = sm_node
+
+        def execute(self, userdata):
+            rospy.loginfo('Executing state GroundApproach')
+
+            # Your state execution goes here
+            if self.sm.GROUND_OBJECT_REACHED:
+                return 'OBJECT_REACHED'
+            if self.sm.MODE == "MANUAL":
+                return 'MOVE_TO_MANUAL'
+            if self.sm.MODE == "IDLE":
+                return 'MOVE_TO_IDLE'
+            else:
+                return 'KEEP_APPROACHING'
+            
 
 
 def main():
     rospy.init_node('rsx_rover_state_machine')
 
-    num_gps_goals = rospy.get_param('~num_gps_goals')
+    num_gps_goals = 4#rospy.get_param('~num_gps_goals')
 
     state_machine_node = StateMachineNode(num_gps_goals)
     state_machine_node.rover_idle.sm = state_machine_node
@@ -400,6 +463,9 @@ def main():
     state_machine_node.rover_light_beacon_scan.sm = state_machine_node
     state_machine_node.rover_transition.sm = state_machine_node   
 
+    state_machine_node.rover_ground_search.sm = state_machine_node  
+    state_machine_node.rover_ground_approach.sm = state_machine_node  
+
     # Create a SMACH state machine
     sm = smach.StateMachine(outcomes=['MISSION_OVER'])
 
@@ -408,7 +474,7 @@ def main():
         # Add states to the container
         smach.StateMachine.add('RoverIdle', state_machine_node.rover_idle,
                                transitions={'STAY': 'RoverIdle',
-                                            'MOVE_TO_INITIALIZE' : 'RoverInitialize', 
+                                            'MOVE_TO_INITIALIZE' : 'RoverInitialize',
                                             'MOVE_TO_MANUAL': 'RoverManual'})
         smach.StateMachine.add('RoverManual', state_machine_node.rover_manual,
                                transitions={'STAY': 'RoverManual',
@@ -450,6 +516,17 @@ def main():
                                             'MOVE_TO_MANUAL': 'RoverManual',
                                             'MOVE_TO_IDLE': 'RoverIdle', 
                                             'STAY':'RoverLightBeaconScan'})
+        # 2024, NEW STATES FOR URC
+        smach.StateMachine.add('RoverGroundSeach', state_machine_node.rover_ground_search, 
+                                transitions={'OBJECT_FOUND':'RoverGroundApproach', 
+                                            'MOVE_TO_MANUAL': 'RoverManual',
+                                            'MOVE_TO_IDLE': 'RoverIdle', 
+                                            'KEEP_SEARCHING':'RoverGroundSeach'})
+        smach.StateMachine.add('RoverGroundApproach', state_machine_node.rover_ground_approach, 
+                                transitions={'OBJECT_REACHED':'RoverTransition', 
+                                            'MOVE_TO_MANUAL': 'RoverManual',
+                                            'MOVE_TO_IDLE': 'RoverIdle', 
+                                            'KEEP_APPROACHING':'RoverGroundApproach'})
 
 
     # Execute SMACH plan

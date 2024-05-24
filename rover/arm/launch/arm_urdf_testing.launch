@@ -1,7 +1,7 @@
 <launch>
    <!-- Load the urdf into the parameter server. -->
 
-   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find rover)/rover/simulation/urdfs/Arm_2023_URDF_2.urdf"/>
+   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find rover)/rover/simulation/urdfs/new_urdf/urdf/URDF.xacro"/>
    <arg name="rvizconfig" default="$(find rover)/rover/simulation/rviz_config/arm_urdf.rviz"/>
     
    <node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub"/>

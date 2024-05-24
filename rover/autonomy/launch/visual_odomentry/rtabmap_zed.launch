@@ -1,0 +1,17 @@
+<!-- Minimal version of rtabmap with zed camera -->
+<launch>
+    <include file="$(find rtabmap_launch)/launch/rtabmap.launch">
+        <arg name="rtabmap_args"  value="--delete_db_on_start"/>
+        <!-- RGB-Depth -->
+        <arg name="rgb_topic"  value="/zed_node/rgb/image_rect_color"/>
+        <arg name="depth_topic"  value="/zed_node/depth/depth_registered"/>
+        <arg name="camera_info_topic" value="/zed_node/rgb/camera_info"/>
+        <arg name="wait_imu_to_init" value="true"/>
+        <arg name="imu_topic"  value="/zed_node/imu/data"/>
+        <arg name="frame_id" value="base_link"/>
+        <arg name="approx_sync" value="false"/>
+        <arg name="rtabmap_viz"		value="false"/>
+		<arg name="rviz"			value="false"/>
+    </include>
+
+</launch>
