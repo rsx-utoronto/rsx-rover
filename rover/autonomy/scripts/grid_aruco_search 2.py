@@ -10,8 +10,6 @@ from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from std_msgs.msg import Float32
 import numpy as np
 
-
-
 class grid_search():
     def __init__(self):
         self.x = 0.0
