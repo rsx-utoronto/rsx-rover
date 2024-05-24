@@ -20,14 +20,14 @@ class ARucoTagDetectionNode():
         self.info_topic = "/zed_node/rgb/camera_info"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
+        self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
+        self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
         self.aruco_pub = rospy.Publisher('aruco_node/rover_state', StateMsg, queue_size=10)
         self.scanned_pub = rospy.Publisher('aruco_scanned_node/rover_state', StateMsg, queue_size=10)
-        self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
         t = time.time()
         while (time.time() - t) < 15:
             print("Passing time")
             pass
-        self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         self.bridge = CvBridge()
         self.current_state = StateMsg()
         self.curr_aruco_detections = {}
@@ -65,7 +65,7 @@ class ARucoTagDetectionNode():
     def findArucoMarkers(self, img, markerSize=4, totalMarkers=100, draw=True):
         imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         key = getattr(aruco, 'DICT_' + str(markerSize) + 'X' + str(markerSize) + "_" + str(totalMarkers))
-        arucoDict = aruco.Dictionary_get(key)
+        arucoDict = aruco.getPredefinedDictionary(key)
         arucoParam = aruco.DetectorParameters_create()
         bboxs, ids, rejected = aruco.detectMarkers(imgGray,arucoDict,parameters=arucoParam)
 
