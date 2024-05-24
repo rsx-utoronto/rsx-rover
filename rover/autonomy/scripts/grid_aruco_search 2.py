@@ -4,9 +4,11 @@ import rospy
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
 from geometry_msgs.msg import Point, Twist
+from rover.msg import StateMsg
 import math
 from std_msgs.msg import Float32
 import numpy as np
+import ar_detection_node as adn
 
 x = 0.0
 y = 0.0 
@@ -29,54 +31,61 @@ def newOdom(msg):
     print("ANGLES: ", (roll, pitch, theta))
     rospy.init_node("speed_controller")
 
-sub = rospy.Subscriber("/rtabmap/odom", Odometry, newOdom) # launch zed camera
-pub = rospy.Publisher("drive", Twist, queue_size = 1)
-pub_error = rospy.Publisher("/robot_base_velocity_controller/error", Float32, queue_size = 1)
 
-speed = Twist()
+if __name__== "__main__":
+    sub = rospy.Subscriber("/rtabmap/odom", Odometry, newOdom) # launch zed camera
+    pub = rospy.Publisher("drive", Twist, queue_size = 1)
+    # sub_aruco = rospy.Subscriber("aruco_node/rover_state", StateMsg, adn.state_callback)
+    pub_error = rospy.Publisher("/robot_base_velocity_controller/error", Float32, queue_size = 1)
+    check = adn.self.aruco_pub
 
-r = rospy.Rate(10)
+    speed = Twist()
 
+    r = rospy.Rate(10)
 
+    path_list = [(0+x,0+y), (3.5+x,0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)]
+                # ,(-3.5+x, -7.0+y), (10.5+x, -7.0+y, (10.5+x,10.5+y), (-10.5+x,10.5+y), 
+                # (-10.5+x, -14.0+y), (17.5+x, -14.0+y), (17.5+x, 17.5+y), (-17.5+x, 17.5+y), (-17.5+x, -21.0+y), (17.5+x, -21.0+y)]
+    point_index = 0  # instead of deleting stuff from a list (which is anyway bug prone) we'll just iterate through it using index variable.
+    scale_factor = 0.75
+    goal = Point ()
+    while not rospy.is_shutdown():
+        if check == False:
+            if point_index < len(path_list): # so we won't get an error of trying to reach non-existant index of a list
+                goal.x = path_list[point_index][0]  # x coordinate for goal
+                goal.y = path_list[point_index][1]  # y coordinate for goal
+            else:
+                speed.linear.x = 0.0
+                speed.angular.z = 0.0
+                break # Means we didn't find anything..
 
-path_list = [(0+x,0+y), (3.5+x,0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)]
-             # ,(-3.5+x, -7.0+y), (10.5+x, -7.0+y, (10.5+x,10.5+y), (-10.5+x,10.5+y), 
-            # (-10.5+x, -14.0+y), (17.5+x, -14.0+y), (17.5+x, 17.5+y), (-17.5+x, 17.5+y), (-17.5+x, -21.0+y), (17.5+x, -21.0+y)]
-point_index = 0  # instead of deleting stuff from a list (which is anyway bug prone) we'll just iterate through it using index variable.
-scale_factor = 0.75
-goal = Point ()
-while not rospy.is_shutdown():
-    if point_index < len(path_list): # so we won't get an error of trying to reach non-existant index of a list
-        goal.x = path_list[point_index][0]  # x coordinate for goal
-        goal.y = path_list[point_index][1]  # y coordinate for goal
-    else:
-        speed.linear.x = 0.0
-        speed.angular.z = 0.0
-        break # I guess we're done?
+            inc_x = (goal.x - x)*scale_factor
+            inc_y = (goal.y - y)*scale_factor 
 
-    inc_x = (goal.x - x)*scale_factor
-    inc_y = (goal.y - y)*scale_factor 
+            if (x==0 or y==0):
+                angle_to_goal = math.pi/2
+            else:
+                angle_to_goal = math.atan2 (inc_y, inc_x) # this is our "bearing to goal" as I can guess
 
-    if (x==0 or y==0):
-        angle_to_goal = math.pi/2
-    else:
-        angle_to_goal = math.atan2 (inc_y, inc_x) # this is our "bearing to goal" as I can guess
+            # if your position is changing and 0,0 is only the start point then use the distance between 2 points formula
+            point_distance_to_goal = np.sqrt(inc_x*inc_x + inc_y*inc_y)
 
-    # if your position is changing and 0,0 is only the start point then use the distance between 2 points formula
-    point_distance_to_goal = np.sqrt(inc_x*inc_x + inc_y*inc_y)
+            if point_distance_to_goal >= 0.5: # we'll now head to our target
+                if angle_to_goal - theta > 0.1:
+                    speed.linear.x = 0.0
+                    speed.angular.z = 0.3   
+                elif angle_to_goal - theta < -0.1:
+                    speed.linear.x = 0.0
+                    speed.angular.z = -0.3  
+                else: 
+                    speed.linear.x = 0.5
+                    speed.angular.z = 0.0
+                pub.publish(speed)
+            else:
+                point_index += 1 
+        else:
+            #refer to edward   
+            break     
 
-    if point_distance_to_goal >= 0.5: # we'll now head to our target
-        if angle_to_goal - theta > 0.1:
-            speed.linear.x = 0.0
-            speed.angular.z = 0.3   
-        elif angle_to_goal - theta < -0.1:
-            speed.linear.x = 0.0
-            speed.angular.z = -0.3  
-        else: 
-            speed.linear.x = 0.5
-            speed.angular.z = 0.0
-        pub.publish(speed)
-    else:
-        point_index += 1 
+        r.sleep()
 
-    r.sleep()
