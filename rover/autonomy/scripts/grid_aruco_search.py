@@ -58,7 +58,7 @@ while not rospy.is_shutdown():
     inc_y = (goal.y - y)*scale_factor 
 
     if (x==0 or y==0):
-        angle_to_goal = PI/2
+        angle_to_goal = math.pi/2
     else:
         angle_to_goal = math.atan2 (inc_y, inc_x) # this is our "bearing to goal" as I can guess
 
@@ -69,7 +69,8 @@ while not rospy.is_shutdown():
         if angle_to_goal - theta > 0.1:
             speed.linear.x = 0.0
             speed.angular.z = 0.3   
-        else if angle_to_goal - theta < -0.1:
+        # to avoid overshoot + 360 turn overcorrection
+        elif angle_to_goal - theta < -0.1:
             speed.linear.x = 0.0
             speed.angular.z = -0.3  
         else: 
@@ -80,6 +81,3 @@ while not rospy.is_shutdown():
         point_index += 1 
 
     r.sleep()
-    
-    
-    
