@@ -20,7 +20,25 @@ from cv_bridge import CvBridge, CvBridgeError
 from std_srvs.srv import Empty, EmptyResponse
 import tf2_ros
 import os
+import aruco_homing
+import ar_detection_node 
+import grid_aruco_search 
 
-class maincaller():
-    def __init__(self):
-        self.
+class maincaller(object):
+    def __init__(self, name, gps_type):
+        self.name = name
+        self.gps_type = gps_type
+        self.sub_ar_detection_node= ar_detection_node.
+        
+        
+        # want to have these three args. gps, aruco, object
+    
+    
+        
+        
+        
+
+if __name__ == "__main__":
+    gps=maincaller()
+
+    
