@@ -32,6 +32,7 @@ class ARucoTagDetectionNode():
         self.current_state = StateMsg()
         self.curr_aruco_detections = {}
         self.detected_aruco_ids = []
+        self.aruco_locations = []
         self.detect_thresh = 5
         self.permanent_thresh = 10
         self.K = None
@@ -100,6 +101,8 @@ class ARucoTagDetectionNode():
                     thickness = 2
                     img = cv2.putText(img, f"ID: {int(id)}", org, font, 
                                     fontScale, color, thickness, cv2.LINE_AA)
+                    
+                    
             
             img_msg = bridge.cv2_to_imgmsg(img, encoding="passthrough")
             self.vis_pub.publish(img_msg)
@@ -107,8 +110,16 @@ class ARucoTagDetectionNode():
         self.updated_state_msg = self.current_state
 
         if ids is not None:
+            print(self.aruco_locations)
             self.updated_state_msg.AR_TAG_DETECTED = True
             self.updated_state_msg.curr_AR_ID = int(best_detection)
+
+            # Transform into a goal in the odom frame
+
+            # lookup baselink to camera link transform 
+            # lookup baselink to odom transform 
+            # transform the 4x4 pose to the odom frame and publish below
+
             self.scanned_state_smg.AR_SCANNED = False
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
