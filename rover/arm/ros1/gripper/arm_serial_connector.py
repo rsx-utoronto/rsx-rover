@@ -63,7 +63,7 @@ class Serial_Port:
             process         = subprocess.run(command_prompt, shell= True)
 
             #initializing serial port with baudrate 9600
-            self.device_port = serial.Serial(port_name, baudrate)
+            self.device_port = serial.Serial(port_name, baudrate, timeout= 0.1)
 
         else:
 
@@ -80,18 +80,19 @@ class Serial_Port:
 
         # if data[-1] != "\n":
         #     data += "\n"
-
+        # print("Sending the following string:", data)
         # Checking if device port is valid
         if self.device_port:
 
             # Write data value to device port
-            print(data, type(data))
+            # print(data, type(data))
+            # self.device_port.reset_output_buffer()
             self.device_port.write(data.encode('utf-8'))
 
         else:
             print("\nPort not connected")
     
-    def read_bytes(self):
+    def read_bytes(self) -> str:
         """
         
         """
@@ -99,8 +100,8 @@ class Serial_Port:
         if self.device_port:
 
             # Read data value coming to the device port
-            data = self.device_port.read(size= 100)
-            print(str(data, encoding='ascii'))
+            data = self.device_port.read_until()
+            return str(data, encoding='utf-8')
 
     def set_permissions(self):
         """
@@ -129,3 +130,15 @@ class Serial_Port:
         
         else:
             print("\nPort not connected\n")
+
+
+if __name__ == "__main__":
+    while True:
+        gripper_connection = Serial_Port(device_name= "STMicroelectronics_STM32_STLink_066DFF353542543351022252")
+        gripper_connection.open_device_port(baudrate= 115200)
+        user_input = input("Position for the motor ")
+        gripper_connection.send_bytes(user_input + '\n')
+        # connection = serial.Serial(port= "/dev/ttyACM1", baudrate= 115200)
+        # connection.open()
+        # connection.write(str(user_input + '\n', encoding= 'utf-8'))
+        # connection.close()
