@@ -28,7 +28,7 @@ def newOdom(msg):
     print("ANGLES: ", (roll, pitch, theta))
     rospy.init_node("speed_controller")
 
-sub = rospy.Subscriber("/stereo_odometry", Odometry, newOdom) # launch zed camera
+sub = rospy.Subscriber("/rtabmap/odom", Odometry, newOdom) # launch zed camera
 pub = rospy.Publisher("drive", Twist, queue_size = 1)
 pub_error = rospy.Publisher("/robot_base_velocity_controller/error", Float32, queue_size = 1)
 
@@ -36,8 +36,9 @@ speed = Twist()
 
 r = rospy.Rate(10)
 
-path_list = [(0,0), (3.5,0.0), (3.5, 3.5), (-3.5,3.5), (-3.5, -7.0), (10.5, -7.0), (10.5,10.5), (-10.5,10.5), 
-            (-10.5, -14.0), (17.5, -14.0), (17.5, 17.5), (-17.5, 17.5), (-17.5, -21.0), (17.5, -21.0)]
+path_list = [(0,0), (3.5,0.0), (3.5, 3.5), (-3.5,3.5)]
+             # ,(-3.5, -7.0), (10.5, -7.0), (10.5,10.5), (-10.5,10.5), 
+            # (-10.5, -14.0), (17.5, -14.0), (17.5, 17.5), (-17.5, 17.5), (-17.5, -21.0), (17.5, -21.0)]
 point_index = 0  # instead of deleting stuff from a list (which is anyway bug prone) we'll just iterate through it using index variable.
 scale_factor = 0.5
 goal = Point ()
