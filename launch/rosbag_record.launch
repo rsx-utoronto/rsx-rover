@@ -1,0 +1,14 @@
+
+<launch>
+<node pkg="rosbag" type="record" name="rosbag_record" cwd="node"
+    args="record -o /home/rsx/rover_ws/bags/bag
+        /tf
+        /tf_static
+        /zed_node/depth/depth_registered
+        /zed_node/depth/depth_registered/camera_info
+        /zed_node/rgb/image_rect_color
+        /zed_node/rgb/camera_info
+        /zed_node/imu/data
+        /zed_node/imu/mag
+    -b 3072"/>
+</launch>
