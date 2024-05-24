@@ -8,7 +8,6 @@ import math
 from std_msgs.msg import Float32
 import numpy as np
 
-
 x = 0.0
 y = 0.0 
 theta = 0.0
@@ -67,7 +66,7 @@ while not rospy.is_shutdown():
         pub.publish(speed)
 
     else:
-        point_index += 1
+        point_index += 1 
 
     r.sleep()
     
