@@ -43,7 +43,7 @@ path_list = [(0+x,0+y), (3.5+x,0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)]
              # ,(-3.5, -7.0), (10.5, -7.0), (10.5,10.5), (-10.5,10.5), 
             # (-10.5, -14.0), (17.5, -14.0), (17.5, 17.5), (-17.5, 17.5), (-17.5, -21.0), (17.5, -21.0)]
 point_index = 0  # instead of deleting stuff from a list (which is anyway bug prone) we'll just iterate through it using index variable.
-scale_factor = 0.5
+scale_factor = 0.75
 goal = Point ()
 while not rospy.is_shutdown():
     if point_index < len(path_list): # so we won't get an error of trying to reach non-existant index of a list
