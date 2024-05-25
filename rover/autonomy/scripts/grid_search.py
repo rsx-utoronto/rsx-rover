@@ -53,9 +53,9 @@ class grid_search_class():
             if point_index < len(path_list): # so we won't get an error of trying to reach non-existant index of a list
                 goal.x = path_list[point_index][0] + self.x  # x coordinate for goal
                 goal.y = path_list[point_index][1] + self.y  # y coordinate for goal
-             else:
-                speed.linear.x = 0.0
-                speed.angular.z = 0.0
+            else:
+                self.speed.linear.x = 0.0
+                self.speed.angular.z = 0.0
                
                 self.nothing_found_at_end()
                  # I guess we're done?

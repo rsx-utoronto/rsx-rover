@@ -22,6 +22,8 @@ import tf2_ros
 import os
 import aruco_homing
 from aruco_homing import Aimer
+from aruco_homing import PID
+from aruco_homing import AimerROS
 import ar_detection_node 
 from ar_detection_node import ARucoTagDetectionNode
 import grid_search 
@@ -31,7 +33,7 @@ class maincaller(object):
     def __init__(self, name, gps_type):
         self.name = name
         self.gps_type = gps_type # array
-        self.scale_factor = 0.75
+        self.scale_factor = 0.75 # to scale up/down the path
         # self.sub_ar_detection_node = ar_detection_node.aruco_pub
         # self.sub_ar_homing = aruco_homing.
         # self.grid_aruco_search  =
@@ -59,8 +61,8 @@ class maincaller(object):
         if tag_detector.is_found() == False:      
             grid_s.follow_path(self, path_list, self.scale_factor, tag_detector)
         if grid_s.is_go_to_loc == True: 
-            
-            
+            # edward
+            print ("something is found")
         else:
             print("nothign found")
             
