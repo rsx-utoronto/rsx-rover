@@ -10,7 +10,6 @@ from rover.msg import StateMsg
 import numpy as np
 import os
 from std_msgs.msg import Float64MultiArray
-from std_msgs.msg import Float64MultiArray
 
 bridge = CvBridge()
 
@@ -28,7 +27,7 @@ class ARucoTagDetectionNode():
         self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
         self.bbox_pub = rospy.Publisher('aruco_node/bbox', Float64MultiArray, queue_size=10)
         t = time.time()
-        while (time.time() - t) < 15:
+        while (time.time() - t) < 2:
             print("Passing time")
             pass
         self.bridge = CvBridge()
@@ -100,9 +99,9 @@ class ARucoTagDetectionNode():
                     # font
 
                    # print (bbox[0][0],bbox[0][1],bbox[2][0],bbox[2][1])
-
-                    data_array=((bbox[0][0], bbox[0][1]),(bbox[2][0], bbox[0][1]),(bbox[2][0], bbox[2][1]), (bbox[0][0], bbox[2][1]) )
-                    self.bbox_pub.publish(data_array)
+                    array=[(bbox[0][0], bbox[0][1]),(bbox[2][0], bbox[0][1]),(bbox[2][0], bbox[2][1]), (bbox[0][0], bbox[2][1])]
+                    data = Float64MultiArray(data=array)
+                    self.bbox_pub.publish(data)
                     
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     org = (int(bbox[0][0]), int(bbox[0][1] - 20))

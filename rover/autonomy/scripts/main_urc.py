@@ -31,7 +31,7 @@ from grid_search import grid_search_class
 import thomas_grid_search 
 from thomas_grid_search import thomasgrid
 
-class maincaller(object):
+class maincaller():
     def __init__(self, name, gps_type):
         self.name = name
         self.gps_type = gps_type # array
@@ -39,6 +39,7 @@ class maincaller(object):
         # self.sub_ar_detection_node = ar_detection_node.aruco_pub
         # self.sub_ar_homing = aruco_homing.
         # self.grid_aruco_search  =
+
         
     def next(self):
         if self.name == "aruco":
@@ -56,14 +57,16 @@ class maincaller(object):
         # jack's detection begins 
         #if nothing is initially detected, start grid search
         # if something is detected, shit from jack's pass
-        # if nothing is detected, stop everything and give up on task.
-        
-        tag_detector = ARucoTagDetectionNode()
+        # if nothing is dete
+        # cted, stop everything and give up on task.
         grid =thomasgrid()  
-        if tag_detector.is_found() == False:      
-            grid.move
-        if grid.is_go_to_loc == True: 
+        tag_detector = ARucoTagDetectionNode()
+        
+        # if tag_detector.is_found() == False:      
+        grid.move(tag_detector)
+        if grid.go_to_loc == True: 
             # edward
+            # grid.stop()
             print ("something is found")
             
         else:
@@ -77,7 +80,9 @@ class maincaller(object):
         
     
 if __name__ == "__main__":
+    print("hello")
     ar=maincaller("aruco", "gps")
+    ar.next()
     
 
     
