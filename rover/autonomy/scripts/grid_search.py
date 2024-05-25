@@ -32,7 +32,7 @@ class grid_search_class():
 
         init += 1
 
-       # print("X: ", x)
+        # print("X: ", x)
         # print("Y: ", y)
 
         self.rot_q = msg.pose.pose.orientation

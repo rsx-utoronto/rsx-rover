@@ -27,7 +27,7 @@ def newOdom(msg):
     rot_q = msg.pose.pose.orientation
     (roll, pitch, theta) = euler_from_quaternion([rot_q.x, rot_q.y, rot_q.z, rot_q.w])
     print("ANGLES: ", (roll, pitch, theta))
-    rospy.init_node("speed_controller")
+rospy.init_node("speed_controller")
 
 sub = rospy.Subscriber("/rtabmap/odom", Odometry, newOdom) # launch zed camera
 pub = rospy.Publisher("drive", Twist, queue_size = 1)
@@ -39,7 +39,7 @@ r = rospy.Rate(10)
 
 
 
-path_list = [(0+x,0+y), (3.5+x,0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)]
+path_list = [(3.5+x,0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)]*scale_factor
              # ,(-3.5+x, -7.0+y), (10.5+x, -7.0+y, (10.5+x,10.5+y), (-10.5+x,10.5+y), 
             # (-10.5+x, -14.0+y), (17.5+x, -14.0+y), (17.5+x, 17.5+y), (-17.5+x, 17.5+y), (-17.5+x, -21.0+y), (17.5+x, -21.0+y)]
 point_index = 0  # instead of deleting stuff from a list (which is anyway bug prone) we'll just iterate through it using index variable.
@@ -54,29 +54,31 @@ while not rospy.is_shutdown():
         speed.angular.z = 0.0
         break # I guess we're done?
 
-    inc_x = (goal.x - x)*scale_factor
-    inc_y = (goal.y - y)*scale_factor 
+    inc_x = (goal.x - x)
+    inc_y = (goal.y - y)
 
-    if (x==0 or y==0):
-        angle_to_goal = math.pi/2
-    else:
-        angle_to_goal = math.atan2 (inc_y, inc_x) # this is our "bearing to goal" as I can guess
+    angle_to_goal = math.atan2 (inc_y, inc_x) # this is our "bearing to goal" as I can guess
 
     # if your position is changing and 0,0 is only the start point then use the distance between 2 points formula
     point_distance_to_goal = np.sqrt(inc_x*inc_x + inc_y*inc_y)
 
-    if point_distance_to_goal >= 0.5: # we'll now head to our target
-        if angle_to_goal - theta > 0.1:
+    while point_distance_to_goal >= 0.5: # we'll now head to our target
+        if angle_to_goal  > 0.1:
             speed.linear.x = 0.0
             speed.angular.z = 0.3   
         # to avoid overshoot + 360 turn overcorrection
-        elif angle_to_goal - theta < -0.1:
+        elif angle_to_goal  < -0.1:
             speed.linear.x = 0.0
             speed.angular.z = -0.3  
         else: 
             speed.linear.x = 0.5
             speed.angular.z = 0.0
         pub.publish(speed)
+        inc_x = (goal.x - x)
+        inc_y = (goal.y - y)
+        angle_to_goal = math.atan2 (inc_y, inc_x) # this is our "bearing to goal" as I can guess
+        # if your position is changing and 0,0 is only the start point then use the distance between 2 points formula
+        point_distance_to_goal = np.sqrt(inc_x*inc_x + inc_y*inc_y)
     else:
         point_index += 1 
 
