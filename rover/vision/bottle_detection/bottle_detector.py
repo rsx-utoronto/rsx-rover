@@ -154,12 +154,12 @@ if __name__ == '__main__':
     path = os.path.dirname(os.path.abspath(__file__))
     # print(path)
     model_path = os.path.join(path, 'bottle_detector.pt')
-    # topicName = "/zed_node/rgb/image_rect_color"
-    # detector = BottleDetector(model_path, topicName)
-    # rospy.spin()
-    # cv2.destroyAllWindows()
+    topicName = "/zed_node/rgb/image_rect_color"
+    detector = BottleDetector(model_path, topicName)
+    rospy.spin()
+    cv2.destroyAllWindows()
 
-    model = YOLO(model_path)
+    # model = YOLO(model_path)
     # cap = cv2.VideoCapture(0)
     # ret, frame = cap.read()
     # # cv2.imshow("image", frame)
@@ -177,10 +177,10 @@ if __name__ == '__main__':
     #         cv2.imshow("detector", frame)
     #         cv2.waitKey(1)
 
-    while True:
-        # res = model.predict(source=r'/home/garvish/Plastic Bottle Image Dataset/test/images/-2_jpg.rf.56c6648de860249fe106b20ce690a650.jpg', show=True)
-        # res = model.predict(source=r'/home/garvish/rover_ws/src/rsx-rover/rover/vision/bottle_detection/IMG_3915.jpg', show=True)
-        res = model.predict(source=0, show=True)
+    # while True:
+    #     # res = model.predict(source=r'/home/garvish/Plastic Bottle Image Dataset/test/images/-2_jpg.rf.56c6648de860249fe106b20ce690a650.jpg', show=True)
+    #     res = model.predict(source=r'/home/garvish/rover_ws/src/rsx-rover/rover/vision/bottle_detection/IMG_3908.jpg', show=True)
+    #     # res = model.predict(source=0, show=True)
         
 
 
