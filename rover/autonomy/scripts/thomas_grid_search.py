@@ -7,45 +7,53 @@ from std_msgs.msg import Float32
 import numpy as np
 import time
 
+class thomasgrid():
+    def __init__(self):
+        rospy.init_node("speed_controller")
+        self.speed=Twist()
+        self.pub = rospy.Publisher("drive", Twist, queue_size = 1)
+        self.r = rospy.Rate(10)
+        self.count = 0
+        self.distance_travelled=5
+        self.r = rospy.Rate(10)
+        self.go_to_loc = False
 
-rospy.init_node("speed_controller")
-pub = rospy.Publisher("drive", Twist, queue_size = 1)
+    def move (self, detector):
+        while not rospy.is_shutdown() and not detector.isfound():
+            time_reference = time.time()
+            # MOVING
+            while True:
+                if time.time() - time_reference < self.distance_travelled:
+                    self.speed.linear.x = 0.5
+                    self.pub.publish(self.speed)
+                
+                else:
+                    self.speed.linear.x = 0.0
+                    break
 
-speed = Twist()
-
-r = rospy.Rate(10)
-
-
-
-distance_travelled = 5
-
-while not rospy.is_shutdown():
-    
-    time_reference = time.time()
-    # MOVING
-    while True:
-        if time.time() - time_reference < distance_travelled:
-            speed.linear.x = 0.5
-            pub.publish(speed)
-        
-        else:
-            speed.linear.x = 0.0
-            break
-
-    time_reference = time.time()
-    
-    # TURNING
-    while True:
-        if time.time - time_reference < 3:
-            speed.linear.z = 0.3
-            pub.publish(speed)
+            time_reference = time.time()
             
-        else:
-            speed.linear.z = 0.0
-            break
+            # TURNING
+            while True:
+                if time.time - time_reference < 3:
+                    self.speed.linear.z = 0.3
+                    self.pub.publish(self.speed)
+                else:
+                    self.speed.linear.z = 0.0
+                    self.count +=1
+                    if self.count > 17:
+                        self.stop()
+                    break
 
-    distance_travelled += 0.5
-    
-    
-    r.sleep()
+            self.distance_travelled += 0.5
+            self.r.sleep()
+
+    def stop(self):
+        self.speed.linear.x = 0.0
+        self.speed.angular.z = 0.0
+        self.go_to_loc = True
+        
+    def nothing_found_at_end(self):
+         print("nothing found at end")
+            
 

@@ -28,6 +28,8 @@ import ar_detection_node
 from ar_detection_node import ARucoTagDetectionNode
 import grid_search 
 from grid_search import grid_search_class
+import thomas_grid_search 
+from thomas_grid_search import thomasgrid
 
 class maincaller(object):
     def __init__(self, name, gps_type):
@@ -47,7 +49,7 @@ class maincaller(object):
             self.object()        
     
     def aruco (self):
-        path_list = [(0,0), (3.5,0.0), (3.5, 3.5), (-3.5, 3.5)]
+       # path_list = [(0,0), (3.5,0.0), (3.5, 3.5), (-3.5, 3.5)]
         #             # ,(-3.5, -7.0), (10.5, -7.0), (10.5,10.5), (-10.5,10.5), 
         #             # (-10.5, -14.0), (17.5, -14.0), (17.5, 17.5), (-17.5, 17.5), (-17.5, -21.0), (17.5, -21.0)]
         
@@ -57,24 +59,15 @@ class maincaller(object):
         # if nothing is detected, stop everything and give up on task.
         
         tag_detector = ARucoTagDetectionNode()
-        grid_s=grid_search_class()  
+        grid =thomasgrid()  
         if tag_detector.is_found() == False:      
-            grid_s.follow_path(self, path_list, self.scale_factor, tag_detector)
-        if grid_s.is_go_to_loc == True: 
+            grid.move
+        if grid.is_go_to_loc == True: 
             # edward
             print ("something is found")
             
         else:
             print("nothing found")
-            
-        
-            
-       
-            
-            
-
-
-        
     
     def gps(self):
         pass
@@ -84,7 +77,7 @@ class maincaller(object):
         
     
 if __name__ == "__main__":
-    ar=maincaller(aruco, gps..)
+    ar=maincaller("aruco", "gps")
     
 
     
