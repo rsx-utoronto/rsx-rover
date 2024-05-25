@@ -9,7 +9,7 @@ BUTTONWIDTH = 5
 BUTTONHEIGHT = 2
 
 BAUDRATE = 9600
-PORT     = 'COM7'
+PORT     = '/dev/ttyACM1'
 PERIOD   = 5 # Assuming we are getting 1 output over serial every second
 
 class Serial_Port:
@@ -61,7 +61,7 @@ class Serial_Port:
             # data = self.device_port.readlines()
             # specificline = data[i]
             # Read data value coming to the device port
-            data = self.device_port.read_until(expected= endline.encode('utf-8'))
+            data = self.device_port.read_until(endline.encode('utf-8'))
             return str(data, encoding= 'utf-8')
         
         else:
@@ -120,7 +120,7 @@ def get_temp_humidity(connection : Serial_Port):
 
         connection.device_port.reset_input_buffer()
         # if ('Sensor' in temperature):
-        data_file.write(temperature[ : ])
+        data_file.write(temperaCOM7ture[ : ])
         print(temperature[ : ])
         # else:
             # i -= 1

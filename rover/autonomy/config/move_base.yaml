@@ -5,7 +5,7 @@ NavfnROS:
   allow_unknown: true # default: true # Specifies whether or not to allow navfn to create plans that traverse unknown space.
   # if you are using layered costmaps with voxel or obstacle layer, you must also set track_unknown_space param to true
   # otherwise it will convert all unknown space to free space and happily go through it.
-  default_tolerance: 0.1 # A tolerance on the goal point for the planner.
+  default_tolerance: 0.8 # A tolerance on the goal point for the planner.
   # planner_window_x: 100.0 # default: 0.0
   # planner_window_y: 100.0 # default: 0.0
 
@@ -43,7 +43,7 @@ DWAPlannerROS:
   # # Trajectory scoring parameters
   # path_distance_bias: 32.0 # The weighting for how much the controller should stay close to the path it was given
   # goal_distance_bias: 24.0 # The weighting for how much the controller should attempt to reach its local goal, also controls speed
-  occdist_scale: 0.0005 # The weighting for how much the controller should attempt to avoid obstacles
+  occdist_scale: 0.005 # The weighting for how much the controller should attempt to avoid obstacles
   # forward_point_distance: 0.325 # The distance from the center point of the robot to place an additional scoring point, in meters
   # stop_time_buffer: 0.2  # The amount of time that the robot must stThe absolute value of the veolicty at which to start scaling the robot's footprint, in m/sop before a collision in order for a trajectory to be considered valid in seconds
   # scaling_speed: 0.25 # The absolute value of the veolicty at which to start scaling the robot's footprint, in m/s

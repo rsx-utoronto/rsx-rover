@@ -3,7 +3,8 @@ import time
 
 
 ser = serial.Serial('/dev/ttyACM0', 9600)
-str = 'g'
+str = 'm'
+# a, g, m
 while True:
     # print(ser.read())
 
