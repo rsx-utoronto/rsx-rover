@@ -9,6 +9,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from rover.msg import StateMsg
 import numpy as np
 import os
+from std_msgs.msg import Float64MultiArray
 
 bridge = CvBridge()
 
@@ -20,14 +21,15 @@ class ARucoTagDetectionNode():
         self.info_topic = "/zed_node/rgb/camera_info"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
+        self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         self.aruco_pub = rospy.Publisher('aruco_node/rover_state', StateMsg, queue_size=10)
         self.scanned_pub = rospy.Publisher('aruco_scanned_node/rover_state', StateMsg, queue_size=10)
         self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
+        self.bbox_pub = rospy.Publisher('aruco_node/bbox', Float64MultiArray, queue_size=10)
         t = time.time()
         while (time.time() - t) < 15:
             print("Passing time")
             pass
-        self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         self.bridge = CvBridge()
         self.current_state = StateMsg()
         self.curr_aruco_detections = {}
@@ -91,8 +93,14 @@ class ARucoTagDetectionNode():
             bboxs = bboxs[0]
             if draw:
                 for bbox, id in zip(bboxs, ids):
-                    cv2.rectangle(img, (bbox[0][0], bbox[0][1]) , (bbox[2][0], bbox[2][1]), (0,255,0), 4)
+                    cv2.rectangle(img, (bbox[0][0], bbox[0][1]) , (bbox[2][0], bbox[0][1]), (0,255,0), 4)
                     # font
+
+                   # print (bbox[0][0],bbox[0][1],bbox[2][0],bbox[2][1])
+
+                    data_array=((bbox[0][0], bbox[0][1]),(bbox[2][0], bbox[0][1]),(bbox[2][0], bbox[2][1]), (bbox[0][0], bbox[2][1]) )
+                    self.bbox_pub.publish(data_array)
+                    
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     org = (int(bbox[0][0]), int(bbox[0][1] - 20))
                     fontScale = 1
