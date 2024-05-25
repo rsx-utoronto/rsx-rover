@@ -85,7 +85,7 @@ class Serial_Port:
             print("\nPort not connected\n")
 
 #send data over serial bus, and print incoming data
-def send_data(letter, connection : Serial_Port, expected_result : str = None):
+def send_data(letter : str, connection : Serial_Port, expected_result : str = None):
     connection.send_bytes(letter)
     #change the bit number to 16 if you remove the print statements in the arduino code
     TIMEOUT = time.time()
@@ -103,7 +103,7 @@ def send_data(letter, connection : Serial_Port, expected_result : str = None):
     print(connection.read_bytes())
 
 def get_temp_humidity(connection : Serial_Port):
-
+    send_data("&", connection)
     # Creating a txt file to store the data
     data_file = open("Temperatureandhumidity.txt", "a")
 
@@ -111,10 +111,11 @@ def get_temp_humidity(connection : Serial_Port):
     for i in range(PERIOD):
         TIMEOUT = time.time()
         while True:
-            temperature = connection.read_bytes() #endline= 'Ft'
+            temperature = connection.read_bytes() #endline= 'Ft
+            print(temperature)
             if "Temp" in temperature:
                 break
-            elif time.time()-TIMEOUT >5:
+            elif time.time()-TIMEOUT >2:
                 print("Timeout")
                 break
 
@@ -128,7 +129,7 @@ def get_temp_humidity(connection : Serial_Port):
     data_file.close()
 
 def get_PMT(connection : Serial_Port):
-
+    send_data("p", connection)
     # Creating a txt file to store the data
     data_file = open("PMT.txt", "a")
 
@@ -139,7 +140,7 @@ def get_PMT(connection : Serial_Port):
             voltage = connection.read_bytes()
             if "lkj" in voltage:
                 break
-            elif time.time()-TIMEOUT>8:
+            elif time.time()-TIMEOUT>2:
                 print("Timeout")
                 break
         connection.device_port.reset_input_buffer()
@@ -322,25 +323,25 @@ resetbc = tk.Button(m, text='Reset Bit Changer',
                         command= lambda:send_data('o', connection))
 
 #Temperature sensor
-tempon = tk.Button(m, text='Temp Sensor On', 
-                        width=BUTTONWIDTH,
-                        height= BUTTONHEIGHT, 
-                        bg="green",
-                        font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('&', connection))
-tempsensor = tk.Button(m, text='Temp and Humidity', 
+# tempon = tk.Button(m, text='Temp Sensor On', 
+#                         width=BUTTONWIDTH,
+#                         height= BUTTONHEIGHT, 
+#                         bg="green",
+#                         font= ('Helvetica 20 bold'),
+#                         command= lambda:send_data('&', connection))
+tempsensor = tk.Button(m, text='Temp and Humidity Data', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="green",
                         font= ('Helvetica 20 bold'),
                         command= lambda:get_temp_humidity(connection))
 
-PMT = tk.Button(m, text='PMT On/Off', 
-                        width=BUTTONWIDTH,
-                        height= BUTTONHEIGHT, 
-                        bg="green",
-                        font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('p', connection))
+# PMT = tk.Button(m, text='PMT On/Off', 
+#                         width=BUTTONWIDTH,
+#                         height= BUTTONHEIGHT, 
+#                         bg="green",
+#                         font= ('Helvetica 20 bold'),
+#                         command= lambda:send_data('p', connection))
 PMTdata = tk.Button(m, text='PMT Data', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
@@ -498,10 +499,10 @@ tinycw.grid(row=5,column=0,columnspan=2,sticky="NSEW")
 tinyccw.grid(row=5,column=2,columnspan=2,sticky="NSEW")
 resetbc.grid(row=5,column=4,columnspan=4,sticky="NSEW")
 
-tempon.grid(row=6,column=0,columnspan=2,sticky="NSEW")
-tempsensor.grid(row=6,column=2,columnspan=2,sticky="NSEW")
-PMT.grid(row=6,column=4,columnspan=2,sticky="NSEW")
-PMTdata.grid(row=6,column=6,columnspan=2,sticky="NSEW")
+#tempon.grid(row=6,column=0,columnspan=2,sticky="NSEW")
+tempsensor.grid(row=6,column=0,columnspan=4,sticky="NSEW")
+#PMT.grid(row=6,column=4,columnspan=2,sticky="NSEW")
+PMTdata.grid(row=6,column=4,columnspan=4,sticky="NSEW")
 
 valve1.grid(row=7,column=0,columnspan=2,sticky="NSEW")
 valve2.grid(row=7,column=2,columnspan=2,sticky="NSEW")
