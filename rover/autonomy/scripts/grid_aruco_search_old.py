@@ -27,7 +27,7 @@ def newOdom(msg):
     rot_q = msg.pose.pose.orientation
     (roll, pitch, theta) = euler_from_quaternion([rot_q.x, rot_q.y, rot_q.z, rot_q.w])
     print("ANGLES: ", (roll, pitch, theta))
-    rospy.init_node("speed_controller")
+rospy.init_node("speed_controller")
 
 sub = rospy.Subscriber("/rtabmap/odom", Odometry, newOdom) # launch zed camera
 pub = rospy.Publisher("drive", Twist, queue_size = 1)
