@@ -10,6 +10,7 @@ from rover.msg import StateMsg
 import numpy as np
 import os
 from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64MultiArray
 
 bridge = CvBridge()
 
@@ -34,12 +35,14 @@ class ARucoTagDetectionNode():
         self.current_state = StateMsg()
         self.curr_aruco_detections = {}
         self.detected_aruco_ids = []
+        self.aruco_locations = []
         self.detect_thresh = 5
         self.permanent_thresh = 10
         self.K = None
         self.D = None
         self.updated_state_msg = StateMsg()
         self.scanned_state_smg = StateMsg()
+        self.found = False
 
     def image_callback(self, ros_image):
         try:
@@ -67,7 +70,7 @@ class ARucoTagDetectionNode():
     def findArucoMarkers(self, img, markerSize=4, totalMarkers=100, draw=True):
         imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         key = getattr(aruco, 'DICT_' + str(markerSize) + 'X' + str(markerSize) + "_" + str(totalMarkers))
-        arucoDict = aruco.Dictionary_get(key)
+        arucoDict = aruco.getPredefinedDictionary(key)
         arucoParam = aruco.DetectorParameters_create()
         bboxs, ids, rejected = aruco.detectMarkers(imgGray,arucoDict,parameters=arucoParam)
 
@@ -108,6 +111,8 @@ class ARucoTagDetectionNode():
                     thickness = 2
                     img = cv2.putText(img, f"ID: {int(id)}", org, font, 
                                     fontScale, color, thickness, cv2.LINE_AA)
+                    
+                    
             
             img_msg = bridge.cv2_to_imgmsg(img, encoding="passthrough")
             self.vis_pub.publish(img_msg)
@@ -115,24 +120,33 @@ class ARucoTagDetectionNode():
         self.updated_state_msg = self.current_state
 
         if ids is not None:
+            print(self.aruco_locations)
             self.updated_state_msg.AR_TAG_DETECTED = True
             self.updated_state_msg.curr_AR_ID = int(best_detection)
+
+            # Transform into a goal in the odom frame
+
+            # lookup baselink to camera link transform 
+            # lookup baselink to odom transform 
+            # transform the 4x4 pose to the odom frame and publish below
+
             self.scanned_state_smg.AR_SCANNED = False
+            self.found = True
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
             self.updated_state_msg.curr_AR_ID = -1
+            self.found = False
 
         self.aruco_pub.publish(self.updated_state_msg)
         self.scanned_pub.publish(self.scanned_state_smg)
-
+     
+    def is_found(self):
+        return self.found
 
 def main():
     rospy.init_node('aruco_tag_detector', anonymous=True)
-
     AR_detector = ARucoTagDetectionNode()
-
     rospy.spin()
-
 
 if __name__ == "__main__":
     main()
