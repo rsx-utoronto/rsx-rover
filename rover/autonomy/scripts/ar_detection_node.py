@@ -39,6 +39,7 @@ class ARucoTagDetectionNode():
         self.D = None
         self.updated_state_msg = StateMsg()
         self.scanned_state_smg = StateMsg()
+        self.found = False
 
     def image_callback(self, ros_image):
         try:
@@ -121,21 +122,22 @@ class ARucoTagDetectionNode():
             # transform the 4x4 pose to the odom frame and publish below
 
             self.scanned_state_smg.AR_SCANNED = False
+            self.found = True
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
             self.updated_state_msg.curr_AR_ID = -1
+            self.found = False
 
         self.aruco_pub.publish(self.updated_state_msg)
         self.scanned_pub.publish(self.scanned_state_smg)
+     
+    def is_found(self):
+        return self.found
 
+# def main():
+#     rospy.init_node('aruco_tag_detector', anonymous=True)
+#     AR_detector = ARucoTagDetectionNode()
+#     rospy.spin()
 
-def main():
-    rospy.init_node('aruco_tag_detector', anonymous=True)
-
-    AR_detector = ARucoTagDetectionNode()
-
-    rospy.spin()
-
-
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
