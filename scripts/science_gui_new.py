@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python3
 
 import serial as ser
 import time
@@ -342,6 +342,18 @@ tempsensor = tk.Button(m, text='Temp and Humidity Data',
 #                         bg="green",
 #                         font= ('Helvetica 20 bold'),
 #                         command= lambda:send_data('p', connection))
+PMTon = tk.Button(m, text='PMT Light On', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="green",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data('^', connection))
+PMToff = tk.Button(m, text='PMT Light Off', 
+                        width=BUTTONWIDTH,
+                        height= BUTTONHEIGHT, 
+                        bg="green",
+                        font= ('Helvetica 20 bold'),
+                        command= lambda:send_data('%', connection))
 PMTdata = tk.Button(m, text='PMT Data', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
@@ -500,9 +512,11 @@ tinyccw.grid(row=5,column=2,columnspan=2,sticky="NSEW")
 resetbc.grid(row=5,column=4,columnspan=4,sticky="NSEW")
 
 #tempon.grid(row=6,column=0,columnspan=2,sticky="NSEW")
-tempsensor.grid(row=6,column=0,columnspan=4,sticky="NSEW")
+tempsensor.grid(row=6,column=0,columnspan=2,sticky="NSEW")
+PMTon.grid(row=6,column=2,columnspan=2,sticky="NSEW")
+PMToff.grid(row=6,column=4,columnspan=2,sticky="NSEW")
 #PMT.grid(row=6,column=4,columnspan=2,sticky="NSEW")
-PMTdata.grid(row=6,column=4,columnspan=4,sticky="NSEW")
+PMTdata.grid(row=6,column=6,columnspan=2,sticky="NSEW")
 
 valve1.grid(row=7,column=0,columnspan=2,sticky="NSEW")
 valve2.grid(row=7,column=2,columnspan=2,sticky="NSEW")
