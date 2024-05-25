@@ -1,16 +1,16 @@
 talons:
   back_left:
-    id: 6
-    P: 3.0
-    I: 0.015
-    D: 175.0
-    inverted: True
-  back_right:
     id: 3
     P: 3.0
     I: 0.015
     D: 175.0
     inverted: False
+  back_right:
+    id: 6
+    P: 3.0
+    I: 0.015
+    D: 175.0
+    inverted: True
   # mid_left:
   #   id: 5
   #   P: 3.0
@@ -24,14 +24,14 @@ talons:
   #   D: 175.0
   #   inverted: True
   front_left:
-    id: 1
-    P: 3.0
-    I: 0.015
-    D: 175.0
-    inverted: True
-  front_right:
     id: 4
     P: 3.0
     I: 0.015
     D: 175.0
     inverted: False
+  front_right:
+    id: 1
+    P: 3.0
+    I: 0.015
+    D: 175.0
+    inverted: True
