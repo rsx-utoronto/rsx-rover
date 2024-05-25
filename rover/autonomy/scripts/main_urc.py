@@ -63,8 +63,9 @@ class maincaller(object):
         if grid_s.is_go_to_loc == True: 
             # edward
             print ("something is found")
+            
         else:
-            print("nothign found")
+            print("nothing found")
             
         
             

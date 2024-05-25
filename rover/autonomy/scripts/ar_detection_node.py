@@ -9,6 +9,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from rover.msg import StateMsg
 import numpy as np
 import os
+from std_msgs.msg import Float64MultiArray
 
 bridge = CvBridge()
 
@@ -24,6 +25,7 @@ class ARucoTagDetectionNode():
         self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
         self.aruco_pub = rospy.Publisher('aruco_node/rover_state', StateMsg, queue_size=10)
         self.scanned_pub = rospy.Publisher('aruco_scanned_node/rover_state', StateMsg, queue_size=10)
+        self.bbox_pub = rospy.Publisher('aruco_node/bbox', Float64MultiArray, queue_size=10)
         t = time.time()
         while (time.time() - t) < 15:
             print("Passing time")
@@ -94,6 +96,8 @@ class ARucoTagDetectionNode():
             if draw:
                 for bbox, id in zip(bboxs, ids):
                     cv2.rectangle(img, (bbox[0][0], bbox[0][1]) , (bbox[2][0], bbox[2][1]), (0,255,0), 4)
+                    corner_list = [bbox[0][0], bbox[0][1], bbox[2][0], bbox[2][1]]
+                    self.bbox_pub.publish(Float64MultiArray(data=bbox.flatten()))
                     # font
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     org = (int(bbox[0][0]), int(bbox[0][1] - 20))
@@ -134,10 +138,10 @@ class ARucoTagDetectionNode():
     def is_found(self):
         return self.found
 
-# def main():
-#     rospy.init_node('aruco_tag_detector', anonymous=True)
-#     AR_detector = ARucoTagDetectionNode()
-#     rospy.spin()
+def main():
+    rospy.init_node('aruco_tag_detector', anonymous=True)
+    AR_detector = ARucoTagDetectionNode()
+    rospy.spin()
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

@@ -99,4 +99,11 @@ class grid_search_class():
     
     def is_go_to_loc (self):
         return self.go_to_loc
-        
+    
+    def main():
+        rospy.init_node('aruco_tag_detector', anonymous=True)
+        AR_detector = ARucoTagDetectionNode()
+        rospy.spin()
+
+if __name__ == "__main__":
+    ar = grid_search_class()

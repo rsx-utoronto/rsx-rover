@@ -46,6 +46,9 @@ point_index = 0  # instead of deleting stuff from a list (which is anyway bug pr
 
 goal = Point ()
 while not rospy.is_shutdown():
+    x = msg.pose.pose.position.x
+    y = msg.pose.pose.position.y
+
     if point_index < len(path_list): # so we won't get an error of trying to reach non-existant index of a list
         goal.x = path_list[point_index][0]  # x coordinate for goal
         goal.y = path_list[point_index][1]  # y coordinate for goal
@@ -61,36 +64,60 @@ while not rospy.is_shutdown():
     angle_to_goal = math.atan2(inc_y, inc_x)
 
     # if your position is changing and 0,0 is only the start point then use the distance between 2 points formula
-    point_distance_to_goal = np.sqrt((inc_x*inc_x + inc_y*inc_y)*scale_factor)
+    point_distance_to_goal = np.sqrt((inc_x*inc_x + inc_y*inc_y))
 
-    old = 100
+    #old = 100
+    print (goal.x-x)
+    print (goal.y-y)
+    print ("angle to goal", init_angle_to_goal)
+    print ("dist to goal", point_distance_to_goal)
+    
 
-    while point_distance_to_goal >= 0.5: # we'll now head to our target
-        print("x", inc_x)
-        print("y", inc_y)
-        print("init_angle_to_goal", init_angle_to_goal)
-        print("angle_to_goal", angle_to_goal)
-        print("theta", theta)
-        print("diff", init_angle_to_goal - theta)
-        print("point_distance_to_goal", point_distance_to_goal)
-        if init_angle_to_goal - theta > 0.2 and np.abs(old - theta) < 0.3:
-            speed.linear.x = 0.0
-            speed.angular.z = 0.2
-        # to avoid overshoot + 360 turn overcorrection
-        elif init_angle_to_goal - theta < -0.2 and np.abs(old - theta) < 0.3:
-            speed.linear.x = 0.0
-            speed.angular.z = -0.2
+    if point_distance_to_goal >= 0.5:
+        print (goal.x-x)
+        print (goal.y-y)
+        print ("angle to goal", init_angle_to_goal)
+        print ("dist to goal", point_distance_to_goal)
+        if abs(init_angle_to_goal - theta) > 0.2:
+             speed.angular.z = 0.2
+             speed.linear.x = 0.0
+             pub.publish(speed)
         else:
-            speed.linear.x = 0.5
+            speed.linear.x = 0.3
             speed.angular.z = 0.0
-        pub.publish(speed)
-        inc_x = (goal.x - x)*scale_factor
-        inc_y = (goal.y - y)*scale_factor
-        old = theta
-        angle_to_goal = math.atan2(inc_y, inc_x)
-        # if your position is changing and 0,0 is only the start point then use the distance between 2 points formula
-        point_distance_to_goal = np.sqrt((inc_x*inc_x + inc_y*inc_y)*scale_factor)
+            pub.publish(speed)
     else:
-        point_index += 1 
+        point_index += 1
+
+    # while point_distance_to_goal >= 0.5: # we'll now head to our target
+    #     print("x", inc_x)
+    #     print("y", inc_y)
+    #     print("init_angle_to_goal", init_angle_to_goal)
+    #     print("angle_to_goal", angle_to_goal)
+    #     print("theta", theta)
+    #     print("diff", init_angle_to_goal - theta)
+    #     print("point_distance_to_goal", point_distance_to_goal)
+    #     if init_angle_to_goal - theta > 0.2 and np.abs(old - theta) < 0.3:
+    #         speed.linear.x = 0.0
+    #         speed.angular.z = 0.2
+    #     # to avoid overshoot + 360 turn overcorrection
+    #     elif init_angle_to_goal - theta < -0.2 and np.abs(old - theta) < 0.3:
+    #         speed.linear.x = 0.0
+    #         speed.angular.z = -0.2
+    #     else:
+    #         speed.linear.x = 0.3
+    #         speed.angular.z = 0.0
+    #     pub.publish(speed)
+    #     inc_x = (goal.x - x)*scale_factor
+    #     inc_y = (goal.y - y)*scale_factor
+    #     old = theta
+    #     angle_to_goal = math.atan2(inc_y, inc_x)
+    #     # if your position is changing and 0,0 is only the start point then use the distance between 2 points formula
+    #     point_distance_to_goal = np.sqrt((inc_x*inc_x + inc_y*inc_y))
+    #     if inc_x<=0.0 or inc_y<=0.0:
+    #         point_index+=1
+        
+    # else:
+    #     point_index += 1 
 
     r.sleep()
