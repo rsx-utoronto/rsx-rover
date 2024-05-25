@@ -86,6 +86,11 @@ class Gripper():
         
         # Get inputs for the gripper and update the position
         gripper_input           = inputs.x - inputs.o
+
+        # If gripper opening and closing buttons are not pressed, exit the function
+        if gripper_input == 0:
+            return
+        
         self.gripper_goal        = gripper_input * self.gripper_speed + self.gripper_goal
         
         servo_config_flip       = inputs.square
@@ -110,6 +115,7 @@ class Gripper():
             # If not within the 50 degrees range, motor might be stuck and drawing a lot of current
             else:
                 print("ERROR: Gripper Motor Stuck, Curr Pos:", self.gripper_curr)
+                self.gripper_goal = self.gripper_curr
             
             
             if self.servo_connection.device_port:
@@ -140,7 +146,7 @@ class Gripper():
         self.gripper_roll = new_gripper_roll
         
         # Set new gripper position
-        self.gripper_goal    = self.gripper_goal + difference
+        self.gripper_goal    = self.gripper_goal - difference
 
         # Calculate the ticks for the motor
         gripper_ticks       = int((self.gripper_goal) / 360 * GRIPPER_CONVERSION * GRIPPER_REDUCTION)
@@ -162,6 +168,7 @@ class Gripper():
         # If not within the 50 degrees range, motor might be stuck and drawing a lot of current
         else:
             print("ERROR: Gripper Motor Stuck, Curr Pos:", self.gripper_curr)
+            self.gripper_goal = self.gripper_curr
 
 
 if __name__ == "__main__":
