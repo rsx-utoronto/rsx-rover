@@ -23,8 +23,8 @@ class thomasgrid():
 
                 time_reference = time.time()
                 # MOVING
-                while True:
-                    if time.time() - time_reference < self.distance_travelled:
+                while True and detector.is_found()==False:
+                    if time.time() - time_reference < self.distance_travelled and detector.is_found()==False:
                         self.speed.linear.x = 0.8
                         self.pub.publish(self.speed)
                     
@@ -41,8 +41,8 @@ class thomasgrid():
             
             
                 # TURNING
-                while True:
-                    if time.time() - time_reference < 4:
+                while True and detector.is_found()==False:
+                    if time.time() - time_reference < 4 and detector.is_found()==False:
                         self.speed.angular.z = 0.5
                         self.pub.publish(self.speed)
                     else:
@@ -68,8 +68,8 @@ class thomasgrid():
         self.speed.linear.x = 0.0
         self.speed.angular.z = 0.0
         self.pub.publish(self.speed)
-        print ("at stop")
+        print ("thomas: at stop")
         self.go_to_loc = True
         
     def nothing_found_at_end(self):
-         print("nothing found at end")
+         print("thomas: nothing found at end")

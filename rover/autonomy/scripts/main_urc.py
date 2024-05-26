@@ -41,10 +41,6 @@ class maincaller():
         self.name = name
         self.gps_type = gps_type # array
         self.scale_factor = 0.75 # to scale up/down the path
-        # self.sub_ar_detection_node = ar_detection_node.aruco_pub
-        # self.sub_ar_homing = aruco_homing.
-        # self.grid_aruco_search  =
-
         
     def next(self):
         if self.name == "aruco":
@@ -68,16 +64,17 @@ class maincaller():
         tag_detector = ARucoTagDetectionNode()
         # if tag_detector.is_found() == False:      
         grid.move(tag_detector)
+        
         if grid.go_to_loc == True: 
             print ("something is found")  
             #edward's code
 
-            #aim=Aimer( frame_width: int, frame_height: int, min_aruco_area: float, 
-                aruco_min_x_uncert: float, aruco_min_area_uncert: float,
-                max_linear_v: float, max_angular_v: float )
+            # aim=Aimer( 45, 45, 2025,5, 25, 0.8, 0.7 )
 
-            #aim.update(tag_detector.bbox_pub[0], tag_detector.bbox_pub[1], tag_detector.bbox_pub[2], tag_detector.bbox_pub[3])
-            "aimed is done"
+            # aim.update(tag_detector.array[0], tag_detector.array[1], tag_detector.array[2], tag_detector.array[3])
+            
+            at_aruco = aruco_homing.main()
+            print(at_aruco)
         else:
             print("nothing found")
     

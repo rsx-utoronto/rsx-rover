@@ -95,14 +95,15 @@ class ARucoTagDetectionNode():
             bboxs = bboxs[0]
             if draw:
                 for bbox, id in zip(bboxs, ids):
-                    cv2.rectangle(img, (bbox[0][0], bbox[0][1]) , (bbox[2][0], bbox[0][1]), (0,255,0), 4)
+                    cv2.rectangle(img, (bbox[0][0], bbox[0][1]) , (bbox[2][0], bbox[2][1]), (0,255,0), 4)
                     # font
 
                    # print (bbox[0][0],bbox[0][1],bbox[2][0],bbox[2][1])
-                    array=[(bbox[0][0], bbox[0][1]),(bbox[2][0], bbox[0][1]),(bbox[2][0], bbox[2][1]), (bbox[0][0], bbox[2][1])]
-                    data = Float64MultiArray(data=array)
+                    self.array=[bbox[0][0], bbox[0][1],bbox[2][0], bbox[0][1], bbox[0][0], bbox[2][1], bbox[2][0], bbox[2][1]]
+                    data = Float64MultiArray(data=self.array)
                     self.bbox_pub.publish(data)
-                    print("here are the coords from jack's code", self.bbox_pub)
+                    
+                    print("here are the coords from jack's code", self.array[0], self.array[1], self.array[6], self.array[7])
                     
                     
                     font = cv2.FONT_HERSHEY_SIMPLEX
