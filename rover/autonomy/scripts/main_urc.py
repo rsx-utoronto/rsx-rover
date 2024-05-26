@@ -1,5 +1,10 @@
 #!/usr/bin/python3
 
+
+#note
+#positive angluar velocity is counter clockwise 
+
+
 import rospy
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
@@ -22,7 +27,7 @@ import tf2_ros
 import os
 import aruco_homing
 from aruco_homing import Aimer
-from aruco_homing import PID
+from aruco_homing import PID #don't use
 from aruco_homing import AimerROS
 import ar_detection_node 
 from ar_detection_node import ARucoTagDetectionNode
@@ -61,14 +66,18 @@ class maincaller():
         # cted, stop everything and give up on task.
         grid =thomasgrid()  
         tag_detector = ARucoTagDetectionNode()
-        
         # if tag_detector.is_found() == False:      
         grid.move(tag_detector)
         if grid.go_to_loc == True: 
-            # edward
-            # grid.stop()
-            print ("something is found")
-            
+            print ("something is found")  
+            #edward's code
+
+            #aim=Aimer( frame_width: int, frame_height: int, min_aruco_area: float, 
+                aruco_min_x_uncert: float, aruco_min_area_uncert: float,
+                max_linear_v: float, max_angular_v: float )
+
+            #aim.update(tag_detector.bbox_pub[0], tag_detector.bbox_pub[1], tag_detector.bbox_pub[2], tag_detector.bbox_pub[3])
+            "aimed is done"
         else:
             print("nothing found")
     

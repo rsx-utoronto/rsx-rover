@@ -102,6 +102,8 @@ class ARucoTagDetectionNode():
                     array=[(bbox[0][0], bbox[0][1]),(bbox[2][0], bbox[0][1]),(bbox[2][0], bbox[2][1]), (bbox[0][0], bbox[2][1])]
                     data = Float64MultiArray(data=array)
                     self.bbox_pub.publish(data)
+                    print("here are the coords from jack's code", self.bbox_pub)
+                    
                     
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     org = (int(bbox[0][0]), int(bbox[0][1] - 20))

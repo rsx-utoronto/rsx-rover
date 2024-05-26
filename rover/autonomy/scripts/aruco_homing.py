@@ -5,7 +5,7 @@ import rospy
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32MultiArray
 
-class Aimer:
+class Aimer: # 
 
     # frame_width: the width of the frame in pixels
     # frame_height: the height of the frame in pixels
@@ -88,7 +88,7 @@ class PID:
     def reset(self) -> None:
         self.error_sum = 0
 
-class AimerROS(Aimer):
+class AimerROS(Aimer):  #updates coords continuously 
     def __init__(self, frame_width: int, frame_height: int, min_aruco_area: float, 
                  aruco_min_x_uncert: float, aruco_min_area_uncert: float,
                  max_linear_v: float, max_angular_v: float) -> None:
@@ -101,20 +101,20 @@ class AimerROS(Aimer):
         aruco_bottom_right = (data.data[6], data.data[7])
         self.update(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right)
 
-def main():
-    rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
-    pub = rospy.Publisher('cmd_vel', Twist, queue_size=10) # change topic name
-    aimer = AimerROS(640, 480, 1000, 50, 100, 0.5, 0.5) # change constants
-    rospy.Subscriber('aruco_corners', Int32MultiArray, callback=aimer.rosUpdate) # change topic name
-    # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
-    rate = rospy.Rate(10)
-    while not rospy.is_shutdown():
-        twist = Twist()
-        if aimer.angular_v == 1:
-            twist.angular.z = aimer.angular_v
-            twist.linear.x = 0
-        elif aimer.linear_v == 1:
-            twist.linear.x = aimer.max_linear_v
-            twist.angular.z = 0
-        pub.publish(twist)
-        rate.sleep()
+# def main():
+#     rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
+#     pub = rospy.Publisher('cmd_vel', Twist, queue_size=10) # change topic name
+#     aimer = AimerROS(640, 480, 1000, 50, 100, 0.5, 0.5) # change constants
+#     rospy.Subscriber('aruco_corners', Int32MultiArray, callback=aimer.rosUpdate) # change topic name
+#     # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
+#     rate = rospy.Rate(10)
+#     while not rospy.is_shutdown():
+#         twist = Twist()
+#         if aimer.angular_v == 1:
+#             twist.angular.z = aimer.angular_v
+#             twist.linear.x = 0
+#         elif aimer.linear_v == 1:
+#             twist.linear.x = aimer.max_linear_v
+#             twist.angular.z = 0
+#         pub.publish(twist)
+#         rate.sleep()
