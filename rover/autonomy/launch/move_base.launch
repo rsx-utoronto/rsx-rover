@@ -8,8 +8,8 @@
 
    <arg name="use_map_topic" default="true"/>
    <arg name="scan_topic" default="/scan_collapsed" />
-   <!-- <arg name="map_topic" default="rtabmap/grid_map" /> -->
-   <arg name="map_topic" default="map" />
+   <arg name="map_topic" default="rtabmap/grid_map" />
+   <!-- <arg name="map_topic" default="map" /> -->
    <arg name="global_costmap_topic" default="/move_base/global_costmap/costmap" />
 
    <!-- <include file="$(find rover)/rover/autonomy/launch/gmapping.launch" /> -->

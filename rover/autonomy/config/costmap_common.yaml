@@ -1,20 +1,22 @@
-footprint: [[-0.5, -0.5], [-0.5, 0.5], [0.5, 0.5], [0.5, -0.5]]
-footprint_padding: 0.01
+footprint: [[-0.5, -0.5], [-0.5, 0.5], [0.5, 0.5], [0.5, -0.5]] # dimensions of the rover from the center of the robot
+footprint_padding: 0.01 # uncertainty for the footprint of the robot, don't add to padding (not necessary)
+# the rover is 1.2m by 1.2m, reduce the footprint to make it believe that obstacles are far in case it tries 
+# to avoid obstacles that are close to the rover
 
 robot_base_frame: base_link
-update_frequency: 2.0 # default 0.2
-publish_frequency: 2.0
-transform_tolerance: 1.0
+update_frequency: 2.0 # default 0.2 # if the rover moves faster, the update frequency should be faster
+publish_frequency: 2.0 # can be less than update to reduce computation and lag while on the network.
+transform_tolerance: 1.0 # not sure, read documentation, sometimes are errors (warnings, ignore)
 
-resolution: 0.05
+resolution: 0.05 # size of each grid cell in the costmap
 
-obstacle_range: 3.5
-raytrace_range: 4.0
+obstacle_range: 3.5 # only show obstacles that are approx 3.5 meters away, usually local.
+raytrace_range: 4.0 # how far camera can see, can make larger (~7). don't need to increase.
 
 #layer definitions
 static:
     map_topic: map
-    subscribe_to_updates: true
+    subscribe_to_updates: true # if the map is updated, the costmap is updated
 
 obstacles_laser:
     observation_sources: point_cloud_sensor
@@ -22,5 +24,5 @@ obstacles_laser:
     # laser_scan_sensor: {sensor_frame: velodyne, data_type: LaserScan, topic: /scan_collapsed, marking: true, clearing: true} # scan topic
 
 inflation:
-    inflation_radius: 0.2
+    inflation_radius: 0.2 # radius of the blue circle around the obstacles, how far the rover should stay away from obstacles
 

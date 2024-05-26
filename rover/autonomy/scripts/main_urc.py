@@ -66,17 +66,11 @@ class maincaller():
         grid.move(tag_detector)
         
         if grid.go_to_loc == True: 
-            print ("something is found")  
-            #edward's code
-
-            # aim=Aimer( 45, 45, 2025,5, 25, 0.8, 0.7 )
-
-            # aim.update(tag_detector.array[0], tag_detector.array[1], tag_detector.array[2], tag_detector.array[3])
-            
+            print ("MAIN: something is found")  
             at_aruco = aruco_homing.main()
-            print(at_aruco)
+            print("MAIN: at aruco", at_aruco)
         else:
-            print("nothing found")
+            print("MAIN: nothing found")
     
     def gps(self):
         pass
