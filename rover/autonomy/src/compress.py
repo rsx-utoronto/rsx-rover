@@ -10,7 +10,7 @@ import cv2
 
 QUALITY = 1
 PUBLISH_RATE = 5
-INPUT_TOPIC = '/camera/color/image_raw'
+INPUT_TOPIC = '/zed_node/rgb/image_rect_color'
 OUTPUT_TOPIC = 'c_stream'
 
 class compressedImage():
@@ -28,6 +28,10 @@ class compressedImage():
         decBuffer = cv2.imdecode(compressedBuffer, 1)
 
         self.compressed = self.bridge.cv2_to_imgmsg(decBuffer, encoding="passthrough")
+<<<<<<< HEAD
+=======
+        self.publish()
+>>>>>>> master
 
     def publish(self):
         self.outStream.publish(self.compressed)
@@ -36,6 +40,13 @@ if __name__ == '__main__':
     rospy.init_node('compressed', anonymous=True)
     compressed_image = compressedImage()
     rate = rospy.Rate(PUBLISH_RATE)
+<<<<<<< HEAD
     while not rospy.is_shutdown():
         compressed_image.publish()
         rate.sleep()
+=======
+    rospy.spin()
+    while not rospy.is_shutdown():
+        compressed_image.publish()
+        #rate.sleep()
+>>>>>>> master

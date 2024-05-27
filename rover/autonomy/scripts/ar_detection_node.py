@@ -9,6 +9,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from rover.msg import StateMsg
 import numpy as np
 import os
+from std_msgs.msg import Float64MultiArray
 
 bridge = CvBridge()
 
@@ -20,24 +21,27 @@ class ARucoTagDetectionNode():
         self.info_topic = "/zed_node/rgb/camera_info"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
+        self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         self.aruco_pub = rospy.Publisher('aruco_node/rover_state', StateMsg, queue_size=10)
         self.scanned_pub = rospy.Publisher('aruco_scanned_node/rover_state', StateMsg, queue_size=10)
         self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
+        self.bbox_pub = rospy.Publisher('aruco_node/bbox', Float64MultiArray, queue_size=10)
         t = time.time()
-        while (time.time() - t) < 15:
+        while (time.time() - t) < 2:
             print("Passing time")
             pass
-        self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         self.bridge = CvBridge()
         self.current_state = StateMsg()
         self.curr_aruco_detections = {}
         self.detected_aruco_ids = []
+        self.aruco_locations = []
         self.detect_thresh = 5
         self.permanent_thresh = 10
         self.K = None
         self.D = None
         self.updated_state_msg = StateMsg()
         self.scanned_state_smg = StateMsg()
+        self.found = False
 
     def image_callback(self, ros_image):
         try:
@@ -65,7 +69,7 @@ class ARucoTagDetectionNode():
     def findArucoMarkers(self, img, markerSize=4, totalMarkers=100, draw=True):
         imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         key = getattr(aruco, 'DICT_' + str(markerSize) + 'X' + str(markerSize) + "_" + str(totalMarkers))
-        arucoDict = aruco.Dictionary_get(key)
+        arucoDict = aruco.getPredefinedDictionary(key)
         arucoParam = aruco.DetectorParameters_create()
         bboxs, ids, rejected = aruco.detectMarkers(imgGray,arucoDict,parameters=arucoParam)
 
@@ -93,6 +97,15 @@ class ARucoTagDetectionNode():
                 for bbox, id in zip(bboxs, ids):
                     cv2.rectangle(img, (bbox[0][0], bbox[0][1]) , (bbox[2][0], bbox[2][1]), (0,255,0), 4)
                     # font
+
+                   # print (bbox[0][0],bbox[0][1],bbox[2][0],bbox[2][1])
+                    self.array=[bbox[0][0], bbox[0][1],bbox[2][0], bbox[0][1], bbox[0][0], bbox[2][1], bbox[2][0], bbox[2][1]]
+                    data = Float64MultiArray(data=self.array)
+                    self.bbox_pub.publish(data)
+                    
+                    print("here are the coords from jack's code", self.array[0], self.array[1], self.array[6], self.array[7])
+                    
+                    
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     org = (int(bbox[0][0]), int(bbox[0][1] - 20))
                     fontScale = 1
@@ -100,6 +113,8 @@ class ARucoTagDetectionNode():
                     thickness = 2
                     img = cv2.putText(img, f"ID: {int(id)}", org, font, 
                                     fontScale, color, thickness, cv2.LINE_AA)
+                    
+                    
             
             img_msg = bridge.cv2_to_imgmsg(img, encoding="passthrough")
             self.vis_pub.publish(img_msg)
@@ -107,24 +122,33 @@ class ARucoTagDetectionNode():
         self.updated_state_msg = self.current_state
 
         if ids is not None:
+            print(self.aruco_locations)
             self.updated_state_msg.AR_TAG_DETECTED = True
             self.updated_state_msg.curr_AR_ID = int(best_detection)
+
+            # Transform into a goal in the odom frame
+
+            # lookup baselink to camera link transform 
+            # lookup baselink to odom transform 
+            # transform the 4x4 pose to the odom frame and publish below
+
             self.scanned_state_smg.AR_SCANNED = False
+            self.found = True
         else:
             self.updated_state_msg.AR_TAG_DETECTED = False
             self.updated_state_msg.curr_AR_ID = -1
+            self.found = False
 
         self.aruco_pub.publish(self.updated_state_msg)
         self.scanned_pub.publish(self.scanned_state_smg)
-
+     
+    def is_found(self):
+        return self.found
 
 def main():
     rospy.init_node('aruco_tag_detector', anonymous=True)
-
     AR_detector = ARucoTagDetectionNode()
-
     rospy.spin()
-
 
 if __name__ == "__main__":
     main()

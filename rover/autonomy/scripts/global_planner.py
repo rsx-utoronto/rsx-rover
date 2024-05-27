@@ -88,6 +88,7 @@ while not rospy.is_shutdown():
 
     if abs(angle_error) < 0.3:
         if pos_error <= 0.5:
+            pos_integral = 0
             speed.linear.x = 0.0
             pub.publish(speed)
             if abs(angle_error) < 0.2: 
