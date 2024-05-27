@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 
 #note
@@ -35,6 +35,7 @@ import grid_search
 from grid_search import grid_search_class
 import thomas_grid_search 
 from thomas_grid_search import thomasgrid
+import write_serial
 
 class maincaller():
     def __init__(self, name, gps_type):
@@ -60,6 +61,10 @@ class maincaller():
         # if something is detected, shit from jack's pass
         # if nothing is dete
         # cted, stop everything and give up on task.
+        port = '/dev/ttyACM0' # change based on find_usb.sh
+        led = write_serial.write_serial(port)
+        led.write('a')
+
         grid =thomasgrid()  
         tag_detector = ARucoTagDetectionNode()
         # if tag_detector.is_found() == False:      
@@ -69,6 +74,8 @@ class maincaller():
             print ("MAIN: something is found")  
             at_aruco = aruco_homing.main()
             print("MAIN: at aruco", at_aruco)
+            if at_aruco:
+                led.write('g')
         else:
             print("MAIN: nothing found")
     
