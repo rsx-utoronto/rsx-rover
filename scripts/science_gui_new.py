@@ -347,13 +347,13 @@ PMTon = tk.Button(m, text='PMT Light On',
                         height= BUTTONHEIGHT, 
                         bg="green",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('^', connection))
+                        command= lambda:send_data('+', connection))
 PMToff = tk.Button(m, text='PMT Light Off', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
                         bg="green",
                         font= ('Helvetica 20 bold'),
-                        command= lambda:send_data('%', connection))
+                        command= lambda:send_data('-', connection))
 PMTdata = tk.Button(m, text='PMT Data', 
                         width=BUTTONWIDTH,
                         height= BUTTONHEIGHT, 
