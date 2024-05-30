@@ -1,0 +1,85 @@
+Electrical Set-up: 
+    1. Rover battery should be plugged in and adequately charged (Approx 16 V). BMS should shut off rover if power low (under 13.6 V)
+    2. AMD should have
+        i. power supplied
+        ii. ublox GPS plugged into USB3 port (blue port)
+        iii. Ethernet connected to the Network Switch
+    3. Jetson should have
+        i. power supplied
+        ii. ZED camera plugged in
+        iii. Ethernet connected to the Network Switch
+    4. Mast Camera should have
+        i. power supplied (12 V **double check)
+    5. Network Switch should have 
+        i. AMD, Jetson, as above
+        ii. TP Link (LAN)
+    6. TP Link 
+        i. Network Switch in (LAN), as above
+        ii. Antenna ethernet (POE)
+        iii. Barrel connector (red and black) with label POE plugged into DC
+
+
+
+Communication Set-up:
+    Power the base station antenna (outlet) 
+    The AP should show a green light initially 
+    Connect the ethernet cable to the base station laptop
+    Make sure a profile exists on the computer in the 
+    Once communication with the rover antenna has been established, all the bars on the AP will turn on  
+    Power on the rover 
+    All motors should be flashing red, the AMD power button lit up, and the jetson have a green light 
+    Check that the bars on both APs turn on fully 
+
+Start up Software 
+    1. Open an SSH connection:
+        a. Need to open a connection to the amd in a terminal using ‘ssh amd’ and in another terminal to the jetson with ‘ssh jetson’
+        b. Alternative is to open a connection with vs code by clicking the blue button in the bottom left corner, then in the drop down click on ‘Connect to Host…’ and then ‘jetson’/’amd’.
+    2. Base Laptop: Make sure you have set the base laptop to have the AMD as master 
+    In terminal do this with the two commands ‘setip’ and ‘setmaster’ (if this does not work follow the below)
+    export ROS_MASTER_URI=http://192.168.0.99:11311
+    export ROS_IP=192.168.0.{base laptop address} (20 for thinkpad 45 for dell) - note that you will need to create a profile with: 
+        a. Select manual 
+        b. Ip in the above format with a number between 1 and 255 as the last digits 
+        c. A mask 255.255.255.0 
+        d. You may also need to add your laptop in the /etc/hosts file on both the base laptop and NUC to allow proper ROS networking 
+    3. On the AMD run ./setup_can.sh to set up the motors 
+        ./rover_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh
+        **USB** to check which usb port is connected, do ./rover_ws/src/rsx-rover/scripts/utils/gen/find_usb.sh
+    4. (Optional) To check CAN lights, check CAN communication with the following commands in amd terminal
+        a. cansend can0 999#DEADBEEF 
+        b. candump can0 
+        c. A stream of info should be showed to show communication and the lights on the motors will flash orange.
+    5. (Error) If the motor lights flash green:     
+        a. Turn on and off the AMD. If this fails,
+        b. Power cycle the rover
+        c. Ask electrical what's up?
+    6. Launch the motors on AMD
+        roslaunch rover falcons.launch 
+    7a. (Manual) To start the manual drive 
+        a. On base laptop (with controller connected) run command ‘roslaunch rover joy.launch’
+        b. On AMD run command ‘rosrun rover drive_sender_node’
+        c. If you aren’t getting input try restarting the joy node, also check its publishing with ‘rostopic echo software/joy’
+    7b. (Autonomy) This is suspicious.
+        a. On AMD run command 'roslaunch rover move_base.launch'.
+        b. **Check move base documentation below.
+    8. (GPS) To run GPS, ensure that the GPS USB says ublox on it. It must be plugged into a blue port on the AMD (USB3). 
+        a. Run on AMD 'roslaunch rover ublox.launch'. 
+        b. To see what it is printing, run 'rostopic echo ublox/fix'
+    9. Launch the ZED camera 
+        a. On the Jetson run command ‘roslaunch rover zed_odom.launch’
+        b. To check camera feed open rviz on the base laptop and check the topic ‘zed_node/image_rect_colour/compressed’
+        c. On Jetson to run odometry ‘roslaunch rover rtabmap_zed.launch’
+
+Ignore for now the following
+    In the rover_ws/src/rsx-rover/scripts/utils/comms/nuc_comms_check.py file, go to line 12 and change the base_ip to the base station’s ip
+    Launch the state machine
+        roslaunch rover state_machine.launch
+    Base Laptop: Connect two controllers to the base laptop
+    Base Laptop: Launch the GUI and joy on your base laptop 
+        roslaunch rover joy.launch
+            Change the mode from Idle to Manual in the GUI for manual control
+        You can echo the joy topic on the NUC to make sure it is communicating and check which controller is for arm and which one is for software.
+    Launch sensors 
+        roslaunch rover sensors.launch
+    To run move base 
+        roslaunch rover move_base.launch 
