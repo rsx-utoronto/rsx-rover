@@ -4,14 +4,15 @@ Electrical Set-up:
         i. power supplied
         ii. ublox GPS plugged into USB3 port (blue port)
         iii. Ethernet connected to the Network Switch
+        iv. CAN connected
     3. Jetson should have
         i. power supplied
         ii. ZED camera plugged in
         iii. Ethernet connected to the Network Switch
     4. Mast Camera should have
-        i. power supplied (12 V **double check)
+        i. power supplied (connected to Network Switch)
     5. Network Switch should have 
-        i. AMD, Jetson, as above
+        i. AMD, Jetson, and Mast Camera as above
         ii. TP Link (LAN)
     6. TP Link 
         i. Network Switch in (LAN), as above
