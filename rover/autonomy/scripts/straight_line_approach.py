@@ -10,9 +10,9 @@ def ToEulerAngles(w, x, y, z):
     angles = [0, 0, 0] # [roll, pitch, yaw]
 
     # roll (x-axis rotation)
-    sinr_cosp = 2 * (w * x + y * z);
-    cosr_cosp = 1 - 2 * (x * x + y * y);
-    angles[0] = math.atan2(sinr_cosp, cosr_cosp);
+    sinr_cosp = 2 * (w * x + y * z)
+    cosr_cosp = 1 - 2 * (x * x + y * y)
+    angles[0] = math.atan2(sinr_cosp, cosr_cosp)
 
     # pitch (y-axis rotation)
     sinp = math.sqrt(1 + 2 * (w * y - x * z))
@@ -49,7 +49,7 @@ def straight_line_approach(lin_vel, ang_vel):
         msg = Twist()
         if target_x == None or target_y == None or x == None or y == None:
             continue
-        target_heading = math.atan2(target_y - y, target_x - x) # in radians
+        target_heading = math.atan2(target_x - x, target_y - y) # in radians
         target_distance = math.sqrt((target_x - x) ** 2 + (target_y - y) ** 2)
         angle_diff = target_heading - heading
         if angle_diff > math.pi:
