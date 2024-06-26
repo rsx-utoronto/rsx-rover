@@ -5,6 +5,8 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray
 import math
+import straight_line_approach_fake_front_end
+
 
 def ToEulerAngles(w, x, y, z):
     angles = [0, 0, 0] # [roll, pitch, yaw]
@@ -26,12 +28,6 @@ def ToEulerAngles(w, x, y, z):
 
     return angles
 
-def odom_callback(msg):
-    global x, y, heading
-    x = msg.pose.pose.position.x
-    y = msg.pose.pose.position.y
-    heading = ToEulerAngles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
-    # heading is in radians
 
 def target_callback(msg):
     global target_x, target_y
