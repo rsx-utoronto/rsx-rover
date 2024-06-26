@@ -12,3 +12,15 @@ def odom_callback(msg):
     y = msg.pose.pose.position.y
     heading = ToEulerAngles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
     # heading is in radians
+
+
+    if __name__ == '__main__':
+    x = None
+    y = None
+    heading = None
+    target_x = None
+    target_y = None
+    try:
+        straight_line_approach(1, 1) # change linear and angular velocities
+    except rospy.ROSInterruptException:
+        pass
