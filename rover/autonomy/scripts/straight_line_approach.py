@@ -49,6 +49,7 @@ def straight_line_approach(lin_vel, ang_vel):
     rate = rospy.Rate(10)
     print("till here works")
     while not rospy.is_shutdown():
+
         msg = Twist()
         if target_x == None or target_y == None or x == None or y == None:
             continue      
