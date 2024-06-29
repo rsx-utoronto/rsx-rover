@@ -54,8 +54,8 @@ def straight_line_approach(lin_vel, ang_vel):
         if target_x == None or target_y == None or x == None or y == None:
             continue
         
-        target_heading = math.atan2(target_x - x, target_y - y) # in radians
-        print("target heading", target_heading)
+        target_heading = math.atan2(target_x - x, target_y - y) # in radians #1. Switch places, 
+        print("target heading", target_heading)  
         target_distance = math.sqrt((target_x - x) ** 2 + (target_y - y) ** 2)
         
 
@@ -63,32 +63,37 @@ def straight_line_approach(lin_vel, ang_vel):
         print("target_distance", target_distance)
         print(x,y)
         angle_diff = target_heading - heading
-        if angle_diff > math.pi:
+        if angle_diff > math.pi: #this makes sure angle is in [-pi, pi] 
             angle_diff -= 2 * math.pi
         elif angle_diff < -math.pi:
             angle_diff += 2 * math.pi
-        if abs(angle_diff) < 0.3:
+        if abs(angle_diff) =< 0.3: #changed this ti < and =
             delta=target_x-x
             print("target_reached_x",delta)
             print("current_X", x)
             #if delta is negative, go to negative velocity.
-           
+            
+            
+            #should not need to go backwards! Rover should face direction.
+            #can delete this part and just do msg.linear.x =0 
             if delta>0.5:
                 print("target still greater than 0 so moving forward")
                 msg.linear.x = lin_vel
             elif delta<0.5:
-                msg.linear.x= -lin_vel
+                msg.linear.x = -lin_vel
                 print("going in negative velocity now", -lin_vel)
             else: 
-                print("target is iwthin 0.5")
-                msg.linear.x=0
+                print("target is iwthin 0.5") 
+                msg.linear.x = 0
+            #should not need to go backwards! Rover should face direction.
+                
+        
             msg.angular.z = 0
-        elif angle_diff > 0:
+            
+        elif angle_diff > 0.3: #changes this from 0 to 0.3
             msg.linear.x = 0
             msg.angular.z = ang_vel
         else:
-            
-            
             msg.linear.x = 0
             msg.angular.z = -ang_vel
         pub.publish(msg)
