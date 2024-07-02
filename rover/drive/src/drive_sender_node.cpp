@@ -95,7 +95,7 @@ void TeleopRover::SetVelocity(){
 	{
 		int KILL = 10; // PS button to kill (0 velocity) as soon as it is pressed
 		if (buttons[KILL] == 1){
-			ROS_INFO("KILL ENGAGED\n\n\n\n\n\n\n\n\n\n");
+			// ROS_INFO("KILL ENGAGED\n\n\n\n\n\n\n\n\n\n");
 			twist.linear.x = 0;
 			twist.linear.y = 0;
 			twist.linear.z = 0;
@@ -107,7 +107,7 @@ void TeleopRover::SetVelocity(){
 			KILL_PRESSED = true;
 		}
 		else {
-				ROS_INFO("KILL DISENGAGED");
+				// ROS_INFO("KILL DISENGAGED");
 				KILL_PRESSED = false;
 			}
 
@@ -145,7 +145,21 @@ void TeleopRover::SetVelocity(){
 			// ROS_INFO("R2:%f", posThrottle);
 			// ROS_INFO("L2:%f", negThrottle);
 
-			double max_allowed_lin_speed = gear * MAX_LINEAR_SPEED; // Maximum speed allowed for the gear
+			double turnFactor_x_lin_vel = 1 - std::fabs(turnFactor_x); // When completely to the right or left, turnFactor_x = +-1, lin_vel = 0
+			                                       			  // Linear velocity is less when turning, least when turining on spot 		
+			// This formula is causing the rover max speed to decrease too much when turning, we don't want that
+			// This is because there is a huge dead zone for turnFactor_x
+			// Need to reduce the weight of turnFactor_lin_vel
+			// It can be done (if needed) by multiplying std::fabs(turnFactor_x) by a number less than 1
+			// This would also make the rover have some linear speed when the joy stick is completely to the right or left
+			// We could also use turnFactor_y to control the linear speed when turning
+			// turnFactor_y has a smaller dead zone but does not work because it's 0 when the joystick is not moved which makes the max speed 0
+			// double max_allowed_lin_speed = gear * MAX_LINEAR_SPEED * std::fabs(turnFactor_y); // Maximum speed allowed for the gear
+			
+			double max_allowed_lin_speed = gear * MAX_LINEAR_SPEED * turnFactor_x_lin_vel; // Maximum speed allowed for the gear
+
+			
+
 			double acc = 0; // Acceleration value based on how much R2 is pressed
 			double max_allowed_ang_speed = gear * MAX_ANGULAR_SPEED; // Maximum speed allowed for the gear
 
@@ -298,6 +312,11 @@ void TeleopRover::SetVelocity(){
 				ROS_INFO("No Throttle Pressed %f", lin_vel);
 			}
 			
+			if (buttons[C] != 1 && buttons[S] != 1)
+			{
+				ang_vel = max_allowed_ang_speed * turnFactor_x;
+			}
+
 			ROS_INFO("Linear velocity: %f", (lin_vel));
 			ROS_INFO("Angular velocity: %f", (ang_vel));
 			twist.linear.x = static_cast<double>(lin_vel); // Should be in range of -MAX_LINEAR_SPEED to +MAX_LINEAR_SPEED 
