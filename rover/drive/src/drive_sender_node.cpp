@@ -41,7 +41,8 @@ public:
 	double robot_radius = 1;
 	double MAX_LINEAR_SPEED = 2.5; // 2.5 speed est * 0.65 from rough calibration
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
-	double MAX_ACCELERATION = 0.075;
+	int RATE = 20;
+	double MAX_ACCELERATION = 0.3/RATE; // 0.1 m/s^2
 	double lin_vel = 0;
 	double prev_lin_vel = 0;
 	// double TIME = 
@@ -88,26 +89,26 @@ void TeleopRover::stateCallback(const rover::StateMsg::ConstPtr& state_msg){
 }
 
 void TeleopRover::SetVelocity(){
-	ros::Rate loop_rate(20);
+	ros::Rate loop_rate(RATE);
 	while (ros::ok())
 	{
 		int KILL = 10; // PS button to kill (0 velocity) as soon as it is pressed
 		if (buttons[KILL] == 1){
-			if (KILL_PRESSED == false) {
-				ROS_INFO("KILL ENGAGED");
-				twist.linear.x = 0;
-				twist.linear.y = 0;
-				twist.linear.z = 0;
-				twist.angular.x = 0;
-				twist.angular.y = 0;
-				twist.angular.z = 0;
-				drive_pub.publish(twist);	
-				KILL_PRESSED = true;
-			} else {
+			ROS_INFO("KILL ENGAGED\n\n\n\n\n\n\n\n\n\n");
+			twist.linear.x = 0;
+			twist.linear.y = 0;
+			twist.linear.z = 0;
+			twist.angular.x = 0;
+			twist.angular.y = 0;
+			twist.angular.z = 0;
+			drive_pub.publish(twist);
+			prev_lin_vel = 0;	
+			KILL_PRESSED = true;
+		}
+		else {
 				ROS_INFO("KILL DISENGAGED");
 				KILL_PRESSED = false;
 			}
-		}
 
 		if (MANUAL_ENABLED && ~KILL_PRESSED){
 			twist.linear.x = 0; 
@@ -121,8 +122,12 @@ void TeleopRover::SetVelocity(){
 			int L2 = 2;
 			int LS_x = 0; // x axis of left joystick
 			int LS_y = 1; // y axis of left joystick
-			int dec_speed = 4; // L1
-			int inc_speed = 5; // R1
+			int L1 = 4; // L1
+			int R1 = 5; // R1
+			int X = 0; // CROSS button
+			int C = 1; // CIRCLE button
+			int T = 2; // TRIANGLE button
+			int S = 3; // SQUARE button
 
 			// Values from Controller
 			double posThrottle = static_cast<double>(axes[R2]);
@@ -136,15 +141,15 @@ void TeleopRover::SetVelocity(){
 			negThrottle = (negThrottle + 1) / 2; // Normalizing values from 0 to 1
 			posThrottle = 1 - posThrottle; // Inverting values because posThrottle is 1 when not pressed, 0 when completely pressed
 			negThrottle = 1 - negThrottle; // Inverting values
-			ROS_INFO("R2:%f", posThrottle);
-			ROS_INFO("L2:%f", negThrottle);
+			// ROS_INFO("R2:%f", posThrottle);
+			// ROS_INFO("L2:%f", negThrottle);
 
 			double max_allowed_speed = gear * MAX_LINEAR_SPEED; // Maximum speed allowed for the gear
 			double acc = 0; // Acceleration value based on how much R2 is pressed
 
 			if (gear_pressed)
 			{
-				if (buttons[dec_speed] != 1 && buttons[inc_speed] != 1)
+				if (buttons[T] != 1 && buttons[S] != 1)
 				{
 					gear_pressed = false;
 				}
@@ -152,7 +157,7 @@ void TeleopRover::SetVelocity(){
 			else
 			{
 				// Encoding values for gear selection (range 0 - 1)
-				if (buttons[dec_speed] == 1) // decrease
+				if (buttons[S] == 1) // decrease
 				{
 					if (gear >= 0.1) // Change this value to change the gear step
 						gear -= 0.1;
@@ -160,7 +165,7 @@ void TeleopRover::SetVelocity(){
 						gear = 0;
 					gear_pressed = true;
 				}
-				else if (buttons[inc_speed] == 1) // increase
+				else if (buttons[T] == 1) // increase
 				{
 					if (gear <= 0.9)
 						gear += 0.1;
@@ -169,8 +174,13 @@ void TeleopRover::SetVelocity(){
 					gear_pressed = true;
 				}
 			}
-
-			if (posThrottle != 0 && negThrottle != 0)
+			ROS_INFO("KILL_ENGAGED: %d", KILL_PRESSED);
+			if (KILL_PRESSED == true)
+			{
+				lin_vel = 0;
+				prev_lin_vel = 0;
+			}
+			else if (posThrottle != 0 && negThrottle != 0)
 			{
 				lin_vel = prev_lin_vel;
 				ROS_INFO("Both Throttle Pressed %f", lin_vel);
@@ -187,8 +197,6 @@ void TeleopRover::SetVelocity(){
 				}
 				else
 				{
-					// This is for the case when the gear is decreased while the throttle is pressed
-					// the max allowed speed decreases, so the speed should decelerate instead of instantly decrease
 					if (prev_lin_vel <= max_allowed_speed)
 					{
 						lin_vel = max_allowed_speed;
@@ -239,7 +247,7 @@ void TeleopRover::SetVelocity(){
 			}
 			else
 			{
-				if (lin_vel != 0)
+				if (prev_lin_vel != 0) // This is equal to 0 when the throttle is not pressed in the beginning or the kill is engaged
 				{
 					if (lin_vel > 0)
 					{
@@ -261,6 +269,11 @@ void TeleopRover::SetVelocity(){
 							prev_lin_vel = 0;
 						}
 					}
+				}
+				else
+				{
+					lin_vel = 0;
+					prev_lin_vel = 0;
 				}
 				
 				ROS_INFO("No Throttle Pressed %f", lin_vel);
