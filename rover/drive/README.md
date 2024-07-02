@@ -16,13 +16,14 @@ The drive sender node is used to send velocity commands to the `/drive` topic
 - R2 to accelerate, L2 to decelarate 
 	- If both, move at that constant speed
     - If none, stop the rover with max decelearation
-- Triangle to increase gear, square to decrease gear
+- Triangle to increase gear, X to decrease gear
 - Left joystick to control steering
 	- the y vector is not used
 	- the x vector is used to: 
 		- control steering (more x, more steering)
 		- control lnear speed (more x, less lin speed)
-- Circle to turn completely on spot (linear speed = 0)
+- Circle to turn completely on spot (linear speed = 0) clockwise
+- Square to turn completely on spot (linear speed = 0) counter-clockwise
 - Reimplement the network status thing so that rover stops moving as soon as we get disconnected from the network
 
 ### Notes:

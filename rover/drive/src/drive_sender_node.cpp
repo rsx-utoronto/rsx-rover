@@ -45,6 +45,7 @@ public:
 	double MAX_ACCELERATION = 0.3/RATE; // 0.1 m/s^2
 	double lin_vel = 0;
 	double prev_lin_vel = 0;
+	double ang_vel = 0;
 	// double TIME = 
 	double gear = 0; // set to 0 initially
 	ros::Publisher drive_pub;
@@ -144,12 +145,13 @@ void TeleopRover::SetVelocity(){
 			// ROS_INFO("R2:%f", posThrottle);
 			// ROS_INFO("L2:%f", negThrottle);
 
-			double max_allowed_speed = gear * MAX_LINEAR_SPEED; // Maximum speed allowed for the gear
+			double max_allowed_lin_speed = gear * MAX_LINEAR_SPEED; // Maximum speed allowed for the gear
 			double acc = 0; // Acceleration value based on how much R2 is pressed
+			double max_allowed_ang_speed = gear * MAX_ANGULAR_SPEED; // Maximum speed allowed for the gear
 
 			if (gear_pressed)
 			{
-				if (buttons[T] != 1 && buttons[S] != 1)
+				if (buttons[T] != 1 && buttons[X] != 1)
 				{
 					gear_pressed = false;
 				}
@@ -157,7 +159,7 @@ void TeleopRover::SetVelocity(){
 			else
 			{
 				// Encoding values for gear selection (range 0 - 1)
-				if (buttons[S] == 1) // decrease
+				if (buttons[X] == 1) // decrease
 				{
 					if (gear >= 0.1) // Change this value to change the gear step
 						gear -= 0.1;
@@ -175,10 +177,27 @@ void TeleopRover::SetVelocity(){
 				}
 			}
 			ROS_INFO("KILL_ENGAGED: %d", KILL_PRESSED);
+			// This is a bit repetitive (there was an if KILL_PRESSED earlier) but it works so I am not gonna change it
 			if (KILL_PRESSED == true)
 			{
 				lin_vel = 0;
 				prev_lin_vel = 0;
+			}
+			else if (buttons[C] == 1)
+			{
+				// When Circle is pressed, turns on spot with 0 linear speed
+				// Turns the rover in place clockwise with max angular speed for that gear
+				lin_vel = 0;
+				prev_lin_vel = 0;
+				ang_vel = -max_allowed_ang_speed;
+			}
+			else if (buttons[S] == 1)
+			{
+				// When X is pressed, turns on spot with 0 linear speed
+				// Turns the rover in place counter-clockwise with max angular speed for that gear
+				lin_vel = 0;
+				prev_lin_vel = 0;
+				ang_vel = max_allowed_ang_speed;
 			}
 			else if (posThrottle != 0 && negThrottle != 0)
 			{
@@ -188,7 +207,7 @@ void TeleopRover::SetVelocity(){
 			else if (posThrottle !=0)
 			{
 				acc = posThrottle * MAX_ACCELERATION;
-				if ((lin_vel + acc) < max_allowed_speed)
+				if ((lin_vel + acc) < max_allowed_lin_speed)
 				{
 					// ROS_INFO("acc = %f", acc);
 					// ROS_INFO("lin_vel = %f", lin_vel);
@@ -197,9 +216,9 @@ void TeleopRover::SetVelocity(){
 				}
 				else
 				{
-					if (prev_lin_vel <= max_allowed_speed)
+					if (prev_lin_vel <= max_allowed_lin_speed)
 					{
-						lin_vel = max_allowed_speed;
+						lin_vel = max_allowed_lin_speed;
 						prev_lin_vel = lin_vel;
 					}
 					else
@@ -216,16 +235,16 @@ void TeleopRover::SetVelocity(){
 			{
 				acc = negThrottle * MAX_ACCELERATION;
 				// ROS_INFO("lin_vel = %f", std::fabs(lin_vel - acc));
-				if ((std::fabs(lin_vel - acc)) < max_allowed_speed) // floating point aboslute value - fabs
+				if ((std::fabs(lin_vel - acc)) < max_allowed_lin_speed) // floating point aboslute value - fabs
 				{
 					lin_vel = prev_lin_vel - acc;
 					prev_lin_vel = lin_vel;
 				}
 				else
 				{
-					if (std::fabs(prev_lin_vel) <= max_allowed_speed)
+					if (std::fabs(prev_lin_vel) <= max_allowed_lin_speed)
 					{
-						lin_vel = -max_allowed_speed;
+						lin_vel = -max_allowed_lin_speed;
 						prev_lin_vel = lin_vel;
 					}
 					else
@@ -279,10 +298,10 @@ void TeleopRover::SetVelocity(){
 				ROS_INFO("No Throttle Pressed %f", lin_vel);
 			}
 			
-			turnFactor_x = turnFactor_x * gear;
 			ROS_INFO("Linear velocity: %f", (lin_vel));
+			ROS_INFO("Angular velocity: %f", (ang_vel));
 			twist.linear.x = static_cast<double>(lin_vel); // Should be in range of -MAX_LINEAR_SPEED to +MAX_LINEAR_SPEED 
-			twist.angular.z = static_cast<double>(turnFactor_x)*MAX_ANGULAR_SPEED; // Should be in range of -MAX_ANGULAR_SPEED to +MAX_ANGULAR_SPEED 
+			twist.angular.z = static_cast<double>(ang_vel); // Should be in range of -MAX_ANGULAR_SPEED to +MAX_ANGULAR_SPEED 
 
 			// ROS_INFO("Turn Factor X %f", turnFactor_x);
 			// ROS_INFO("Turn Factor Y %f", turnFactor_y);
