@@ -42,7 +42,7 @@ public:
 	double MAX_LINEAR_SPEED = 2.5; // 2.5 speed est * 0.65 from rough calibration
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
 	int RATE = 20;
-	double MAX_ACCELERATION = 0.3/RATE; // 0.1 m/s^2
+	double MAX_ACCELERATION = 0.5/RATE; // 0.1 m/s^2
 	double lin_vel = 0;
 	double prev_lin_vel = 0;
 	double ang_vel = 0;
@@ -129,6 +129,8 @@ void TeleopRover::SetVelocity(){
 			int C = 1; // CIRCLE button
 			int T = 2; // TRIANGLE button
 			int S = 3; // SQUARE button
+			// int hor_dpad = 6; // the horizontal d pad button, left is +1 and right is -1
+			// ROS_INFO("%f", axes[hor_dpad]);
 
 			// Values from Controller
 			double posThrottle = static_cast<double>(axes[R2]);
@@ -156,7 +158,7 @@ void TeleopRover::SetVelocity(){
 			// turnFactor_y has a smaller dead zone but does not work because it's 0 when the joystick is not moved which makes the max speed 0
 			// double max_allowed_lin_speed = gear * MAX_LINEAR_SPEED * std::fabs(turnFactor_y); // Maximum speed allowed for the gear
 			
-			double max_allowed_lin_speed = gear * MAX_LINEAR_SPEED * turnFactor_x_lin_vel; // Maximum speed allowed for the gear
+			double max_allowed_lin_speed = gear * MAX_LINEAR_SPEED; // * turnFactor_x_lin_vel; // Maximum speed allowed for the gear
 
 			
 
