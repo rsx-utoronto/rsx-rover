@@ -25,9 +25,25 @@ It works in a very sketchy way:
 - Also, the ssh command doesn't work in the service for some reason
 - **If someone has time, figure out this stuff**
 
-## Future idea: 
+## New Idea: 
 - Make a file that takes input from a button (either one of our bad controller or a button connected to an arduino)
 - If the button is pressed, run the `manual_control` file
 - Make a service that starts this file automatically on startup
 - Result: A file is running in background waiting for input, once it gets input, it makes the rover drivable without using any laptop - this is for using the rover for showcasing, for fun, for ease of use
 - When it doesn't get input, it doesn't do anything - this is when we are doing competition setup and we have laptops connected, we don't need to drive the rover around with a controller bluetooth connected to the rover. This can also help when we just want to debug
+
+- To take input from the controller, I made a new [launch file](../launch/joy_auto.launch)
+- I have started writing [code](manual_switch.py) which takes input from controller
+    - When you press the PS button, it runs the `manual_control` file which launches everything
+    - Need to figure out how to kill this file - the break statement doesn't work
+- I am making a new joy launch file which just launches for bluetooth software controller and I am hardcoding `js1` in it which means it always has to be the second controller connected
+- This means the controller which gives the input to the rover for auto manual without computer is has to be always attached to the computer
+- **Manual WORKS!!!!!**
+- For some reason, the zed camera doesn't get launched (some problem with ssh) and I can't view the tmux screen for debugging (again for some reason idk)
+
+
+## Final (for now)
+- Keep a controller wire connected to rover at all times 
+    - or stop and disable the rover system service using `sudo systemctl stop rover` and `sudo systemctl disable rover`
+- Press the PS button on the rover controller to launch manual stuff
+- Connect the software controller through bluetooth and enjoy
