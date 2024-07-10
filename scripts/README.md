@@ -43,7 +43,14 @@ It works in a very sketchy way:
 
 
 ## Final (for now)
+### User Instructions
 - Keep a controller wire connected to rover at all times 
     - or stop and disable the rover system service using `sudo systemctl stop rover` and `sudo systemctl disable rover`
 - Press the PS button on the rover controller to launch manual stuff
-- Connect the software controller through bluetooth and enjoy
+- Connect the software controller (second controller) through bluetooth and enjoy
+
+### Developer Instructions 
+- The [manual_control](manual_control) file is for running drive and camera when we have laptops connected and we wanna do competition tasks
+- The [bash file for service](manual_control_service) is to run when the `rover.service` is run
+- This file runs the joy node and a [python script](manual_switch.py) that will wait in background until the PS button on the controler is pressed
+- It will run [this script](manual_auto) to start ROS and manual control (without the camera)

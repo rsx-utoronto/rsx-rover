@@ -9,7 +9,7 @@ class ManualSwitch:
     def __init__(self):
         rospy.init_node('auto_switch')
         sub = rospy.Subscriber('/auto/joy', Joy, self.callback)
-        self.manual_script_path = '/home/rsx/rover_ws/src/rsx-rover/scripts/manual_control'
+        self.manual_script_path = '/home/rsx/rover_ws/src/rsx-rover/scripts/manual_auto'
         self.switch_pressed = False
         # self.PS = 0
         # print("Waiting for the switch to be pressed")
