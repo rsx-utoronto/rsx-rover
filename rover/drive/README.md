@@ -34,6 +34,9 @@ The drive sender node is used to send velocity commands to the `/drive` topic
 - There's a problem: the code only does stuff when the controller is getting input (changing things on the controller) however, when the controller state is constant (like there is button pressed or R2 is pressed completely), joy topic doesn't get any input and the algorithm doesn't run
     - To fix this, the algorithm needs to be outside the joy callback function
     - Done
+- New bug: When the controller is connected, before R2 and L2 have not been pressed, the R2 and L2 value on the axes shows 0 instead of 1 (which is the idle state). This causes the rover to move as soon as the gear is changed even when L2 and R2 are not pressd.
+    - I noticed that buttons[7] becomes 1 when R2 is pressed and buttons[6] becomes 1 when L2 is pressed
+    - **Solved!** Added this in the if statements for positive and negative throttle
 
 
 

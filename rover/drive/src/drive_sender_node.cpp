@@ -129,6 +129,8 @@ void TeleopRover::SetVelocity(){
 			int C = 1; // CIRCLE button
 			int T = 2; // TRIANGLE button
 			int S = 3; // SQUARE button
+			int R2_pressed = 7; // On buttons array, confirmation that R2 is pressed
+			int L2_pressed = 6; // On buttons array, confirmation that L2 is pressed
 			// int hor_dpad = 6; // the horizontal d pad button, left is +1 and right is -1
 			// ROS_INFO("%f", axes[hor_dpad]);
 
@@ -215,12 +217,12 @@ void TeleopRover::SetVelocity(){
 				prev_lin_vel = 0;
 				ang_vel = max_allowed_ang_speed;
 			}
-			else if (posThrottle != 0 && negThrottle != 0)
+			else if (posThrottle != 0 && negThrottle != 0 && buttons[R2_pressed] == 1 && buttons[L2_pressed] == 1)
 			{
 				lin_vel = prev_lin_vel;
 				ROS_INFO("Both Throttle Pressed %f", lin_vel);
 			}
-			else if (posThrottle !=0)
+			else if (posThrottle !=0 && buttons[R2_pressed] == 1)
 			{
 				acc = posThrottle * MAX_ACCELERATION;
 				if ((lin_vel + acc) < max_allowed_lin_speed)
@@ -247,7 +249,7 @@ void TeleopRover::SetVelocity(){
 				}
 				ROS_INFO("Positive Throttle Pressed %f", lin_vel);
 			}
-			else if (negThrottle != 0)
+			else if (negThrottle != 0 && buttons[L2_pressed] == 1)
 			{
 				acc = negThrottle * MAX_ACCELERATION;
 				// ROS_INFO("lin_vel = %f", std::fabs(lin_vel - acc));
