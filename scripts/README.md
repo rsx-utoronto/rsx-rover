@@ -14,6 +14,7 @@
 ## Making it a system service
 
 - `manual_control` doesn't work if this is a system service
+- Making a service can be learnt [here](https://linuxhandbook.com/create-systemd-services/)
 
 It works in a very sketchy way:
 - I made a system service called `rover.service`
