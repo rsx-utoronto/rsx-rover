@@ -146,8 +146,8 @@ void TeleopRover::SetVelocity(){
 			negThrottle = (negThrottle + 1) / 2; // Normalizing values from 0 to 1
 			posThrottle = 1 - posThrottle; // Inverting values because posThrottle is 1 when not pressed, 0 when completely pressed
 			negThrottle = 1 - negThrottle; // Inverting values
-			// ROS_INFO("R2:%f", posThrottle);
-			// ROS_INFO("L2:%f", negThrottle);
+			ROS_INFO("R2:%f", posThrottle);
+			ROS_INFO("L2:%f", negThrottle);
 
 			double turnFactor_x_lin_vel = 1 - std::fabs(turnFactor_x); // When completely to the right or left, turnFactor_x = +-1, lin_vel = 0
 			                                       			  // Linear velocity is less when turning, least when turining on spot 		
@@ -288,7 +288,7 @@ void TeleopRover::SetVelocity(){
 				{
 					if (lin_vel > 0)
 					{
-						lin_vel = prev_lin_vel - MAX_ACCELERATION;
+						lin_vel = prev_lin_vel - (MAX_ACCELERATION/2);
 						prev_lin_vel = lin_vel;
 						if (lin_vel < 0)
 						{
@@ -298,7 +298,7 @@ void TeleopRover::SetVelocity(){
 					}
 					else
 					{
-						lin_vel = lin_vel + MAX_ACCELERATION;
+						lin_vel = lin_vel + (MAX_ACCELERATION/2);
 						prev_lin_vel = lin_vel;
 						if (lin_vel > 0)
 						{

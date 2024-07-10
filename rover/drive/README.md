@@ -37,6 +37,8 @@ The drive sender node is used to send velocity commands to the `/drive` topic
 - New bug: When the controller is connected, before R2 and L2 have not been pressed, the R2 and L2 value on the axes shows 0 instead of 1 (which is the idle state). This causes the rover to move as soon as the gear is changed even when L2 and R2 are not pressd.
     - I noticed that buttons[7] becomes 1 when R2 is pressed and buttons[6] becomes 1 when L2 is pressed
     - **Solved!** Added this in the if statements for positive and negative throttle
+- Another bug: Software control is **SHIT**: When I press R2, it only goes to 0 (instead of -1) and L2 goes to -0.9. The arm controler is fine, R2 and L2 go to -1.
+    - I am not hardcoding anything right now but it could be done
 
 
 
