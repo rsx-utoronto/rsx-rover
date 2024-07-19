@@ -33,7 +33,7 @@ tmux new-session -d -s manual
 
 tmux new-window -t manual:1 'bash -c "source /home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh && sleep 2 && roslaunch rover falcons.launch; exec bash"'
 tmux new-window -t manual:2 'bash -c "rosrun rover drive_sender_node; exec bash"'
-tmux new-window -t manual:3 'bash -c "roslaunch rover joy.launch; exec bash"'
+# tmux new-window -t manual:3 'bash -c "roslaunch rover joy.launch; exec bash"'
 
 ssh jetson 'source /opt/ros/noetic/setup.bash && source ~/rover_ws/devel/setup.bash && export ROS_MASTER_URI=http://192.168.0.99:11311 && export ROS_IP=192.168.0.250  && roslaunch rover zed_odom.launch && exit'
 
