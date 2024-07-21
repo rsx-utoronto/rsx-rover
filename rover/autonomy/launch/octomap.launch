@@ -19,7 +19,7 @@
 		<!-- <param name="height_map" value="false" /> -->
 
 		<!-- data source to integrate (PointCloud2) -->
-		<remap from=git config --global user.name "Your Name""cloud_in" to="/zed/zed_node/point_cloud/cloud_registered" />
+		<remap from="cloud_in" to="/zed/zed_node/point_cloud/cloud_registered" />
 	
 	</node>
 </launch>
