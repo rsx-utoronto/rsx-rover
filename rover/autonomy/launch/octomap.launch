@@ -23,8 +23,11 @@
         <param name="height_map" value="false" />
 
 		<!-- testing other parameters-->
-		<param name="pointcloud_min_z" value="0.0" />
-		<param name="pointcloud_max_z" value="3.0" />
+		<!-- <param name="pointcloud_min_z" value="0.0" />
+		<param name="pointcloud_max_z" value="3.0" /> -->
+
+		<param name="occupancy_min_z" value="0.0" />
+		<param name="occupancy_max_z" value="3.0" />
 
         <!-- data source to integrate (PointCloud2) -->
         <remap from="cloud_in" to="/zed_node/point_cloud/cloud_registered" />
