@@ -1,0 +1,37 @@
+<!-- 
+  Example launch file for octomap_server mapping: 
+  Listens to incoming PointCloud2 data and incrementally builds an octomap. 
+  The data is sent out in different representations. 
+
+  Copy this file into your workspace and adjust as needed, see
+  www.ros.org/wiki/octomap_server for details
+  zed2_camera_centre
+-->
+<launch>
+
+    <node name="octomap_rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/autonomy/config/octomap.rviz"/>
+
+    <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+        <param name="resolution" value="0.05" />
+
+        <!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
+        <param name="frame_id" type="string" value="map" />
+
+        <!-- maximum range to integrate (speedup!) -->
+        <param name="sensor_model/max_range" value="5.0" />
+
+        <param name="height_map" value="false" />
+
+		<!-- testing other parameters-->
+		<param name="occupancy_min_z" value="0.6" />
+		<param name="occupancy_max_z" value="1.5" />
+
+        <!-- data source to integrate (PointCloud2) -->
+        <remap from="cloud_in" to="/zed_node/point_cloud/cloud_registered" />
+
+    </node>
+    <param name="/use_sim_time" value="true" />
+
+    <node name="playbag" pkg="rosbag" type="play"
+        args="--clock $(arg bag_filename)" />
+</launch>
