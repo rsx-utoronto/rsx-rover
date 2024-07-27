@@ -36,30 +36,31 @@ r = rospy.Rate(10)
 
 
 
-path_list = [(0+x,0+y), (3.5+x,0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)]
-             # ,(-3.5, -7.0), (10.5, -7.0), (10.5,10.5), (-10.5,10.5), 
-            # (-10.5, -14.0), (17.5, -14.0), (17.5, 17.5), (-17.5, 17.5), (-17.5, -21.0), (17.5, -21.0)]
+path_list = [(0+x,0+y), (3.5+x,0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)
+            ,(-3.5, -7.0), (10.5, -7.0), (10.5,10.5), (-10.5,10.5), 
+            (-10.5, -14.0), (17.5, -14.0), (17.5, 17.5), (-17.5, 17.5), (-17.5, -21.0), (17.5, -21.0)]
 point_index = 0  # instead of deleting stuff from a list (which is anyway bug prone) we'll just iterate through it using index variable.
 scale_factor = 0.75
 goal = Point ()
 index = 0
 init_ang = theta
 prev_point_index = -1
-iterations = 4
 prev_distance = 1000000
 state = 0  #0  moving, 1 turning
 while not rospy.is_shutdown():
-    
-    goal.x = path_list[index+1][0]  # x coordinate for goal
-    goal.y = path_list[index+1][1]  # y coordinate fsor goal
+    if point_index < len(path_list): # so we won't get an error of trying to reach non-existant index of a list
+        goal.x = path_list[point_index][0]  # x coordinate for goal
+        goal.y = path_list[point_index][1]  # y coordinate for goal
+    else:
+        break # I guess we're done?
+    print ("yaw", theta)
+    goal.x = path_list[index][0]  # x coordinate for goal
+    goal.y = path_list[index][1]  # y coordinate fsor goal
     goal_ang = init_ang+math.pi/2*index
     inc_x = (goal.x - x)*scale_factor**index
     inc_y = (goal.y - y)*scale_factor**index
     cur_point_distance_to_goal = np.sqrt(inc_x*inc_x + inc_y*inc_y)
     print(cur_point_distance_to_goal, speed.linear.x)
-    
-    if index > iterations:
-        break
 
     if state == 0:
         # cur_point_distance_to_goal = np.sqrt(inc_x*inc_x + inc_y*inc_y)

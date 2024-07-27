@@ -1,0 +1,8 @@
+<launch>
+    <group ns="software">
+        <node pkg="joy" type="joy_node" name="joy_node">
+            <param name="dev" value="/dev/input/js1"/>
+        </node>
+    </group>
+
+</launch>

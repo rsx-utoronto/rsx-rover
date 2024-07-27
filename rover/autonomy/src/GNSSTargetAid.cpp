@@ -148,6 +148,7 @@ void chatterCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
 
 void magCallback(const sensor_msgs::MagneticField::ConstPtr& msg) {
     gnss.setBearing(atan2(msg->magnetic_field.y, -msg->magnetic_field.x) * 180.0 / M_PI);
+    ROS_INFO("working"); 
 }
 
 void targetCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
@@ -174,8 +175,8 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "GNSSLocalization");
     ros::NodeHandle n;
     ros::Subscriber sub = n.subscribe("/ublox/fix", 1000, chatterCallback);
-    // ros::Subscriber subm = n.subscribe("/zed2i/zed_node/imu/mag", 10, magCallback);
-    ros::Subscriber subg = n.subscribe("/zed2i/zed_node/imu/data", 10, gyroCallback);
+    ros::Subscriber subm = n.subscribe("/zed_node/imu/mag", 10, magCallback);
+    // ros::Subscriber subg = n.subscribe("/zed2i/zed_node/imu/data", 10, gyroCallback);
     ros::Subscriber subt = n.subscribe("/gps_target", 10, targetCallback);
     ros::Publisher pub = n.advertise<nav_msgs::Odometry>("GPSOdometry", 1000);
     ros::Rate loop_rate(10);
