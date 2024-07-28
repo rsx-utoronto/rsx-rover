@@ -41,4 +41,19 @@ The drive sender node is used to send velocity commands to the `/drive` topic
     - I am not hardcoding anything right now but it could be done
 
 
-
+## New Joy Package - [DS4 Driver](https://github.com/naoki-mizuno/ds4_driver/tree/noetic-devel)
+- Gives rumble support, control over LED colors, IMU values and many more features
+- Steps:
+```
+cd ~/Downloads/
+git clone https://github.com/naoki-mizuno/ds4drv --branch devel
+cd ds4drv
+mkdir -p ~/.local/lib/python3.8/site-packages
+python3 setup.py install --prefix ~/.local
+sudo cp udev/50-ds4drv.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+cd ~/catkin_ws/src
+git clone https://github.com/naoki-mizuno/ds4_driver.git
+cd ds4_driver/
+git checkout noetic-devel
