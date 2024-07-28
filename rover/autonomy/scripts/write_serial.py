@@ -13,13 +13,18 @@ class write_serial():
         ser.close()
 
 
-ser = serial.Serial('/dev/ttyACM0', 9600)
-str = 'm'
-# a, g, m
-while True:
-    # print(ser.read())
+# ser = serial.Serial('/dev/ttyACM0', 9600)
+# str = 'a'
+# # a, g, m
+# # a is autonomy -> red
+# # g is goal -> green flashing
+# # m is manual -> blue
+# while True:
+#     # print(ser.read())
 
-    ser.write(str.encode('utf-8'))
-    # print(str.encode('utf-8'))
-    time.sleep(0.1)
-ser.close()
+#     ser.write(str.encode('utf-8'))
+#     # print to terminal 
+    
+#     # print(str.encode('utf-8'))
+#     time.sleep(0.1)
+# ser.close()

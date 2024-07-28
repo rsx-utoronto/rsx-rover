@@ -39,9 +39,9 @@ r = rospy.Rate(5)
 
 
 scale_factor = 0.75
-path_list = [(3.5+x,0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)]
-             # ,(-3.5+x, -7.0+y), (10.5+x, -7.0+y, (10.5+x,10.5+y), (-10.5+x,10.5+y), 
-            # (-10.5+x, -14.0+y), (17.5+x, -14.0+y), (17.5+x, 17.5+y), (-17.5+x, 17.5+y), (-17.5+x, -21.0+y), (17.5+x, -21.0+y)]
+path_list = [(3.5+x,0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)
+            ,(-3.5+x, -7.0+y), (10.5+x, -7.0+y), (10.5+x,10.5+y), (-10.5+x,10.5+y), 
+             (-10.5+x, -14.0+y), (17.5+x, -14.0+y), (17.5+x, 17.5+y), (-17.5+x, 17.5+y), (-17.5+x, -21.0+y), (17.5+x, -21.0+y)]
 point_index = 0  # instead of deleting stuff from a list (which is anyway bug prone) we'll just iterate through it using index variable.
 
 goal = Point ()
