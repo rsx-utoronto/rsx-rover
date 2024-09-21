@@ -3,6 +3,7 @@
 # from __future__ import print_function
 
 import cv2 as cv
+from cvbridge import CvBridge, CvBridgeError
 
 # modes = (cv.Stitcher_PANORAMA, cv.Stitcher_SCANS)
  
@@ -19,29 +20,33 @@ import cv2 as cv
 # __doc__ += '\n' + parser.format_help()
 class Stitcher:
     def __init__(self, panaroma = True):
+        self.bridge = CvBridge()
         if panaroma:
             self.mode = cv.Stitcher_PANORAMA
         else:
             self.mode = cv.Stitcher_SCANS
 
-    def stitch(self, imgfiles):
+    def stitch(self, img_msgs):
         # args = parser.parse_args()
     
         # read input images
         imgs = []
         # imgfiles = ['1.jpg', '2.jpg', '3.jpg', '4.jpg', '5.jpg']
-        for img_name in imgfiles:
+        for img_msg in img_msgs:
             # img = cv.imread(cv.samples.findFile(img_name))
-            img = cv.imread(img_name)
+            try:
+                img = self.bridge.imgmsg_to_cv2(img_msg, "bgr8")
+            except CvBridgeError as e:
+                print(e)
             if img is None:
-                print("can't read image " + img_name)
+                print("can't read image " + img_msg.frame_id + "with timestamp " + img_msg.header.stamp)
                 return
                 # sys.exit(-1)
             imgs.append(img)
     
         #![stitching]
         # stitcher = cv.Stitcher.create(args.mode)
-        stitcher = cv.Stitcher_create(self.mode)
+        stitcher = cv.Stitcher.create(self.mode)
         status, pano = stitcher.stitch(imgs)
     
         if status != cv.Stitcher_OK:
