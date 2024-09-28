@@ -57,6 +57,7 @@ class Panorama:
         print('Starting panorama')
         self.sub.reset()
         self.sub.save()
+        time.sleep(0.5)
         for i in range(num_images):
             self.sub.stop()
             self.pub.turn(0.1)
