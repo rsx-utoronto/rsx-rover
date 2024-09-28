@@ -12,7 +12,9 @@ import numpy as np
 #2. convert to cv file
 #3. convert to ros done
 #4. publish to ros done
-
+print("hi")
+#testing 123
+print("testing")
 def initialize_camera():
     camera = Camera()  
     camera.enable_multicast()  # Enable multicast if supported
