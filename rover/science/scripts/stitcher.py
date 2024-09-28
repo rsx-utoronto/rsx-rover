@@ -3,7 +3,7 @@
 # from __future__ import print_function
 
 import cv2 as cv
-from cvbridge import CvBridge, CvBridgeError
+from cv_bridge import CvBridge, CvBridgeError
 
 # modes = (cv.Stitcher_PANORAMA, cv.Stitcher_SCANS)
  
