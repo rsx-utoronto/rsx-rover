@@ -3,24 +3,24 @@
 import stitcher
 import rospy
 from sensor_msgs.msg import Image
-from sensor_msgs.msg import Twist
+from geometry_msgs.msg import Twist
 import time
 
 # ros subscriber
 class Subscriber:
     def __init__(self):
-        self.sub = rospy.Subscriber('rgb/image_rect_color', Image, self.callback)
+        self.sub = rospy.Subscriber('/zed_node/rgb/image_rect_color', Image, self.callback)
         self.imgfiles = []
         self.save = False
     
     def callback(self, data):
         print('Received image')
-        time.sleep(0.5)
+        time.sleep(2)
         if self.save:
-            print('Image ' + len(self.imgfiles))
+            print('Image ' + str(len(self.imgfiles)))
             self.imgfiles.append(data)
 
-    def save(self):
+    def save1(self):
         self.save = True
 
     def stop(self):
@@ -56,15 +56,15 @@ class Panorama:
     def start(self, num_images):
         print('Starting panorama')
         self.sub.reset()
-        self.sub.save()
-        time.sleep(0.5)
+        self.sub.save1()
+        time.sleep(0.1)
         for i in range(num_images):
             self.sub.stop()
             self.pub.turn(0.1)
-            time.sleep(5)
+            time.sleep(0.01)
             self.pub.stop()
-            self.sub.save()
-            time.sleep(0.5)
+            self.sub.save1()
+            time.sleep(1)
         self.sub.stop()
         self.stitcher.stitch(self.sub.imgfiles)
         print('Panorama completed')
@@ -74,7 +74,7 @@ def main():
     sub = Subscriber()
     pub = Publisher()
     pan = Panorama(sub, pub)
-    pan.start(5)
+    pan.start(20)
 
 if __name__ == '__main__':
     main()

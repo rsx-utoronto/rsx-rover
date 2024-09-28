@@ -43,6 +43,7 @@ class Stitcher:
                 return
                 # sys.exit(-1)
             imgs.append(img)
+            
     
         #![stitching]
         # stitcher = cv.Stitcher.create(args.mode)
