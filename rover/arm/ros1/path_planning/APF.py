@@ -2,6 +2,7 @@ import math
 import numpy as np
 import APF_func as af
 
+
 class APF():
 
     def _init_(self, start, goal, obstacles):
@@ -102,3 +103,4 @@ class APF():
     def escape_trap(self):
         self.cur_pos = af.brownian(self.cur_pos, self.vi, self.ran_steps)
         self.move()
+    
