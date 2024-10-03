@@ -18,7 +18,7 @@ We primarily develop is C++ and Python using ROS noetic and ROS2 Humble.
 
 Note: It is recommended to set up [ssh keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) 
 
-### On Ubuntu Focal w/ ROS noetic 
+### On Ubuntu Focal w/ ROS noetic
 ```
 cd ~
 mkdir -p rover_ws/src 
