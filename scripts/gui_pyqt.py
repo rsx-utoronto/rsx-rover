@@ -3,12 +3,24 @@
 import sys
 import rospy
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QComboBox, QGridLayout
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QTimer, QThread
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap
+
+
+class ROSWorker(QThread):
+    """
+    A QThread that runs rospy.spin() in the background to keep ROS processing messages.
+    """
+    def __init__(self):
+        super(ROSWorker, self).__init__()
+
+    def run(self):
+        rospy.spin()  # Run ROS event loop in a separate thread
+
 
 class CameraFeed:
     def __init__(self, widget):
@@ -51,8 +63,6 @@ class VelocityControl:
         twist.angular.z = angular_z
         self.pub.publish(twist)
 
-#/rtabmap/octomap_grid topic
-
 
 class RoverGUI(QWidget):
     def __init__(self):
@@ -63,7 +73,6 @@ class RoverGUI(QWidget):
         # Camera feed widget
         self.camera_label = QLabel(self)
         self.camera_label.setFixedSize(400, 300)
-
 
         # Velocity control buttons
         self.forward_button = QPushButton("Forward", self)
@@ -94,7 +103,6 @@ class RoverGUI(QWidget):
         layout.addWidget(QLabel("Select Camera"), 2, 0)
         layout.addWidget(self.camera_selector, 2, 1)
 
-
         # Velocity Control Layout
         layout.addWidget(self.forward_button, 4, 1)
         layout.addWidget(self.left_button, 5, 0)
@@ -108,14 +116,9 @@ class RoverGUI(QWidget):
         self.camera_feed = CameraFeed(self.camera_label)
         self.velocity_control = VelocityControl()
 
-        # Timer for ROS spinning and GUI update
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.spin_ros)
-        self.timer.start(1000)  # 10 Hz update rate
-
-    def spin_ros(self):
-        # rospy.spin()
-        rospy.spin_once()
+        # Start ROS in a separate thread
+        self.ros_thread = ROSWorker()
+        self.ros_thread.start()
 
     def switch_camera(self, index):
         self.camera_feed.switch_camera(index + 1)
