@@ -88,8 +88,6 @@ class RobotControlGUI(QWidget):
         for modules, button in module_buttons.items():
             button.clicked.connect(self.button_is_clicked)
 
-        self.speed_slider = QSlider(Qt.Orientation.Horizontal)
-        view_layout.addWidget(self.speed_slider)
 
         science_modules.setLayout(science_layout)
 
