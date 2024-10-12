@@ -50,22 +50,35 @@ class RobotControlGUI(QWidget):
         coordinates_group.setLayout(coord_layout)
 
         # 3D View Section
-        view_group = QGroupBox("3D View")
+        view_group = QGroupBox("Camera View")
         view_layout = QVBoxLayout()
-
-        science_modules = QGroupBox("Science Modules")
-        science_layout = QVBoxLayout()
-        
-        self.coord_view_label = QLabel("Cameras Goes Here")
-        self.coord_view_label.setFixedHeight(200)
-        view_layout.addWidget(self.coord_view_label)
 
         self.user_coord_box = QComboBox()
         self.user_coord_box.addItems(["Camera View 1", "Camera View 2"])
         view_layout.addWidget(self.user_coord_box)
 
+        view_layout.addStretch(1)
+        
+        self.coord_view_label = QLabel("Cameras Goes Here")
+        self.coord_view_label.setFixedHeight(200)
+        view_layout.addWidget(self.coord_view_label)
+
+
 
         # Modules for Science Team
+
+        science_modules = QGroupBox("Science Modules")
+        science_layout = QVBoxLayout()
+
+        self.module1 = QPushButton("Module 1")
+        self.module2 = QPushButton("Module 2")
+        self.module3 = QPushButton("Module 3")
+        self.module4 = QPushButton("Module 4")
+
+        science_layout.addWidget(self.module1)
+        science_layout.addWidget(self.module2)
+        science_layout.addWidget(self.module3)
+        science_layout.addWidget(self.module4)
         module_types = ["Module 1", "Module 2", "Module 3", "Module 4"]
         module_buttons = {m: QPushButton(m) for m in module_types}
 
@@ -134,23 +147,20 @@ class RobotControlGUI(QWidget):
         modes_group = QGroupBox("Modes")
         modes_layout = QGridLayout()
 
-        self.idle_mode = QPushButton("Idle")
-        self.setup_mode = QPushButton("Setup")
-        self.manual_mode = QPushButton("Manual")
-        self.inverse_kin_mode = QPushButton("Inverse Kin")
-        self.dig_mode = QPushButton("Dig")
-        self.pickup_mode = QPushButton("Pickup")
-        self.custom1_mode = QPushButton("Custom 1")
-        self.custom2_mode = QPushButton("Custom 2")
+        mode_types = ["Idle", "Setup", "Manual", "Inverse Kin", "Dig", "Pick up", "Custom 1", "Custom 2"]
+        mode_buttons = {m: QPushButton(m) for m in mode_types}
 
-        modes_layout.addWidget(self.idle_mode, 0, 0)
-        modes_layout.addWidget(self.setup_mode, 0, 1)
-        modes_layout.addWidget(self.manual_mode, 1, 0)
-        modes_layout.addWidget(self.inverse_kin_mode, 1, 1)
-        modes_layout.addWidget(self.dig_mode, 2, 0)
-        modes_layout.addWidget(self.pickup_mode, 2, 1)
-        modes_layout.addWidget(self.custom1_mode, 3, 0)
-        modes_layout.addWidget(self.custom2_mode, 3, 1)
+        modes_layout.addWidget(mode_buttons["Idle"], 0, 0)
+        modes_layout.addWidget(mode_buttons["Setup"], 0, 1)
+        modes_layout.addWidget(mode_buttons["Manual"], 1, 0)
+        modes_layout.addWidget(mode_buttons["Inverse Kin"], 1, 1)
+        modes_layout.addWidget(mode_buttons["Dig"], 2, 0)
+        modes_layout.addWidget(mode_buttons["Pick up"], 2, 1)
+        modes_layout.addWidget(mode_buttons["Custom 1"], 3, 0)
+        modes_layout.addWidget(mode_buttons["Custom 2"], 3, 1)
+
+        for modes, button in mode_buttons.items():
+            button.clicked.connect(self.button_is_clicked)
 
         modes_group.setLayout(modes_layout)
 
@@ -158,13 +168,12 @@ class RobotControlGUI(QWidget):
         coords_group.setLayout(coord_layout)
 
         coords_layout.addWidget(science_modules)
-        
 
         # Adding sections to the main layout
-        main_layout.addWidget(coordinates_group)
+        main_layout.addWidget(coordinates_group, stretch=1)
         main_layout.addWidget(view_group, stretch=3)
-        main_layout.addWidget(joints_group)
-        main_layout.addWidget(coords_group)
+        main_layout.addWidget(joints_group, stretch=1)
+        main_layout.addWidget(coords_group, stretch=1)
 
         # Bottom Buttons
         bottom_layout = QHBoxLayout()
