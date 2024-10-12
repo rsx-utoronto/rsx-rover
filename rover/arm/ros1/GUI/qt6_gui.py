@@ -143,10 +143,12 @@ class RobotControlGUI(QWidget):
         coords_layout.addWidget(modes_group)
         coords_group.setLayout(coord_layout)
 
+        coords_layout.addWidget(science_modules)
+        
+
         # Adding sections to the main layout
         main_layout.addWidget(coordinates_group)
-        main_layout.addWidget(view_group)
-        main_layout.addWidget(science_modules)
+        main_layout.addWidget(view_group, stretch=3)
         main_layout.addWidget(joints_group)
         main_layout.addWidget(coords_group)
 
