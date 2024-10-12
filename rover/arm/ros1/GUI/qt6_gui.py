@@ -139,23 +139,20 @@ class RobotControlGUI(QWidget):
         modes_group = QGroupBox("Modes")
         modes_layout = QGridLayout()
 
-        self.idle_mode = QPushButton("Idle")
-        self.setup_mode = QPushButton("Setup")
-        self.manual_mode = QPushButton("Manual")
-        self.inverse_kin_mode = QPushButton("Inverse Kin")
-        self.dig_mode = QPushButton("Dig")
-        self.pickup_mode = QPushButton("Pickup")
-        self.custom1_mode = QPushButton("Custom 1")
-        self.custom2_mode = QPushButton("Custom 2")
+        mode_types = ["Idle", "Setup", "Manual", "Inverse Kin", "Dig", "Pick up", "Custom 1", "Custom 2"]
+        mode_buttons = {m: QPushButton(m) for m in mode_types}
 
-        modes_layout.addWidget(self.idle_mode, 0, 0)
-        modes_layout.addWidget(self.setup_mode, 0, 1)
-        modes_layout.addWidget(self.manual_mode, 1, 0)
-        modes_layout.addWidget(self.inverse_kin_mode, 1, 1)
-        modes_layout.addWidget(self.dig_mode, 2, 0)
-        modes_layout.addWidget(self.pickup_mode, 2, 1)
-        modes_layout.addWidget(self.custom1_mode, 3, 0)
-        modes_layout.addWidget(self.custom2_mode, 3, 1)
+        modes_layout.addWidget(mode_buttons["Idle"], 0, 0)
+        modes_layout.addWidget(mode_buttons["Setup"], 0, 1)
+        modes_layout.addWidget(mode_buttons["Manual"], 1, 0)
+        modes_layout.addWidget(mode_buttons["Inverse Kin"], 1, 1)
+        modes_layout.addWidget(mode_buttons["Dig"], 2, 0)
+        modes_layout.addWidget(mode_buttons["Pick up"], 2, 1)
+        modes_layout.addWidget(mode_buttons["Custom 1"], 3, 0)
+        modes_layout.addWidget(mode_buttons["Custom 2"], 3, 1)
+
+        for modes, button in mode_buttons.items():
+            button.clicked.connect(self.button_is_clicked)
 
         modes_group.setLayout(modes_layout)
 
