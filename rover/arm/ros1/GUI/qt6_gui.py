@@ -48,24 +48,25 @@ class RobotControlGUI(QWidget):
         coordinates_group.setLayout(coord_layout)
 
         # 3D View Section
-        view_group = QGroupBox("3D View")
+        view_group = QGroupBox("Camera View")
         view_layout = QVBoxLayout()
-
-        science_modules = QGroupBox("Science Modules")
-        science_layout = QVBoxLayout()
-        
-        self.coord_view_label = QLabel("Cameras Goes Here")
-        self.coord_view_label.setFixedHeight(200)
-        view_layout.addWidget(self.coord_view_label)
 
         self.user_coord_box = QComboBox()
         self.user_coord_box.addItems(["Camera View 1", "Camera View 2"])
         view_layout.addWidget(self.user_coord_box)
 
+        view_layout.addStretch(1)
+        
+        self.coord_view_label = QLabel("Cameras Goes Here")
+        self.coord_view_label.setFixedHeight(200)
+        view_layout.addWidget(self.coord_view_label)
 
         # Modules for Science Team
         module_types = ["Module 1", "Module 2", "Module 3", "Module 4"]
         module_buttons = {m: QPushButton(m) for m in module_types}
+
+        science_modules = QGroupBox("Science Modules")
+        science_layout = QVBoxLayout()
 
         science_layout.addWidget(module_buttons["Module 1"])
         science_layout.addWidget(module_buttons["Module 2"])
@@ -74,9 +75,6 @@ class RobotControlGUI(QWidget):
 
         for modules, button in module_buttons.items():
             button.clicked.connect(self.button_is_clicked)
-
-        self.speed_slider = QSlider(Qt.Orientation.Horizontal)
-        view_layout.addWidget(self.speed_slider)
 
         science_modules.setLayout(science_layout)
 
