@@ -48,22 +48,26 @@ class RobotControlGUI(QWidget):
         coordinates_group.setLayout(coord_layout)
 
         # 3D View Section
-        view_group = QGroupBox("3D View")
+        view_group = QGroupBox("Camera View")
         view_layout = QVBoxLayout()
-
-        science_modules = QGroupBox("Science Modules")
-        science_layout = QVBoxLayout()
-        
-        self.coord_view_label = QLabel("Cameras Goes Here")
-        self.coord_view_label.setFixedHeight(200)
-        view_layout.addWidget(self.coord_view_label)
 
         self.user_coord_box = QComboBox()
         self.user_coord_box.addItems(["Camera View 1", "Camera View 2"])
         view_layout.addWidget(self.user_coord_box)
 
+        view_layout.addStretch(1)
+        
+        self.coord_view_label = QLabel("Cameras Goes Here")
+        self.coord_view_label.setFixedHeight(200)
+        view_layout.addWidget(self.coord_view_label)
+
+
 
         # Modules for Science Team
+
+        science_modules = QGroupBox("Science Modules")
+        science_layout = QVBoxLayout()
+
         self.module1 = QPushButton("Module 1")
         self.module2 = QPushButton("Module 2")
         self.module3 = QPushButton("Module 3")
@@ -73,9 +77,6 @@ class RobotControlGUI(QWidget):
         science_layout.addWidget(self.module2)
         science_layout.addWidget(self.module3)
         science_layout.addWidget(self.module4)
-
-        self.speed_slider = QSlider(Qt.Orientation.Horizontal)
-        view_layout.addWidget(self.speed_slider)
 
         science_modules.setLayout(science_layout)
 
@@ -149,13 +150,12 @@ class RobotControlGUI(QWidget):
         coords_group.setLayout(coord_layout)
 
         coords_layout.addWidget(science_modules)
-        
 
         # Adding sections to the main layout
-        main_layout.addWidget(coordinates_group)
+        main_layout.addWidget(coordinates_group, stretch=1)
         main_layout.addWidget(view_group, stretch=3)
-        main_layout.addWidget(joints_group)
-        main_layout.addWidget(coords_group)
+        main_layout.addWidget(joints_group, stretch=1)
+        main_layout.addWidget(coords_group, stretch=1)
 
         # Bottom Buttons
         bottom_layout = QHBoxLayout()
