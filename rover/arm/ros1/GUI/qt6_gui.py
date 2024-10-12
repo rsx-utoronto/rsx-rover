@@ -56,11 +56,34 @@ class RobotControlGUI(QWidget):
         
         self.coord_view_label = QLabel("Cameras Goes Here")
         self.coord_view_label.setFixedHeight(200)
+        self.coord_view_label.setFixedWidth(400)
         view_layout.addWidget(self.coord_view_label)
 
         self.user_coord_box = QComboBox()
         self.user_coord_box.addItems(["Camera View 1", "Camera View 2"])
         view_layout.addWidget(self.user_coord_box)
+
+        # Arm Power Options
+        power_group = QGroupBox("Arm Power")
+        power_layout = QHBoxLayout()
+
+        power_layout.setContentsMargins(0,0,0,0)
+
+        self.power_on = QPushButton("ON")
+        self.power_off = QPushButton("OFF")
+        self.power_reset = QPushButton("Reset")
+
+        power_group.setStyleSheet('QPushButton {font-size: 20px}')
+
+        self.power_on.setStyleSheet('QPushButton {background-color: #00FF00; color: #000000}')
+        self.power_off.setStyleSheet('QPushButton {background-color: #FF0000}')
+
+        power_layout.addWidget(self.power_on)
+        power_layout.addWidget(self.power_off)
+        power_layout.addWidget(self.power_reset)
+
+        power_group.setLayout(power_layout)
+        view_layout.addWidget(power_group)
 
 
         # Modules for Science Team
