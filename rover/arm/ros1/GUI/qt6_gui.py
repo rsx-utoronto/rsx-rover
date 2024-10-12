@@ -51,7 +51,7 @@ class RobotControlGUI(QWidget):
         view_layout.addWidget(self.coord_view_label)
 
         self.user_coord_box = QComboBox()
-        self.user_coord_box.addItems(["User Coordinates 1", "User Coordinates 2"])
+        self.user_coord_box.addItems(["Camera View 1", "Camera View 2"])
         view_layout.addWidget(self.user_coord_box)
 
         self.continuous_motion = QPushButton("Continuous Motion")
