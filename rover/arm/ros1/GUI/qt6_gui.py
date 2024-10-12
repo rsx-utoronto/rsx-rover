@@ -46,16 +46,19 @@ class RobotControlGUI(QWidget):
         view_group = QGroupBox("3D View")
         view_layout = QVBoxLayout()
 
-        self.coord_view_label = QLabel("3D Robot View Goes Here")
+        self.coord_view_label = QLabel("Cameras Goes Here")
         self.coord_view_label.setFixedHeight(200)
         view_layout.addWidget(self.coord_view_label)
 
         self.user_coord_box = QComboBox()
-        self.user_coord_box.addItems(["User Coordinates 1", "User Coordinates 2"])
+        self.user_coord_box.addItems(["Camera 1", "Camera 2"])
         view_layout.addWidget(self.user_coord_box)
 
-        self.continuous_motion = QPushButton("Continuous Motion")
-        self.discrete_motion = QPushButton("Discrete Motion")
+        # Modes for Arm 
+        self.module1 = QPushButton("Module 1")
+        self.module2 = QPushButton("Module 2")
+        self.module3 = QPushButton("Module 3")
+        self.module4 = QPushButton("Module 4")
 
         motion_layout = QHBoxLayout()
         motion_layout.addWidget(self.continuous_motion)
