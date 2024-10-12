@@ -61,8 +61,10 @@ class RobotControlGUI(QWidget):
         self.module4 = QPushButton("Module 4")
 
         motion_layout = QHBoxLayout()
-        motion_layout.addWidget(self.continuous_motion)
-        motion_layout.addWidget(self.discrete_motion)
+        motion_layout.addWidget(self.module1)
+        motion_layout.addWidget(self.module2)
+        motion_layout.addWidget(self.module3)
+        motion_layout.addWidget(self.module4)
 
         view_layout.addLayout(motion_layout)
 
