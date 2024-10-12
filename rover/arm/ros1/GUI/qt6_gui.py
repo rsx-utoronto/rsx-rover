@@ -51,7 +51,7 @@ class RobotControlGUI(QWidget):
         view_layout.addWidget(self.coord_view_label)
 
         self.user_coord_box = QComboBox()
-        self.user_coord_box.addItems(["Camera 1", "Camera 2"])
+        self.user_coord_box.addItems(["Camera View 1", "Camera View 2"])
         view_layout.addWidget(self.user_coord_box)
 
         # Modes for Arm 
