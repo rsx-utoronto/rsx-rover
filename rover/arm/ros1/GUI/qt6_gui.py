@@ -11,12 +11,14 @@ class RobotControlGUI(QWidget):
         self.setWindowTitle("Robot Control Interface")
         self.setGeometry(100, 100, 800, 600)
         self.initUI()
+    def button_is_clicked(self):
+        print("Clicked")
 
     def initUI(self):
         # Main Layout
         main_layout = QHBoxLayout(self)
 
-        # Coordinates Control Section
+        # Coordinates Control Section:w
         coordinates_group = QGroupBox("Inverse Kinematics: End Effector Coordinates and Rotation")
         coord_layout = QGridLayout()
 
@@ -24,6 +26,9 @@ class RobotControlGUI(QWidget):
         directions = ["Up", "Down", "Left", "Right", "Forward", "Backward",
                       "Rx", "Ry", "Rz", "-Rx", "-Ry", "-Rz"]
         arrow_buttons = {d: QPushButton(d) for d in directions}
+
+        for direction, button in arrow_buttons.items():
+            button.clicked.connect(self.button_is_clicked)
 
         coord_layout.addWidget(arrow_buttons["Up"], 1, 1)
         coord_layout.addWidget(arrow_buttons["Down"], 3, 1)
@@ -48,7 +53,7 @@ class RobotControlGUI(QWidget):
 
         science_modules = QGroupBox("Science Modules")
         science_layout = QVBoxLayout()
-
+        
         self.coord_view_label = QLabel("Cameras Goes Here")
         self.coord_view_label.setFixedHeight(200)
         view_layout.addWidget(self.coord_view_label)
