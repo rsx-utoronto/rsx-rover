@@ -3,7 +3,7 @@
 import sys
 from enum import Enum
 import rospy
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QComboBox, QGridLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QComboBox, QGridLayout, QSlider, QHBoxLayout, QVBoxLayout
 from PyQt5.QtCore import *
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
@@ -20,13 +20,26 @@ class Direction(Enum):
 class VelocityControl:
     def __init__(self):
         self.pub = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.gear = 1  # Initialize gear to Low (1 by default)
+
+    def set_gear(self, gear):
+        """Sets the current gear level (1-10 levels)"""
+        self.gear = gear
+        print(f"Gear set to: {gear}")  # Debug print
 
     def send_velocity(self, linear_x, angular_z):
+        """Scale velocities according to the current gear"""
+        # Adjust velocities based on the gear
+        linear_x *= (self.gear/10)*2.5  # Scale linear velocity
+        angular_z *= (self.gear/10)*2.5  # Scale linear velocity
+
         twist = Twist()
         twist.linear.x = linear_x
         twist.angular.z = angular_z
         self.pub.publish(twist)
-        print(f"Publishing to /drive: linear_x = {linear_x}, angular_z = {angular_z}")  # Debug print
+        print(f"Publishing to /drive: linear_x = {linear_x}, angular_z = {angular_z}, gear = {self.gear}")  # Debug print
+
+# No change in the Joystick class, it already sends the velocities to VelocityControl
 
 class Direction: 
     def __init__(self):
@@ -178,19 +191,58 @@ class RoverGUI(QWidget):
         # Joystick widget with velocity control
         self.joystick = Joystick(self.velocity_control)
 
+        # Gear slider
+        self.gear_slider = QSlider(Qt.Vertical)
+        self.gear_slider.setRange(1, 10)  # 1-10 gear options
+        self.gear_slider.setTickPosition(QSlider.TicksBelow)
+        self.gear_slider.setTickInterval(1)
+        self.gear_slider.setValue(1)  # Set default value to Low Gear
+        self.gear_slider.valueChanged.connect(self.change_gear)  # Connect slider value change to gear change
+        
+        # Create a layout for the slider and labels
+        slider_layout = QHBoxLayout()  # Horizontal layout for labels and slider
+
+        # Create labels for each tick on the slider
+        label_layout = QVBoxLayout()  # Vertical layout for labels
+        for i in range(10, 0, -1):  # Create labels from 10 to 1
+            label = QLabel(str(i))
+            label.setAlignment(Qt.AlignCenter)  # Center align the labels
+            label_layout.addWidget(label)
+
+        # Create a layout for the gear label and the slider
+        gear_label_layout = QVBoxLayout()  # Vertical layout for the gear label and the slider
+        gear_label = QLabel("Gear")
+        gear_label.setAlignment(Qt.AlignCenter)  # Center align the gear label
+        gear_label_layout.addWidget(gear_label)  # Add the gear label
+        gear_label_layout.addWidget(self.gear_slider)  # Add the slider below the gear label
+
+        # Add both layouts to the horizontal layout
+        slider_layout.addLayout(label_layout)  # Add labels to the left
+        slider_layout.addLayout(gear_label_layout)  # Add gear label and slider to the right
+
         # Layout setup
         layout = QGridLayout()
         layout.addWidget(QLabel("Camera Feed"), 0, 0)
         layout.addWidget(self.camera_label, 1, 0, 1, 2)
         layout.addWidget(QLabel("Select Camera"), 2, 0)
         layout.addWidget(self.camera_selector, 2, 1)
+        layout.addLayout(slider_layout, 1, 1, 1, 1)  # Adjusted position for slider layout
         layout.addWidget(self.joystick, 3, 0, 1, 2)
 
         self.setLayout(layout)
 
+
         # Start ROS in a separate thread
         self.ros_thread = ROSWorker()
         self.ros_thread.start()
+
+
+    def change_gear(self, value):
+        """Change the gear based on the value from the QSlider"""
+        gear = value  # The value from the slider directly corresponds to the gear
+        self.velocity_control.set_gear(gear)
+        print(f"Changed to Gear: {gear}")  # Debug print
+
 
     def switch_camera(self, index):
         self.camera_feed.switch_camera(index + 1)
