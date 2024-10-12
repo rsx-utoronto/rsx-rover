@@ -54,7 +54,8 @@ class RobotControlGUI(QWidget):
         self.user_coord_box.addItems(["Camera View 1", "Camera View 2"])
         view_layout.addWidget(self.user_coord_box)
 
-        # Modes for Arm 
+
+        # Modules for Science Team
         self.module1 = QPushButton("Module 1")
         self.module2 = QPushButton("Module 2")
         self.module3 = QPushButton("Module 3")
@@ -67,9 +68,6 @@ class RobotControlGUI(QWidget):
         motion_layout.addWidget(self.module4)
 
         view_layout.addLayout(motion_layout)
-
-        self.speed_slider = QSlider(Qt.Orientation.Horizontal)
-        view_layout.addWidget(self.speed_slider)
 
         view_group.setLayout(view_layout)
 
@@ -113,6 +111,32 @@ class RobotControlGUI(QWidget):
         coords_layout.addWidget(self.rz_coord)
 
         coords_group.setLayout(coords_layout)
+
+        modes_group = QGroupBox("Modes")
+        modes_layout = QGridLayout()
+
+        self.idle_mode = QPushButton("Idle")
+        self.setup_mode = QPushButton("Setup")
+        self.manual_mode = QPushButton("Manual")
+        self.inverse_kin_mode = QPushButton("Inverse Kin")
+        self.dig_mode = QPushButton("Dig")
+        self.pickup_mode = QPushButton("Pickup")
+        self.custom1_mode = QPushButton("Custom 1")
+        self.custom2_mode = QPushButton("Custom 2")
+
+        modes_layout.addWidget(self.idle_mode, 0, 0)
+        modes_layout.addWidget(self.setup_mode, 0, 1)
+        modes_layout.addWidget(self.manual_mode, 1, 0)
+        modes_layout.addWidget(self.inverse_kin_mode, 1, 1)
+        modes_layout.addWidget(self.dig_mode, 2, 0)
+        modes_layout.addWidget(self.pickup_mode, 2, 1)
+        modes_layout.addWidget(self.custom1_mode, 3, 0)
+        modes_layout.addWidget(self.custom2_mode, 3, 1)
+
+        modes_group.setLayout(modes_layout)
+
+        coords_layout.addWidget(modes_group)
+        coords_group.setLayout(coord_layout)
 
         # Adding sections to the main layout
         main_layout.addWidget(coordinates_group)
