@@ -46,6 +46,9 @@ class RobotControlGUI(QWidget):
         view_group = QGroupBox("3D View")
         view_layout = QVBoxLayout()
 
+        science_modules = QGroupBox("Science Modules")
+        science_layout = QVBoxLayout()
+
         self.coord_view_label = QLabel("Cameras Goes Here")
         self.coord_view_label.setFixedHeight(200)
         view_layout.addWidget(self.coord_view_label)
@@ -60,16 +63,15 @@ class RobotControlGUI(QWidget):
         self.module3 = QPushButton("Module 3")
         self.module4 = QPushButton("Module 4")
 
-        motion_layout = QHBoxLayout()
-        motion_layout.addWidget(self.module1)
-        motion_layout.addWidget(self.module2)
-        motion_layout.addWidget(self.module3)
-        motion_layout.addWidget(self.module4)
-
-        view_layout.addLayout(motion_layout)
+        science_layout.addWidget(self.module1)
+        science_layout.addWidget(self.module2)
+        science_layout.addWidget(self.module3)
+        science_layout.addWidget(self.module4)
 
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
         view_layout.addWidget(self.speed_slider)
+
+        science_modules.setLayout(science_layout)
 
         view_group.setLayout(view_layout)
 
@@ -117,6 +119,7 @@ class RobotControlGUI(QWidget):
         # Adding sections to the main layout
         main_layout.addWidget(coordinates_group)
         main_layout.addWidget(view_group)
+        main_layout.addWidget(science_modules)
         main_layout.addWidget(joints_group)
         main_layout.addWidget(coords_group)
 
