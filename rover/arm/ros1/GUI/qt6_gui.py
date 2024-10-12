@@ -77,6 +77,19 @@ class RobotControlGUI(QWidget):
         science_layout.addWidget(self.module2)
         science_layout.addWidget(self.module3)
         science_layout.addWidget(self.module4)
+        module_types = ["Module 1", "Module 2", "Module 3", "Module 4"]
+        module_buttons = {m: QPushButton(m) for m in module_types}
+
+        science_layout.addWidget(module_buttons["Module 1"])
+        science_layout.addWidget(module_buttons["Module 2"])
+        science_layout.addWidget(module_buttons["Module 3"])
+        science_layout.addWidget(module_buttons["Module 4"])
+
+        for modules, button in module_buttons.items():
+            button.clicked.connect(self.button_is_clicked)
+
+        self.speed_slider = QSlider(Qt.Orientation.Horizontal)
+        view_layout.addWidget(self.speed_slider)
 
         science_modules.setLayout(science_layout)
 
