@@ -11,8 +11,10 @@ class RobotControlGUI(QWidget):
         self.setWindowTitle("Robot Control Interface")
         self.setGeometry(100, 100, 800, 600)
         self.initUI()
+    
     def button_is_clicked(self):
         print("Clicked")
+        self.x_coord.setText(self.x_coord.text()+"m")
 
     def initUI(self):
         # Main Layout
@@ -105,8 +107,11 @@ class RobotControlGUI(QWidget):
 
         # Position Information
         self.x_coord = QLineEdit("X: 0.0 mm")
+        self.x_coord.setReadOnly(True)
         self.y_coord = QLineEdit("Y: 0.0 mm")
+        self.y_coord.setReadOnly(True)
         self.z_coord = QLineEdit("Z: 0.0 mm")
+        self.z_coord.setReadOnly(True)
 
         coords_layout.addWidget(self.x_coord)
         coords_layout.addWidget(self.y_coord)
@@ -114,8 +119,11 @@ class RobotControlGUI(QWidget):
 
         # Rotation Information
         self.rx_coord = QLineEdit("Rx: 0.0°")
+        self.rx_coord.setReadOnly(True)
         self.ry_coord = QLineEdit("Ry: 0.0°")
+        self.ry_coord.setReadOnly(True)
         self.rz_coord = QLineEdit("Rz: 0.0°")
+        self.rz_coord.setReadOnly(True)
 
         coords_layout.addWidget(self.rx_coord)
         coords_layout.addWidget(self.ry_coord)
