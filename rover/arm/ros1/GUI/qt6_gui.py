@@ -11,10 +11,8 @@ class RobotControlGUI(QWidget):
         self.setWindowTitle("Robot Control Interface")
         self.setGeometry(100, 100, 800, 600)
         self.initUI()
-    
     def button_is_clicked(self):
         print("Clicked")
-        self.x_coord.setText(self.x_coord.text()+"m")
 
     def initUI(self):
         # Main Layout
@@ -50,35 +48,22 @@ class RobotControlGUI(QWidget):
         coordinates_group.setLayout(coord_layout)
 
         # 3D View Section
-        view_group = QGroupBox("Camera View")
+        view_group = QGroupBox("3D View")
         view_layout = QVBoxLayout()
 
-        self.user_coord_box = QComboBox()
-        self.user_coord_box.addItems(["Camera View 1", "Camera View 2"])
-        view_layout.addWidget(self.user_coord_box)
-
-        view_layout.addStretch(1)
+        science_modules = QGroupBox("Science Modules")
+        science_layout = QVBoxLayout()
         
         self.coord_view_label = QLabel("Cameras Goes Here")
         self.coord_view_label.setFixedHeight(200)
         view_layout.addWidget(self.coord_view_label)
 
+        self.user_coord_box = QComboBox()
+        self.user_coord_box.addItems(["Camera View 1", "Camera View 2"])
+        view_layout.addWidget(self.user_coord_box)
 
 
         # Modules for Science Team
-
-        science_modules = QGroupBox("Science Modules")
-        science_layout = QVBoxLayout()
-
-        self.module1 = QPushButton("Module 1")
-        self.module2 = QPushButton("Module 2")
-        self.module3 = QPushButton("Module 3")
-        self.module4 = QPushButton("Module 4")
-
-        science_layout.addWidget(self.module1)
-        science_layout.addWidget(self.module2)
-        science_layout.addWidget(self.module3)
-        science_layout.addWidget(self.module4)
         module_types = ["Module 1", "Module 2", "Module 3", "Module 4"]
         module_buttons = {m: QPushButton(m) for m in module_types}
 
@@ -90,6 +75,8 @@ class RobotControlGUI(QWidget):
         for modules, button in module_buttons.items():
             button.clicked.connect(self.button_is_clicked)
 
+        self.speed_slider = QSlider(Qt.Orientation.Horizontal)
+        view_layout.addWidget(self.speed_slider)
 
         science_modules.setLayout(science_layout)
 
@@ -118,11 +105,8 @@ class RobotControlGUI(QWidget):
 
         # Position Information
         self.x_coord = QLineEdit("X: 0.0 mm")
-        self.x_coord.setReadOnly(True)
         self.y_coord = QLineEdit("Y: 0.0 mm")
-        self.y_coord.setReadOnly(True)
         self.z_coord = QLineEdit("Z: 0.0 mm")
-        self.z_coord.setReadOnly(True)
 
         coords_layout.addWidget(self.x_coord)
         coords_layout.addWidget(self.y_coord)
@@ -130,11 +114,8 @@ class RobotControlGUI(QWidget):
 
         # Rotation Information
         self.rx_coord = QLineEdit("Rx: 0.0°")
-        self.rx_coord.setReadOnly(True)
         self.ry_coord = QLineEdit("Ry: 0.0°")
-        self.ry_coord.setReadOnly(True)
         self.rz_coord = QLineEdit("Rz: 0.0°")
-        self.rz_coord.setReadOnly(True)
 
         coords_layout.addWidget(self.rx_coord)
         coords_layout.addWidget(self.ry_coord)
@@ -166,12 +147,13 @@ class RobotControlGUI(QWidget):
         coords_group.setLayout(coord_layout)
 
         coords_layout.addWidget(science_modules)
+        
 
         # Adding sections to the main layout
-        main_layout.addWidget(coordinates_group, stretch=1)
+        main_layout.addWidget(coordinates_group)
         main_layout.addWidget(view_group, stretch=3)
-        main_layout.addWidget(joints_group, stretch=1)
-        main_layout.addWidget(coords_group, stretch=1)
+        main_layout.addWidget(joints_group)
+        main_layout.addWidget(coords_group)
 
         # Bottom Buttons
         bottom_layout = QHBoxLayout()
