@@ -25,20 +25,20 @@ class RobotControlGUI(QWidget):
                       "Rx", "Ry", "Rz", "-Rx", "-Ry", "-Rz"]
         arrow_buttons = {d: QPushButton(d) for d in directions}
 
-        coord_layout.addWidget(arrow_buttons["Up"], 0, 1)
-        coord_layout.addWidget(arrow_buttons["Down"], 2, 1)
-        coord_layout.addWidget(arrow_buttons["Left"], 1, 0)
-        coord_layout.addWidget(arrow_buttons["Right"], 1, 2)
-        coord_layout.addWidget(arrow_buttons["Forward"], 1, 1)
-        coord_layout.addWidget(arrow_buttons["Backward"], 1, 3)
+        coord_layout.addWidget(arrow_buttons["Up"], 1, 1)
+        coord_layout.addWidget(arrow_buttons["Down"], 3, 1)
+        coord_layout.addWidget(arrow_buttons["Left"], 2, 0)
+        coord_layout.addWidget(arrow_buttons["Right"], 2, 2)
+        coord_layout.addWidget(arrow_buttons["Forward"], 0, 0)
+        coord_layout.addWidget(arrow_buttons["Backward"], 0, 2)
 
         # Rotation Controls
-        coord_layout.addWidget(arrow_buttons["Rx"], 3, 0)
-        coord_layout.addWidget(arrow_buttons["-Rx"], 3, 1)
-        coord_layout.addWidget(arrow_buttons["Ry"], 4, 0)
-        coord_layout.addWidget(arrow_buttons["-Ry"], 4, 1)
-        coord_layout.addWidget(arrow_buttons["Rz"], 5, 0)
-        coord_layout.addWidget(arrow_buttons["-Rz"], 5, 1)
+        coord_layout.addWidget(arrow_buttons["Rx"], 4, 0)
+        coord_layout.addWidget(arrow_buttons["-Rx"], 4, 2)
+        coord_layout.addWidget(arrow_buttons["Ry"], 5, 0)
+        coord_layout.addWidget(arrow_buttons["-Ry"], 5, 2)
+        coord_layout.addWidget(arrow_buttons["Rz"], 6, 0)
+        coord_layout.addWidget(arrow_buttons["-Rz"], 6, 2)
 
         coordinates_group.setLayout(coord_layout)
 
