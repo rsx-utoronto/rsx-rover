@@ -6,7 +6,7 @@ To enable the CAN network, open a terminal and type the following (assuming you 
 
 ### Terminal 1
 ```
-cd ~/rover-ws/src/rsx-rover/scripts/utils/gen
+cd ~/rover_ws/src/rsx-rover/scripts/utils/gen
 ./setup_can.bash
 (Enter the password for your system)
 ```
@@ -60,6 +60,11 @@ python3 ~/rover_ws/src/rsx-rover/rover/arm/scripts/gripper/gripper_controller.py
 Run CAN_recv node (before CAN_send)
 ```
 rosrun rover CAN_recv.py
+```
+
+Before proceeding further, make sure that all the angles that the arm thinks it are zero with:
+```
+rostopic echo /arm_curr_pos
 ```
 
 ### Terminal 6/7
