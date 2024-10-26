@@ -3,7 +3,7 @@
 ## 1. Install packages
 
 ```bash
-sudo apt install python3-opencv ros-noetic-cv-bridge
+sudo apt install python3-opencv ros-noetic-cv-bridge v4l-utils
 ```
 
 Packages installed:
@@ -11,6 +11,8 @@ Packages installed:
 1. `python3-opencv` opencv = open-source computer vision, used for accessing the camera feed
 
 2. `ros-noetic-cv-bridge` converts opencv feed to ros message
+
+3. `v4l-utils` is used for finding the correct camera ID
 
 
 ## 2. Connect camera

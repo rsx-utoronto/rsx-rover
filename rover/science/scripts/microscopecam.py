@@ -6,6 +6,18 @@ from sensor_msgs.msg import Image
 import cv2
 from cv_bridge import CvBridge
 
+import getmicroscopeid # local import
+
+
+camera_name = "USB2.0 Camera: USB2.0 Camera"
+camera_id = getmicroscopeid.get_usb_camera_device(camera_name)
+
+if not camera_id:
+    print("WARNING: Microscope camera not found.")
+else:
+    print(camera_id)
+
+
 class MicroscopeCam:
 
     def __init__(self):
@@ -14,8 +26,7 @@ class MicroscopeCam:
 
 
         # Get camera feed
-        # TODO: Get camera based on "AVEO_Technology_Corp._USB2.0_Camera" rather than hard-coded
-        camera = cv2.VideoCapture(0)
+        camera = cv2.VideoCapture(camera_id)
 
         # Create bridge object
         bridge = CvBridge()
