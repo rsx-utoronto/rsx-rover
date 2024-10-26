@@ -11,8 +11,9 @@ obstacles = np.empty((0,3))
 
 def start_callback(msg):
     #collect start position data from its corresponding topic
-    global start
-    start = np.array(msg.data).reshape(1,3)
+    if first_run == True:
+        start = np.array(msg)
+        first_run = False
 
 def goal_callback(msg):
     #collect goal position data from its corresponding topic
@@ -25,13 +26,17 @@ def obstacles_callback(msg):
     new_row = np.array([msg.data])
     obstacles = np.vstack([obstacles, new_row])
 
+
+
 def move():
     global start
     global goal
     global obstacles
 
-    rospy.Subscriber("/ARM_SART_POS", Float32MultiArray, start_callback, queue_size=10) #topic doesn't exist yet
+    rospy.Subscriber("/ARM_CUR_POS", Float32MultiArray, start_callback, queue_size=10) #topic doesn't exist yet
     rospy.Subscriber("/ARM_GOAL_POS", Float32MultiArray, goal_callback, queue_size=10)
+
+    #/ARM_CUR_POS
 
     min_dist = 0.5 #minimum distance between the tool tip and the goal to stop the arm
     apf = APF(start, goal, obstacles)
