@@ -5,16 +5,20 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 import sys
 
+from arm_gui_controller import GuiControllerNode  # Class for sending commands to manipulator
+
 class RobotControlGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Robot Control Interface")
         self.setGeometry(100, 100, 800, 600)
         self.initUI()
+        
+        self.controller = GuiControllerNode()  # Initialize controller
     
-    def button_is_clicked(self):
-        print("Clicked")
-        self.x_coord.setText(self.x_coord.text()+"m")
+    def button_is_clicked(self,command):
+        self.controller.on_press(command)  # Send command to controller
+        self.controller.on_release()       # Reset
 
     def initUI(self):
         # Main Layout
@@ -30,8 +34,8 @@ class RobotControlGUI(QWidget):
         arrow_buttons = {d: QPushButton(d) for d in directions}
 
         for direction, button in arrow_buttons.items():
-            button.clicked.connect(self.button_is_clicked)
-
+            button.clicked.connect(lambda _, d=direction: self.button_is_clicked(d))
+            
         coord_layout.addWidget(arrow_buttons["Up"], 1, 1)
         coord_layout.addWidget(arrow_buttons["Down"], 3, 1)
         coord_layout.addWidget(arrow_buttons["Left"], 2, 0)
@@ -104,8 +108,8 @@ class RobotControlGUI(QWidget):
         science_layout.addWidget(module_buttons["Module 4"])
 
         for modules, button in module_buttons.items():
-            button.clicked.connect(self.button_is_clicked)
-
+            button.clicked.connect(lambda _, m=modules: self.button_is_clicked(m))
+            
         science_modules.setLayout(science_layout)
 
         view_group.setLayout(view_layout)
@@ -173,8 +177,8 @@ class RobotControlGUI(QWidget):
         modes_layout.addWidget(mode_buttons["Custom 2"], 3, 1)
 
         for modes, button in mode_buttons.items():
-            button.clicked.connect(self.button_is_clicked)
-
+            button.clicked.connect(lambda _, m=modes: self.button_is_clicked(m))
+            
         modes_group.setLayout(modes_layout)
 
         coords_layout.addWidget(modes_group)
