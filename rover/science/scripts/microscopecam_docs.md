@@ -1,4 +1,4 @@
-# microscopecam docs for testing
+# microscopecam docs
 
 ## 1. Install packages
 
@@ -30,18 +30,6 @@ Go to **Settings > USB**, select the **USB 3.0 (xHCI Controller)** box.
 
 While your VM is running:\
 Go to **Devices** at the top of the VM window, and select `AVEO_Technology_Corp._USB2.0_Camera`.
-
-### 2.2 Ensure camera is connected
-
-Among other ways, my preferred method is:
-
-```
-sudo apt install vlc
-```
-
-Open the **VLC** program. Go to **Media > Open Capture Device**.
-
-Ensure that you can see the camera stream.
 
 
 ## 3. Run the publisher
