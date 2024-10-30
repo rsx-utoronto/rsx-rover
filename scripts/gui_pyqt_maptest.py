@@ -4,12 +4,15 @@ import sys
 from enum import Enum
 import rospy
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QComboBox, QGridLayout, QSlider, QHBoxLayout, QVBoxLayout
+from PyQt5.QtWebEngineWidgets import QWebEngineView  # Import QWebEngineView for the map
 from PyQt5.QtCore import *
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter
+import plotly.express as px
+import os
 
 class Direction(Enum):
     Left = 0
@@ -31,7 +34,7 @@ class VelocityControl:
         """Scale velocities according to the current gear"""
         # Adjust velocities based on the gear
         linear_x *= (self.gear/10)*2.5  # Scale linear velocity
-        angular_z *= (self.gear/10)*2.5  # Scale linear velocity
+        angular_z *= (self.gear/10)*2.5  # Scale angular velocity
 
         twist = Twist()
         twist.linear.x = linear_x
@@ -43,7 +46,7 @@ class VelocityControl:
 
 class Direction: 
     def __init__(self):
-        self.LinX =0
+        self.LinX = 0
         self.AngleZ = 0
 
 class Joystick(QWidget):
@@ -124,8 +127,6 @@ class Joystick(QWidget):
             self.update()
         self.joystickDirection()  # Call the function to update the velocity
 
-        
-
 class ROSWorker(QThread):
     """
     A QThread that runs rospy.spin() in the background to keep ROS processing messages.
@@ -135,7 +136,6 @@ class ROSWorker(QThread):
 
     def run(self):
         rospy.spin()  # Run ROS event loop in a separate thread
-
 
 class CameraFeed:
     def __init__(self, widget):
@@ -167,7 +167,6 @@ class CameraFeed:
     def switch_camera(self, camera_index):
         self.current_camera = camera_index
 
-
 class RoverGUI(QWidget):
     def __init__(self):
         super().__init__()
@@ -176,7 +175,7 @@ class RoverGUI(QWidget):
 
         # Camera feed widget
         self.camera_label = QLabel(self)
-        self.camera_label.setFixedSize(600, 500)
+        self.camera_label.setFixedSize(400, 300)
 
         # Camera toggle
         self.camera_selector = QComboBox(self)
@@ -192,25 +191,25 @@ class RoverGUI(QWidget):
         self.joystick = Joystick(self.velocity_control)
 
         # Gear slider
-        self.gear_slider = QSlider(Qt.Horizontal)  # Change from Qt.Vertical to Qt.Horizontal
+        self.gear_slider = QSlider(Qt.Vertical)
         self.gear_slider.setRange(1, 10)  # 1-10 gear options
         self.gear_slider.setTickPosition(QSlider.TicksBelow)
         self.gear_slider.setTickInterval(1)
         self.gear_slider.setValue(1)  # Set default value to Low Gear
         self.gear_slider.valueChanged.connect(self.change_gear)  # Connect slider value change to gear change
-
+        
         # Create a layout for the slider and labels
-        slider_layout = QVBoxLayout()  # Horizontal layout for labels and slider
+        slider_layout = QHBoxLayout()  # Horizontal layout for labels and slider
 
         # Create labels for each tick on the slider
-        label_layout = QHBoxLayout()  # Vertical layout for labels
-        for i in range(1, 11):# Create labels from 1 to 10
+        label_layout = QVBoxLayout()  # Vertical layout for labels
+        for i in range(10, 0, -1):  # Create labels from 10 to 1
             label = QLabel(str(i))
             label.setAlignment(Qt.AlignCenter)  # Center align the labels
             label_layout.addWidget(label)
 
         # Create a layout for the gear label and the slider
-        gear_label_layout = QHBoxLayout()  # Vertical layout for the gear label and the slider
+        gear_label_layout = QVBoxLayout()  # Vertical layout for the gear label and the slider
         gear_label = QLabel("Gear")
         gear_label.setAlignment(Qt.AlignCenter)  # Center align the gear label
         gear_label_layout.addWidget(gear_label)  # Add the gear label
@@ -220,24 +219,25 @@ class RoverGUI(QWidget):
         slider_layout.addLayout(label_layout)  # Add labels to the left
         slider_layout.addLayout(gear_label_layout)  # Add gear label and slider to the right
 
-
         # Layout setup
         layout = QGridLayout()
         layout.addWidget(QLabel("Camera Feed"), 0, 0)
-        layout.setSpacing(0)  # Remove spacing between widgets
-        layout.addWidget(self.camera_label, 1, 0, 1, 2)  # Moved camera label to span 2 columns
-        layout.addWidget(QLabel("Select Camera"), 2, 0)  # Adjusted to Row 2
-        layout.addWidget(self.camera_selector, 3, 0, 1, 2)  # Moved to Row 3, span 2 columns
-        layout.addLayout(slider_layout, 4, 0, 1, 2)  # Moved to Row 4, span 2 columns
-        layout.addWidget(self.joystick, 5, 0, 1, 2)  # Moved joystick to Row 5
+        layout.addWidget(self.camera_label, 1, 0, 1, 2)
+        layout.addWidget(QLabel("Select Camera"), 2, 0)
+        layout.addWidget(self.camera_selector, 2, 1)
+        layout.addLayout(slider_layout, 1, 1, 1, 1)  # Adjusted position for slider layout
+        layout.addWidget(self.joystick, 3, 0, 1, 2)
+
+        # Add the map widget
+        self.map_view = QWebEngineView(self)
+        self.init_map()
+        layout.addWidget(self.map_view, 4, 0, 1, 2)  # Add map below other widgets
 
         self.setLayout(layout)
-
 
         # Start ROS in a separate thread
         self.ros_thread = ROSWorker()
         self.ros_thread.start()
-
 
     def change_gear(self, value):
         """Change the gear based on the value from the QSlider"""
@@ -245,9 +245,27 @@ class RoverGUI(QWidget):
         self.velocity_control.set_gear(gear)
         print(f"Changed to Gear: {gear}")  # Debug print
 
-
     def switch_camera(self, index):
         self.camera_feed.switch_camera(index + 1)
+
+    def init_map(self):
+        #Initialize the Mapbox map and set it to the map view
+        # Mapbox access token (replace with your own)
+        mapbox_access_token = 'pk.eyJ1IjoibmJ5bGltIiwiYSI6ImNsejdkNXJybDAzNHEyaXBvYTg5MHM4dzcifQ.j6GwNwJW9bImvDU_fA-R0A'
+
+        # Create a simple Plotly map
+        fig = px.scatter_mapbox(lat=[37.7749], lon=[-122.4194], hover_name=["San Francisco"], zoom=10)
+        fig.update_layout(mapbox_style="open-street-map",
+                        mapbox_accesstoken=mapbox_access_token,
+                        mapbox_zoom=10,
+                        mapbox_center={"lat": 37.7749, "lon": -122.4194})
+
+        # Generate the HTML string for the map
+        html_string = fig.to_html(full_html=True, include_plotlyjs='cdn')
+
+        # Load the HTML string into the QWebEngineView
+        self.map_view.setHtml(html_string)
+
 
 
 if __name__ == '__main__':
@@ -256,4 +274,3 @@ if __name__ == '__main__':
     gui = RoverGUI()
     gui.show()
     sys.exit(app.exec_())
-
