@@ -1,20 +1,76 @@
 #!/usr/bin/env python3
 import rospy
-import random
 import os
 import sys
 from sensor_msgs.msg import NavSatFix
-from PyQt5.QtCore import QThread, QUrl,QTimer
+from PyQt5.QtCore import QThread, QUrl, QTimer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 import json
-import rospkg 
+import rospkg
+
+cesium_html = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.122/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.122/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; }
+        #cesiumContainer { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    <script>
+        // Insert your Cesium Ion access token here
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiYTc0Y2UyOC0zNDk4LTQ2Y2MtOGMxYy1iNTkzZTU1Njk2ZjUiLCJpZCI6MjQ3NjQzLCJpYXQiOjE3Mjg3NTI4NTV9.t9TaQyYUq1PVfC_TcR6JMiiEqaEJi4pa9K-VVvSLTMU'; // Replace with your token
+
+        let viewer;
+
+        function initCesium() {
+            viewer = new Cesium.Viewer('cesiumContainer', {
+                terrainProvider: Cesium.createWorldTerrain()
+            });
+
+            // Fly the camera to San Francisco at the given longitude, latitude, and height.
+            viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(-122.4175, 37.655, 400),
+                orientation: {
+                    heading: Cesium.Math.toRadians(0.0),
+                    pitch: Cesium.Math.toRadians(-15.0),
+                }
+            });
+
+            // Add Cesium OSM Buildings, a global 3D buildings layer.
+            Cesium.createOsmBuildingsAsync().then((buildingTileset) => {
+                viewer.scene.primitives.add(buildingTileset);
+            });
+        }
+
+        initCesium(); // Call the function to initialize Cesium
+
+        // Function to update rover position
+        function receiveGPSData(gpsData) {
+            const data = JSON.parse(gpsData);
+            const roverLocation = Cesium.Cartesian3.fromDegrees(data.longitude, data.latitude, data.altitude);
+            viewer.entities.add({
+                position: roverLocation,
+                point: { pixelSize: 10, color: Cesium.Color.RED }
+            });
+            viewer.zoomTo(viewer.entities);
+        }
+    </script>
+</body>
+</html>
+'''
 
 class GPSVisualizer(QWidget):
     def __init__(self):
         super().__init__()
         rospy.init_node('gps_visualizer_node', anonymous=True)
-        self.setWindowTitle("3D Rover GPS Visualization (Google Earth Style)")
+        self.setWindowTitle("3D Rover GPS Visualization (CesiumJS)")
         self.setGeometry(100, 100, 800, 600)
 
         # Set up layout for the window
@@ -25,7 +81,7 @@ class GPSVisualizer(QWidget):
         self.map_view.setGeometry(50, 50, 700, 500)
         self.load_map()
 
-        layout.addWidget(QLabel("Rover Location on 3D Map (Google Earth Style)"))
+        layout.addWidget(QLabel("Rover Location on 3D Map (CesiumJS)"))
         layout.addWidget(self.map_view)
         self.setLayout(layout)
 
@@ -45,55 +101,6 @@ class GPSVisualizer(QWidget):
         Initialize and load the CesiumJS map dynamically
         """
         print("Loading map...")  # This will confirm if the method is called
-
-        cesium_html = '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <script src="file:///home/definitely_not_marvin/Downloads/CesiumJS/Build/Cesium/Cesium.js"></script>
-            <link href="file:///home/definitely_not_marvin/Downloads/CesiumJS/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
-            <style>
-                body, html { margin: 0; padding: 0; width: 100%; height: 100%; }
-                #cesiumContainer { width: 100%; height: 100%; }
-            </style>
-        </head>
-        <body>
-            <div id="cesiumContainer"></div>
-            <script>
-                var viewer = new Cesium.Viewer('cesiumContainer', {
-                    terrainProvider: Cesium.createWorldTerrain()
-                });
-
-                var roverPath = [];  // Stores the rover path
-
-                function updateRoverPosition(lat, lon, alt) {
-                    var roverLocation = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
-                    if (roverPath.length === 0) {
-                        var roverEntity = viewer.entities.add({
-                            position: roverLocation,
-                            point: { pixelSize: 10, color: Cesium.Color.RED }
-                        });
-                    } else {
-                        roverPath.push(roverLocation);
-                        viewer.entities.add({
-                            polyline: {
-                                positions: roverPath,
-                                width: 5,
-                                material: Cesium.Color.RED
-                            }
-                        });
-                    }
-                    viewer.zoomTo(viewer.entities);
-                }
-
-                function receiveGPSData(gpsData) {
-                    var data = JSON.parse(gpsData);
-                    updateRoverPosition(data.latitude, data.longitude, data.altitude);
-                }
-            </script>
-        </body>
-        </html>
-        '''
 
         # Use rospack to get the path to the current package
         rospack = rospkg.RosPack()
@@ -125,11 +132,9 @@ class GPSVisualizer(QWidget):
         rospy.loginfo(f"Sending to CesiumJS: {gps_data}")  # Add this line to log the GPS data being passed
         self.map_view.page().runJavaScript(f"receiveGPSData('{gps_data}');")
 
-
     def update_map(self):
         # Called periodically to refresh the map with the rover's latest location
         pass
-
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
