@@ -13,6 +13,8 @@ import numpy as np
 #3. convert to ros done
 #4. publish to ros done
 
+# hello jacky typed on line 16
+
 def initialize_camera():
     camera = Camera()  
     camera.enable_multicast()  # Enable multicast if supported
