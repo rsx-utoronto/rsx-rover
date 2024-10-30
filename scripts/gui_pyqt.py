@@ -139,7 +139,7 @@ class RoverGUI(QWidget):
 
         # Camera feed widget
         self.camera_label = QLabel(self)
-        self.camera_label.setFixedSize(600, 500)
+        self.camera_label.setFixedSize(400, 300)
 
         # Camera toggle
         self.camera_selector = QComboBox(self)
@@ -157,7 +157,7 @@ class RoverGUI(QWidget):
         # Gear slider
         self.gear_slider = QSlider(Qt.Horizontal)
         self.gear_slider.setRange(1, 10)
-        self.gear_slider.setTickPosition(QSlider.TicksAbove)
+        self.gear_slider.setTickPosition(QSlider.TicksBelow)
         self.gear_slider.setTickInterval(1)
         self.gear_slider.valueChanged.connect(self.change_gear)
 
@@ -180,8 +180,8 @@ class RoverGUI(QWidget):
         layout.addWidget(self.camera_label, 1, 0, 1, 2)
         layout.addWidget(QLabel("Select Camera"), 2, 0)
         layout.addWidget(self.camera_selector, 2, 1)
-        layout.addWidget(self.joystick, 3, 1, 1, 1, alignment=Qt.AlignRight)
-        layout.addLayout(slider_layout, 3, 0, 1, 1, alignment=Qt.AlignLeft)
+        layout.addWidget(self.joystick, 3, 0, 1, 1, alignment=Qt.AlignLeft)
+        layout.addLayout(slider_layout, 4, 0, 1, 2, alignment=Qt.AlignBottom)
 
         self.setLayout(layout)
 
