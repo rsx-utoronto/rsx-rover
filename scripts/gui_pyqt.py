@@ -181,7 +181,7 @@ class RoverGUI(QWidget):
         layout.addWidget(QLabel("Select Camera"), 2, 0)
         layout.addWidget(self.camera_selector, 2, 1)
         layout.addWidget(self.joystick, 3, 0, 1, 1, alignment=Qt.AlignLeft)
-        layout.addLayout(slider_layout, 4, 0, 1, 2, alignment=Qt.AlignBottom)
+        layout.addLayout(slider_layout, 3, 1, 1, 1, alignment=Qt.AlignBottom)
 
         self.setLayout(layout)
 
