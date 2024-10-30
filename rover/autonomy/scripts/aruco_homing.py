@@ -42,6 +42,7 @@ class Aimer: #
             else:
                 out_angular = -1 # self.angular_pid.update(self.target_x - aruco_x)
         else:
+            print ("at no turning")
             out_angular = 0
             self.angular_pid.reset()
         aruco_distance_est = self.calculate_area(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right)
@@ -51,6 +52,7 @@ class Aimer: #
         if abs(aruco_distance_est - self.min_aruco_area) < self.aruco_min_area_uncert:
             out_linear = 1 # self.linear_pid.update(self.min_aruco_area - aruco_distance_est)
         else:
+            print ("do not go forward")
             out_linear = 0
             self.linear_pid.reset()
         self.linear_v, self.angular_v = out_linear, out_angular # min(self.max_linear_v, out_linear), min(self.max_angular_v, out_angular)
@@ -111,7 +113,7 @@ class AimerROS(Aimer):  #updates coords continuously
         self.update(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right)
 
 def main():
-    # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
+    rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
     pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
     aimer = AimerROS(640, 360, 2025, 100, 1976, 0.8, 0.7) # change constants
     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
@@ -121,6 +123,8 @@ def main():
         twist = Twist()
         if aimer.linear_v == 0 and aimer.angular_v == 0:
             print ("at weird", aimer.linear_v, aimer.angular_v)
+            twist.linear.x = 0
+            twist.angular.z = 0
             return True
         if aimer.angular_v == 1:
             twist.angular.z = aimer.max_angular_v
@@ -134,3 +138,6 @@ def main():
         
         pub.publish(twist)
         rate.sleep()
+
+
+main()
