@@ -139,7 +139,7 @@ class RoverGUI(QWidget):
 
         # Camera feed widget
         self.camera_label = QLabel(self)
-        self.camera_label.setFixedSize(400, 300)
+        self.camera_label.setFixedSize(600, 500)
 
         # Camera toggle
         self.camera_selector = QComboBox(self)
