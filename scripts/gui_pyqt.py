@@ -116,6 +116,7 @@ class Joystick(QWidget):
     def mouseReleaseEvent(self, event):
         self.grabCenter = False
         self.movingOffset = QPointF(0, 0)
+        self.velocity_control.send_velocity(0, 0)
         self.update()
 
     def mouseMoveEvent(self, event):
