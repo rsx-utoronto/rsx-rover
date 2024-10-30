@@ -85,7 +85,29 @@ class Joystick(QWidget):
         else:
             angleZ = -(angle - 180) / 45
 
-        self.velocity_control.send_velocity(linX, angleZ)
+
+
+        # Define a small constant increment for smooth acceleration
+        increment = 0.05
+
+        # Gradually adjust current linear velocity towards the target
+        if abs(linX - self.direction.LinX) < increment:
+            self.direction.LinX = linX  # Close enough to target, snap to it
+        elif linX > self.direction.LinX:
+            self.direction.LinX += increment  # Increase linearly
+        else:
+            self.direction.LinX -= increment  # Decrease linearly
+
+        # Gradually adjust current angular velocity towards the target
+        if abs(angleZ - self.direction.AngleZ) < increment:
+            self.direction.AngleZ = angleZ  # Close enough to target, snap to it
+        elif angleZ > self.direction.AngleZ:
+            self.direction.AngleZ += increment  # Increase angular velocity
+        else:
+            self.direction.AngleZ -= increment  # Decrease angular velocity
+
+        # Send the updated velocities to the rover
+        self.velocity_control.send_velocity(self.direction.LinX, self.direction.AngleZ)
 
     def mousePressEvent(self, ev):
         self.grabCenter = self._centerEllipse().contains(ev.pos())
