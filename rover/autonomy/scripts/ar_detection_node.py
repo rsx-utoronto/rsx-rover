@@ -75,7 +75,6 @@ class ARucoTagDetectionNode():
         arucoParam = aruco.DetectorParameters_create()
         bboxs, ids, rejected = aruco.detectMarkers(imgGray,arucoDict,parameters=arucoParam)
 
-
         if ids is not None:
             print("AR detected!")
             print(ids)
@@ -101,12 +100,13 @@ class ARucoTagDetectionNode():
                     # font
 
                    # print (bbox[0][0],bbox[0][1],bbox[2][0],bbox[2][1])
-                    self.array=[bbox[0][0], bbox[0][1],bbox[2][0], bbox[0][1], bbox[0][0], bbox[2][1], bbox[2][0], bbox[2][1]]
+                    self.array=[bbox[0][0], bbox[0][1], bbox[2][0], bbox[0][1], bbox[0][0], bbox[2][1], bbox[2][0], bbox[2][1]]
                     data = Float64MultiArray(data=self.array)
                     self.bbox_pub.publish(data)
                     
+                    # first two numbers are top left corner, second two are bottom right corner
                     print("here are the coords from jack's code", self.array[0], self.array[1], self.array[6], self.array[7])
-                    
+                    print((self.array[6]-self.array[0])*(self.array[7]-self.array[1]))
                     
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     org = (int(bbox[0][0]), int(bbox[0][1] - 20))
@@ -115,8 +115,6 @@ class ARucoTagDetectionNode():
                     thickness = 2
                     img = cv2.putText(img, f"ID: {int(id)}", org, font, 
                                     fontScale, color, thickness, cv2.LINE_AA)
-                    
-                    
             
             img_msg = bridge.cv2_to_imgmsg(img, encoding="passthrough")
             self.vis_pub.publish(img_msg)

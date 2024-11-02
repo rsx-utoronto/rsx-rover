@@ -101,7 +101,7 @@ def straight_line_approach(lin_vel, ang_vel):
 
         else:
             msg.linear.x = 0
-            msg.angular.z = (kp * angle_diff)  + (kd * diff_err) + (ki * acc_err)
+            msg.angular.z = (kp * angle_diff) # + (kd * diff_err) + (ki * acc_err)
             if abs((kp * angle_diff)  + (kd * diff_err) + (ki * acc_err)) < 0.3:
                 if angle_diff*kp > 0:
                     msg.angular.z = 0.3    
@@ -119,9 +119,9 @@ if __name__ == '__main__':
     x = 0
     y = 0
     heading = 0
-    target_x = 10
-    target_y = -4
+    target_x = 7
+    target_y = -3
     try:
-        straight_line_approach(2, 0.5) # change linear and angular velocities
+        straight_line_approach(1.5, 0.5) # change linear and angular velocities
     except rospy.ROSInterruptException:
         pass  

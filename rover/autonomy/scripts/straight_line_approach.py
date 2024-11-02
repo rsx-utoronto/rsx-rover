@@ -115,9 +115,9 @@ if __name__ == '__main__':
     x = 0
     y = 0
     heading = 0
-    target_x = 15
-    target_y = -6
+    target_x = 7
+    target_y = 3
     try:
-        straight_line_approach(1.8, 0.5) # change linear and angular velocities
+        straight_line_approach(1.5, 0.5) # change linear and angular velocities
     except rospy.ROSInterruptException:
         pass  
