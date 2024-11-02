@@ -1,5 +1,5 @@
 """
-Pseudocode for the state machine
+Code for the state machine
 
 """
 
