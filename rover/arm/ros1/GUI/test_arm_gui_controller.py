@@ -2,7 +2,8 @@ import unittest
 from unittest.mock import patch
 from arm_gui_controller import GuiControllerNode
 from rover.msg import ArmInputs
-from std_msgs.msg import String
+from std_msgs.msg import String, Int32
+import rosbag
 
 class TestGuiControllerNode(unittest.TestCase):
 
