@@ -76,7 +76,7 @@ class GuiControllerNode():
                 GuiToController.options = 1
             if command == "useless":
                 GuiToController.r3 = 1
-        except AttributeError:
+                
             # left and right triggers
             if command == "Up":
                 GuiToController.r2 = 1
@@ -92,6 +92,8 @@ class GuiControllerNode():
                 self.statePublisher.publish("Setup")
             if command == "Idle":
                 self.statePublisher.publish("Idle")
+        except:
+            print("error!")
 
         self.inputPublisher.publish(GuiToController)
 

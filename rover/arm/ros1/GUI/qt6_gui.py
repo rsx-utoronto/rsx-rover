@@ -1,11 +1,10 @@
-from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-    QLabel, QLineEdit, QComboBox, QSlider, QGridLayout, QGroupBox, QSpinBox
-)
+#! /usr/bin/env python3
+
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QComboBox, QSlider, QGridLayout, QGroupBox, QSpinBox
 from PyQt6.QtCore import Qt
 import sys
 
-# from arm_gui_controller import GuiControllerNode  # Class for sending commands to manipulator
+from arm_gui_controller import GuiControllerNode  # Class for sending commands to manipulator
 
 class RobotControlGUI(QWidget):
     def __init__(self):
@@ -14,11 +13,11 @@ class RobotControlGUI(QWidget):
         self.setGeometry(100, 100, 800, 600)
         self.initUI()
         
-        # self.controller = GuiControllerNode()  # Initialize controller
+        self.controller = GuiControllerNode()  # Initialize controller  
     
     def button_is_clicked(self,command):
-        # self.controller.on_press(command)  # Send command to controller
-        # self.controller.on_release()       # Reset
+        self.controller.on_press(command)  # Send command to controller
+        self.controller.on_release()       # Reset
         pass
 
     def initUI(self):
