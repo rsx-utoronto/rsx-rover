@@ -15,15 +15,30 @@ class RobotControlGUI(QWidget):
         self.initUI()
         
         # self.controller = GuiControllerNode()  # Initialize controller
+        # self.update_current_position() # DOESN"T WORK
+
     
     def button_is_clicked(self,command):
         # self.controller.on_press(command)  # Send command to controller
         # self.controller.on_release()       # Reset
+        print(command)
+        pass
+
+    def update_current_position(self):
+        value = 0
+        while True:
+            self.x_coord.setText(f"X: {value:.1f} mm")
+            self.y_coord.setText(f"Y: {value:.1f} mm")
+            self.z_coord.setText(f"Z: {value:.1f} mm")
+            self.rx_coord.setText(f"Rx: {value:.1f}°") 
+            self.ry_coord.setText(f"Ry: {value:.1f}°") 
+            self.rz_coord.setText(f"Rz: {value:.1f}°")
+            value += 1
         pass
 
     def initUI(self):
         # Main Layout
-        main_layout = QHBoxLayout(self)
+        main_layout = QHBoxLayout()
 
         # Coordinates Control Section:w
         coordinates_group = QGroupBox("Inverse Kinematics: End Effector Coordinates and Rotation")
@@ -62,9 +77,9 @@ class RobotControlGUI(QWidget):
         view_group = QGroupBox("Camera View")
         view_layout = QVBoxLayout()
 
-        self.user_coord_box = QComboBox()
-        self.user_coord_box.addItems(["Camera View 1", "Camera View 2"])
-        view_layout.addWidget(self.user_coord_box)
+        self.camera_view_box  = QComboBox()
+        self.camera_view_box .addItems(["Camera View 1", "Camera View 2"])
+        view_layout.addWidget(self.camera_view_box )
 
         view_layout.addStretch(1)
         
@@ -73,10 +88,6 @@ class RobotControlGUI(QWidget):
         self.coord_view_label.setFixedWidth(400)
         view_layout.addWidget(self.coord_view_label)
 
-        self.user_coord_box = QComboBox()
-        self.user_coord_box.addItems(["Camera View 1", "Camera View 2"])
-        view_layout.addWidget(self.user_coord_box)
-
         # Arm Power Options
         power_group = QGroupBox("Arm Power")
         power_layout = QHBoxLayout()
@@ -84,11 +95,13 @@ class RobotControlGUI(QWidget):
         power_layout.setContentsMargins(0,0,0,0)
 
         self.power_on = QPushButton("ON")
+        self.power_on.clicked.connect(lambda _: self.button_is_clicked("ON"))         
         self.power_off = QPushButton("OFF")
+        self.power_off.clicked.connect(lambda _: self.button_is_clicked("OFF"))         
         self.power_reset = QPushButton("Reset")
-
+        self.power_reset.clicked.connect(lambda _: self.button_is_clicked("Reset"))         
+        
         power_group.setStyleSheet('QPushButton {font-size: 20px}')
-
         self.power_on.setStyleSheet('QPushButton {background-color: #00FF00; color: #000000}')
         self.power_off.setStyleSheet('QPushButton {background-color: #FF0000}')
 
@@ -98,7 +111,7 @@ class RobotControlGUI(QWidget):
 
         power_group.setLayout(power_layout)
         view_layout.addWidget(power_group)
-
+        view_group.setLayout(view_layout)
 
         # Modules for Science Team
         module_types = ["Module 1", "Module 2", "Module 3", "Module 4"]
@@ -117,7 +130,6 @@ class RobotControlGUI(QWidget):
             
         science_modules.setLayout(science_layout)
 
-        view_group.setLayout(view_layout)
 
         # Joints Control Section
         joints_group = QGroupBox("Joints Control")
@@ -187,10 +199,9 @@ class RobotControlGUI(QWidget):
         modes_group.setLayout(modes_layout)
 
         coords_layout.addWidget(modes_group)
-        coords_group.setLayout(coord_layout)
-
         coords_layout.addWidget(science_modules)
-        
+        coords_group.setLayout(coords_layout)
+
 
         # Adding sections to the main layout
         main_layout.addWidget(coordinates_group)
@@ -201,8 +212,11 @@ class RobotControlGUI(QWidget):
         # Bottom Buttons
         bottom_layout = QHBoxLayout()
         self.move_home = QPushButton("Move to Home")
+        self.move_home.clicked.connect(lambda _: self.button_is_clicked("Move to Home"))         
         self.move_origin = QPushButton("Move to Origin")
+        self.move_origin.clicked.connect(lambda _: self.button_is_clicked("Move to Origin"))         
         self.freemove = QPushButton("Freemove")
+        self.freemove.clicked.connect(lambda _: self.button_is_clicked("Freemove"))         
 
         bottom_layout.addWidget(self.move_home)
         bottom_layout.addWidget(self.move_origin)
@@ -212,7 +226,6 @@ class RobotControlGUI(QWidget):
         main_vertical_layout = QVBoxLayout(self)
         main_vertical_layout.addLayout(main_layout)
         main_vertical_layout.addLayout(bottom_layout)
-
         self.setLayout(main_vertical_layout)
 
 if __name__ == "__main__":
