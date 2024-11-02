@@ -85,7 +85,7 @@ def signal_green_led(): #happens for a few seconds and returns to red
 class InitializeAutonomousNavigation(smach.State):
     def __init__(self):
         smach.State.__init__(self, 
-                             outcomes = ["Location Selection", "Re-Initialize"]
+                             outcomes = ["Location Selection", "Re-Initialize"],
                              input_keys = ["curr_location"])
         
         curr_location = ()
@@ -99,7 +99,7 @@ class InitializeAutonomousNavigation(smach.State):
         
 class LocationSelection(smach.State): #goes through all states 
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"]
+        smach.State.__init__(self, outcomes = ["Location Selection"],
                              output_keys = ["aimed_location"])
 
     
@@ -114,7 +114,7 @@ class LocationSelection(smach.State): #goes through all states
 
 class GNS1(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"]
+        smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location"])
         curr_location = ()
         
@@ -131,7 +131,7 @@ class GNS1(smach.State):
         
 class GNS2(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"]
+        smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location"])
         curr_location = ()
         
@@ -147,13 +147,13 @@ class GNS2(smach.State):
            
 class AR1(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"]
+        smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location"])
         curr_location = ()
         
     def exectue(self, userdata):
         rospy.loginfo("Performing ArıucoTag1 Search")
-        state,loc=grid_search_aruco():
+        state,loc=grid_search_aruco()
         if state == True:
             rospy.loginfo("Successful grid search")
             rover_cruise(loc)
@@ -164,7 +164,7 @@ class AR1(smach.State):
 
 class AR2(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"]
+        smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location"])
         curr_location = ()
         
@@ -181,7 +181,7 @@ class AR2(smach.State):
 
 class AR3(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"]
+        smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location"])
         curr_location = ()
         
@@ -198,7 +198,7 @@ class AR3(smach.State):
 
 class GObject1(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"]
+        smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location"])
         curr_location = ()
     
@@ -214,7 +214,7 @@ class GObject1(smach.State):
     
 class GObject2(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"]
+        smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location"])
         curr_location = ()
     
