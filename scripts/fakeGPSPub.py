@@ -2,12 +2,20 @@
 
 import rospy
 from sensor_msgs.msg import NavSatFix
+import random
 
-def generate_fixed_gps_data():
-    """Generate fixed GPS data for testing."""
-    # Set fixed latitude and longitude values
-    latitude = 38.4063  # Example: San Francisco, CA
-    longitude = -110.7918  # Example: San Francisco, CA
+# Initial GPS coordinates
+latitude = 38.4063  # Example: starting latitude
+longitude = -110.7918  # Example: starting longitude
+
+def generate_moving_gps_data():
+    """Generate GPS data that moves slightly over time."""
+    global latitude, longitude
+
+    # Randomly change latitude and longitude slightly
+    # Random increment values between -0.0001 and 0.0001
+    latitude += random.uniform(-0.0001, 0.0001)
+    longitude += random.uniform(-0.0001, 0.0001)
 
     gps_msg = NavSatFix()
     gps_msg.header.stamp = rospy.Time.now()
@@ -20,15 +28,15 @@ def generate_fixed_gps_data():
     return gps_msg
 
 def gps_publisher():
-    """Publish fixed GPS data to the 'gps' topic."""
+    """Publish GPS data that moves slightly to the 'gps' topic."""
     rospy.init_node('gps_publisher', anonymous=True)
     pub = rospy.Publisher('gps', NavSatFix, queue_size=10)
 
     rate = rospy.Rate(1)  # Publish at 1 Hz
     while not rospy.is_shutdown():
-        gps_data = generate_fixed_gps_data()
+        gps_data = generate_moving_gps_data()
         pub.publish(gps_data)
-        rospy.loginfo(f"Published GPS data: Latitude={gps_data.latitude}, Longitude={gps_data.longitude}")
+        rospy.loginfo(f"Published GPS data: Latitude={gps_data.latitude:.6f}, Longitude={gps_data.longitude:.6f}")
         rate.sleep()
 
 if __name__ == "__main__":
