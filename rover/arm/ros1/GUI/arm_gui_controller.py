@@ -11,7 +11,7 @@ class GuiControllerNode():
         rospy.init_node("arm_gui_controller")
 
         self.inputPublisher = rospy.Publisher("arm_inputs", ArmInputs, queue_size=10)
-        self.statePubliser = rospy.Publisher("arm_state", String, queue_size=10)
+        self.statePublisher = rospy.Publisher("arm_state", String, queue_size=10)
 
     def on_press(self, command):
         GuiToController = ArmInputs()
@@ -40,7 +40,7 @@ class GuiControllerNode():
             # left horizontal joystick emulation
             if command == "Left":
                 GuiToController.l_horizontal = 1
-            elif command == "Righ":
+            elif command == "Right":
                 GuiToController.l_horizontal = -1
 
             # right vertical joystick emulation
@@ -85,13 +85,13 @@ class GuiControllerNode():
 
             # emulate d-pad as arrow keys
             if command == "Manual":
-                self.statePubliser.publish("Manual")
+                self.statePublisher.publish("Manual")
             if command == "Inverse Kin":
-                self.statePubliser.publish("IK")
+                self.statePublisher.publish("IK")
             if command == "Setup":
-                self.statePubliser.publish("Setup")
+                self.statePublisher.publish("Setup")
             if command == "Idle":
-                self.statePubliser.publish("Idle")
+                self.statePublisher.publish("Idle")
 
         self.inputPublisher.publish(GuiToController)
 
