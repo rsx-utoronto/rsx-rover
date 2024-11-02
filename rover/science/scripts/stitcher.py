@@ -60,7 +60,7 @@ class Stitcher:
     
         cv.imwrite("result.jpg", pano)
         print("stitching completed successfully, file saved!")
-        cv.imshow('result', pano)
+        # cv.imshow('result', pano)
     
         print('Done')
  
