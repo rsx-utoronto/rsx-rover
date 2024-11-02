@@ -1,11 +1,10 @@
-from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-    QLabel, QLineEdit, QComboBox, QSlider, QGridLayout, QGroupBox, QSpinBox
-)
+#! /usr/bin/env python3
+
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QComboBox, QSlider, QGridLayout, QGroupBox, QSpinBox
 from PyQt6.QtCore import Qt
 import sys
 
-# from arm_gui_controller import GuiControllerNode  # Class for sending commands to manipulator
+from arm_gui_controller import GuiControllerNode  # Class for sending commands to manipulator
 
 class RobotControlGUI(QWidget):
     def __init__(self):
