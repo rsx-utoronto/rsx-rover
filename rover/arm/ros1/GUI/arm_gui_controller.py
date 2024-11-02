@@ -32,7 +32,7 @@ class GuiControllerNode():
 
         try:
             # left vertical joystick emulation
-            if command == 'Forward':
+            if command == "Forward":
                 GuiToController.l_vertical = 1
             elif command == "Backward":
                 GuiToController.l_vertical = -1
@@ -44,7 +44,7 @@ class GuiControllerNode():
                 GuiToController.l_horizontal = -1
 
             # right vertical joystick emulation
-            if command == 'Ry':
+            if command == "Ry":
                 GuiToController.r_vertical = 1
             elif command == "-Ry":
                 GuiToController.r_vertical = -1
@@ -56,9 +56,9 @@ class GuiControllerNode():
                 GuiToController.r_horizontal = -1
 
             # shape button emulation
-            if command == "Temp: Open Grip":
+            if command == "Open Grip":
                 GuiToController.x = 1
-            if command == "Temp: Close Grip":
+            if command == "Close Grip":
                 GuiToController.o = 1
             if command == "useless":
                 GuiToController.triangle = 1

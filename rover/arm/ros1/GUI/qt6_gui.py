@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 import sys
 
-from arm_gui_controller import GuiControllerNode  # Class for sending commands to manipulator
+# from arm_gui_controller import GuiControllerNode  # Class for sending commands to manipulator
 
 class RobotControlGUI(QWidget):
     def __init__(self):
@@ -14,11 +14,12 @@ class RobotControlGUI(QWidget):
         self.setGeometry(100, 100, 800, 600)
         self.initUI()
         
-        self.controller = GuiControllerNode()  # Initialize controller
+        # self.controller = GuiControllerNode()  # Initialize controller
     
     def button_is_clicked(self,command):
-        self.controller.on_press(command)  # Send command to controller
-        self.controller.on_release()       # Reset
+        # self.controller.on_press(command)  # Send command to controller
+        # self.controller.on_release()       # Reset
+        pass
 
     def initUI(self):
         # Main Layout
@@ -30,7 +31,7 @@ class RobotControlGUI(QWidget):
 
         # Arrow Buttons for movement
         directions = ["Up", "Down", "Left", "Right", "Forward", "Backward",
-                      "Rx", "Ry", "Rz", "-Rx", "-Ry", "-Rz"]
+                      "Rx", "Ry", "Rz", "-Rx", "-Ry", "-Rz","Open Grip", "Close Grip"]
         arrow_buttons = {d: QPushButton(d) for d in directions}
 
         for direction, button in arrow_buttons.items():
@@ -45,12 +46,16 @@ class RobotControlGUI(QWidget):
 
         # Rotation Controls
         coord_layout.addWidget(arrow_buttons["Rx"], 4, 0)
-        coord_layout.addWidget(arrow_buttons["-Rx"], 4, 2)
+        coord_layout.addWidget(arrow_buttons["-Rx"], 4, 1)
         coord_layout.addWidget(arrow_buttons["Ry"], 5, 0)
-        coord_layout.addWidget(arrow_buttons["-Ry"], 5, 2)
+        coord_layout.addWidget(arrow_buttons["-Ry"], 5, 1)
         coord_layout.addWidget(arrow_buttons["Rz"], 6, 0)
-        coord_layout.addWidget(arrow_buttons["-Rz"], 6, 2)
+        coord_layout.addWidget(arrow_buttons["-Rz"], 6, 1)
 
+        # Grip Control
+        coord_layout.addWidget(arrow_buttons["Open Grip"], 5, 2)
+        coord_layout.addWidget(arrow_buttons["Close Grip"], 6, 2)
+        
         coordinates_group.setLayout(coord_layout)
 
         # 3D View Section
