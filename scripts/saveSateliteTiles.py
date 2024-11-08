@@ -1,5 +1,5 @@
-from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
+#!/usr/bin/python3
+
 import folium
 import json
 import os
@@ -13,7 +13,6 @@ zoom_start = 13
 # File paths
 output_folder = 'map_output'
 html_file = os.path.join(output_folder, 'map.html')
-image_file = os.path.join(output_folder, 'map_screenshot.png')
 metadata_file = os.path.join(output_folder, 'map_metadata.json')
 
 # Create output folder if it doesn't exist
@@ -43,8 +42,8 @@ pixel_center_x, pixel_center_y = lat_lng_to_pixel(latitude, longitude, zoom_star
 # Define the size of one tile in pixels (256x256)
 tile_size = 256
 
-# The visible width and height in pixels (could be adjusted based on your screenshot size)
-map_width, map_height = 1024, 768  # Change these values based on your screenshot resolution
+# The visible width and height in pixels (adjust based on your desired output)
+map_width, map_height = 1024, 768  # Resolution of the map area
 
 # Calculate the number of pixels that correspond to the map's bounds
 half_width = (map_width / 2) / (tile_size / 2)
@@ -54,7 +53,7 @@ half_height = (map_height / 2) / (tile_size / 2)
 sw_x = pixel_center_x - half_width
 ne_x = pixel_center_x + half_width
 sw_y = pixel_center_y + half_height  # SW is lower on the screen
-ne_y = pixel_center_y - half_height    # NE is higher on the screen
+ne_y = pixel_center_y - half_height  # NE is higher on the screen
 
 # Convert pixel bounds back to lat/lng
 sw_lat, sw_lng = pixel_to_lat_lng(sw_x, sw_y, zoom_start)
@@ -69,22 +68,10 @@ map_metadata = {
     "zoom": zoom_start,
 }
 
-# Step 3: Set up Firefox with Selenium to capture the map screenshot
-options = Options()
-options.add_argument("--headless")  # Run in headless mode
-
-driver = webdriver.Firefox(options=options)
-driver.set_window_size(map_width, map_height)  # Set to your screenshot resolution
-driver.get("file://" + os.path.abspath(html_file))
-
-# Step 4: Capture the screenshot and save it
-driver.save_screenshot(image_file)
-driver.quit()
-
-# Step 5: Save the metadata as a JSON file
+# Step 3: Save the metadata as a JSON file
 with open(metadata_file, 'w') as f:
     json.dump(map_metadata, f, indent=4)
 
-print("Map image and metadata saved:")
-print(f"Image: {image_file}")
+print("Map HTML and metadata saved:")
+print(f"HTML file: {html_file}")
 print(f"Metadata: {metadata_file}")
