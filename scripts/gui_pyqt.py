@@ -20,8 +20,8 @@ from sensor_msgs.msg import NavSatFix  # Import GPS message type
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter
-widgetWidth = 400
-widgetHeight = 300
+widgetWidth = 1000
+widgetHeight = 750
 
 class PygameOverlay(QWidget):
     def __init__(self, map_image_path, metadata_path):
@@ -357,6 +357,7 @@ class RoverGUI(QMainWindow):
             label.setAlignment(Qt.AlignCenter)
             label_layout.addWidget(label)
 
+        label_layout.setSpacing(0)  # Decrease spacing between the labels
         slider_layout.addLayout(label_layout)
         slider_layout.addWidget(self.gear_slider)
 
@@ -366,13 +367,13 @@ class RoverGUI(QMainWindow):
 
         # Horizontal layout for joystick and gear control side by side
         control_layout = QHBoxLayout()
-        control_layout.addWidget(gear_group)  # Gear control on the right
-        control_layout.addWidget(joystick_group)  # Joystick control on the left
+        control_layout.addWidget(gear_group)  
+        control_layout.addWidget(joystick_group)  
 
         # Main Layout (Vertical: Camera on top, Joystick & Gear side by side below)
         main_layout = QVBoxLayout()
-        main_layout.addWidget(camera_group)  # Camera Feed on top
-        main_layout.addLayout(control_layout)  # Joystick & Gear side by side
+        main_layout.addWidget(camera_group)  
+        main_layout.addLayout(control_layout)  
 
         # Set the final layout for the control tab
         self.control_tab.setLayout(main_layout)
@@ -412,7 +413,7 @@ if __name__ == '__main__':
         }
         QGroupBox {
             font-weight: bold;
-            font-size: 14px;
+            font-size: 18px;
             border: 1px solid gray;
             margin-top: 10px;
         }
@@ -420,7 +421,7 @@ if __name__ == '__main__':
             font-size: 12px;
         }
         QComboBox, QSlider {
-            font-size: 12px;
+            font-size: 18px;
         }
         QTabWidget::pane {
             border: 1px solid gray;
