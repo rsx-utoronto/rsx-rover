@@ -11,7 +11,7 @@ import json
 import pygame
 import numpy as np
 
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, QSlider, QHBoxLayout, QVBoxLayout, QMainWindow
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from sensor_msgs.msg import Image
@@ -161,10 +161,10 @@ class VelocityControl:
 class Joystick(QWidget):
     def __init__(self, velocity_control, parent=None):
         super(Joystick, self).__init__(parent)
-        self.setMinimumSize(100, 100)
+        self.setMinimumSize(200, 200)
         self.movingOffset = QPointF(0, 0)
         self.grabCenter = False
-        self.__maxDistance = 50
+        self.__maxDistance = 100
         self.velocity_control = velocity_control
 
     def paintEvent(self, event):
@@ -176,8 +176,8 @@ class Joystick(QWidget):
 
     def _centerEllipse(self):
         if self.grabCenter:
-            return QRectF(-20, -20, 40, 40).translated(self.movingOffset)
-        return QRectF(-20, -20, 40, 40).translated(self._center())
+            return QRectF(-40, -40, 80, 80).translated(self.movingOffset)
+        return QRectF(-40, -40, 80, 80).translated(self._center())
 
     def _center(self):
         return QPointF(self.width() / 2, self.height() / 2)
@@ -277,32 +277,72 @@ class CameraFeed:
         self.current_camera = camera_index
 
 
-class RoverGUI(QWidget):
+class RoverGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Rover Control Panel")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 1200, 800)
 
-        # Camera feed widget
-        self.camera_label = QLabel(self)
-        self.camera_label.setFixedSize(400, 300)
+        # Initialize QTabWidget
+        self.tabs = QTabWidget()
+        self.setCentralWidget(self.tabs)
 
-        # Camera toggle
-        self.camera_selector = QComboBox(self)
+        # Create tabs
+        self.control_tab = QWidget()
+        self.map_tab = QWidget()
+
+        # Add tabs to QTabWidget
+        self.tabs.addTab(self.control_tab, "Controls")
+        self.tabs.addTab(self.map_tab, "Map")
+
+        # Setup each tab
+        self.setup_control_tab()
+        self.setup_map_tab()
+
+    def setup_control_tab(self):
+        # Camera Group Box (top)
+        camera_group = QGroupBox("Camera Feed")
+        camera_group.setAlignment(Qt.AlignCenter)
+        camera_layout = QVBoxLayout()
+        
+        # Camera feed widget with fixed size
+        self.camera_label = QLabel(self.control_tab)
+        self.camera_label.setFixedSize(640, 480)  # Set to smaller size
+        self.camera_label.setFrameStyle(QFrame.Panel | QFrame.Sunken)  # Add border style
+
+        # Camera toggle with label
+        camera_selector_layout = QHBoxLayout()
+        self.camera_selector = QComboBox(self.control_tab)
         self.camera_selector.addItem("Zed (front) camera")
         self.camera_selector.addItem("Butt camera")
         self.camera_selector.currentIndexChanged.connect(self.switch_camera)
+
+        # Add the label and combo box to the horizontal layout
+        camera_label = QLabel("Select Camera:")  # Label next to combo box
+        camera_selector_layout.addWidget(camera_label, alignment=Qt.AlignRight)
+        camera_selector_layout.addWidget(self.camera_selector)
+        camera_selector_layout.setAlignment(Qt.AlignCenter)
 
         # ROS functionality
         self.camera_feed = CameraFeed(self.camera_label)
         self.velocity_control = VelocityControl()
 
+        # Layout for camera feed
+        camera_layout.addWidget(self.camera_label, alignment=Qt.AlignCenter)
+        camera_layout.addLayout(camera_selector_layout)  # Add the layout with the label and combo box
+        camera_group.setLayout(camera_layout)
+
+        # Joystick Group Box (side-by-side with gear)
+        joystick_group = QGroupBox("Joystick Control")
+        joystick_layout = QVBoxLayout()
 
         # Joystick widget with velocity control
         self.joystick = Joystick(self.velocity_control)
+        joystick_layout.addWidget(self.joystick)
+        joystick_group.setLayout(joystick_layout)
 
         # Gear slider
-        self.gear_slider = QSlider(Qt.Horizontal)
+        self.gear_slider = QSlider(Qt.Horizontal, self.control_tab)
         self.gear_slider.setRange(1, 10)
         self.gear_slider.setTickPosition(QSlider.TicksBelow)
         self.gear_slider.setTickInterval(1)
@@ -317,24 +357,41 @@ class RoverGUI(QWidget):
             label = QLabel(str(i))
             label.setAlignment(Qt.AlignCenter)
             label_layout.addWidget(label)
-        
+
         slider_layout.addLayout(label_layout)
         slider_layout.addWidget(self.gear_slider)
-        self.map_overlay = PygameOverlay(
-            "/home/laura/rover_ws/src/rsx-rover/map_output/map_screenshot.png",
-            "/home/laura/rover_ws/src/rsx-rover/map_output/map_metadata.json"
-        )
-        # Layout setup
-        layout = QGridLayout()
-        layout.addWidget(QLabel("Camera Feed"), 0, 0)
-        layout.addWidget(self.camera_label, 1, 0, 1, 2)
-        layout.addWidget(QLabel("Select Camera"), 2, 0)
-        layout.addWidget(self.camera_selector, 2, 1)
-        layout.addWidget(self.joystick, 3, 0, 1, 1, alignment=Qt.AlignLeft)
-        layout.addLayout(slider_layout, 3, 1, 1, 1, alignment=Qt.AlignBottom)
-        layout.addWidget(self.map_overlay, 1, 2)  # Add GPS map overlay
 
-        self.setLayout(layout)
+        # Gear Group Box
+        gear_group = QGroupBox("Gear Control")
+        gear_group.setLayout(slider_layout)
+
+        # Horizontal layout for joystick and gear control side by side
+        control_layout = QHBoxLayout()
+        control_layout.addWidget(gear_group)  # Gear control on the right
+        control_layout.addWidget(joystick_group)  # Joystick control on the left
+
+        # Main Layout (Vertical: Camera on top, Joystick & Gear side by side below)
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(camera_group)  # Camera Feed on top
+        main_layout.addLayout(control_layout)  # Joystick & Gear side by side
+
+        # Set the final layout for the control tab
+        self.control_tab.setLayout(main_layout)
+
+
+    def setup_map_tab(self):
+        # Path to map image and metadata
+        map_image_path = "/home/kjyshen223/rover_ws/src/rsx-rover/scripts/map_output/map_screenshot.png"
+        metadata_path = "/home/kjyshen223/rover_ws/src/rsx-rover/scripts/map_output/map_metadata.json"
+
+        # Initialize PygameOverlay
+        self.map_overlay = PygameOverlay(map_image_path, metadata_path)
+
+        # Layout setup for map tab
+        layout = QVBoxLayout()
+        layout.addWidget(self.map_overlay)
+
+        self.map_tab.setLayout(layout)
 
     def change_gear(self, value):
         self.velocity_control.set_gear(value)
@@ -343,9 +400,34 @@ class RoverGUI(QWidget):
     def switch_camera(self, index):
         self.camera_feed.switch_camera(index + 1)
 
+
 if __name__ == '__main__':
     rospy.init_node('rover_gui', anonymous=False)
     app = QApplication(sys.argv)
     gui = RoverGUI()
+
+     # Apply a basic stylesheet for a modern look
+    app.setStyleSheet("""
+        QMainWindow {
+            background-color: #f5f5f5;
+        }
+        QGroupBox {
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid gray;
+            margin-top: 10px;
+        }
+        QLabel {
+            font-size: 12px;
+        }
+        QComboBox, QSlider {
+            font-size: 12px;
+        }
+        QTabWidget::pane {
+            border: 1px solid gray;
+            background: #e6e6e6;
+        }
+    """)
+
     gui.show()
     sys.exit(app.exec_())

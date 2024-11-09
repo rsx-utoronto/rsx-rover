@@ -9,7 +9,7 @@ from selenium import webdriver
 # Set up the map details
 latitude = 38.4063  # Center latitude
 longitude = -110.7918 # Center longitude
-zoom_start = 13
+zoom_start = 25
 
 # File paths
 output_folder = 'map_output'
