@@ -8,8 +8,8 @@ import time
 class FakeGPSPublisher(QThread):
     def __init__(self):
         super(FakeGPSPublisher, self).__init__()
-        self.latitude = 40.7608  # Starting latitude (e.g., in Utah, near Salt Lake City)
-        self.longitude = -111.8910  # Starting longitude (e.g., in Utah, near Salt Lake City)
+        self.latitude = 38.4063  # Starting latitude (e.g., in Utah, near Salt Lake City)
+        self.longitude = -110.7918  # Starting longitude (e.g., in Utah, near Salt Lake City)
         self.altitude = 1500  # Approximate altitude (adjust as needed)
         self.publisher = rospy.Publisher("/gps/fix", NavSatFix, queue_size=10)
         self.rate = rospy.Rate(1)  # Limit to 1 Hz (1 message per second)

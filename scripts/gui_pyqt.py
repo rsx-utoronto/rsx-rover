@@ -62,19 +62,18 @@ class PygameOverlay(QWidget):
         # Limit history to avoid excessive memory usage
         if len(self.gps_history) > 1000:  # Keep last 1000 points (adjust as needed)
             self.gps_history.pop(0)
-
-        # Update offset to center the new GPS point
-        self.center_on_gps(gps_point)
         
         self.update()  # Trigger repaint
 
     def center_on_gps(self, gps_point):
-        """Calculate offset to center the latest GPS point on the view."""
-        pixel_x, pixel_y = self.gps_to_pixel(*gps_point)
+        """Set the initial offset to keep the center of the map fixed."""
+        # Calculate the map's center (this will not change dynamically)
 
-        # Adjust offset based on zoom level and view dimensions
-        self.offset_x = pixel_x * self.zoom_factor - widgetWidth // 2
-        self.offset_y = pixel_y * self.zoom_factor - widgetHeight // 2
+        # Adjust offset based on zoom level and widget dimensions
+        image_width, image_height = self.map_image.get_size()
+        self.offset_x = (image_width * self.zoom_factor - widgetWidth) // 2
+        self.offset_y = (image_height * self.zoom_factor - widgetHeight) // 2
+
 
     def gps_to_pixel(self, latitude, longitude):
         x = int((longitude - self.longitude_min) / (self.longitude_max - self.longitude_min) * widgetWidth)

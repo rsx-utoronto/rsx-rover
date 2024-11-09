@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 import folium
 import json
 import os
