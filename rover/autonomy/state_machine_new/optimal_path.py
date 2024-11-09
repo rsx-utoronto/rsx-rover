@@ -1,13 +1,20 @@
 import math 
 from collections import deque
 
+from rover.autonomy.scripts import state_machine
+
 
 #0-1 for scoring
 #task : [task_scoring, task_difficulty, task_location]
-variable_dict = {"GNSS1": [1, 1, state_machine.potential_locations] , }
+variable_dict = {"GNSS1": [1, 1, state_machine.potential_locations["GNSS1"]] ,
+                 "GNSS2": [1, 1, state_machine.potential_locations["GNSS2"]] ,
+                 "AR1" : [0.8, 0.8, state_machine.potential_locations["AR1"]],
+                 "AR2" : [0.8, 0.8, state_machine.potential_locations["AR2"]],
+                 "AR3" : [0.8, 0.5, state_machine.potential_locations["AR3"]]["GObject1"],
+                 "GObject1" : [0.5, 0.5, state_machine.potential_locations["GObject2"]]}
 
 
-def shortest_path(curr_loc: tuple, rem_loc: dict): 
+def calculate_distance(curr_loc: tuple, rem_loc: dict): 
 
     s_path = ["", float('inf')]
     
@@ -36,7 +43,7 @@ def shortest_path(curr_loc: tuple, rem_loc: dict):
         if dist < s_path[1]:
             s_path[0], s_path[1] = loc, dist
 
-    return (s_path[0], rem_loc[s_path[0]])
+    return (s_path[1])
 
 
 # BFS from given source s
@@ -74,8 +81,19 @@ def add_edge(adj, u, v):
     adj[u].append(v)
     adj[v].append(u)
 
-def calculate_weight():
-    pass
+
+#Take in the node name, dictionary and return the weight of the node
+def calculate_weight(curr_node, variable_dict) -> float:
+    for task in variable_dict:
+        total_distance = 0
+        if task != curr_node:
+            distance = calculate_distance(variable_dict[curr_node][2], variable_dict[task][2]) 
+            total_distance += distance
+    
+        distance_in_relative = total_distance/2 #Rescales the total distance from 0-1 out of the 2km course with 6 other tasks
+    
+    final_weight = (distance_in_relative + variable_dict[curr_node][0] + variable_dict[curr_node][1])/3 #rescales the weight from 0-1
+    return final_weight
 
 def main():
   
