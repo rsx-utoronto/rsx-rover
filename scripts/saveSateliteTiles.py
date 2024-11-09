@@ -6,8 +6,8 @@ import math
 from selenium import webdriver
 
 # Set up the map details
-latitude = 40.7128  # Center latitude
-longitude = -74.0060  # Center longitude
+latitude = 38.4063  # Center latitude
+longitude = -110.7918 # Center longitude
 zoom_start = 13
 
 # File paths
@@ -19,8 +19,10 @@ png_file = os.path.join(output_folder, 'map_screenshot.png')
 # Create output folder if it doesn't exist
 os.makedirs(output_folder, exist_ok=True)
 
-# Step 1: Create a folium map
-m = folium.Map(location=[latitude, longitude], zoom_start=zoom_start)
+# Step 1: Create a folium map with a satellite layer
+m = folium.Map(location=[latitude, longitude], zoom_start=zoom_start, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri Satellite")
+
+# Save the map with satellite tiles
 m.save(html_file)
 
 # Step 2: Calculate map bounds (SW and NE corners)

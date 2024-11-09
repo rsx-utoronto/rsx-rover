@@ -25,7 +25,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_37889921f2ff731a689ec4c321fe27bc {
+                #map_f2a60638ede2f3ec4ede9acf8c694529 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -39,16 +39,16 @@
 <body>
     
     
-            <div class="folium-map" id="map_37889921f2ff731a689ec4c321fe27bc" ></div>
+            <div class="folium-map" id="map_f2a60638ede2f3ec4ede9acf8c694529" ></div>
         
 </body>
 <script>
     
     
-            var map_37889921f2ff731a689ec4c321fe27bc = L.map(
-                "map_37889921f2ff731a689ec4c321fe27bc",
+            var map_f2a60638ede2f3ec4ede9acf8c694529 = L.map(
+                "map_f2a60638ede2f3ec4ede9acf8c694529",
                 {
-                    center: [40.7128, -74.006],
+                    center: [38.4063, -110.7918],
                     crs: L.CRS.EPSG3857,
                     zoom: 13,
                     zoomControl: true,
@@ -60,13 +60,13 @@
 
         
     
-            var tile_layer_38d5bf31278ee8154fcd68f0f91c4a7f = L.tileLayer(
-                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                {"attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors", "detectRetina": false, "maxNativeZoom": 19, "maxZoom": 19, "minZoom": 0, "noWrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
+            var tile_layer_fe3a46827af962d55da658710ec6878c = L.tileLayer(
+                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                {"attribution": "Esri Satellite", "detectRetina": false, "maxZoom": 18, "minZoom": 0, "noWrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
             );
         
     
-            tile_layer_38d5bf31278ee8154fcd68f0f91c4a7f.addTo(map_37889921f2ff731a689ec4c321fe27bc);
+            tile_layer_fe3a46827af962d55da658710ec6878c.addTo(map_f2a60638ede2f3ec4ede9acf8c694529);
         
 </script>
 </html>
