@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#test instrcutions
+# run saveSateliteTiles.py to generate test sample data 
+#run fakeGPSPub.py to publish gps points
+#play rosbag to view camera toggle
 
 import sys
 from enum import Enum
@@ -88,12 +92,21 @@ class PygameOverlay(QWidget):
         painter.drawImage(0, 0, img)
 
     def render_map_and_gps(self):
-        # Clear surface and apply zoomed map view with offset
+        # Clear surface
         self.surface.fill((255, 255, 255))
 
-        # Scale and center map image based on offset
-        map_width = int(self.map_image.get_width() * self.zoom_factor)
-        map_height = int(self.map_image.get_height() * self.zoom_factor)
+        # Calculate scaled dimensions that preserve aspect ratio
+        image_width, image_height = self.map_image.get_size()
+        aspect_ratio = image_width / image_height
+
+        # Determine new width and height based on zoom, preserving aspect ratio
+        if aspect_ratio > 1:  # Wider than tall
+            map_width = int(image_width * self.zoom_factor)
+            map_height = int(map_width / aspect_ratio)
+        else:  # Taller than wide or square
+            map_height = int(image_height * self.zoom_factor)
+            map_width = int(map_height * aspect_ratio)
+
         zoomed_map = pygame.transform.scale(self.map_image, (map_width, map_height))
         
         # Blit the zoomed map with offset

@@ -4,6 +4,7 @@ import folium
 import json
 import os
 import math
+from selenium import webdriver
 
 # Set up the map details
 latitude = 40.7128  # Center latitude
@@ -14,6 +15,7 @@ zoom_start = 13
 output_folder = 'map_output'
 html_file = os.path.join(output_folder, 'map.html')
 metadata_file = os.path.join(output_folder, 'map_metadata.json')
+png_file = os.path.join(output_folder, 'map_screenshot.png')
 
 # Create output folder if it doesn't exist
 os.makedirs(output_folder, exist_ok=True)
@@ -72,6 +74,24 @@ map_metadata = {
 with open(metadata_file, 'w') as f:
     json.dump(map_metadata, f, indent=4)
 
-print("Map HTML and metadata saved:")
+# Step 4: Use Selenium to take a screenshot of the map HTML
+options = webdriver.ChromeOptions()
+options.add_argument('--headless')
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-dev-shm-usage')
+driver = webdriver.Chrome(options=options)
+
+# Open the HTML file in the browser
+driver.get("file://" + os.path.abspath(html_file))
+
+# Set the window size to capture the map
+driver.set_window_size(map_width, map_height)
+
+# Save screenshot as PNG
+driver.save_screenshot(png_file)
+driver.quit()
+
+print("Map HTML, metadata, and PNG screenshot saved:")
 print(f"HTML file: {html_file}")
-print(f"Metadata: {metadata_file}")
+print(f"Metadata file: {metadata_file}")
+print(f"PNG file: {png_file}")
