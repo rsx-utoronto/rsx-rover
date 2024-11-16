@@ -45,6 +45,12 @@ class GuiControllerNode():
             elif command == "Right":
                 GuiToController.l_horizontal = -1 * speedMultiplier
 
+            # Rx
+            if command == "Rx":
+                GuiToController.l1 = 1 * speedMultiplier
+            elif command == "-Rx":
+                GuiToController.r1 = 1 * speedMultiplier
+            
             # right vertical joystick emulation
             if command == "Ry":
                 GuiToController.r_vertical = 1 * speedMultiplier
@@ -68,10 +74,6 @@ class GuiControllerNode():
                 GuiToController.square = 1
 
             # other buttons
-            if command == "Rx":
-                GuiToController.l1 = 1 * speedMultiplier
-            if command == "-Rx":
-                GuiToController.r1 = 1 * speedMultiplier
             if command == "useless":
                 GuiToController.share = 1
             if command == "useless":
@@ -88,7 +90,6 @@ class GuiControllerNode():
             # emulate d-pad as arrow keys
             if command == "Manual":
                 self.statePublisher.publish("Manual")
-                print("Manul mode")
             if command == "Inverse Kin":
                 self.statePublisher.publish("IK")
             if command == "Setup":

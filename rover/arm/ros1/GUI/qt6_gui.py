@@ -17,72 +17,11 @@ class RobotControlGUI(QWidget):
         self.initUI()
 
         self.controller = GuiControllerNode()  # Initialize controller
-        # self.update_current_position() # DOESN"T WORK
-
-            # I ADDED THIS!!!!! - Ada 
-        self.current_x = 0  # Initial x-coordinate
-        self.current_y = 0  # Initial y-coordinate
-        self.current_z = 0  # Initial z-coordinate
-        self.current_roll = 0  # Initial roll (Rx)
-        self.current_pitch = 0  # Initial pitch (Ry)
-        self.current_yaw = 0  # Initial yaw (Rz)
-        self.gripper_state = 0  # Initial gripper state (0 = closed, 1 = open) # PROBABLY NEED TO FIX THIS
-    
-    # def button_is_clicked2(self,command):
-
-    #     step = 10
-    #     angle_step = 0.1
-    #     if command == "Forward":
-    #         self.current_z += step
-    #     elif command == "Backward":
-    #         self.current_z -= step
-    #     elif command == "Up":
-    #         self.current_y += step
-    #     elif command == "Down":
-    #         self.current_y -= step
-    #     elif command == "Left":
-    #         self.current_x -= step
-    #     elif command == "Right":
-    #         self.current_x += step
-    #     elif command == "Rx":
-    #         self.current_roll += angle_step
-    #     elif command == "-Rx":
-    #         self.current_roll -= angle_step
-    #     elif command == "Ry":
-    #         self.current_pitch += angle_step
-    #     elif command == "-Ry":
-    #         self.current_pitch -= angle_step
-    #     elif command == "Rz":
-    #         self.current_yaw += angle_step
-    #     elif command == "-Rz":
-    #         self.current_yaw -= angle_step
-    #     elif command == "Open Grip":
-    #         self.gripper_state = 1  # Open gripper
-    #     elif command == "Close Grip":
-    #         self.gripper_state = 0  # Close gripper
-
-    #     self.controller.publish_ik_target(
-    #             self.current_x, self.current_y, self.current_z,
-    #             self.current_roll, self.current_pitch, self.current_yaw,
-    #             self.gripper_state
-    #         )
-
+        
     def button_is_clicked(self,command):
         self.controller.on_press(command)  # Send command to controller
         self.controller.on_release()       # Reset
         print(command)
-
-    def update_current_position(self):
-        # value = 0
-        # while True:
-        #     self.x_coord.setText(f"X: {value:.1f} mm")
-        #     self.y_coord.setText(f"Y: {value:.1f} mm")
-        #     self.z_coord.setText(f"Z: {value:.1f} mm")
-        #     self.rx_coord.setText(f"Rx: {value:.1f}°") 
-        #     self.ry_coord.setText(f"Ry: {value:.1f}°") 
-        #     self.rz_coord.setText(f"Rz: {value:.1f}°")
-        #     value += 1
-        pass
 
     def update_image(self, qt_image):
         # Clear old pixmap
