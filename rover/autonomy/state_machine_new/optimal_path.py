@@ -1,118 +1,108 @@
-import math 
+import math
 from collections import deque
+import matplotlib.pyplot as plt
 
-from rover.autonomy.scripts import state_machine
+def get_loc_name(locations):
+    locName = []
+    for location in locations.keys():
+        locName.append(location)
+    return locName
 
+# Calculate the distance between two points using the Haversine formula
+def calculate_distance(point1: tuple, point2: tuple) -> float:
+    lat1, lon1 = point1
+    lat2, lon2 = point2
 
-#0-1 for scoring
-#task : [task_scoring, task_difficulty, task_location]
-variable_dict = {"GNSS1": [1, 1, state_machine.potential_locations["GNSS1"]] ,
-                 "GNSS2": [1, 1, state_machine.potential_locations["GNSS2"]] ,
-                 "AR1" : [0.8, 0.8, state_machine.potential_locations["AR1"]],
-                 "AR2" : [0.8, 0.8, state_machine.potential_locations["AR2"]],
-                 "AR3" : [0.8, 0.5, state_machine.potential_locations["AR3"]]["GObject1"],
-                 "GObject1" : [0.5, 0.5, state_machine.potential_locations["GObject2"]]}
+    # Convert latitude and longitude from degrees to radians
+    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
 
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-def calculate_distance(curr_loc: tuple, rem_loc: dict): 
+    # Radius of Earth in kilometers
+    r = 6371.0
+    return r * c
 
-    s_path = ["", float('inf')]
+# Calculate the weight of traveling to a location
+# 0-1 scale, GNSS -> 1, 1
+# AR --> 0.8 for without obstacles, 0.5 for obstacles
+def calculate_location_weight(current: str, loc: str, locName: list, locations: dict) -> float:
+    difficulty = {"GNSS1": 0.5, "GNSS2": 0.5, "AR1": 0.8, "AR2": 0.8, "AR3": 1,  "OBJ1": 0.8, "OBJ2": 1}
+
+    distance = calculate_distance(locations[current], locations[loc]) #/2 (for scaling actual locations)
+    proximity_weight = sum(calculate_distance(locations[loc], locations[other]) for other in locName if other != loc) #/8.5 (worst case scenario - assuming all the points are on the opposite end)(open for change, for scaling actual locations)
     
-    #Get position of curr_loc tuple
-    lat1 = curr_loc[0]
-    lon1 = curr_loc[1]
-
-    for loc in rem_loc:
-        #Get position of loc
-        lat2 = rem_loc[loc][0]
-        lon2 = rem_loc[loc][1]
-        print(lat1, lon1, lat2, lon2)
-        # Convert latitude and longitude from degrees to radians
-        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-
-        # Haversine formula
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-        a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)) 
-
-        # Radius of Earth in kilometers
-        r = 6371.0
-        dist = r * c
-
-        if dist < s_path[1]:
-            s_path[0], s_path[1] = loc, dist
-
-    return (s_path[1])
-
-
-# BFS from given source s
-def bfs(adj, s):
-  
-    # Create a queue for BFS
-    q = deque()
+    # Use the correct key for difficulty
     
-    # Initially mark all the vertices as not visited
-    # When we push a vertex into the q, we mark it as 
-    # visited
-    visited = [False] * len(adj)
+    return (distance + proximity_weight) * difficulty[loc] #instead of loc_type
 
-    # Mark the source node as visited and enqueue it
-    visited[s] = True
-    q.append(s)
-
-    # Iterate over the queue
-    while q:
-      
-        # Dequeue a vertex from queue and print it
-        curr = q.popleft()
-        print(curr, end=" ")
-
-        # Get all adjacent vertices of the dequeued 
-        # vertex. If an adjacent has not been visited, 
-        # mark it visited and enqueue it
-        for x in adj[curr]:
-            if not visited[x]:
-                visited[x] = True
-                q.append(x)
-
-# Function to add an edge to the graph
-def add_edge(adj, u, v):
-    adj[u].append(v)
-    adj[v].append(u)
-
-
-#Take in the node name, dictionary and return the weight of the node
-def calculate_weight(curr_node, variable_dict) -> float:
-    for task in variable_dict:
-        total_distance = 0
-        if task != curr_node:
-            distance = calculate_distance(variable_dict[curr_node][2], variable_dict[task][2]) 
-            total_distance += distance
+# Function to find the shortest path using a weighted nearest-neighbor heuristic
+def find_shortest_path(start: str, locations: dict):
+    visited = set()
+    current = start
+    visited.add(current)
+    path = [current]
+    total_distance = 0
     
-        distance_in_relative = total_distance/2 #Rescales the total distance from 0-1 out of the 2km course with 6 other tasks
+    #initialize locName list
+    locName = get_loc_name(locations)
+
+    # Checking to see if rover traveled to all locations
+    while len(visited) < len(locName):
+        nearest = None
+        min_weight = float('inf')
+
+        for loc in locName:
+            if loc not in visited:
+                # Calculate the weight for traveling to this location
+                weight = calculate_location_weight(current, loc, locName)
+                if weight < min_weight:
+                    nearest = loc
+                    min_weight = weight
+                    print(weight)
+
+        if nearest:
+            visited.add(nearest)
+            path.append(nearest)
+            total_distance += calculate_distance(locations[current], locations[nearest])
+            current = nearest
+
+    return path, total_distance
+
+#graphing the locations
+def plot_locations(path, locations):
+    fig, ax = plt.subplots()
     
-    final_weight = (distance_in_relative + variable_dict[curr_node][0] + variable_dict[curr_node][1])/3 #rescales the weight from 0-1
-    return final_weight
+    for loc in locations:
+        ax.plot(locations[loc][1], locations[loc][0], 'o', label=loc)
+        ax.text(locations[loc][1], locations[loc][0], loc)
 
-def main():
-  
-    # Number of vertices in the graph
-    V = 7
+    for i in range(len(path) - 1):
+        start_loc = locations[path[i]]
+        end_loc = locations[path[i + 1]]
+        ax.plot([start_loc[1], end_loc[1]], [start_loc[0], end_loc[0]], 'k-')
 
-    # Adjacency list representation of the graph
-    adj = [[] for _ in range(V)]
+    plt.xlabel('Longitude')
+    plt.ylabel('Latitude')
+    plt.title('Shortest Path Visiting All Locations')
+    plt.legend()
+    plt.show()
 
-    # Add edges to the graph
-    add_edge(adj, 0, 1)
-    add_edge(adj, 0, 2)
-    add_edge(adj, 1, 3)
-    add_edge(adj, 1, 4)
-    add_edge(adj, 2, 4)
+def OPmain(start, locations):
+    # Start the pathfinding from a specific location of choice based on the dictionary
 
-    print(adj)
-    # Perform BFS traversal starting from vertex 0
-    print("BFS starting from 0: ")
-    #bfs(adj, 0) 
+    path, total_distance = find_shortest_path(start, locations)
+    print(path)
+    
+    print("Shortest path visiting all locations:")
+    print(" -> ".join(path))
+    print(f"Total distance: {total_distance:.2f} km")
+    
+    plot_locations(path, locations)
 
-main()
+    return path
+
+#OPmain()
