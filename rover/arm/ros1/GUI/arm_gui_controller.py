@@ -4,6 +4,7 @@ import rospy
 from std_msgs.msg import String
 from rover.msg import ArmInputs
 
+
 # Based on arm_keyboard_controller.py / Adapted for GUI control
 
 class GuiControllerNode():
@@ -12,7 +13,7 @@ class GuiControllerNode():
 
         self.inputPublisher = rospy.Publisher("arm_inputs", ArmInputs, queue_size=10)
         self.statePublisher = rospy.Publisher("arm_state", String, queue_size=10)
-
+        
     def on_press(self, command):
         GuiToController = ArmInputs()
 
@@ -30,34 +31,35 @@ class GuiControllerNode():
         GuiToController.options      = 0
         GuiToController.r3           = 0
 
+        speedMultiplier = 6900
         try:
             # left vertical joystick emulation
             if command == "Forward":
-                GuiToController.l_vertical = 1
+                GuiToController.l_vertical = 1 * speedMultiplier
             elif command == "Backward":
-                GuiToController.l_vertical = -1
+                GuiToController.l_vertical = -1 * speedMultiplier
 
             # left horizontal joystick emulation
             if command == "Left":
-                GuiToController.l_horizontal = 1
+                GuiToController.l_horizontal = 1 * speedMultiplier
             elif command == "Right":
-                GuiToController.l_horizontal = -1
+                GuiToController.l_horizontal = -1 * speedMultiplier
 
             # right vertical joystick emulation
             if command == "Ry":
-                GuiToController.r_vertical = 1
+                GuiToController.r_vertical = 1 * speedMultiplier
             elif command == "-Ry":
-                GuiToController.r_vertical = -1
+                GuiToController.r_vertical = -1 * speedMultiplier
 
             # right horizontal joystick emulation
             if command == "Rz":
-                GuiToController.r_horizontal = 1
+                GuiToController.r_horizontal = 1 * speedMultiplier
             elif command == "-Rz":
-                GuiToController.r_horizontal = -1
+                GuiToController.r_horizontal = -1 * speedMultiplier
 
             # shape button emulation
             if command == "Open Grip":
-                GuiToController.x = 1
+                GuiToController.x = 1 
             if command == "Close Grip":
                 GuiToController.o = 1
             if command == "useless":
@@ -67,9 +69,9 @@ class GuiControllerNode():
 
             # other buttons
             if command == "Rx":
-                GuiToController.l1 = 1
+                GuiToController.l1 = 1 * speedMultiplier
             if command == "-Rx":
-                GuiToController.r1 = 1
+                GuiToController.r1 = 1 * speedMultiplier
             if command == "useless":
                 GuiToController.share = 1
             if command == "useless":
@@ -79,13 +81,14 @@ class GuiControllerNode():
                 
             # left and right triggers
             if command == "Up":
-                GuiToController.r2 = 1
+                GuiToController.r2 = 1 * speedMultiplier
             if command == "Down":
-                GuiToController.l2 = 1
+                GuiToController.l2 = 1 * speedMultiplier
 
             # emulate d-pad as arrow keys
             if command == "Manual":
                 self.statePublisher.publish("Manual")
+                print("Manul mode")
             if command == "Inverse Kin":
                 self.statePublisher.publish("IK")
             if command == "Setup":
