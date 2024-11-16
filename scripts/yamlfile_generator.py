@@ -84,8 +84,8 @@ nc: 2  # Adjust based on your dataset
 
 # Class names
 names: 
-    0: waterbottle
-    1: mallet
+    0: mallet
+    1: waterbottle
 # Replace with your class names
 """
 
