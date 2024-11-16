@@ -1,8 +1,8 @@
+#!/usr/bin/python3
 """
 Code for the state machine
 
 """
-
 import rospy
 import smach
 import smach_ros
@@ -113,15 +113,21 @@ def get_current_location(port='/dev/ttyUSB0', baudrate=9600, timeout=1) -> tuple
                             latitude = -latitude
                         if lon_direction == 'W':
                             longitude = -longitude
-                            eturn latitude, longitude
+                            return latitude, longitude
                             
     except serial.SerialException as e:
         print(f"Error: Could not read from serial port {port}. {e}")
         return None, None
-        
 
-
-
+        # Continuously print the rover's current location
+if __name__ == "__main__":
+    while True:
+        lat, lon = get_current_location()
+        if lat is not None and lon is not None:
+            print(f"Current Location: Latitude = {lat}, Longitude = {lon}")
+        else:
+            print("No GPS data available.")
+        time.sleep(2)
 
     """
     """
