@@ -11,10 +11,9 @@ class ROSVideoSubscriber(QObject):
     def __init__(self, topic_name):
         super().__init__()
         self.bridge = CvBridge()
-        rospy.Subscriber(topic_name, Image, self.callback)
+        self.sub = rospy.Subscriber(topic_name, Image, self.callback)
 
     def callback(self, msg):
-        print("test")
         # Convert the ROS Image message to a CV2 image
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         

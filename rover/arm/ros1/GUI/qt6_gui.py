@@ -13,7 +13,7 @@ class RobotControlGUI(QWidget):
         super().__init__()
         self.setWindowTitle("Robot Control Interface")
         self.setGeometry(100, 100, 800, 600)
-        self.camera_topic_name = "/camera/color/image_raw"
+        self.camera_topic_name = ["/camera/color/image_king", "/camera/color/image_raw"]
         self.initUI()
 
         self.controller = GuiControllerNode()  # Initialize controller
@@ -71,7 +71,6 @@ class RobotControlGUI(QWidget):
         self.controller.on_press(command)  # Send command to controller
         self.controller.on_release()       # Reset
         print(command)
-        pass
 
     def update_current_position(self):
         # value = 0
@@ -86,10 +85,17 @@ class RobotControlGUI(QWidget):
         pass
 
     def update_image(self, qt_image):
+        # Clear old pixmap
+        self.coord_view_label.clear()
         # Update the QLabel with the latest frame
         pixmap = QPixmap.fromImage(qt_image)
         self.coord_view_label.setPixmap(pixmap)
         self.coord_view_label.setScaledContents(True)  # Optional: scales the image to fit the label size
+
+    def on_view_selected(self, index):
+        self.video_subscriber.sub.unregister()
+        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[index])
+        self.video_subscriber.frame_received.connect(self.update_image)
 
     def initUI(self):
         # Main Layout
@@ -144,8 +150,10 @@ class RobotControlGUI(QWidget):
         view_layout.addWidget(self.coord_view_label)
 
         # Initialize the ROS video subscriber
-        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name)
+        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[0])
         self.video_subscriber.frame_received.connect(self.update_image)
+
+        self.camera_view_box.currentIndexChanged.connect(self.on_view_selected)
         # -------------------------------- _
 
         # Arm Power Options
