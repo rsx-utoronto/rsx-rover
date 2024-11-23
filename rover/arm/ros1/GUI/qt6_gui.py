@@ -4,9 +4,16 @@ from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPu
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtCore import Qt
 import sys
+import os
+import rospy
+from std_msgs.msg import Float32MultiArray
 
 from gui_camera import ROSVideoSubscriber # Imports video display functionality
 from arm_gui_controller import GuiControllerNode  # Class for sending commands to manipulator
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'IK')))
+
+from IK.ik_library import createDHTable, calculateTransformToLink, calculateRotationAngles, createTransformMatrix
 
 class RobotControlGUI(QWidget):
     def __init__(self):
@@ -17,6 +24,8 @@ class RobotControlGUI(QWidget):
         self.initUI()
 
         self.controller = GuiControllerNode()  # Initialize controller
+
+        self.end_effector_coords = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.update_end_effector_coords) 
 
     # Send commands to the controller 
     def button_is_clicked(self,command):
@@ -89,6 +98,33 @@ class RobotControlGUI(QWidget):
         self.video_subscriber.sub.unregister()
         self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[index])
         self.video_subscriber.frame_received.connect(self.update_image)
+
+    def update_end_effector_coords(self, data):
+        # have to import ik_library.py
+        dh_table = createDHTable(data)
+
+        # see the calculateRotationAngles for how the transformation matrix looks
+        transformation_matrix = calculateTransformToLink(dh_table, 5)
+
+        # returns [rx, ry, rz]
+        rotation_angles = calculateRotationAngles(transformation_matrix)
+
+        x = transformation_matrix[0][3]
+        y = transformation_matrix[1][3]
+        z = transformation_matrix[2][3]
+        rx = rotation_angles[0]
+        ry = rotation_angles[1]
+        rz = rotation_angles[2]
+
+        self.x_coord.setText(f"X: {x:.2f} mm")
+        self.y_coord.setText(f"Y: {y:.2f} mm")
+        self.z_coord.setText(f"Z: {z:.2f} mm")
+        self.rx_coord.setText(f"Rx: {rx:.2f}°")
+        self.ry_coord.setText(f"Ry: {ry:.2f}°")
+        self.rz_coord.setText(f"Rz: {rz:.2f}°")
+
+        # return [x, y, z] + rotation_angles
+    
 
     # Main GUI code
     def initUI(self):
