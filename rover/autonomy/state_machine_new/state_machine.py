@@ -12,22 +12,22 @@ from optimal_path import OPmain
 
 #Change this section according to potential get functions
 
-ATag1_loc = ()
-ATag2_loc = ()
-ATag3_loc = () 
-GNSS1_loc = ()
-GNSS2_loc = ()
-OBJ1_loc = ()
-OBJ2_loc = ()
-
+#ATag1_loc = ()
+#ATag2_loc = ()
+#ATag3_loc = () 
+#GNSS1_loc = ()
+#GNSS2_loc = ()
+#OBJ1_loc = ()
+#OBJ2_loc = ()
 locations = {
-    "GNSS1": GNSS1_loc,
-    "GNSS2": GNSS2_loc,
-    "AR1": ATag1_loc,
-    "AR2": ATag2_loc,
-    "AR3": ATag3_loc,
-    "OBJ1": OBJ1_loc,
-    "OBJ2": OBJ2_loc  
+    "start": (43.6532, 79.3832), # Toronto
+    "GNSS1": (40.6892, -74.0445),   # Statue of Liberty
+    "GNSS2": (48.8584, 2.2945),     # Eiffel Tower
+    "AR1": (-33.8568, 151.2153),    # Sydney Opera House
+    "AR2": (40.4319, 116.5704),     # Great Wall of China (Mutianyu)
+    "AR3": (-22.9519, -43.2105),    # Christ the Redeemer
+    "OBJ1": (27.1751, 78.0421),     # Taj Mahal
+    "OBJ2": (41.8902, 12.4922),     # Colosseum
 }
 
 #Up till here
@@ -39,22 +39,11 @@ locations = {
 
 #Functions for now - Possible instances of classes
 
-def shortest_path(start: tuple, locations: dict) -> (list[str]):
+def shortest_path(start: str, locations: dict) -> (list):
 
-    start = (43.6532, 79.3832) # Toronto
-
-    locations = {
-    "GNSS1": (40.6892, -74.0445),   # Statue of Liberty
-    "GNSS2": (48.8584, 2.2945),     # Eiffel Tower
-    "AR1": (-33.8568, 151.2153),    # Sydney Opera House
-    "AR2": (40.4319, 116.5704),     # Great Wall of China (Mutianyu)
-    "AR3": (-22.9519, -43.2105),    # Christ the Redeemer
-    "OBJ1": (27.1751, 78.0421),     # Taj Mahal
-    "OBJ2": (41.8902, 12.4922),     # Colosseum
-}
     OPmain(start, locations)
 
-def grid_search_aruco() -> tuple(bool, tuple(int, int)): #should return a True or False,  #needs to display tag!
+def grid_search_aruco(): #should return a True or False,  #needs to display tag!
     """
     Function for grid search
     """
@@ -67,7 +56,7 @@ def signal_red_led():
     #Body ommited for now- Possibly a class
 
 def rover_cruise(location) -> bool:
-    pass
+    return True
 
 def grid_search_object():
     '''
@@ -84,7 +73,8 @@ def display_tag():
     import serial
     import time
 
-def get_current_location(port='/dev/ttyUSB0', baudrate=9600, timeout=1) -> tuple[float, float]:
+'''
+def get_curr_loc(port='/dev/ttyUSB0', baudrate=9600, timeout=1) -> tuple[float, float]:
 
     try:
         # Open the Serial Port
@@ -122,7 +112,7 @@ def get_current_location(port='/dev/ttyUSB0', baudrate=9600, timeout=1) -> tuple
         # Continuously print the rover's current location
 if __name__ == "__main__":
     while True:
-        lat, lon = get_current_location()
+        lat, lon = get_curr_loc()
         if lat is not None and lon is not None:
             print(f"Current Location: Latitude = {lat}, Longitude = {lon}")
         else:
@@ -132,6 +122,7 @@ if __name__ == "__main__":
     """
     """
     #Body omitted- possibly an instance of a class
+'''
 
 def signal_green_led(): #happens for a few seconds and returns to red 
     """
@@ -158,11 +149,11 @@ def reinit():
 class InitializeAutonomousNavigation(smach.State):
     def __init__(self):
         smach.State.__init__(self, 
-                             outcomes = ["Location Selection"])
+                             outcomes = ["Tasks Execute"])
     
     def execute(self, userdata):
-        rospy.loginfo("Initializing Autonomous Navigation")
-        return "Location Selection"
+        print("Initializing Autonomous Navigation")
+        return "Tasks Execute"
 
         
 class LocationSelection(smach.State): #goes through all states 
@@ -173,7 +164,7 @@ class LocationSelection(smach.State): #goes through all states
                             
     
     def execute(self, userdata):
-        rospy.loginfo("Performing Location Search")
+        print("Performing Location Search")
         path = userdata.rem_loc
         if path != []:
             rover_cruise(locations[path[0]])
@@ -189,13 +180,13 @@ class GNSS1(smach.State):
                             input_keys = ["aimed_location", "rem_loc"])
         
     def execute(self, userdata):
-        rospy.loginfo("Performing GNS 1")
+        print("Performing GNS 1")
         rover_cruise()
-        if get_curr_loc() == userdata.aimed_location:
-            rospy.loginfo("Successful cruise")
-            signal_green_led()
-        else:
-            rospy.loginfo("Failed cruise")
+        #if get_curr_loc() == userdata.aimed_location:
+        print("Successful cruise")
+        signal_green_led()
+        #else:
+            #print("Failed cruise")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
         
@@ -207,13 +198,13 @@ class GNSS2(smach.State):
         curr_location = ()
         
     def execute(self, userdata):
-        rospy.loginfo("Performing GNS 2")
+        print("Performing GNS 2")
         rover_cruise()
-        if get_curr_loc() == userdata.aimed_location:
-            rospy.loginfo("Successful cruise")
-            signal_green_led()
-        else:
-            rospy.loginfo("Failed cruise")
+        #if get_curr_loc() == userdata.aimed_location:
+        print("Successful cruise")
+        signal_green_led()
+        #else:
+        #print("Failed cruise")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
            
@@ -221,17 +212,17 @@ class AR1(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location", "rem_loc"])
-        curr_loc = get_curr_loc()
+        #curr_loc = get_curr_loc()
         
     def execute(self, userdata):
-        rospy.loginfo("Performing ArıucoTag1 Search")
-        state,loc=grid_search_aruco()
+        print("Performing ArıucoTag1 Search")
+        state,loc=grid_search_aruco()[0], grid_search_aruco[1]
         if state == True:
-            rospy.loginfo("Successful grid search")
+            print("Successful grid search")
             rover_cruise(loc)
             signal_green_led()
         else:
-            rospy.loginfo("Failed grid search")
+            print("Failed grid search")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
 
@@ -239,17 +230,17 @@ class AR2(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location", "rem_loc"])
-        curr_location = ()
+        #curr_location = get_curr_loc()
         
     def execute(self, userdata):
-        rospy.loginfo("Performing ArıucoTag2 Search")
-        state,loc=grid_search_aruco()
+        print("Performing ArıucoTag2 Search")
+        state,loc=grid_search_aruco()[0], grid_search_aruco[1]
         if state == True:
-            rospy.loginfo("Successful grid search")
+            print("Successful grid search")
             rover_cruise(loc)
             signal_green_led()
         else:
-            rospy.loginfo("Failed grid search")
+            print("Failed grid search")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
 
@@ -257,17 +248,17 @@ class AR3(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location", "rem_loc"])
-        curr_location = ()
+        #curr_location = get_curr_loc()
         
     def execute(self, userdata):
-        rospy.loginfo("Performing ArıucoTag3 Search")
-        state,loc=grid_search_aruco()
+        print("Performing ArıucoTag3 Search")
+        state,loc=grid_search_aruco()[0], grid_search_aruco[1]
         if state == True:
-            rospy.loginfo("Successful grid search")
+            print("Successful grid search")
             rover_cruise(loc)
             signal_green_led()
         else:
-            rospy.loginfo("Failed grid search")
+            print("Failed grid search")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
 
@@ -275,16 +266,16 @@ class OBJ1(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location", "rem_loc"])
-        curr_location = ()
+        #curr_location = get_curr_loc()
     
     def execute(self, userdata):
-        rospy.loginfo("Performing ObjectNav 1")
+        print("Performing ObjectNav 1")
         state,loc=grid_search_object()
         if state == True:
-            rospy.loginfo("Successful grid search")
+            print("Successful grid search")
             signal_green_led()
         else:
-            rospy.loginfo("Failed grid search")
+            print("Failed grid search")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
     
@@ -292,16 +283,16 @@ class OBJ2(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
                             input_keys = ["aimed_location", "rem_loc"])
-        curr_location = ()
+        #get_curr_location = ()
     
     def execute(self, userdata):
-        rospy.loginfo("Performing ObjectNav 2")
+        print("Performing ObjectNav 2")
         state,loc=grid_search_object()
         if state == True:
-            rospy.loginfo("Successful grid search")
+            print("Successful grid search")
             signal_green_led()
         else:
-            rospy.loginfo("Failed grid search")
+            print("Failed grid search")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection" 
 
@@ -310,16 +301,16 @@ class TasksEnded(smach.State):
         smach.State.__init__(self)
     
     def execute(self, userdata):
-        rospy.loginfo("End of tasks")
+        print("End of tasks")
 
 
 def main():
 
+    rospy.init_node('RSX_Rover')
     sm = smach.StateMachine(outcomes = ["Tasks Ended"])
-    sm.userdata.locations_list = shortest_path(get_curr_loc, locations)
-    sm.userdata.rem_loc = ()
-    sm.userdata.aimed_location = ()
-
+    sm.userdata.locations_list = shortest_path("start", locations)
+    sm.userdata.rem_loc = locations.copy()
+    sm.userdata.aimed_location = None
     with sm:
         smach.StateMachine.add("Initialize Autonomous Navigation", InitializeAutonomousNavigation(),
                                transitions = {"Tasks Execute": "Tasks Execute"})
@@ -383,7 +374,7 @@ def main():
 
 if __name__ == "__main__":
     t = time.time()
-    while (time.time()-t) < 10:
-        rospy.loginfo("Passing time until Autonomous Initialization")
-        pass
+    #while (time.time()-t) < 10:
+    print("Passing time until Autonomous Initialization")
+        #pass
     main()

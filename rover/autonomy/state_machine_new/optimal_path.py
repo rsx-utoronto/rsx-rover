@@ -58,11 +58,10 @@ def find_shortest_path(start: str, locations: dict):
         for loc in locName:
             if loc not in visited:
                 # Calculate the weight for traveling to this location
-                weight = calculate_location_weight(current, loc, locName)
+                weight = calculate_location_weight(current, loc, locName, locations)
                 if weight < min_weight:
                     nearest = loc
                     min_weight = weight
-                    print(weight)
 
         if nearest:
             visited.add(nearest)
