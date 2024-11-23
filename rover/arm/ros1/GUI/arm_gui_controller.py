@@ -34,33 +34,39 @@ class GuiControllerNode():
         speedMultiplier = 6900
         try:
             # left vertical joystick emulation
-            if command == "Forward":
+            if command == "Forward" or command == "joint1plus":
                 GuiToController.l_vertical = 1 * speedMultiplier
-            elif command == "Backward":
+            elif command == "Backward" or command == "joint1minus":
                 GuiToController.l_vertical = -1 * speedMultiplier
 
             # left horizontal joystick emulation
-            if command == "Left":
+            if command == "Left" or command == "joint0plus":
                 GuiToController.l_horizontal = 1 * speedMultiplier
-            elif command == "Right":
+            elif command == "Right" or command == "joint0minus":
                 GuiToController.l_horizontal = -1 * speedMultiplier
 
+            # left and right triggers
+            if command == "Up" or command == "joint5plus":
+                GuiToController.r2 = 1 * speedMultiplier
+            if command == "Down" or command == "joint5minus":
+                GuiToController.l2 = 1 * speedMultiplier
+
             # Rx
-            if command == "Rx":
+            if command == "Rx" or command == "joint4plus":
                 GuiToController.l1 = 1 * speedMultiplier
-            elif command == "-Rx":
+            elif command == "-Rx" or command == "joint4minus":
                 GuiToController.r1 = 1 * speedMultiplier
             
             # right vertical joystick emulation
-            if command == "Ry":
+            if command == "Ry" or command == "joint2plus":
                 GuiToController.r_vertical = 1 * speedMultiplier
-            elif command == "-Ry":
+            elif command == "-Ry" or command == "joint2minus":
                 GuiToController.r_vertical = -1 * speedMultiplier
 
             # right horizontal joystick emulation
-            if command == "Rz":
+            if command == "Rz" or command == "joint3plus":
                 GuiToController.r_horizontal = 1 * speedMultiplier
-            elif command == "-Rz":
+            elif command == "-Rz" or command == "joint3minus":
                 GuiToController.r_horizontal = -1 * speedMultiplier
 
             # shape button emulation
@@ -81,12 +87,6 @@ class GuiControllerNode():
             if command == "useless":
                 GuiToController.r3 = 1
                 
-            # left and right triggers
-            if command == "Up":
-                GuiToController.r2 = 1 * speedMultiplier
-            if command == "Down":
-                GuiToController.l2 = 1 * speedMultiplier
-
             # emulate d-pad as arrow keys
             if command == "Manual":
                 self.statePublisher.publish("Manual")

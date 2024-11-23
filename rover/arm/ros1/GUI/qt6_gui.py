@@ -17,12 +17,65 @@ class RobotControlGUI(QWidget):
         self.initUI()
 
         self.controller = GuiControllerNode()  # Initialize controller
-        
+
+    # Send commands to the controller 
     def button_is_clicked(self,command):
         self.controller.on_press(command)  # Send command to controller
         self.controller.on_release()       # Reset
         print(command)
 
+    # Forward Kinematics (Individual Joint Angles) (MUST BE IN MANUAL MODE)
+    def update_joint_value(self, joint_index, increment):
+        """
+        Args:
+            joint_index (int): Index of the joint to update.
+            increment (int): Whether increment or decrement the value.
+        
+        Joint 0: l/r L joystick
+        Joint 1: up/down L joystick
+        Joint 2: up/down R joystick
+        Joint 3: l/r R joystick
+        Joint 4: L1 - R1
+        Joint 5: L2 - R2
+        """
+        # Set in Manual Mode
+        # self.button_is_clicked("Manual")
+
+        # Map +/- buttons to playstation controller buttons (+/- may be flipped, NEED TO CHECK)
+        command_translator = {
+            (0,1):"joint0plus",
+            (0,-1):"joint0minus",
+            (1,1):"joint1plus",
+            (1,-1):"joint1minus",
+            (2,1):"joint2plus",
+            (2,-1):"joint2minus",
+            (3,1):"joint3plus",
+            (3,-1):"joint3minus",
+            (4,1):"joint4plus",
+            (4,-1):"joint4minus",
+            (5,1):"joint5plus",
+            (5,-1):"joint5minus"
+        }
+        self.button_is_clicked(command_translator[(joint_index,increment)])
+        
+        # For testing (REMOVE LATER)
+        self.set_joint_value(joint_index,"Clicked")
+
+    # Update the current joint angle display (NOT CURRENTLY CONNECTED TO REST OF CODE / NEED TO CONNECT THIS TO RELEVANT ROS TOPIC)
+    def set_joint_display(self, joint_index, value):
+        """
+        Args:
+            joint_index (int): Index of the joint to update.
+            value (int): New value to set.
+        """
+        joint_display = self.joint_displays[joint_index]
+        
+        # Enforce range limits (OPTIONAL)
+        # value = max(-360, min(360, value))
+        
+        joint_display.setText(str(value))
+
+    # Receive camera feed
     def update_image(self, qt_image):
         # Clear old pixmap
         self.coord_view_label.clear()
@@ -31,11 +84,13 @@ class RobotControlGUI(QWidget):
         self.coord_view_label.setPixmap(pixmap)
         self.coord_view_label.setScaledContents(True)  # Optional: scales the image to fit the label size
 
+    # Switch camera feeds
     def on_view_selected(self, index):
         self.video_subscriber.sub.unregister()
         self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[index])
         self.video_subscriber.frame_received.connect(self.update_image)
 
+    # Main GUI code
     def initUI(self):
         # Main Layout
         main_layout = QHBoxLayout()
@@ -146,11 +201,30 @@ class RobotControlGUI(QWidget):
         for i in range(6):
             joint_control = QHBoxLayout()
             joint_label = QLabel(f"Joint {i + 1}")
-            joint_spin = QSpinBox()
-            joint_spin.setRange(-180, 180)
+            
+            # Label to display the joint angle
+            joint_display = QLabel("0")
+            joint_display.setStyleSheet("border: 1px solid black; padding: 5px;")
+            joint_display.setFixedWidth(50)
+            joint_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+            # Increment and decrement buttons
+            inc_button = QPushButton("+")
+            dec_button = QPushButton("-")
+
+            # Connect buttons to functions
+            inc_button.clicked.connect(lambda _, idx=i: self.update_joint_value(idx, 1))
+            dec_button.clicked.connect(lambda _, idx=i: self.update_joint_value(idx, -1))
+
+            # Store the joint displays
+            self.joint_displays.append(joint_display)
+
+            # Add widgets to the layout
             joint_control.addWidget(joint_label)
-            joint_control.addWidget(joint_spin)
+            joint_control.addWidget(dec_button)
+            joint_control.addWidget(joint_display)
+            joint_control.addWidget(inc_button)
+
             joints_layout.addLayout(joint_control)
 
         joints_group.setLayout(joints_layout)
