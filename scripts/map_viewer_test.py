@@ -3,6 +3,7 @@
 """The marker widget shows a collection of Marker objects onscreen relative to the robot's position."""
 
 import math
+
 import os
 from enum import Enum
 from dataclasses import dataclass
@@ -18,6 +19,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
+CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
+
 @dataclass
 class MapPoint:
 	latitude: float
@@ -26,7 +29,7 @@ class MapPoint:
 	name: str
 
 class Locations(Enum):
-	engineering = [39.646074, -79.972144]
+	engineering = [(38.380691+38.439607)/2,(-110.829048+-110.751286)/2]
 	mdrs = [38.406458, -110.791903]
 
 	def __str__(self):
@@ -209,6 +212,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     viewer = MapViewer()
-    viewer.set_map_server("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", 19)  # Example tile server
+	# initial_map_server = MapServers.ARCGIS_World_Imagery_Cache
+    viewer.set_map_server(str(CACHE_DIR) + '/arcgis_world_imagery/{z}/{y}/{x}.jpg',20)  # Example tile server
     viewer.show()  # Display the widget
     sys.exit(app.exec_())
