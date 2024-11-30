@@ -88,7 +88,7 @@ class ObjectDetectionNode():
 def main():
     rospy.init_node('object_detector', anonymous=True)
     object_detector = ObjectDetectionNode()
-    object_detector = 
+ 
     rospy.spin()
 
 
