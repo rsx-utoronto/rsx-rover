@@ -96,9 +96,9 @@ def OPmain(start, locations):
     path, total_distance = find_shortest_path(start, locations)
     print(path)
     
-    print("Shortest path visiting all locations:")
-    print(" -> ".join(path))
-    print(f"Total distance: {total_distance:.2f} km")
+    #print("Shortest path visiting all locations:")
+    #print(" -> ".join(path))
+    #print(f"Total distance: {total_distance:.2f} km")
     
     plot_locations(path, locations)
 
