@@ -173,7 +173,7 @@ def runNewRealJointState(jointPublisherData, angles):
     newJointState.header = Header()
     newJointState.header.stamp = rospy.Time.now()
     newJointState.name = ["Real_Joint_1", "Real_Joint_2", "Real_Joint_3", "Real_Joint_4", "Real_Joint_5", 
-                          "Real_Joint_6", "Real_Joint_7", "Real_Joint_8", "Real_Joint_9"]
+                          "Real_Joint_6"]
     # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
     newJointState.position = angles
     jointPublisherData.publish(newJointState)  # send data to be published
@@ -280,7 +280,7 @@ class ArmVisualizationNode():
         tempAngles[0] = -tempAngles[0]
         tempAngles[1] = tempAngles[1]
         tempAngles[5] = tempAngles[5]
-
+            
         if self.gazebo_on:
             tempAngles.append(0)
             tempAngles.append(0)

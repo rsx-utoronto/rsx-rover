@@ -7,13 +7,14 @@ import sys
 import os
 import rospy
 from std_msgs.msg import Float32MultiArray
+from math import pi
 
 from gui_camera import ROSVideoSubscriber # Imports video display functionality
 from arm_gui_controller import GuiControllerNode  # Class for sending commands to manipulator
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'IK')))
+#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'IK')))
 
-from IK.ik_library import createDHTable, calculateTransformToLink, calculateRotationAngles, createTransformMatrix
+from ik_library import createDHTable, calculateTransformToLink, calculateRotationAngles, createTransformationMatrix
 
 class RobotControlGUI(QWidget):
     def __init__(self):
@@ -24,7 +25,7 @@ class RobotControlGUI(QWidget):
         self.initUI()
 
         self.controller = GuiControllerNode()  # Initialize controller
-
+    # look at function at line 150 & 835
         self.end_effector_coords = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.update_end_effector_coords) 
 
     # Send commands to the controller 
@@ -101,17 +102,19 @@ class RobotControlGUI(QWidget):
 
     def update_end_effector_coords(self, data):
         # have to import ik_library.py
-        dh_table = createDHTable(data)
+        dh_table = createDHTable([-data.data[0], data.data[1] + pi/2, -data.data[2], data.data[3], data.data[5], -data.data[4]])
+        print('random')
 
         # see the calculateRotationAngles for how the transformation matrix looks
-        transformation_matrix = calculateTransformToLink(dh_table, 5)
+        transformation_matrix = calculateTransformToLink(dh_table, 6)
+        print(transformation_matrix)
 
         # returns [rx, ry, rz]
         rotation_angles = calculateRotationAngles(transformation_matrix)
 
-        x = transformation_matrix[0][3]
-        y = transformation_matrix[1][3]
-        z = transformation_matrix[2][3]
+        x = transformation_matrix[0,3]
+        y = transformation_matrix[1,3]
+        z = transformation_matrix[2,3]
         rx = rotation_angles[0]
         ry = rotation_angles[1]
         rz = rotation_angles[2]
@@ -228,6 +231,7 @@ class RobotControlGUI(QWidget):
             
         science_modules.setLayout(science_layout)
 
+        self.joint_displays = []
 
         # Joints Control Section
         joints_group = QGroupBox("Joints Control")

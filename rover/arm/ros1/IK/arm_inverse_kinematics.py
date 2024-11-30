@@ -162,6 +162,7 @@ class ForwardKin(ScriptState):
         newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
         prevTargetValues = newTargetValues
 
+        print(newTargetValues)
         self.updateDesiredEETransformation(newTargetValues)
         # publishNewAngles(liveArmAngles)
 
@@ -905,6 +906,7 @@ class InverseKinematicsNode():
         global movementSpeed
         global isMovementNormalized
         global curArmAngles
+        global newTargetValues
 
         buttonsPressed = [0, 0, data.triangle, 0, data.l1, data.r1, data.l2, data.r2, data.share, data.options, 0, 0, 0, 0, 0, 0, 0]
         # isButtonPressed = {"X": data.x, "CIRCLE": data.o, "TRIANGLE": data.triagle, 
@@ -938,6 +940,7 @@ class InverseKinematicsNode():
             isMovementNormalized = not isMovementNormalized
             print("Normalized Movement: ", isMovementNormalized)
 
+        # print(newTargetValues)
         self.scriptMode.onJoystickUpdate(isButtonPressed, joystickAxesStatus)
 
     def onIKTargetUpdate(self, data):
