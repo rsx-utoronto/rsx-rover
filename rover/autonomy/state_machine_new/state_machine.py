@@ -64,6 +64,7 @@ def signal_red_led():
     #Body ommited for now- Possibly a class
 
 def rover_cruise(location) -> bool:
+    #staright_line_approach_kp 
     return True
 
 def grid_search_object():
