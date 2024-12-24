@@ -1,8 +1,0 @@
-<launch>
-
-    <node pkg="imu_complementary_filter" type="complementary_filter_node" name="imu_filter_node" output="screen">
-        <remap from="/imu/data_raw" to="/imu" />
-        <remap from="/imu/mag" to="/mag" />
-        <!-- <param name="use_mag" value="true"/> -->
-    </node>
-</launch>
