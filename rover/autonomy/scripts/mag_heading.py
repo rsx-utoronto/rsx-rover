@@ -5,6 +5,10 @@ from sensor_msgs.msg import MagneticField
 from std_msgs.msg import Float64
 import math
 
+"""
+Gets the heading of the magnetic field given by ZED camera
+"""
+
 class MagHeading:
     def __init__(self):
         self.mag_sub = rospy.Subscriber('/zed_node/imu/mag', MagneticField, self.mag_callback)

@@ -69,13 +69,13 @@ add_definitions(${PCL_DEFINITIONS})
 add_message_files(
   FILES
   ArmInputs.msg
-  StateMsg.msg
+  # StateMsg.msg
 )
 
 # Generate services in the 'srv' folder
 add_service_files(
   FILES
-  AddGoal.srv
+  # AddGoal.srv
   Corrections.srv
   GoToArmPos.srv
   SaveArmPos.srv
@@ -249,6 +249,6 @@ target_link_libraries(arm_point_cloud_assembler ${catkin_LIBRARIES} ${PCL_LIBRAR
 # catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
 #  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-catkin_install_python(PROGRAMS rover/autonomy/scripts/gps_target_waypoint_updater.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+# catkin_install_python(PROGRAMS rover/autonomy/scripts/gps_target_waypoint_updater.py
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )

@@ -1,3 +1,0 @@
-<launch>
-    <node pkg="rover" type="setup_can.sh" name="can_steup" output="screen"/>
-</launch>
