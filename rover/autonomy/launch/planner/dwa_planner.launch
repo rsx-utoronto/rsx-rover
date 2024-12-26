@@ -1,0 +1,12 @@
+<launch>
+    <include file="$(find rover)/rover/autonomy/launch/mapping/octomap_bag.launch" >
+        <arg name="bag_filename" value="/home/garvish/bags/zed_myhal_basement2.bag" />
+    </include>
+    <node name="dwa_planner" pkg="rover" type="dwa_planner" output="screen">
+        <param name="odom_topic" value="/rtabmap/odom" />
+        <param name="octomap_topic" value="/octomap_full"/> <!-- /octomap_full by default--> 
+        <param name="map_topic" value="/map" />
+        <rosparam file="$(find rover)/rover/autonomy/config/dwa_planner.yaml" command="load" /> 
+    </node>
+
+</launch>
