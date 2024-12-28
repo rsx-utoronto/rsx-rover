@@ -31,15 +31,22 @@ public:
     // Obstacle avoidance
     bool check_collision(const std::vector<Pose2D> &traj);
 
+    // Robot Model
+    std::vector<std::pair<double, double>> transform_robot_footprint(const Pose2D &pose);
+    std::vector<std::pair<double, double>> get_robot_grid(std::vector<std::pair<double, double>> &robot_footprint);
+
 private:
 
     // Structs // defined in dwa namespace in dwa_structs.h
 
     VelocityRange vr;
     DWAConfig dwac;
+    RobotFootprint rf;
+    Pose2D current_pose;
+
     double current_v;
     double current_w;
-    Pose2D current_pose;
+    
     
     // ROS communication
     tf2_ros::Buffer* tfBuffer_;
@@ -103,6 +110,10 @@ void DWAPlanner::define_parameters(ros::NodeHandle &nh)
     nh.param<double>("w_heading", dwac.w_heading, 1.0);
     nh.param<double>("w_dist", dwac.w_dist, 1.0);
     nh.param<double>("w_vel", dwac.w_vel, 1.0);
+    nh.param<double>("robot_length", rf.length, 0.5);
+    nh.param<double>("robot_width", rf.width, 0.5);
+    nh.param<double>("robot_height", rf.height, 0.5);
+    nh.param<double>("robot_grid_n", rf.robot_grid_n, 10);
 
     nh.param<int>("controller_frequency", rate, 10);
 
@@ -239,7 +250,7 @@ void DWAPlanner::plan()
                 traj_vis.publishTrajectory(traj);                
 
                 // 4.2 Check for collision
-                if (!check_collision(traj))
+                if (!check_collision(traj)) // check_collision returns true if there is a collision
                 {
                     continue;
                 }
@@ -258,11 +269,89 @@ void DWAPlanner::plan()
 
 bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
 {
-    /* Checks if the current trajectory is collision-free */
+    /* Checks if the current trajectory is collision-free 
+    Returns true if there is a collision */
 
-    return true;
+    for (const auto &pose : traj)
+    {
+        // Make a robot model around each pose in the trajectory
+        // Check if any part of the robot collides with an obstacle in the octree
+        // If it does, return true
+
+        // Transform the robot footprint to the current pose
+        std::vector<std::pair<double, double>> robot_footprint = transform_robot_footprint(pose);
+
+        // Make the robot footprint into a grid
+        std::vector<std::pair<double, double>> robot_grid = get_robot_grid(robot_footprint);
+
+        // Check if any of the grid cells are occupied in the octree
+
+        for (const auto &cell : robot_grid)
+        {
+            octomap::point3d point(cell.first, cell.second, 0.0);
+            octomap::OcTreeNode* node = octree_->search(point);
+            if (node)
+            {
+                return true;
+            }
+        }
+
+    }
+
+    return false;
 }
-} // namespace dwa
+
+std::vector<std::pair<double, double>> DWAPlanner::transform_robot_footprint(const Pose2D &pose)
+{
+    // Get the top left, top right, bottom left and bottom right points of the robot footprint
+    // Assuming the centre is at (0,0) -> base_link frame
+    std::vector<std::pair<double, double>> robot_footprint = {
+        {rf.length/2, rf.width/2}, // Top right
+        {-rf.length/2, rf.width/2}, // Top left
+        {-rf.length/2, -rf.width/2}, // Bottom left
+        {rf.length/2, -rf.width/2} // Bottom right
+    };
+
+    std::vector<std::pair<double, double>> transformed_footprint;
+    // Rotate the robot footprint by the current pose
+
+    for (const auto &point : robot_footprint)
+    {
+        double x = point.first * cos(pose.theta) - point.second * sin(pose.theta);
+        double y = point.first * sin(pose.theta) + point.second * cos(pose.theta);
+
+        transformed_footprint.push_back({x, y});
+    }
+    return transformed_footprint;
+}
+
+std::vector<std::pair<double, double>> DWAPlanner::get_robot_grid(std::vector<std::pair<double, double>> &robot_footprint)
+{
+    // Get the grid of the robot footprint
+    // Divide the robot footprint into n x n grid cells
+    // Return the grid cells
+
+    std::vector<std::pair<double, double>> robot_grid;
+
+    // Get the top left, top right, bottom left and bottom right points of the robot footprint
+    std::pair<double, double> top_right = robot_footprint[0];
+    std::pair<double, double> top_left = robot_footprint[1];
+    std::pair<double, double> bottom_left = robot_footprint[2];
+    std::pair<double, double> bottom_right = robot_footprint[3];
+
+    for (double x = top_left.first; x <= top_right.first; x += rf.length/rf.robot_grid_n)
+    {
+        for (double y = top_right.second; y >= bottom_right.second; y -= rf.length/rf.robot_grid_n)
+        {
+            robot_grid.push_back({x, y});
+        }
+    }
+
+    return robot_grid;
+
+} 
+
+}// namespace dwa
 // Namespace is closed here before main because main is the entry point of the program
 // compiler will fail to compile if the namespace is not closed before main
 // main is supposed to be in global namespace

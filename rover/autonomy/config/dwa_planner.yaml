@@ -17,3 +17,9 @@ num_samples_w: 100
 w_heading: 1
 w_dist: 1
 w_vel: 1
+
+# Robot Footprint
+robot_width: 1.0
+robot_length: 1.0
+robot_height: 1.0
+robot_grid_n: 10

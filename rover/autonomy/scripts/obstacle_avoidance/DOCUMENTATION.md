@@ -30,3 +30,7 @@ This is like notes of most of my decision making while coding this file, it's no
         - **Source** = `"base_link"`
 
         If you have a point (or pose) expressed in the **`base_link`** frame, you multiply it by this transform to express it in the **`map`** frame.
+
+## Future Goals
+
+- Currently only supporting cuboid footprint for robot. Should be generalized to any convex polygon in future. Should also be generalized for 3D shapes.

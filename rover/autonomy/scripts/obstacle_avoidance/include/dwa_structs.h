@@ -55,6 +55,20 @@ namespace dwa // These structs will only be used in the dwa namespace
         double w_dist;         ///< Weight for distance cost
         double w_vel;          ///< Weight for velocity cost
     };
+
+    /**
+     * @struct RobotFootprint
+     * @brief Physical parameters of the robot (Assuming robot is a cuboid).
+     */
+    struct RobotFootprint
+    {
+        double width;      ///< Width of the robot
+        double length;     ///< Length of the robot
+        double height;     ///< Height of the robot
+        double robot_grid_n;  ///< Resolution for collision checking
+        /// The robot is approximated as a cuboid with the given dimensions
+        /// The cuboid is divided into a grid of cells with the given resolution
+    };
 }
 
 #endif // ROVER_DWA_STRUCTS_H
