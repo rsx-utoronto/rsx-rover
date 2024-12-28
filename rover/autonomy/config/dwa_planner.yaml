@@ -1,4 +1,4 @@
-controller_frequency: 1 # Rate in Hz
+controller_frequency: 10 # Rate in Hz
 
 v_min: -2.0
 v_max: 2.0

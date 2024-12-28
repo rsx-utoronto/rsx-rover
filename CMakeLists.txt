@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   pcl_ros
   octomap_msgs
+  visualization_msgs
 )
 
 
@@ -96,6 +97,7 @@ generate_messages(
   std_msgs
   sensor_msgs
   geometry_msgs
+  visualization_msgs
 )
 
 ################################################
@@ -144,12 +146,13 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   $(OCTOMAP_INCLUDE_DIRS)
+  rover/autonomy/scripts/obstacle_avoidance/include
 )
 
-## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/Rover.cpp
-# )
+# Declare a C++ library
+add_library(dwa_visualizer
+  rover/autonomy/scripts/obstacle_avoidance/trajectory_visualizer.cpp
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -171,10 +174,10 @@ include_directories(
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
+# Specify libraries to link a library or executable target against
+target_link_libraries(dwa_visualizer
+  ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##
@@ -197,12 +200,12 @@ include_directories(
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
-## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
+# Mark cpp header files for installation
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  # FILES_MATCHING PATTERN "*.h"
+  # PATTERN ".svn" EXCLUDE
+)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES
@@ -250,7 +253,7 @@ add_executable(arm_point_cloud_assembler rover/arm/ros1/arm_point_cloud_assemble
 target_link_libraries(arm_point_cloud_assembler ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(dwa_planner rover/autonomy/scripts/obstacle_avoidance/dwa_planner.cpp)
-target_link_libraries(dwa_planner ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES})
+target_link_libraries(dwa_planner ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} dwa_visualizer)
 
 # catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
 #  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

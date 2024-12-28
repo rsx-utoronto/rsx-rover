@@ -8,34 +8,10 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <math.h>
 #include <tf2/utils.h>
+#include "trajectory_visualizer.h"
+#include "dwa_structs.h"
 
-struct VelocityRange {
-  double v_min;
-  double v_max;
-  double w_min;
-  double w_max;
-};
-
-struct DWAConfig {
-  double max_accel_lin;
-  double max_accel_ang;
-  double dt;        // time step for simulation
-  double sim_time;  // horizon T
-  int num_samples_v;
-  int num_samples_w;
-
-  // Cost function weights
-  double w_heading;
-  double w_dist;
-  double w_vel;
-};
-
-struct Pose2D {
-  double x;
-  double y;
-  double theta;
-};
-
+namespace dwa{ // This namespace is defined in dwa_structs.h
 class DWAPlanner
 {
 public:
@@ -53,11 +29,12 @@ public:
     void plan();
 
     // Obstacle avoidance
-    bool check_collision();
+    bool check_collision(const std::vector<Pose2D> &traj);
 
 private:
 
-    // Structs
+    // Structs // defined in dwa namespace in dwa_structs.h
+
     VelocityRange vr;
     DWAConfig dwac;
     double current_v;
@@ -73,16 +50,23 @@ private:
     std::string octomap_topic;
     std::string odom_topic;
     int rate;
+    ros::NodeHandle pnh; // Private node handle
+
+    // Visualization
+    TrajectoryVisualizer traj_vis;
 };
 
 // Constructor
 
-DWAPlanner::DWAPlanner(ros::NodeHandle &nh, tf2_ros::Buffer* tfBuffer)
+DWAPlanner::DWAPlanner(ros::NodeHandle &nh, tf2_ros::Buffer* tfBuffer) 
+    : pnh("~"),
+      traj_vis(pnh, "map")
 {
     // Variables
     // Private node handle to get parameters from the launch file where the parameter file is loaded in the dwa_planner node
-    ros::NodeHandle pnh("~");
+    
     DWAPlanner::define_parameters(pnh);
+
     
     // ROS communication
     tfBuffer_ = tfBuffer;
@@ -217,6 +201,8 @@ void DWAPlanner::plan()
         double best_v = 0.0;
         double best_w = 0.0;
 
+
+        std::vector<std::vector<Pose2D>> trajectories;
         // 3. Iterate over all velocities
 
         for (int i = 0; i < this->dwac.num_samples_v; i++)
@@ -235,29 +221,35 @@ void DWAPlanner::plan()
                 // Target frame is the frame in which we need coordinates, source frame is the frame in which we have coordinates
                 // tf_lookup("map", "base_link", current_pose);
 
+                Pose2D sim_pose = current_pose;
+                std::vector<Pose2D> traj;
+
                 // For every velocity, simulate the trajectory for next sim_time sec and check for collision
                 // The trajectory has the same velocity for the entire sim_time
                 // Find the trajectory with the least cost
                 for (double t = 0; t < this->dwac.sim_time; t += this->dwac.dt)
                 {
-                    // 4.1 Update pose
-                    updated_pose.x += v * cos(current_pose.theta) * this->dwac.dt;
-                    updated_pose.y += v * sin(current_pose.theta) * this->dwac.dt;
-                    updated_pose.theta += w * this->dwac.dt;
+                    // 4.1 Add to the trajectory
+                    sim_pose.x += v * cos(sim_pose.theta) * this->dwac.dt;
+                    sim_pose.y += v * sin(sim_pose.theta) * this->dwac.dt;
+                    sim_pose.theta += w * this->dwac.dt;
 
+                    traj.push_back(sim_pose);
+                }
 
+                trajectories.push_back(traj);
 
-                    // 4.2 Check for collision
-                    if (!check_collision())
-                    {
-                        break;
-                    }
+                // 4.2 Check for collision
+                if (!check_collision(traj))
+                {
+                    continue;
                 }
                 // 5. Compute cost
                 // 6. Update best trajectory
             }
         }
 
+        traj_vis.publishTrajectories(trajectories);
         ros::spinOnce();
         loop_rate.sleep();
         
@@ -265,13 +257,16 @@ void DWAPlanner::plan()
 
 }
 
-bool DWAPlanner::check_collision()
+bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
 {
     /* Checks if the current trajectory is collision-free */
 
     return true;
 }
-
+} // namespace dwa
+// Namespace is closed here before main because main is the entry point of the program
+// compiler will fail to compile if the namespace is not closed before main
+// main is supposed to be in global namespace
 
 
 int main(int argc, char **argv)
@@ -280,7 +275,7 @@ int main(int argc, char **argv)
 
     ros::NodeHandle nh;
     tf2_ros::Buffer tfBuffer;
-    DWAPlanner planner(nh, &tfBuffer);
+    dwa::DWAPlanner planner(nh, &tfBuffer);
     planner.plan();
     ros::spin();
     return 0;
