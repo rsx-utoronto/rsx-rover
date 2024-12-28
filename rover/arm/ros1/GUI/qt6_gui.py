@@ -28,6 +28,9 @@ class RobotControlGUI(QWidget):
     # look at function at line 150 & 835
         self.end_effector_coords = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.update_end_effector_coords) 
 
+    # update the joint display values
+        self.joint_display_values = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.set_joint_display)
+
     # Send commands to the controller 
     def button_is_clicked(self,command):
         self.controller.on_press(command)  # Send command to controller
@@ -69,21 +72,24 @@ class RobotControlGUI(QWidget):
         self.button_is_clicked(command_translator[(joint_index,increment)])
         
         # For testing (REMOVE LATER)
-        self.set_joint_value(joint_index,"Clicked")
+        #self.set_joint_value(joint_index,"Clicked")
 
     # Update the current joint angle display (NOT CURRENTLY CONNECTED TO REST OF CODE / NEED TO CONNECT THIS TO RELEVANT ROS TOPIC)
-    def set_joint_display(self, joint_index, value):
+    # Now the code updates the values and is subscribed to the arm_curr_pos topic as seen above
+    def set_joint_display(self, data): #joint_index, value):
         """
         Args:
             joint_index (int): Index of the joint to update.
             value (int): New value to set.
         """
-        joint_display = self.joint_displays[joint_index]
+        ##joint_display = self.joint_displays[joint_index]
         
         # Enforce range limits (OPTIONAL)
         # value = max(-360, min(360, value))
-        
-        joint_display.setText(str(value))
+
+        # Updates each of the joint values in the GUI
+        for joint in range(6):
+            self.joint_displays[joint].setText(str(round(data.data[joint], 1)))
 
     # Receive camera feed
     def update_image(self, qt_image):

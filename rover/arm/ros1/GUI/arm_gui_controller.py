@@ -53,27 +53,27 @@ class GuiControllerNode():
 
             # Rx
             if command == "Rx" or command == "joint4plus":
-                GuiToController.l1 = 1 * speedMultiplier
+                GuiToController.l1 = 1 * int(speedMultiplier/100)
             elif command == "-Rx" or command == "joint4minus":
-                GuiToController.r1 = 1 * speedMultiplier
+                GuiToController.r1 = 1 * int(speedMultiplier/100)
             
             # right vertical joystick emulation
-            if command == "Ry" or command == "joint2plus":
+            if command == "Ry" or command == "joint3plus":
                 GuiToController.r_vertical = 1 * speedMultiplier
-            elif command == "-Ry" or command == "joint2minus":
+            elif command == "-Ry" or command == "joint3minus":
                 GuiToController.r_vertical = -1 * speedMultiplier
 
             # right horizontal joystick emulation
-            if command == "Rz" or command == "joint3plus":
+            if command == "Rz" or command == "joint2plus":
                 GuiToController.r_horizontal = 1 * speedMultiplier
-            elif command == "-Rz" or command == "joint3minus":
+            elif command == "-Rz" or command == "joint2minus":
                 GuiToController.r_horizontal = -1 * speedMultiplier
 
             # shape button emulation
             if command == "Open Grip":
-                GuiToController.x = 1 
+                GuiToController.x = 1 *speedMultiplier
             if command == "Close Grip":
-                GuiToController.o = 1
+                GuiToController.o = 1 * speedMultiplier
             if command == "useless":
                 GuiToController.triangle = 1
             if command == "useless":
