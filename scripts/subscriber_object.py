@@ -25,7 +25,7 @@ class ObjectDetectionNode():
 
         self.K = None
         self.D = None
-        self.model = torch.hub.load('ultralytics/yolov8', 'custom', path='best.pt')  # Load YOLO model
+        self.model = torch.hub.load('ultralytics/yolov8', 'custom', path='taskModel.pt', trust_repo = True)  # Load YOLO model
         self.model.conf = 0.5  # Set confidence threshold
 
         # Mapping class indices to object names (update as per your model's training labels)
