@@ -8,6 +8,7 @@ Panels:
         - /Status1
         - /PointCloud21
         - /MarkerArray1
+        - /Marker1
       Splitter Ratio: 0.5
     Tree Height: 429
   - Class: rviz/Selection
@@ -186,6 +187,14 @@ Visualization Manager:
       Unreliable: false
       Use Timestamp: false
       Value: false
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /dwa_planner/dwa_trajectory
+      Name: Marker
+      Namespaces:
+        dwa_trajectories: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

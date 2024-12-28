@@ -202,7 +202,6 @@ void DWAPlanner::plan()
         double best_w = 0.0;
 
 
-        std::vector<std::vector<Pose2D>> trajectories;
         // 3. Iterate over all velocities
 
         for (int i = 0; i < this->dwac.num_samples_v; i++)
@@ -237,7 +236,7 @@ void DWAPlanner::plan()
                     traj.push_back(sim_pose);
                 }
 
-                trajectories.push_back(traj);
+                traj_vis.publishTrajectory(traj);                
 
                 // 4.2 Check for collision
                 if (!check_collision(traj))
@@ -249,7 +248,7 @@ void DWAPlanner::plan()
             }
         }
 
-        traj_vis.publishTrajectories(trajectories);
+        
         ros::spinOnce();
         loop_rate.sleep();
         
