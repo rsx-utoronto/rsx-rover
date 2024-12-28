@@ -10,10 +10,12 @@
         /zed_node/rgb/camera_info
         /zed_node/imu/data
         /zed_node/imu/mag
-        /camera/depth/image_rect_raw
-        /camera/color/camera_info
-        /camera/imu
-        /camera/color/image_raw
+        /rtabmap/odom
+        /imu/orient
+        /calian_gnss/gps
+        /calian_gnss/gps_extended
+        /calian_gnss/rtcm_correction
+        /calian_gnss/base_gps_extended
         
     -b 3072"/>
 </launch>
