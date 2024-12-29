@@ -5,6 +5,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray
 import math
+from sm_grid_search import GridSearch
 
 def ToEulerAngles(w, x, y, z):
     angles = [0, 0, 0] # [roll, pitch, yaw]
@@ -93,7 +94,8 @@ if __name__ == '__main__':
     x = 0
     y = 0
     heading = 0
-    targets = [(9, 0), (9, 2)]  # define multiple target points here
+
+    targets = GridSearch(10, 10, 2)  # define multiple target points here
     try:
         straight_line_approach(1.5, 0.5, targets)
     except rospy.ROSInterruptException:

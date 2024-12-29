@@ -14,17 +14,23 @@ class GridSearch:
     tolerance   - this is the limitation of our own equipment, ie. from camera, aruco only detected left right and dist of 3 m
                 - if this is unequal, take the smallest tolerance
     '''
-    def __init__(self, w, h, tolerance, lin_vel, ang_vel):
+    def __init__(self, w, h, tolerance):
         self.x = w 
         self.y = h
         self.tol = tolerance 
+        rospy.Subscriber('/rtabmap/odom', Odometry, callback=self.odom_callback) # change topic name
 
+    def odom_callback(msg):
+        global start_x, start_y
+        start_x = msg.pose.pose.position.x
+        start_y = msg.pose.pose.position.y
+    
     '''
     Generates a list of targets for straight line approach.
     '''
     def square_target(self):
-        x, y, dx, dy = 0, 0, 0, 1
-        targets = [(x,y)]
+        dx, dy = 0, 1
+        targets = [(start_x,start_y)]
         step = 1
 
         while len(targets) < self.x:
@@ -32,8 +38,8 @@ class GridSearch:
                 for j in range(step):
                     if step*self.tol > self.x: 
                         break
-                    x, y = x + (self.tol*dx), y + (self.tol*dy)
-                    targets.append((x, y))
+                    start_x, start_y = start_x + (self.tol*dx), start_y + (self.tol*dy)
+                    targets.append((start_x, start_y))
                 dx, dy = -dy, dx
             step += 1  
         return targets
