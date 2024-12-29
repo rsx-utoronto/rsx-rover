@@ -14,8 +14,8 @@ class GridSearch:
                 - if this is unequal, take the smallest tolerance
     '''
     def __init__(self, w, h, tolerance, lin_vel, ang_vel):
-        self.grid_x = w 
-        self.grid_y = h
+        self.x = w 
+        self.y = h
         self.tol = tolerance 
         self.straight_line_approach = StraightLineApproach(lin_vel, ang_vel, self.square_target)
         self.odom_subscriber = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
@@ -36,23 +36,35 @@ class GridSearch:
         x, y, dx, dy = 0, 0, 0, 1
         targets = [(x,y)]
         step = 1
+
         while len(targets) < self.x:
-            if step%2==1: # moving up/down
-                for i in range (step):
-                    # move up if %4==1, down if %4 ==3 from the pattern
-                    y+=1 if step%4 ==1 else -1
-                    targets.append((x,y))
-                    if len(targets)==self.x:
-                        return targets
-                else: 
-                    for i in range (step):
-                    # move right if %4==2, left if %4 ==0 
-                        x+=1 if step%4==2 else -1
-                        targets.append((x,y))
-                        if len(targets)==self.x:
-                            return targets
-            step += 1  # Increase step size after two edges
+            for i in range(2):  # 1, 1, 2, 2, 3, 3... etc
+                for j in range(step):
+                    if step*self.tol > self.x: 
+                        break
+                    x, y = x + (self.tol*dx), y + (self.tol*dy)
+                    targets.append((x, y))
+                dx, dy = -dy, dx
+            step += 1  
         return targets
+
+        # while len(targets) < self.x: # 1, 2, 3, 4, 5... sol 
+        #     if step%2==1: # moving up/down
+        #         for i in range (step):
+        #             # move up if %4==1, down if %4 ==3 from the pattern
+        #             y+=1 if step%4 ==1 else -1
+        #             targets.append((x,y))
+        #             if len(targets)==self.x:
+        #                 return targets
+        #         else: 
+        #             for i in range (step):
+        #             # move right if %4==2, left if %4 ==0 
+        #                 x+=1 if step%4==2 else -1
+        #                 targets.append((x,y))
+        #                 if len(targets)==self.x:
+        #                     return targets
+        #     step += 1  # Increase step size after two edges
+        # return targets
 
     def search(self):
         self.straight_line_approach.navigate()
