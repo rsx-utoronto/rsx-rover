@@ -9,6 +9,9 @@ import smach_ros
 import time 
 import math
 from optimal_path import OPmain
+from thomas_grid_search import thomasgrid
+from ar_detection_node import ARucoTagDetectionNode  
+from aruco_homing import Aimer
 
 #Change this section according to potential get functions
 
@@ -24,8 +27,6 @@ locations = {
     "OBJ1": (27.1751, 78.0421),     # Taj Mahal
     "OBJ2": (41.8902, 12.4922),     # Colosseum
 }
-
-
 
 #Up till here
 
@@ -47,15 +48,22 @@ locations = {
 
 
 def shortest_path(start: str, locations: dict) -> list:
-
     return OPmain(start, locations)
 
 def grid_search_aruco(): #should return a True or False,  #needs to display tag!
     """
     Function for grid search
     """
-    #Body omitted for now-Possibly a class
+    # thomas grid needs to be switched out to a new program using straight line traversal kp
+    # to do grid search (ie. pass in cartesian oordinates that would make up the grid) since
+    # thomas grid uses... timing :')
+    tg = thomasgrid.move()
+    
+    # run the grid search w ar_detection_node 
+    
+    # if ar_detection_node function "is_found" returns true at any point 
     return (True, (0,0))
+    
 
 def signal_red_led():
     """
@@ -64,7 +72,7 @@ def signal_red_led():
     #Body ommited for now- Possibly a class
 
 def rover_cruise(location) -> bool:
-    #staright_line_approach_kp 
+    #straight_line_approach_kp 
     return True
 
 def grid_search_object():
@@ -163,7 +171,6 @@ class LocationSelection(smach.State): #goes through all states
         smach.State.__init__(self, outcomes = ["GNSS1", "GNSS2", "AR1", "AR2", "AR3", "OBJ1", "OBJ2", "Tasks Ended"],
                              input_keys = ["rem_loc", 'testing'],
                              output_keys = ["aimed_location"])
-                            
     
     def execute(self, userdata):
         print("Performing Location Search")
@@ -218,6 +225,7 @@ class AR1(smach.State):
         
     def execute(self, userdata):
         print("Performing ArucoTag1 Search")
+
         state,loc=grid_search_aruco() 
         if state == True:
             print("Successful grid search")

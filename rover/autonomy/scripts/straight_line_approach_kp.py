@@ -32,7 +32,7 @@ def odom_callback(msg):
     x = msg.pose.pose.position.x
     y = msg.pose.pose.position.y
     heading = ToEulerAngles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
-    print("XXX",x,y)
+    # print("XXX",x,y)
     # heading is in radians
 
 def target_callback(msg):
