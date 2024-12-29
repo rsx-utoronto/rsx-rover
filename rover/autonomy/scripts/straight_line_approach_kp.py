@@ -95,10 +95,11 @@ if __name__ == '__main__':
     y = 0
     heading = 0
 
-    gs = GridSearch(10, 10, 2)  # define multiple target points here
+    
+    gs = GridSearch(4, 4, 1, x, y)  # define multiple target points here
     target = gs.square_target()
-    rospy.loginfo(target)
+    print(target)
     try:
-        straight_line_approach(1.5, 0.5, target)
+        straight_line_approach(1, 0.5, target)
     except rospy.ROSInterruptException:
         pass

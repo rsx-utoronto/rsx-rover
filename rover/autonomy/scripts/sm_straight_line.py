@@ -91,11 +91,19 @@ class StraightLineApproach:
             self.move_to_target(target_x, target_y)
             rospy.sleep(1)
 
-# if __name__ == '__main__':
-#     targets = [(9, 0), (9, 2)]  # Define multiple target points
-#     try:
-#         rospy.init_node('straight_line_approach_node')
-#         approach = StraightLineApproach(1.5, 0.5, targets)
-#         approach.navigate()
-#     except rospy.ROSInterruptException:
-#         pass
+if __name__ == '__main__':
+    targets = [(9, 0), (9, 2)]  # Define multiple target points
+    try:
+        rospy.init_node('straight_line_approach_node')
+        approach = StraightLineApproach(1.5, 0.5, targets)
+        approach.navigate()
+    except rospy.ROSInterruptException:
+        pass
+
+    gs = GridSearch(4, 4, 1, x, y)  # define multiple target points here
+    target = gs.square_target()
+    print(target)
+    try:
+        straight_line_approach(1, 0.5, target)
+    except rospy.ROSInterruptException:
+        pass
