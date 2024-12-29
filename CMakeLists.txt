@@ -18,7 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   tf2
   pcl_ros
-  octomap_msgs
+  # octomap_msgs
   visualization_msgs
 )
 
@@ -28,7 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
 #include_directories(${GTSAM_INCLUDE_DIR})
 
 find_package(PCL 1.2 REQUIRED)
-find_package(octomap REQUIRED)
+# find_package(octomap REQUIRED)
 
 # Variables set by the pcl config.cmake.in file
 include_directories(${PCL_INCLUDE_DIRS})
@@ -145,14 +145,14 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  $(OCTOMAP_INCLUDE_DIRS)
-  rover/autonomy/scripts/obstacle_avoidance/include
+  # $(OCTOMAP_INCLUDE_DIRS)
+  # rover/autonomy/scripts/obstacle_avoidance/include
 )
 
 # Declare a C++ library
-add_library(dwa_visualizer
-  rover/autonomy/scripts/obstacle_avoidance/trajectory_visualizer.cpp
-)
+# add_library(dwa_visualizer
+#   rover/autonomy/scripts/obstacle_avoidance/trajectory_visualizer.cpp
+# )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -175,9 +175,9 @@ add_library(dwa_visualizer
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 # Specify libraries to link a library or executable target against
-target_link_libraries(dwa_visualizer
-  ${catkin_LIBRARIES}
-)
+# target_link_libraries(dwa_visualizer
+#   ${catkin_LIBRARIES}
+# )
 
 #############
 ## Install ##
@@ -252,8 +252,8 @@ target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 add_executable(arm_point_cloud_assembler rover/arm/ros1/arm_point_cloud_assembler.cpp)
 target_link_libraries(arm_point_cloud_assembler ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(dwa_planner rover/autonomy/scripts/obstacle_avoidance/dwa_planner.cpp)
-target_link_libraries(dwa_planner ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} dwa_visualizer)
+# add_executable(dwa_planner rover/autonomy/scripts/obstacle_avoidance/dwa_planner.cpp)
+# target_link_libraries(dwa_planner ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} dwa_visualizer)
 
 # catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
 #  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
