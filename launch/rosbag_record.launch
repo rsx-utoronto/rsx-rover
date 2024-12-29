@@ -14,7 +14,7 @@
         /imu/orient
         /calian_gnss/gps
         /calian_gnss/gps_extended
-        /calian_gnss/rtcm_correction
+        /calian_gnss/rtcm_corrections
         /calian_gnss/base_gps_extended
         
     -b 3072"/>
