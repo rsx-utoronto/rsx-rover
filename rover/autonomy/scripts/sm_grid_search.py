@@ -18,19 +18,27 @@ class GridSearch:
         self.x = w 
         self.y = h
         self.tol = tolerance 
-        rospy.Subscriber('/rtabmap/odom', Odometry, callback=self.odom_callback) # change topic name
+        # print(self.tol)
+        sub = rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) # change topic name
+        self.start_x = None
+        self.start_y = None
 
-    def odom_callback(msg):
-        global start_x, start_y
-        start_x = msg.pose.pose.position.x
-        start_y = msg.pose.pose.position.y
+    def odom_callback(self, msg):
+        self.start_x = msg.pose.pose.position.x
+        self.start_y = msg.pose.pose.position.y
+        print(self.start_x)
+        print(self.start_y)
     
     '''
     Generates a list of targets for straight line approach.
     '''
     def square_target(self):
         dx, dy = 0, 1
-        targets = [(start_x,start_y)]
+        while self.start_x == None:
+            # print("Waiting for odom...")
+            # rospy.loginfo("Waiting for odom...")
+            continue
+        targets = [(self.start_x,self.start_y)]
         step = 1
 
         while len(targets) < self.x:
@@ -38,8 +46,8 @@ class GridSearch:
                 for j in range(step):
                     if step*self.tol > self.x: 
                         break
-                    start_x, start_y = start_x + (self.tol*dx), start_y + (self.tol*dy)
-                    targets.append((start_x, start_y))
+                    self.start_x, self.start_y = self.start_x + (self.tol*dx), self.start_y + (self.tol*dy)
+                    targets.append((self.start_x, self.start_y))
                 dx, dy = -dy, dx
             step += 1  
         return targets
