@@ -42,6 +42,8 @@ class MapViewer(QWidget):
 	"""View markers and robot position overlaid on a satellite map."""
 
 	def __init__(self, *args, **kwargs):
+		
+
 		super().__init__(*args, **kwargs)
 
 		self.mapWidget = MapWidget()
@@ -69,23 +71,24 @@ class MapViewer(QWidget):
 		document.head.appendChild(styleSheet)
 		"""
 		, 0)
-
+		# self.map.runJavaScript("", 0)
+        
 		# 'initialize' tile layer
 		self.tile_layer = None
 
 
 		# initialize robot icon
 		robot_startup_location = Locations.engineering.value
-		self.robot_icon = L.icon(str(Path(__file__).parent.resolve() / "../resources/robot.png"),
-		{
-			"iconSize": [26, 25],
-			"iconAnchor": [10, 12]
-		})
+		# self.robot_icon = L.icon(str(Path(__file__).parent.resolve() / "../resources/robot.png"),
+		# {
+		# 	"iconSize": [26, 25],
+		# 	"iconAnchor": [10, 12]
+		# })
 		self.robot = L.marker(robot_startup_location, {
 			'rotationAngle': 0,
 			'rotationOrigin': '10px 12px'
 		})
-		self.robot.setIcon(self.robot_icon)
+		# self.robot.setIcon(self.robot_icon)
 		self.robot.addTo(self.map)
 
 		# initialize robot line
@@ -101,6 +104,37 @@ class MapViewer(QWidget):
 		self.selected_marker: Dict[str, Circle] = {}
 		self.show_selected_marker: Dict[str, bool] = {}
 		self.circle_color: Dict[str, str] = {}
+
+	def centre_on_gps_callback(self,event):
+		eastBound=event['_northEast']['lng']
+		westBound=event['_southWest']['lng']
+		northBound=event['_northEast']['lat']
+		southBound=event['_southWest']['lat'] 
+		latitude = self.last_drawn_robot_position[0]
+		longitude = self.last_drawn_robot_position[1]
+		if latitude <southBound or \
+			latitude >northBound or \
+			longitude <westBound or \
+			longitude>eastBound:
+			self.map.panTo( [latitude,longitude])
+		
+		# return [eastBound,westBound, northBound, southBound]
+		
+		# coord=latLong.corner1[0]
+	def center_on_gps(self,gps_point):
+		"""Set the initial offset to keep the center of the map fixed."""
+		# Calculate the map's center (this will not change dynamically)
+
+		self.map.getBounds(self.centre_on_gps_callback)
+		# import pprint
+		# pprint(bound)
+		# westBound =self.map.getBounds().getWest()
+		# northBound = self.map.getBounds().getNorth()
+		# southBound = self.map.getBounds().getSouth()
+		# # Adjust offset based on zoom level and widget dimensions
+		
+
+
 
 	def set_map_server(self, tile_url: str, layer_count):
 		# remove current tile layer
@@ -129,7 +163,7 @@ class MapViewer(QWidget):
 		self.points_line[layer_name] = Polyline([], {'color': line_color})
 		self.points_layer[layer_name] = LayerGroup()
 		self.selected_marker[layer_name] = Circle([0, 0], 2, {'color': selected_color, 'weight': 8})
-		self.show_selected_marker[layer_name] = False
+		self.show_selected_marker[layer_name] = True
 		self.circle_color[layer_name] = circle_color
 
 		self.points_line[layer_name].addTo(self.map)
@@ -178,7 +212,6 @@ class MapViewer(QWidget):
 		if dist((lat, long), self.last_moved_robot_position) > 0.000001:
 			self.robot.setLatLng([lat, long])
 			self.last_moved_robot_position = (lat, long)
-
 		# if we've moved more, add to the lines
 		if dist((lat, long), self.last_drawn_robot_position) > 0.00001:
 			jscode = f'{self.robot_line.jsName}.addLatLng([{lat}, {long}]);'
@@ -212,7 +245,15 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     viewer = MapViewer()
-	# initial_map_server = MapServers.ARCGIS_World_Imagery_Cache
-    viewer.set_map_server(str(CACHE_DIR) + '/arcgis_world_imagery/{z}/{y}/{x}.jpg',20)  # Example tile server
+    
     viewer.show()  # Display the widget
+    viewer.set_map_server(
+		str(CACHE_DIR) + '/arcgis_world_imagery/{z}/{y}/{x}.jpg', 19
+	)
+    viewer.set_robot_position(38.4,-110.78)
+    
+    viewer.set_robot_position(38.5,-110.78)
+
+    
+    
     sys.exit(app.exec_())

@@ -15,8 +15,8 @@ def publish_gps_coordinates():
     rate = rospy.Rate(1)  # 1 Hz
     
     # Starting position for simulated GPS coordinates (e.g., near New York City)
-    latitude = 40.7128  # Initial latitude
-    longitude = -74.0060  # Initial longitude
+    latitude = 38.4  # Initial latitude 38.4,-110.78
+    longitude = -110.78  # Initial longitude
 
     while not rospy.is_shutdown():
         # Create a NavSatFix message
@@ -25,8 +25,8 @@ def publish_gps_coordinates():
         gps_msg.header.frame_id = "gps"
 
         # Adjust latitude and longitude slightly
-        latitude += random.uniform(-0.01, 0.01)  # Move latitude slightly
-        longitude += random.uniform(-0.01, 0.01)  # Move longitude slightly
+        latitude += random.uniform(-0.0001, 0.0001)  # Move latitude slightly
+        longitude += random.uniform(-0.0001, 0.0001)  # Move longitude slightly
 
         # Assign the modified values to the message
         gps_msg.latitude = latitude

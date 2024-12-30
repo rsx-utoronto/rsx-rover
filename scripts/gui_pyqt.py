@@ -8,10 +8,12 @@ import sys
 from enum import Enum
 import rospy
 import json
-import pygame
 import numpy as np
+import map_viewer as map_viewer
+from pathlib import Path
 
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame
+
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, QCheckBox
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from sensor_msgs.msg import Image
@@ -23,114 +25,116 @@ from PyQt5.QtGui import QImage, QPixmap, QPainter
 widgetWidth = 1000
 widgetHeight = 750
 
-class PygameOverlay(QWidget):
-    def __init__(self, map_image_path, metadata_path):
+CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
+
+class mapOverlay(QWidget):
+    def __init__(self):
         super().__init__()
-        self.setMinimumSize(widgetWidth, widgetHeight)
-        pygame.init()
-        self.surface = pygame.Surface((widgetWidth, widgetHeight))
-        self.map_image = pygame.image.load(map_image_path)
-        self.metadata = self.load_metadata(metadata_path)
+        
+        # self.setMinimumSize(widgetWidth, widgetHeight)
+        self.viewer = map_viewer.MapViewer()
+        self.viewer.set_map_server(
+            str(CACHE_DIR) + '/arcgis_world_imagery/{z}/{y}/{x}.jpg', 19
+        )
+        self.setLayout(self.initOverlayout())
+        self.centreOnRover = False
+        # self.viewer.set_robot_position(38.4,-110.78)
+    
+        # self.viewer.set_robot_position(38.5,-110.78)
+        # pygame.init()
+        # self.surface = pygame.Surface((widgetWidth, widgetHeight))
+        # self.map_image = pygame.image.load(map_image_path)
+        # self.metadata = self.load_metadata(metadata_path)
 
         # GPS bounds
-        self.latitude_min = self.metadata['bounds']['southwest']['lat']
-        self.latitude_max = self.metadata['bounds']['northeast']['lat']
-        self.longitude_min = self.metadata['bounds']['southwest']['lng']
-        self.longitude_max = self.metadata['bounds']['northeast']['lng']
+        # self.latitude_min = self.metadata['bounds']['southwest']['lat']
+        # self.latitude_max = self.metadata['bounds']['northeast']['lat']
+        # self.longitude_min = self.metadata['bounds']['southwest']['lng']
+        # self.longitude_max = self.metadata['bounds']['northeast']['lng']
         
         # History of GPS coordinates to draw the path
-        self.gps_history = []
+        # self.gps_history = []
         
-        # Zoom level and offset
-        self.zoom_factor = 2.0  # Adjust to zoom in; 1.0 means no zoom
-        self.offset_x = 0  # Horizontal offset to center the latest GPS coordinate
-        self.offset_y = 0  # Vertical offset to center the latest GPS coordinate
+        # # Zoom level and offset
+        # self.zoom_factor = 2.0  # Adjust to zoom in; 1.0 means no zoom
+        # self.offset_x = 0  # Horizontal offset to center the latest GPS coordinate
+        # self.offset_y = 0  # Vertical offset to center the latest GPS coordinate
 
         # ROS Subscriber for GPS coordinates
         rospy.Subscriber('/gps/fix', NavSatFix, self.update_gps_coordinates)
-
+    
+    def initOverlayout(self):
+        OverLayout = QGridLayout()
+        OverLayout.addWidget(self.viewer)
+        return OverLayout
     def load_metadata(self, path):
         with open(path, 'r') as f:
             return json.load(f)
 
     def update_gps_coordinates(self, msg):
         gps_point = (msg.latitude, msg.longitude)
-        
-        # Append new GPS point to history
-        self.gps_history.append(gps_point)
-        
-        # Limit history to avoid excessive memory usage
-        if len(self.gps_history) > 1000:  # Keep last 1000 points (adjust as needed)
-            self.gps_history.pop(0)
-        
-        self.update()  # Trigger repaint
-
-    def center_on_gps(self, gps_point):
-        """Set the initial offset to keep the center of the map fixed."""
-        # Calculate the map's center (this will not change dynamically)
-
-        # Adjust offset based on zoom level and widget dimensions
-        image_width, image_height = self.map_image.get_size()
-        self.offset_x = (image_width * self.zoom_factor - widgetWidth) // 2
-        self.offset_y = (image_height * self.zoom_factor - widgetHeight) // 2
+        self.viewer.set_robot_position(msg.latitude,msg.longitude)
+        if self.centreOnRover == True:
+            self.viewer.center_on_gps( gps_point)  # Trigger repaint
 
 
-    def gps_to_pixel(self, latitude, longitude):
-        x = int((longitude - self.longitude_min) / (self.longitude_max - self.longitude_min) * widgetWidth)
-        y = int((1 - (latitude - self.latitude_min) / (self.latitude_max - self.latitude_min)) * widgetHeight)
-        return x, y
 
-    def paintEvent(self, event):
-        self.render_map_and_gps()
-        frame = pygame.surfarray.array3d(self.surface)
-        frame = np.rot90(frame)
-        frame = np.flipud(frame)
-        height, width, _ = frame.shape
-        img = QImage(frame.tobytes(), width, height, QImage.Format_RGB888)
-        painter = QPainter(self)
-        painter.drawImage(0, 0, img)
 
-    def render_map_and_gps(self):
+
+
+
+    # def paintEvent(self, event):
+    #     self.render_map_and_gps()
+    #     # frame = pygame.surfarray.array3d(self.surface)
+        # frame = np.rot90(frame)
+        # frame = np.flipud(frame)
+        # height, width, _ = frame.shape
+        # img = QImage(frame.tobytes(), width, height, QImage.Format_RGB888)
+        # painter = QPainter(self)
+        # painter.drawImage(0, 0, img)
+
+    # def render_map_and_gps(self):
         # Clear surface
-        self.surface.fill((255, 255, 255))
 
-        # Calculate scaled dimensions that preserve aspect ratio
-        image_width, image_height = self.map_image.get_size()
-        aspect_ratio = image_width / image_height
+        # self.surface.fill((255, 255, 255))
+
+        # # Calculate scaled dimensions that preserve aspect ratio
+        # image_width, image_height = self.map_image.get_size()
+        # aspect_ratio = image_width / image_height
 
         # Determine new width and height based on zoom, preserving aspect ratio
-        if aspect_ratio > 1:  # Wider than tall
-            map_width = int(image_width * self.zoom_factor)
-            map_height = int(map_width / aspect_ratio)
-        else:  # Taller than wide or square
-            map_height = int(image_height * self.zoom_factor)
-            map_width = int(map_height * aspect_ratio)
+        # if aspect_ratio > 1:  # Wider than tall
+        #     map_width = int(image_width * self.zoom_factor)
+        #     map_height = int(map_width / aspect_ratio)
+        # else:  # Taller than wide or square
+        #     map_height = int(image_height * self.zoom_factor)
+        #     map_width = int(map_height * aspect_ratio)
 
-        zoomed_map = pygame.transform.scale(self.map_image, (map_width, map_height))
+        # zoomed_map = pygame.transform.scale(self.map_image, (map_width, map_height))
         
         # Blit the zoomed map with offset
-        self.surface.blit(zoomed_map, (-self.offset_x, -self.offset_y))
-        
+        # self.surface.blit(zoomed_map, (-self.offset_x, -self.offset_y))
+        # print("nw")
         # Draw path of GPS points
-        if len(self.gps_history) > 1:
-            for i in range(1, len(self.gps_history)):
-                start_x, start_y = self.gps_to_pixel(*self.gps_history[i - 1])
-                end_x, end_y = self.gps_to_pixel(*self.gps_history[i])
+        # if len(self.gps_history) > 1:
+        #     for i in range(1, len(self.gps_history)):
+        #         start_x, start_y = self.gps_to_pixel(*self.gps_history[i - 1])
+        #         end_x, end_y = self.gps_to_pixel(*self.gps_history[i])
 
-                # Adjust coordinates based on zoom and offset
-                start_x = int(start_x * self.zoom_factor - self.offset_x)
-                start_y = int(start_y * self.zoom_factor - self.offset_y)
-                end_x = int(end_x * self.zoom_factor - self.offset_x)
-                end_y = int(end_y * self.zoom_factor - self.offset_y)
+        #         # Adjust coordinates based on zoom and offset
+        #         start_x = int(start_x * self.zoom_factor - self.offset_x)
+        #         start_y = int(start_y * self.zoom_factor - self.offset_y)
+        #         end_x = int(end_x * self.zoom_factor - self.offset_x)
+        #         end_y = int(end_y * self.zoom_factor - self.offset_y)
 
-                pygame.draw.line(self.surface, (0, 0, 255), (start_x, start_y), (end_x, end_y), 2)
+        #         pygame.draw.line(self.surface, (0, 0, 255), (start_x, start_y), (end_x, end_y), 2)
         
-        # Draw a circle at the most recent GPS point
-        if self.gps_history:
-            recent_x, recent_y = self.gps_to_pixel(*self.gps_history[-1])
-            recent_x = int(recent_x * self.zoom_factor - self.offset_x)
-            recent_y = int(recent_y * self.zoom_factor - self.offset_y)
-            pygame.draw.circle(self.surface, (0, 255, 0), (recent_x, recent_y), 5)
+        # # Draw a circle at the most recent GPS point
+        # if self.gps_history:
+        #     recent_x, recent_y = self.gps_to_pixel(*self.gps_history[-1])
+        #     recent_x = int(recent_x * self.zoom_factor - self.offset_x)
+        #     recent_y = int(recent_y * self.zoom_factor - self.offset_y)
+        #     pygame.draw.circle(self.surface, (0, 255, 0), (recent_x, recent_y), 5)
 
 
 class Direction(Enum):
@@ -380,18 +384,26 @@ class RoverGUI(QMainWindow):
 
 
     def setup_map_tab(self):
-        # Path to map image and metadata
-        map_image_path = "/home/kjyshen223/rover_ws/src/rsx-rover/scripts/map_output/map_screenshot.png"
-        metadata_path = "/home/kjyshen223/rover_ws/src/rsx-rover/scripts/map_output/map_metadata.json"
 
-        # Initialize PygameOverlay
-        self.map_overlay = PygameOverlay(map_image_path, metadata_path)
-
+        # Initialize mapOverlay
+        self.map_overlay = mapOverlay()
+        # Create a checkbox for settings
+        self.checkbox_setting = QCheckBox("Recentre map when rover offscreen")
+        self.checkbox_setting.setChecked(False)  # Set the default state to unchecked
+        self.checkbox_setting.stateChanged.connect(self.on_checkbox_state_changed)
         # Layout setup for map tab
         layout = QVBoxLayout()
+        layout.addWidget(self.checkbox_setting)
         layout.addWidget(self.map_overlay)
 
         self.map_tab.setLayout(layout)
+    def on_checkbox_state_changed(self, state):
+        if state == Qt.Checked:
+            self.map_overlay.centreOnRover = True
+            # Perform actions for the checked state
+        else:
+            self.map_overlay.centreOnRover = False
+            # Perform actions for the unchecked state
 
     def change_gear(self, value):
         self.velocity_control.set_gear(value)
