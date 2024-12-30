@@ -33,7 +33,7 @@ from std_msgs.msg import UInt8
 # HOST should be the Ubuntu computer's local IP, and
 # PORT should be an available port on the Ubuntu computer.
 # This is to send the data to the Ubuntu computer.
-HOST = "192.168.0.99"
+HOST = "192.168.2.88"
 PORT = 5409
 
 
@@ -62,35 +62,34 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
     s.listen()
 
-    print("Ready for connection from Windows")
+    rospy.loginfo("Ready for connection from Windows")
 
-
+    rate = rospy.Rate(10)
     while not rospy.is_shutdown():
 
-    
-        while True:
-
-            # Found connection
-            conn, addr = s.accept()
-            with conn:
-                print(f"Connected by {addr}")
+        # Found connection
+        conn, addr = s.accept()
+        with conn:
+            print(f"Connected by {addr}")
 
 
-                while True:
+            while not rospy.is_shutdown():
 
-                    # Received data
-                    data = conn.recv(1024)
-                    if data:
+                # Received data
+                data = conn.recv(1024)
+                if data:
 
-                        for byte in data:
-                            pub.publish(byte)
+                    for byte in data:
+                        pub.publish(byte)
 
-                    # Disconnect when data has stopped
-                    # Outer while loop will wait for connection again
-                    else:
-                        break
+                # Disconnect when data has stopped
+                # Outer while loop will wait for connection again
+                else:
+                    break
+                rate.sleep()
 
-    rospy.loginfo("Shutting down TruPrecision ROS listener node.")
+        rospy.loginfo("Shutting down TruPrecision ROS listener node.")
+        rate.sleep()
 
 
 # -----------------------------------------------
