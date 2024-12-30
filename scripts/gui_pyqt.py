@@ -227,27 +227,47 @@ class RoverGUI(QMainWindow):
 
     def setup_split_screen_tab(self):
         splitter = QSplitter(Qt.Horizontal)
+        
         # Add camera feed to the splitter
         camera_group = QGroupBox("Camera Feed")
         camera_layout = QVBoxLayout()
+        
+        # Camera feed label
         camera_label = QLabel(self.split_screen_tab)
-        # camera_label.setFixedSize(640, 480)
         self.camera_label.setMinimumSize(320, 240)  # Allow it to shrink
         self.camera_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         camera_label.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         camera_layout.addWidget(camera_label)
+
+        # Add the camera selector
+        camera_selector_layout = QHBoxLayout()
+        camera_label_selector = QLabel("Select Camera:")  # Label for selector
+        self.camera_selector_split = QComboBox(self.split_screen_tab)
+        self.camera_selector_split.addItem("Zed (front) camera")
+        self.camera_selector_split.addItem("Butt camera")
+        self.camera_selector_split.currentIndexChanged.connect(self.switch_camera)
+
+        # Combine selector label and combo box
+        camera_selector_layout.addWidget(camera_label_selector, alignment=Qt.AlignRight)
+        camera_selector_layout.addWidget(self.camera_selector_split)
+        camera_layout.addLayout(camera_selector_layout)
+
+        # Set camera group layout
         camera_group.setLayout(camera_layout)
-         # Add map to the splitter
+        
+        # Add map to the splitter
         map_group = QGroupBox("Map")
         map_layout = QVBoxLayout()
         self.map_overlay = mapOverlay()
         map_layout.addWidget(self.map_overlay)
         map_group.setLayout(map_layout)
+
         # Add widgets to the splitter
         splitter.addWidget(camera_group)
         splitter.addWidget(map_group)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
+
         # Controls section
         controls_group = QGroupBox("Controls")
         controls_layout = QHBoxLayout()
@@ -281,6 +301,7 @@ class RoverGUI(QMainWindow):
         split_screen_layout.addWidget(controls_group)
 
         self.split_screen_tab.setLayout(split_screen_layout)
+
         
     def setup_control_tab(self):
         # Camera Group Box (top)
