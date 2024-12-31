@@ -195,6 +195,14 @@ Visualization Manager:
         dwa_trajectories: true
       Queue Size: 100
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /dwa_planner/robot_footprint
+      Name: Marker
+      Namespaces:
+        robot_footprint: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

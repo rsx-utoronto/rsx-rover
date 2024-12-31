@@ -43,6 +43,7 @@ private:
     DWAConfig dwac;
     RobotFootprint rf;
     Pose2D current_pose;
+    ObstacleAvoidanceConfig oac;
 
     double current_v;
     double current_w;
@@ -114,6 +115,13 @@ void DWAPlanner::define_parameters(ros::NodeHandle &nh)
     nh.param<double>("robot_width", rf.width, 0.5);
     nh.param<double>("robot_height", rf.height, 0.5);
     nh.param<double>("robot_grid_n", rf.robot_grid_n, 10);
+    nh.param<double>("min_z", oac.min_z, 0.0);
+    nh.param<double>("max_z", oac.max_z, 1.0);
+
+    // Initial pose set to 0 just in case the odom topic is not publishing
+    current_pose.x = 0.0;
+    current_pose.y = 0.0;
+    current_pose.theta = 0.0;
 
     nh.param<int>("controller_frequency", rate, 10);
 
@@ -201,6 +209,15 @@ void DWAPlanner::plan()
         // ROS_INFO("Current linear velocity: %f", current_v);
         // ROS_INFO("Current angular velocity: %f", current_w);
 
+        // Need this check because the first few times the planner runs, it will not have an octomap, causing the node to crash
+        if (!octree_)
+        {
+            ROS_WARN("No octomap received yet, skipping planning...");
+            ros::spinOnce();
+            loop_rate.sleep();
+            continue;
+        }
+
         // 1. Compute feasible velocity ranges (dynamic window)
         double v_min = std::max(this->vr.v_min, current_v - this->dwac.max_accel_lin * this->dwac.dt);
         double v_max = std::min(this->vr.v_max, current_v + this->dwac.max_accel_lin * this->dwac.dt);
@@ -245,14 +262,13 @@ void DWAPlanner::plan()
                     sim_pose.theta += w * this->dwac.dt;
 
                     traj.push_back(sim_pose);
-                }
-
-                traj_vis.publishTrajectory(traj);                
+                }                
 
                 // 4.2 Check for collision
                 if (!check_collision(traj)) // check_collision returns true if there is a collision
                 {
-                    continue;
+                    traj_vis.publishTrajectory(traj);
+                    // continue;
                 }
                 // 5. Compute cost
                 // 6. Update best trajectory
@@ -280,7 +296,7 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
 
         // Transform the robot footprint to the current pose
         std::vector<std::pair<double, double>> robot_footprint = transform_robot_footprint(pose);
-
+        traj_vis.publishRobotFootprint(robot_footprint);
         // Make the robot footprint into a grid
         std::vector<std::pair<double, double>> robot_grid = get_robot_grid(robot_footprint);
 
@@ -288,11 +304,23 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
 
         for (const auto &cell : robot_grid)
         {
-            octomap::point3d point(cell.first, cell.second, 0.0);
-            octomap::OcTreeNode* node = octree_->search(point);
-            if (node)
+            ROS_INFO("NEW CELL\n\n\n\n\n\n\n\n\n\n");
+            for (double z = oac.min_z; z <= oac.max_z; z += ((oac.max_z - oac.min_z)/rf.robot_grid_n))
             {
-                return true;
+                // Check if the cell is within the bounds of the octree
+                if (!octree_->inBBX(octomap::point3d(cell.first, cell.second, z))) 
+                {
+                    ROS_WARN("Coordinates (%f, %f, %f) are out of bounds for the OctoMap!", cell.first, cell.second, z);
+                    continue;  // Skip this point
+                }
+                
+                octomap::OcTreeKey key = octree_->coordToKey(cell.first, cell.second, z);
+                octomap::OcTreeNode* node = octree_->search(key);
+                if (node && octree_->isNodeOccupied(node))
+                {
+                    ROS_INFO("Checking cell (%f, %f, %f)", cell.first, cell.second, z);
+                    return true;
+                }
             }
         }
 
@@ -320,7 +348,12 @@ std::vector<std::pair<double, double>> DWAPlanner::transform_robot_footprint(con
         double x = point.first * cos(pose.theta) - point.second * sin(pose.theta);
         double y = point.first * sin(pose.theta) + point.second * cos(pose.theta);
 
+        // Translate the robot footprint to the current pose
+        x += pose.x;
+        y += pose.y;
+
         transformed_footprint.push_back({x, y});
+
     }
     return transformed_footprint;
 }

@@ -69,6 +69,17 @@ namespace dwa // These structs will only be used in the dwa namespace
         /// The robot is approximated as a cuboid with the given dimensions
         /// The cuboid is divided into a grid of cells with the given resolution
     };
+
+    /**
+     * @struct Obstacle Avoidance Config
+     * @brief Parameters defining the obstacle avoidance behavior
+     */
+
+    struct ObstacleAvoidanceConfig
+    {
+        double min_z;  ///< Minimum height of obstacles to consider
+        double max_z;  ///< Maximum height of obstacles to consider
+    };
 }
 
 #endif // ROVER_DWA_STRUCTS_H

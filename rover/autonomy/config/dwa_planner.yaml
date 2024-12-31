@@ -1,4 +1,4 @@
-controller_frequency: 10 # Rate in Hz
+controller_frequency: 1 # Rate in Hz
 
 v_min: -2.0
 v_max: 2.0
@@ -9,8 +9,8 @@ max_accel_lin: 0.5
 max_accel_ang: 0.2
 dt: 0.1     # time step for simulation
 sim_time: 2 # simulation time in sec (Time horizon)    
-num_samples_v: 100
-num_samples_w: 100
+num_samples_v: 10
+num_samples_w: 10
 
 # Cost function weights
 
@@ -23,3 +23,7 @@ robot_width: 1.0
 robot_length: 1.0
 robot_height: 1.0
 robot_grid_n: 10
+
+# Obstacle avoidance parameters
+min_z: 0.0
+max_z: 1.5
