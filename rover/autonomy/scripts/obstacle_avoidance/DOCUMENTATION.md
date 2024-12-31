@@ -31,6 +31,30 @@ This is like notes of most of my decision making while coding this file, it's no
 
         If you have a point (or pose) expressed in the **`base_link`** frame, you multiply it by this transform to express it in the **`map`** frame.
 
+
+- NOTE: The `InBBX` check doesn't work with octree_ for some reason. Don't use it in future.
+
+- I notice that out of the queried cells, only less than 1/3rd have nodes in the octomap. Other nodes don't even exist. Is this because of out of bounds errors (which seems unlikely after noticing the values) or is it because of interpolation?
+    - ChatGPT's answer (which I think makes sense): 
+        - In an **octomap::OcTree**, it’s actually **quite normal** for a large fraction of the coordinates you query (`search(x, y, z)`) to return `nullptr` (i.e., no node). It does *not* necessarily mean they are out of bounds; often it just means that **no specific leaf node** at that exact coordinate exists at the current resolution, or the space was never observed (“unknown” in octomap terms).
+        - **OctoMap stores data in an octree structure** where space is subdivided into voxels at discrete resolutions (e.g. 0.05 m or 0.1 m).  
+        - Only **occupied** voxels and certain **subdivided free** voxels are stored explicitly; large expanses of free (or unknown) space are often represented by **coarser nodes** at higher levels in the octree.
+        - Hence, when you do:
+
+            ```cpp
+            octomap::OcTreeNode* node = octree_->search(x, y, z);
+            ```
+            …**if** \((x, y, z)\) **is not exactly the center of a leaf voxel** (or if it’s in an area the sensor never observed), you will likely get a `nullptr`. This does *not* mean it’s strictly out of bounds; it can simply be:
+            - **At a coarser level** in the tree (so the specific leaf doesn’t exist), or  
+            - **Completely unknown** (never observed).  
+
+        - If you really need a more nuanced check, you can do something like:
+            ```cpp
+            OcTreeNode* node = octree_->search(x, y, z, depth);
+            ```
+            where you specify a deeper or shallower depth to allow the tree to return a node at some coarser level. You can then check if that node is free or occupied at that coarser resolution.
+    - I am making a decision to consider the nodes that don't exist as unoccupied. If that creates a lot of problems, I will reconsider, maybe check a group of coordinates or check the distance to nearest obstacle or smth.
+
 ## Future Goals
 
 - Currently only supporting cuboid footprint for robot. Should be generalized to any convex polygon in future. Should also be generalized for 3D shapes.

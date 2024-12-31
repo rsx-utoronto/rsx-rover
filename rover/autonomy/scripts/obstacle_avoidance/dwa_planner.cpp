@@ -35,6 +35,9 @@ public:
     std::vector<std::pair<double, double>> transform_robot_footprint(const Pose2D &pose, std::vector<std::pair<double, double>> &robot_footprint);
     std::vector<std::pair<double, double>> get_robot_grid(std::vector<std::pair<double, double>> &robot_footprint);
 
+    // Octomap
+    void get_octomap_bounds(octomap::OcTree* octree);
+
 private:
 
     // Structs // defined in dwa namespace in dwa_structs.h
@@ -227,6 +230,7 @@ void DWAPlanner::plan()
         double best_v = 0.0;
         double best_w = 0.0;
 
+        get_octomap_bounds(octree_.get());
 
         // 3. Iterate over all velocities
         for (int i = 0; i < this->dwac.num_samples_v; i++)
@@ -265,7 +269,6 @@ void DWAPlanner::plan()
                 if (!check_collision(traj)) // check_collision returns true if there is a collision
                 {
                     vis.publishTrajectory(traj);
-                    // continue;
                 }
                 // 5. Compute cost
                 // 6. Update best trajectory
@@ -284,7 +287,6 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
 {
     /* Checks if the current trajectory is collision-free 
     Returns true if there is a collision */
-    int i = 0;
     for (const auto &pose : traj)
     {
         // Make a robot model around each pose in the trajectory
@@ -304,34 +306,31 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
         std::vector<std::pair<double, double>> robot_grid = get_robot_grid(robot_footprint);
 
         // Transform the robot grid to the current pose
-        robot_footprint = transform_robot_footprint(pose, robot_grid);
+        robot_grid = transform_robot_footprint(pose, robot_grid);
         
-        if ((i % 5) == 0)
-        {
-            ROS_INFO("Visualizing robot footprint and grid of size: %lu\n\n\n", robot_grid.size());
-            // vis.publishRobotFootprint(robot_footprint);
-            vis.publishRobotGrid(robot_footprint);
-        }
-        i++;
+        // if ((i % 5) == 0)
+        // {
+        //     ROS_INFO("Visualizing robot footprint and grid of size: %lu\n\n\n", robot_grid.size());
+        //     // vis.publishRobotFootprint(robot_footprint);
+        //     vis.publishRobotGrid(robot_grid);
+        // }
+        // i++;
         // Check if any of the grid cells are occupied in the octree
 
         for (const auto &cell : robot_grid)
         {
-            // ROS_INFO("NEW CELL\n\n\n\n\n\n\n\n\n\n");
             for (double z = oac.min_z; z <= oac.max_z; z += ((oac.max_z - oac.min_z)/rf.robot_grid_n))
-            {
-                // Check if the cell is within the bounds of the octree
-                if (!this->octree_->inBBX(octomap::point3d(cell.first, cell.second, z))) 
-                {
-                    // ROS_WARN("Coordinates (%f, %f, %f) are out of bounds for the OctoMap!", cell.first, cell.second, z);
-                    continue;  // Skip this point
-                }
+            {   
                 
                 octomap::OcTreeKey key = this->octree_->coordToKey(cell.first, cell.second, z);
                 octomap::OcTreeNode* node = this->octree_->search(key);
+
+                // A lot of nodes are not found in the octree 
+                // THIS IS NORMAL (check documentation)
+                // Decision: Any node that's not found is considered unoccupied
                 if (node && this->octree_->isNodeOccupied(node))
                 {
-                    ROS_INFO("Checking cell (%f, %f, %f)", cell.first, cell.second, z);
+                    // ROS_INFO("Checking cell (%f, %f, %f)", cell.first, cell.second, z);
                     return true;
                 }
             }
@@ -390,6 +389,21 @@ std::vector<std::pair<double, double>> DWAPlanner::get_robot_grid(std::vector<st
     return robot_grid;
 
 } 
+
+void DWAPlanner::get_octomap_bounds(octomap::OcTree* octree)
+{
+    /* 
+    A function to fetch the octomap bounds because InBBX and related functions don't work
+    */
+    double x_min, y_min, z_min;
+    double x_max, y_max, z_max;
+    octree->getMetricMin(x_min, y_min, z_min);
+    octree->getMetricMax(x_max, y_max, z_max);
+
+    ROS_INFO("Metric bounds: x in [%f, %f], y in [%f, %f], z in [%f, %f]",
+         x_min, x_max, y_min, y_max, z_min, z_max);
+
+}
 
 }// namespace dwa
 // Namespace is closed here before main because main is the entry point of the program
