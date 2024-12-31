@@ -32,7 +32,7 @@ public:
     bool check_collision(const std::vector<Pose2D> &traj);
 
     // Robot Model
-    std::vector<std::pair<double, double>> transform_robot_footprint(const Pose2D &pose);
+    std::vector<std::pair<double, double>> transform_robot_footprint(const Pose2D &pose, std::vector<std::pair<double, double>> &robot_footprint);
     std::vector<std::pair<double, double>> get_robot_grid(std::vector<std::pair<double, double>> &robot_footprint);
 
 private:
@@ -291,16 +291,26 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
         // Check if any part of the robot collides with an obstacle in the octree
         // If it does, return true
 
-        // Transform the robot footprint to the current pose
-        std::vector<std::pair<double, double>> robot_footprint = transform_robot_footprint(pose);
-        
+        // Get the top left, top right, bottom left and bottom right points of the robot footprint
+        // Assuming the centre is at (0,0) -> base_link frame
+        std::vector<std::pair<double, double>> robot_footprint = {
+        {rf.length/2, rf.width/2}, // Top right
+        {-rf.length/2, rf.width/2}, // Top left
+        {-rf.length/2, -rf.width/2}, // Bottom left
+        {rf.length/2, -rf.width/2} // Bottom right
+        };
+
         // Make the robot footprint into a grid
         std::vector<std::pair<double, double>> robot_grid = get_robot_grid(robot_footprint);
-        if (i == 0)
+
+        // Transform the robot grid to the current pose
+        robot_footprint = transform_robot_footprint(pose, robot_grid);
+        
+        if ((i % 5) == 0)
         {
-            // ROS_INFO("Visualizing robot footprint and grid\n\n\n");
-            vis.publishRobotFootprint(robot_footprint);
-            vis.publishRobotGrid(robot_grid);
+            ROS_INFO("Visualizing robot footprint and grid of size: %lu\n\n\n", robot_grid.size());
+            // vis.publishRobotFootprint(robot_footprint);
+            vis.publishRobotGrid(robot_footprint);
         }
         i++;
         // Check if any of the grid cells are occupied in the octree
@@ -332,16 +342,8 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
     return false;
 }
 
-std::vector<std::pair<double, double>> DWAPlanner::transform_robot_footprint(const Pose2D &pose)
+std::vector<std::pair<double, double>> DWAPlanner::transform_robot_footprint(const Pose2D &pose, std::vector<std::pair<double, double>> &robot_footprint)
 {
-    // Get the top left, top right, bottom left and bottom right points of the robot footprint
-    // Assuming the centre is at (0,0) -> base_link frame
-    std::vector<std::pair<double, double>> robot_footprint = {
-        {rf.length/2, rf.width/2}, // Top right
-        {-rf.length/2, rf.width/2}, // Top left
-        {-rf.length/2, -rf.width/2}, // Bottom left
-        {rf.length/2, -rf.width/2} // Bottom right
-    };
 
     std::vector<std::pair<double, double>> transformed_footprint;
     // Rotate the robot footprint by the current pose
@@ -375,17 +377,16 @@ std::vector<std::pair<double, double>> DWAPlanner::get_robot_grid(std::vector<st
     std::pair<double, double> bottom_left = robot_footprint[2];
     std::pair<double, double> bottom_right = robot_footprint[3];
 
-    ROS_INFO("Length of top side: %f", top_right.first - top_left.first);
-    ROS_INFO("Length of right side: %f", top_right.second - bottom_right.second);
+    // ROS_INFO("Length of top side: %f", top_right.first - top_left.first);
+    // ROS_INFO("Length of right side: %f", top_right.second - bottom_right.second);
 
-    for (double x = top_left.first; x <= top_right.first; x += rf.length/rf.robot_grid_n)
+    for (double x = top_left.first; x < top_right.first; x += rf.length/rf.robot_grid_n)
     {
-        for (double y = top_right.second; y >= bottom_right.second; y -= rf.length/rf.robot_grid_n)
+        for (double y = top_right.second; y > bottom_right.second; y -= rf.length/rf.robot_grid_n)
         {
             robot_grid.push_back({x, y});
         }
     }
-    ROS_INFO("Number of points in grid: %lu", robot_grid.size());
     return robot_grid;
 
 } 
