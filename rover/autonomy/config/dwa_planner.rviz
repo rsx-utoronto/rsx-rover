@@ -6,9 +6,10 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /PointCloud21
         - /MarkerArray1
         - /Marker1
+        - /Marker3
+        - /Marker3/Status1
       Splitter Ratio: 0.5
     Tree Height: 429
   - Class: rviz/Selection
@@ -88,7 +89,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -103,7 +104,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /occupied_cells_vis_array
@@ -203,6 +204,14 @@ Visualization Manager:
         robot_footprint: true
       Queue Size: 100
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /dwa_planner/robot_grid
+      Name: Marker
+      Namespaces:
+        robot_grid: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -231,7 +240,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.7583571672439575
+      Distance: 1.9544321298599243
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -239,17 +248,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 4.256310939788818
-        Y: 0.012111617252230644
-        Z: 3.8378756046295166
+        X: 4.233272075653076
+        Y: -0.004905657842755318
+        Z: 3.851532220840454
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8203966617584229
+      Pitch: 1.0503968000411987
       Target Frame: base_link
-      Yaw: 5.885435104370117
+      Yaw: 5.935434818267822
     Saved: ~
 Window Geometry:
   Displays:

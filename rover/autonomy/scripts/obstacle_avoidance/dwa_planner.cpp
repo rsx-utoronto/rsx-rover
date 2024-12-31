@@ -61,14 +61,14 @@ private:
     ros::NodeHandle pnh; // Private node handle
 
     // Visualization
-    TrajectoryVisualizer traj_vis;
+    Visualizer vis;
 };
 
 // Constructor
 
 DWAPlanner::DWAPlanner(ros::NodeHandle &nh, tf2_ros::Buffer* tfBuffer) 
     : pnh("~"),
-      traj_vis(pnh, "map")
+      vis(pnh, "map")
 {
     // Variables
     // Private node handle to get parameters from the launch file where the parameter file is loaded in the dwa_planner node
@@ -206,8 +206,6 @@ void DWAPlanner::plan()
     while (ros::ok())
     {
         ROS_INFO("Planning...");
-        // ROS_INFO("Current linear velocity: %f", current_v);
-        // ROS_INFO("Current angular velocity: %f", current_w);
 
         // Need this check because the first few times the planner runs, it will not have an octomap, causing the node to crash
         if (!octree_)
@@ -231,7 +229,6 @@ void DWAPlanner::plan()
 
 
         // 3. Iterate over all velocities
-
         for (int i = 0; i < this->dwac.num_samples_v; i++)
         {
             double v = v_min + i * (v_max - v_min) / this->dwac.num_samples_v;
@@ -254,20 +251,20 @@ void DWAPlanner::plan()
                 // For every velocity, simulate the trajectory for next sim_time sec and check for collision
                 // The trajectory has the same velocity for the entire sim_time
                 // Find the trajectory with the least cost
-                for (double t = 0; t < this->dwac.sim_time; t += this->dwac.dt)
+                traj.push_back(sim_pose);
+                for (double t = this->dwac.dt; t < this->dwac.sim_time; t += this->dwac.dt)
                 {
                     // 4.1 Add to the trajectory
                     sim_pose.x += v * cos(sim_pose.theta) * this->dwac.dt;
                     sim_pose.y += v * sin(sim_pose.theta) * this->dwac.dt;
                     sim_pose.theta += w * this->dwac.dt;
-
                     traj.push_back(sim_pose);
                 }                
-
+                // ROS_INFO("Number of points in trajectory: %lu", traj.size());
                 // 4.2 Check for collision
                 if (!check_collision(traj)) // check_collision returns true if there is a collision
                 {
-                    traj_vis.publishTrajectory(traj);
+                    vis.publishTrajectory(traj);
                     // continue;
                 }
                 // 5. Compute cost
@@ -287,7 +284,7 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
 {
     /* Checks if the current trajectory is collision-free 
     Returns true if there is a collision */
-
+    int i = 0;
     for (const auto &pose : traj)
     {
         // Make a robot model around each pose in the trajectory
@@ -296,27 +293,33 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
 
         // Transform the robot footprint to the current pose
         std::vector<std::pair<double, double>> robot_footprint = transform_robot_footprint(pose);
-        traj_vis.publishRobotFootprint(robot_footprint);
+        
         // Make the robot footprint into a grid
         std::vector<std::pair<double, double>> robot_grid = get_robot_grid(robot_footprint);
-
+        if (i == 0)
+        {
+            // ROS_INFO("Visualizing robot footprint and grid\n\n\n");
+            vis.publishRobotFootprint(robot_footprint);
+            vis.publishRobotGrid(robot_grid);
+        }
+        i++;
         // Check if any of the grid cells are occupied in the octree
 
         for (const auto &cell : robot_grid)
         {
-            ROS_INFO("NEW CELL\n\n\n\n\n\n\n\n\n\n");
+            // ROS_INFO("NEW CELL\n\n\n\n\n\n\n\n\n\n");
             for (double z = oac.min_z; z <= oac.max_z; z += ((oac.max_z - oac.min_z)/rf.robot_grid_n))
             {
                 // Check if the cell is within the bounds of the octree
-                if (!octree_->inBBX(octomap::point3d(cell.first, cell.second, z))) 
+                if (!this->octree_->inBBX(octomap::point3d(cell.first, cell.second, z))) 
                 {
-                    ROS_WARN("Coordinates (%f, %f, %f) are out of bounds for the OctoMap!", cell.first, cell.second, z);
+                    // ROS_WARN("Coordinates (%f, %f, %f) are out of bounds for the OctoMap!", cell.first, cell.second, z);
                     continue;  // Skip this point
                 }
                 
-                octomap::OcTreeKey key = octree_->coordToKey(cell.first, cell.second, z);
-                octomap::OcTreeNode* node = octree_->search(key);
-                if (node && octree_->isNodeOccupied(node))
+                octomap::OcTreeKey key = this->octree_->coordToKey(cell.first, cell.second, z);
+                octomap::OcTreeNode* node = this->octree_->search(key);
+                if (node && this->octree_->isNodeOccupied(node))
                 {
                     ROS_INFO("Checking cell (%f, %f, %f)", cell.first, cell.second, z);
                     return true;
@@ -372,6 +375,9 @@ std::vector<std::pair<double, double>> DWAPlanner::get_robot_grid(std::vector<st
     std::pair<double, double> bottom_left = robot_footprint[2];
     std::pair<double, double> bottom_right = robot_footprint[3];
 
+    ROS_INFO("Length of top side: %f", top_right.first - top_left.first);
+    ROS_INFO("Length of right side: %f", top_right.second - bottom_right.second);
+
     for (double x = top_left.first; x <= top_right.first; x += rf.length/rf.robot_grid_n)
     {
         for (double y = top_right.second; y >= bottom_right.second; y -= rf.length/rf.robot_grid_n)
@@ -379,7 +385,7 @@ std::vector<std::pair<double, double>> DWAPlanner::get_robot_grid(std::vector<st
             robot_grid.push_back({x, y});
         }
     }
-
+    ROS_INFO("Number of points in grid: %lu", robot_grid.size());
     return robot_grid;
 
 } 

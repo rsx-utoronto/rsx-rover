@@ -8,10 +8,10 @@
 
 namespace dwa
 {
-class TrajectoryVisualizer
+class Visualizer
 {
 public:
-    TrajectoryVisualizer(ros::NodeHandle &nh, const std::string& frame_id = "map");
+    Visualizer(ros::NodeHandle &nh, const std::string& frame_id = "map");
 
     /**
      * @brief Publish multiple trajectories as LINE_STRIP markers in RViz.
@@ -32,10 +32,19 @@ public:
      */
     void publishRobotFootprint(const std::vector<std::pair<double, double>>& footprint);
 
+    /**
+     * @brief Publish a the robot footprint as a grid of points in RViz, used for collision checking.
+     * @param grid_points A vector of points (pairs) representing the grid.
+     */
+
+    void publishRobotGrid(const std::vector<std::pair<double, double>>& grid_points);
+
+
 private:
     ros::Publisher marker_array_pub_;
     ros::Publisher line_marker_pub_;
     ros::Publisher footprint_pub_;
+    ros::Publisher grid_pub_;
     std::string frame_id_;
 };
 }
