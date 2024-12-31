@@ -287,6 +287,12 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
 {
     /* Checks if the current trajectory is collision-free 
     Returns true if there is a collision */
+
+    // // Just for debugging
+    // int a = 0;
+    // int b = 0;
+    // int c = 0;
+
     for (const auto &pose : traj)
     {
         // Make a robot model around each pose in the trajectory
@@ -321,13 +327,39 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
         {
             for (double z = oac.min_z; z <= oac.max_z; z += ((oac.max_z - oac.min_z)/rf.robot_grid_n))
             {   
-                
+                // a++;
+                ROS_INFO("Checking cell %d", a);
                 octomap::OcTreeKey key = this->octree_->coordToKey(cell.first, cell.second, z);
                 octomap::OcTreeNode* node = this->octree_->search(key);
 
                 // A lot of nodes are not found in the octree 
                 // THIS IS NORMAL (check documentation)
-                // Decision: Any node that's not found is considered unoccupied
+                // Decision: Any node that's not found, check at a coarser depth (until 5 levels up)
+
+                // // Just for debugging, checking how many nodes were found before and after depth check
+                // if (node)
+                // {
+                //     c++;
+                //     ROS_INFO("Found %d nodes before depth check", c);
+                // }
+                if (!node)
+                {
+                    unsigned int maxDepth = octree_->getTreeDepth();
+                    for (unsigned int d = maxDepth - 1; d > maxDepth - 5; d = d - 1)
+                    {
+                        node = octree_->search(key, d);
+                        if (node) 
+                        {
+                            // ROS_INFO("Found a coarser node at depth = %u", d);
+                            break;
+                        }
+                    }
+                }
+                // if (node)
+                // {
+                //     b++;
+                //     ROS_INFO("Found %d nodes", b);
+                // }
                 if (node && this->octree_->isNodeOccupied(node))
                 {
                     // ROS_INFO("Checking cell (%f, %f, %f)", cell.first, cell.second, z);

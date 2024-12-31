@@ -34,7 +34,7 @@ This is like notes of most of my decision making while coding this file, it's no
 
 - NOTE: The `InBBX` check doesn't work with octree_ for some reason. Don't use it in future.
 
-- I notice that out of the queried cells, only less than 1/3rd have nodes in the octomap. Other nodes don't even exist. Is this because of out of bounds errors (which seems unlikely after noticing the values) or is it because of interpolation?
+- I noticed that out of the queried cells, only less than 1/3rd have nodes in the octomap. Other nodes don't even exist. Is this because of out of bounds errors (which seems unlikely after noticing the values) or is it because of interpolation?
     - ChatGPT's answer (which I think makes sense): 
         - In an **octomap::OcTree**, it’s actually **quite normal** for a large fraction of the coordinates you query (`search(x, y, z)`) to return `nullptr` (i.e., no node). It does *not* necessarily mean they are out of bounds; often it just means that **no specific leaf node** at that exact coordinate exists at the current resolution, or the space was never observed (“unknown” in octomap terms).
         - **OctoMap stores data in an octree structure** where space is subdivided into voxels at discrete resolutions (e.g. 0.05 m or 0.1 m).  
@@ -54,6 +54,31 @@ This is like notes of most of my decision making while coding this file, it's no
             ```
             where you specify a deeper or shallower depth to allow the tree to return a node at some coarser level. You can then check if that node is free or occupied at that coarser resolution.
     - I am making a decision to consider the nodes that don't exist as unoccupied. If that creates a lot of problems, I will reconsider, maybe check a group of coordinates or check the distance to nearest obstacle or smth.
+
+    - A few ways to emulate a nearest neighbour search in case the node is not found:
+        - OctoMap **does not** provide a built-in “nearest-neighbor” search for leaf nodes, so there’s no single function call like `searchNearest(x, y, z)`. If your `search(...)` call returns `nullptr`, that typically means:
+
+            - The queried point lies in unknown space, or  
+            - It falls into a higher-level (coarser) node that has not been subdivided down to leaf resolution.
+        - **Query at coarser depth**:
+            By default, `search(x, y, z)` searches at the **full/leaf depth**. However, you can specify a smaller `depth`, which makes OctoMap return coarser (higher-level) nodes if a leaf-level node does not exist. For example:
+
+            ```cpp
+            unsigned int depth = octree->getTreeDepth() - 1; 
+            // or any value < getTreeDepth()
+            octomap::OcTreeNode* node = octree->search(x, y, z, depth);
+            ```
+
+            If a coarser node exists at that coordinate, `node` will be non-null. This isn’t a true “nearest neighbor” search, but it effectively says, “If I can’t find a leaf node, at least give me the coarser node covering (x, y, z).” 
+        
+        - **Expand or subdivide free space**
+
+            OctoMap often stores large free regions at higher levels. You can force the octree to subdivide more finely, so that future queries at leaf resolution will succeed. For instance:
+            ```cpp
+            octree->expand();
+            ```
+            This tells the tree to expand all nodes (down to the max depth), so free space gets subdivided into child nodes. Then a subsequent `search(x, y, z)` might return a leaf node for those free coordinates rather than `nullptr`. (Be aware this can **dramatically** increase memory usage.)
+
 
 ## Future Goals
 
