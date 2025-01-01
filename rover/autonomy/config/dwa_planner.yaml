@@ -14,9 +14,11 @@ num_samples_w: 5
 
 # Cost function weights
 
-w_heading: 1
-w_dist: 1
-w_vel: 1
+w_heading: 1 # Weight for heading to goal
+w_dist: 1 # Weight for distance to goal
+w_lin: 1 # Weight for linear velocity (keep it as high as possible)
+w_ang: 1 # Weight for angular velocity (keep it average)
+w_obs: 1 # Weight for obstacle avoidance # NOT USING THIS YET
 
 # Robot Footprint
 robot_width: 1.0
@@ -25,5 +27,8 @@ robot_height: 1.0
 robot_grid_n: 10
 
 # Obstacle avoidance parameters
-min_z: 0.0
-max_z: 1.5
+min_z: 0.3 # Minimum height to consider obstacles
+max_z: 1.5 # Maximum height to consider obstacles
+
+# NOT USING THIS YET
+obstacle_threshold: 0.75 # Distance to obstacle to start avoiding it (in meters) - used in the cost function

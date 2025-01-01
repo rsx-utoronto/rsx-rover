@@ -51,9 +51,11 @@ namespace dwa // These structs will only be used in the dwa namespace
         int num_samples_w;     ///< Number of angular velocity samples
 
         // Cost function weights
-        double w_heading;      ///< Weight for heading cost
-        double w_dist;         ///< Weight for distance cost
-        double w_vel;          ///< Weight for velocity cost
+        double w_heading;      ///< Weight for goal heading cost
+        double w_dist;         ///< Weight for goal distance cost
+        double w_lin;          ///< Weight for linear velocity cost
+        double w_ang;          ///< Weight for angular velocity cost
+        double w_obs;          ///< Weight for obstacle cost
     };
 
     /**
@@ -79,6 +81,7 @@ namespace dwa // These structs will only be used in the dwa namespace
     {
         double min_z;  ///< Minimum height of obstacles to consider
         double max_z;  ///< Maximum height of obstacles to consider
+        double obstacle_threshold;  ///< Minimum distance from obstacles to avoid - used in cost function
     };
 }
 

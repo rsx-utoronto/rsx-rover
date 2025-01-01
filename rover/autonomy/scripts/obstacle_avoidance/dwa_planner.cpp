@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <octomap_msgs/Octomap.h>
 #include <octomap_msgs/conversions.h>
 #include <octomap/octomap.h>
@@ -24,12 +25,15 @@ public:
     void octomapCallback(const octomap_msgs::Octomap::ConstPtr &msg);
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
     void tf_lookup(const std::string &target_frame, const std::string &source_frame, Pose2D &current_pose_);
+    void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
 
     // Planning
     void plan();
+    double compute_cost(const std::vector<Pose2D> &traj, double v, double w);
 
     // Obstacle avoidance
     bool check_collision(const std::vector<Pose2D> &traj);
+    // double calculateObstacleCost(const std::vector<Pose2D>& traj); // NOT USING THIS FOR NOW
 
     // Robot Model
     std::vector<std::pair<double, double>> transform_robot_footprint(const Pose2D &pose, std::vector<std::pair<double, double>> &robot_footprint);
@@ -47,19 +51,28 @@ private:
     RobotFootprint rf;
     Pose2D current_pose;
     ObstacleAvoidanceConfig oac;
+    Pose2D goal;
 
     double current_v;
     double current_w;
+    double v_max = 0.0;
+    double w_max = 0.0;
+    double v_min = 0.0;
+    double w_min = 0.0;
+    bool goal_received = false;
     
     
     // ROS communication
     tf2_ros::Buffer* tfBuffer_;
     ros::Subscriber octomap_sub;
     ros::Subscriber odom_sub;
+    ros::Subscriber goal_sub;
     ros::Publisher cmd_vel_pub;
     std::shared_ptr<octomap::OcTree> octree_;
     std::string octomap_topic;
     std::string odom_topic;
+    std::string goal_topic;
+    std::string cmd_vel_topic;
     int rate;
     ros::NodeHandle pnh; // Private node handle
 
@@ -85,7 +98,8 @@ DWAPlanner::DWAPlanner(ros::NodeHandle &nh, tf2_ros::Buffer* tfBuffer)
 
     octomap_sub = nh.subscribe(octomap_topic, 1, &DWAPlanner::octomapCallback, this);
     odom_sub = nh.subscribe(odom_topic, 1, &DWAPlanner::odomCallback, this);
-    cmd_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
+    cmd_vel_pub = nh.advertise<geometry_msgs::Twist>(cmd_vel_topic, 1);
+    goal_sub = nh.subscribe(goal_topic, 1, &DWAPlanner::goalCallback, this);
 }
 
 // Parameters
@@ -113,26 +127,36 @@ void DWAPlanner::define_parameters(ros::NodeHandle &nh)
     nh.param<int>("num_samples_w", dwac.num_samples_w, 100);
     nh.param<double>("w_heading", dwac.w_heading, 1.0);
     nh.param<double>("w_dist", dwac.w_dist, 1.0);
-    nh.param<double>("w_vel", dwac.w_vel, 1.0);
+    nh.param<double>("w_lin", dwac.w_lin, 1.0);
+    nh.param<double>("w_ang", dwac.w_ang, 1.0);
+    nh.param<double>("w_obs", dwac.w_obs, 1.0);
     nh.param<double>("robot_length", rf.length, 0.5);
     nh.param<double>("robot_width", rf.width, 0.5);
     nh.param<double>("robot_height", rf.height, 0.5);
     nh.param<double>("robot_grid_n", rf.robot_grid_n, 10);
     nh.param<double>("min_z", oac.min_z, 0.0);
     nh.param<double>("max_z", oac.max_z, 1.0);
+    nh.param<double>("obstacle_threshold", oac.obstacle_threshold, 0.5);
 
     // Initial pose set to 0 just in case the odom topic is not publishing
     current_pose.x = 0.0;
     current_pose.y = 0.0;
     current_pose.theta = 0.0;
 
+    goal.x = 0.0;
+    goal.y = 0.0;
+    goal.theta = 0.0;
+
     nh.param<int>("controller_frequency", rate, 10);
 
     // Topics
     nh.param<std::string>("octomap_topic", octomap_topic, "/octomap_full");
     nh.param<std::string>("odom_topic", odom_topic, "/odom");
+    nh.param<std::string>("goal_topic", goal_topic, "/goal");
+    nh.param<std::string>("cmd_vel_topic", cmd_vel_topic, "/cmd_vel");
 }
 
+// Callbacks
 void DWAPlanner::octomapCallback(const octomap_msgs::Octomap::ConstPtr &msg)
 {
     /* Takes the full octomap, converts to Abstract Octree message,
@@ -173,6 +197,16 @@ void DWAPlanner::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
 
     // double current_y = msg->pose.pose.position.y;
     // double current_yaw = msg->pose.pose.orientation.z;
+}
+
+void DWAPlanner::goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
+{
+    // Get the goal position
+    bool goal_received = true;
+    ROS_INFO("Goal received");
+    goal.x = msg->pose.position.x;
+    goal.y = msg->pose.position.y;
+    goal.theta = tf2::getYaw(msg->pose.orientation);
 }
 
 void DWAPlanner::tf_lookup(const std::string &target_frame, const std::string &source_frame, Pose2D &current_pose_)
@@ -218,31 +252,38 @@ void DWAPlanner::plan()
             loop_rate.sleep();
             continue;
         }
+        if (!goal_received)
+        {
+            ROS_WARN("No goal received yet, skipping planning...");
+            ros::spinOnce();
+            loop_rate.sleep();
+            continue;
+        }
 
         // 1. Compute feasible velocity ranges (dynamic window)
-        double v_min = std::max(this->vr.v_min, current_v - this->dwac.max_accel_lin * this->dwac.dt);
-        double v_max = std::min(this->vr.v_max, current_v + this->dwac.max_accel_lin * this->dwac.dt);
-        double w_min = std::max(this->vr.w_min, current_w - this->dwac.max_accel_ang * this->dwac.dt);
-        double w_max = std::min(this->vr.w_max, current_w + this->dwac.max_accel_ang * this->dwac.dt);
+        this->v_min = std::max(this->vr.v_min, current_v - this->dwac.max_accel_lin * this->dwac.dt);
+        this->v_max = std::min(this->vr.v_max, current_v + this->dwac.max_accel_lin * this->dwac.dt);
+        this->w_min = std::max(this->vr.w_min, current_w - this->dwac.max_accel_ang * this->dwac.dt);
+        this->w_max = std::min(this->vr.w_max, current_w + this->dwac.max_accel_ang * this->dwac.dt);
 
         // 2. Discretize velocity space
         double best_cost = std::numeric_limits<double>::infinity();
         double best_v = 0.0;
         double best_w = 0.0;
+        std::vector<Pose2D> best_traj;
+        best_traj.push_back(current_pose);
 
         get_octomap_bounds(octree_.get());
 
         // 3. Iterate over all velocities
         for (int i = 0; i < this->dwac.num_samples_v; i++)
         {
-            double v = v_min + i * (v_max - v_min) / this->dwac.num_samples_v;
+            double v = this->v_min + i * (this->v_max - this->v_min) / this->dwac.num_samples_v;
             for (int j = 0; j < this->dwac.num_samples_w; j++)
             {
-                double w = w_min + j * (w_max - w_min) / this->dwac.num_samples_w;
+                double w = this->w_min + j * (this->w_max - this->w_min) / this->dwac.num_samples_w;
 
                 // 4. Simulate trajectory
-
-                // Pose2D current_pose;
 
                 // Gave up on tf lookup, using odom for now
                 // Target frame is map, source frame is base_link
@@ -268,14 +309,43 @@ void DWAPlanner::plan()
                 // 4.2 Check for collision
                 if (!check_collision(traj)) // check_collision returns true if there is a collision
                 {
-                    vis.publishTrajectory(traj);
-                }
-                // 5. Compute cost
-                // 6. Update best trajectory
+
+                    // 5. Compute cost
+
+                    // Less cost is better
+                    double cost = 0.0;
+                    cost = compute_cost(traj, v, w);
+
+                    // 6. Update best trajectory
+                    if (cost < best_cost)
+                    {
+                        best_cost = cost;
+                        best_v = v;
+                        best_w = w;
+                        best_traj = traj;
+                    }
+
+                }                
             }
         }
-
+        if (best_cost == std::numeric_limits<double>::infinity())
+        {
+            ROS_WARN("No feasible trajectory found");
+        }
+        else
+        {
+            ROS_INFO("Best cost: %f", best_cost);
+            ROS_INFO("Best linear velocity: %f", best_v);
+            ROS_INFO("Best angular velocity: %f", best_w);
+            vis.publishTrajectory(best_traj);
+        }
         
+        // 7. Publish the best velocity
+        geometry_msgs::Twist cmd_vel;
+        cmd_vel.linear.x = best_v;
+        cmd_vel.angular.z = best_w;
+        cmd_vel_pub.publish(cmd_vel);
+
         ros::spinOnce();
         loop_rate.sleep();
         
@@ -328,7 +398,7 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
             for (double z = oac.min_z; z <= oac.max_z; z += ((oac.max_z - oac.min_z)/rf.robot_grid_n))
             {   
                 // a++;
-                ROS_INFO("Checking cell %d", a);
+                // ROS_INFO("Checking cell %d", a);
                 octomap::OcTreeKey key = this->octree_->coordToKey(cell.first, cell.second, z);
                 octomap::OcTreeNode* node = this->octree_->search(key);
 
@@ -421,6 +491,109 @@ std::vector<std::pair<double, double>> DWAPlanner::get_robot_grid(std::vector<st
     return robot_grid;
 
 } 
+
+double DWAPlanner::compute_cost(const std::vector<Pose2D> &traj, double v, double w)
+{
+    /* 
+
+    Computes the cost of the trajectory based on the cost function 
+    Metrics:
+    1. Distance of the final point* in trajectory from goal
+    2. Heading difference of the final point* as compared to goal
+    3. Velocity cost:
+        a) Higher linear velocity is better
+        b) Average angular velocity is better
+    4. Distance from nearest obstacle: Not using this for now
+
+    *final point is the last point in the trajectory
+
+    */
+    // 1. Distance Cost
+    Pose2D final_pose = traj.back();
+    double dx = goal.x - final_pose.x;
+    double dy = goal.y - final_pose.y;
+    double dist_cost = sqrt(pow(dx, 2) + pow(dy, 2));
+    
+    // 2. Heading Cost
+    double heading_cost = std::fabs(std::atan2(dy, dx) - final_pose.theta);
+
+    // 3. Velocity Cost
+    // 3.1 Linear velocity cost
+    double v_cost = 0.0;
+    if (v>=0)
+    {
+        v_cost = std::fabs(this->v_max - v);
+    }
+    else
+    {
+        v_cost = std::fabs(this->v_min - v);
+    }
+    // 3.2 Angular velocity cost
+    double w_cost = 0.0;
+    if (w_min >= 0)
+    {
+        double w_avg = (w_min + w_max) / 2;
+        w_cost = std::fabs(w_avg - w);
+    }
+    else
+    {
+        if (w >= 0)
+        {
+            double w_avg = (w_max) / 2;
+            w_cost = std::fabs(w_avg - w);
+        }
+        else
+        {
+            double w_avg = (w_min) / 2;
+            w_cost = std::fabs(w_min - w);
+        }
+    }
+
+    // 4. Obstacle distance cost // NOT USING THIS FOR NOW
+    // double obstacle_cost = calculateObstacleCost(traj);
+
+    // Total cost
+    double tot_cost = this->dwac.w_heading * heading_cost + this->dwac.w_dist * dist_cost + this->dwac.w_lin * v_cost + this->dwac.w_ang * w_cost; // + this->dwac.w_obs * obstacle_cost;
+
+    return tot_cost;
+}
+
+
+/* NOT USING THIS FOR NOW
+
+double DWAPlanner::calculateObstacleCost(const std::vector<Pose2D>& traj) {
+    NOT USING THIS FOR NOW
+    
+    This function is supposed to calculate the cost of a trajectory 
+    based on how far it is from the nearest obstacle.
+    Apparently getMetricMinDistance does not exist and there's no function which does this directly
+    So I am not using this cost for now
+    
+
+    double min_distance = std::numeric_limits<double>::infinity();
+    double obstacle_cost = 0.0;
+
+    for (const auto& pose : traj) {
+        // Query the nearest obstacle distance from the current pose
+        octomap::point3d query_point(pose.x, pose.y, 0.0); // Assume Z=0 for simplicity
+        double nearest_distance = octree_->getMetricMinDistance(query_point);
+
+        if (nearest_distance >= 0) {
+            min_distance = std::min(min_distance, nearest_distance);
+        }
+    }
+
+    // Compute obstacle cost based on minimum distance
+    // Obstacle cost would be 0 if the trajectory is far enough (threshold) from obstacles
+    if (min_distance < oac.obstacle_threshold) {
+        obstacle_cost = 1.0 / (min_distance + 1e-3); // Add epsilon to avoid division by zero
+    }
+
+    return obstacle_cost;
+} 
+*/
+
+
 
 void DWAPlanner::get_octomap_bounds(octomap::OcTree* octree)
 {
