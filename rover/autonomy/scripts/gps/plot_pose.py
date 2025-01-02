@@ -17,7 +17,22 @@ import tf2_ros
 
 
 class PlotPose:
+    """
+    A class for visualizing the position of a robot in real-time.
+
+    This class subscribes to pose and odometry topics in ROS, collects position data, and
+    generates live plots using Matplotlib. The position data is plotted in the XY plane,
+    providing a visual representation of the robot's movement over time.
+    """
     def __init__(self):
+        """
+        Initializes the PlotPose class by setting up ROS subscribers, Matplotlib figures, and
+        buffers for storing positional data.
+
+        Attributes:
+            fig_xy (matplotlib.figure.Figure): The figure for plotting the XY position of the robot.
+            ax_xy (matplotlib.axes.Axes): The axes associated with the XY figure.
+        """
 
         # Initialize figure and axes and save to class
         self.fig_xy, self.ax_xy = plt.subplots()
@@ -120,6 +135,15 @@ class PlotPose:
         self.o_y_list.append(self.o_y)
 
     def plot_pose(self, _):
+        """
+        Plots the robot's XY position in real-time.
+
+        Args:
+            _ (Any): Placeholder parameter required by `FuncAnimation`. It is unused in this method.
+
+        This method retrieves the stored position data and plots it on a Matplotlib figure,
+        providing a visual representation of the robot's movement in the XY plane.
+        """
 
         x = np.array(self.x_list)
         y = np.array(self.y_list)
