@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from sensor_msgs.msg import NavSatFix
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped
 from math import atan2, pi, sin, cos
 import functions
 import message_filters
@@ -45,8 +45,8 @@ class GPSToPose:
         # here 5 is the size of the queue and 0.2 is the time allowed between messages
         self.ts = message_filters.ApproximateTimeSynchronizer([self.gps1, self.gps2], 5, 0.2)
         self.ts.registerCallback(self.callback)
-        self.pose_pub = rospy.Publisher('pose', Pose, queue_size=1)
-        self.msg = Pose()
+        self.pose_pub = rospy.Publisher('pose', PoseStamped, queue_size=1)
+        self.msg = PoseStamped()
 
     def callback(self, gps1, gps2):
         # first we get the most recent longitudes and latitudes
@@ -89,14 +89,16 @@ class GPSToPose:
 
         # now that we have the coordinate and angle quaternion information we can return the pose message
         msg = self.msg
-        msg.position.x = x
-        msg.position.y = y
-        msg.position.z = 0.0
+        msg.header.stamp = rospy.Time.now()
+        msg.header.frame_id = "map"
+        msg.pose.position.x = x
+        msg.pose.position.y = y
+        msg.pose.position.z = 0.0
         
-        msg.orientation.x = qx
-        msg.orientation.y = qy
-        msg.orientation.z = qz
-        msg.orientation.w = qw
+        msg.pose.orientation.x = qx
+        msg.pose.orientation.y = qy
+        msg.pose.orientation.z = qz
+        msg.pose.orientation.w = qw
         self.pose_pub.publish(msg)
 
 
