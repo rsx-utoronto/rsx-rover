@@ -4,6 +4,8 @@ from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import Pose
 from math import atan2, pi, sin, cos
 import functions
+import message_filters
+from calian_gnss_ros2_msg.msg import GnssSignalStatus
 
 
 # important constants, make sure these are accurate to the current state of the rover (read below description)
@@ -14,8 +16,8 @@ Y_POS_ANTENNA_1 = 0.0
 X_POS_ANTENNA_2 = 0.0
 Y_POS_ANTENNA_2 = 0.0
 # the NavSatFix publishers should correspond to the same numbered antenna from the position above
-GPS_ANTENNA_1 = ""
-GPS_ANTENNA_2 = ""
+GPS_ANTENNA_1 = "calian_gnss/gps_extended"
+GPS_ANTENNA_2 = "calian_gnss/base_gps_extended"
 
 
 # our heading is calculated as the direction from antenna 1 to 2, so we 
@@ -38,8 +40,8 @@ class GPSToPose:
     
     def __init__(self):
         self.origin_coordinates = None
-        self.gps1 = message_filters.Subscriber(GPS_ANTENNA_1, NavSatFix)
-        self.gps2 = message_filters.Subscriber(GPS_ANTENNA_2, NavSatFix)
+        self.gps1 = message_filters.Subscriber(GPS_ANTENNA_1, GnssSignalStatus)
+        self.gps2 = message_filters.Subscriber(GPS_ANTENNA_2, GnssSignalStatus)
         # here 5 is the size of the queue and 0.2 is the time allowed between messages
         self.ts = message_filters.ApproximateTimeSynchronizer([self.gps1, self.gps2], 5, 0.2)
         self.ts.registerCallback(self.callback)
@@ -48,24 +50,24 @@ class GPSToPose:
 
     def callback(self, gps1, gps2):
         # first we get the most recent longitudes and latitudes
-        lat1 = self.gps1.latitude
-        long1 = self.gps1.longitude
-        lat2 = self.gps2.latitude
-        long2 = self.gps2.longitude
+        lat1 = gps1.latitude
+        long1 = gps1.longitude
+        lat2 = gps2.latitude
+        long2 = gps2.longitude
 
         # let's first calculate our heading
         heading = functions.getHeadingBetweenGPSCoordinates(lat1, long1, lat2, long2)
         # now we apply the angle correction so its the heading towards the front of the rover
-        heading = getAddedAngles(heading, ANGLE_CORRECTION)
+        heading = functions.getAddedAngles(heading, ANGLE_CORRECTION)
         # now we convert our angle to a quaternion for our pose data
-        qx,qy,qz,qw = eulerToQuaternion(0.0, 0.0, heading)
+        qx,qy,qz,qw = functions.eulerToQuaternion(0.0, 0.0, heading)
 
         # now let's get our coordinate
-        # if the value for curr_heading is None then this is the first callback and we set the current
+        # if the value for origin_coordinates is None then this is the first callback and we set the current
         # current gps location as the origin
         # note that we consider north (or 0.0 as a calculated gps heading on the -pi to pi scale) to be the
         # positive y direction for our coordinate system 
-        if self.curr_heading is None:
+        if self.origin_coordinates is None:
             # note that since the gps antenna locations are fixed distances from the origin, to not have to
             # we use the coordinates for antenna one, then apply a fix based of where antenna 1 is from the
             # center of the rover if needed afterwards
@@ -79,8 +81,8 @@ class GPSToPose:
             # thus, I first get the distance and angle between the origin and our current rover position,
             # then use these value to convert to our coordinate system (where North is 0.0 degrees)
             orig_lat, orig_long = self.origin_coordinates
-            distance = getDistanceBetweenGPSCoordinates((orig_lat, orig_long), (lat1, long1))
-            theta = getHeadingBetweenGPSCoordinates(orig_lat, orig_long, lat1, long1)
+            distance = functions.getDistanceBetweenGPSCoordinates((orig_lat, orig_long), (lat1, long1))
+            theta = functions.getHeadingBetweenGPSCoordinates(orig_lat, orig_long, lat1, long1)
             # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
             x = -distance * sin(theta)
             y = distance * cos(theta)
@@ -90,10 +92,11 @@ class GPSToPose:
         msg.position.x = x
         msg.position.y = y
         msg.position.z = 0.0
-        msg.orientation.x = dx
-        msg.orientation.y = dy
-        msg.orientation.z = dz
-        msg.orientation.w = dw
+        
+        msg.orientation.x = qx
+        msg.orientation.y = qy
+        msg.orientation.z = qz
+        msg.orientation.w = qw
         self.pose_pub.publish(msg)
 
 

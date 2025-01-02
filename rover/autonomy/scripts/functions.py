@@ -8,6 +8,7 @@ This script contains the following functions:
 """
 from math import cos, sin, atan2, pi, degrees, radians
 from geopy import distance
+from typing import Tuple
 
 
 def getHeadingBetweenGPSCoordinates(lat1: float, long1: float, lat2: float, long2: float) -> float:
@@ -29,7 +30,7 @@ def getHeadingBetweenGPSCoordinates(lat1: float, long1: float, lat2: float, long
     return heading
 
 
-def getDistanceBetweenGPSCoordinates(latLong1: (float, float), latLong2: (float, float)) -> float:
+def getDistanceBetweenGPSCoordinates(latLong1: Tuple[float, float], latLong2: Tuple[float, float]) -> float:
     """
     This function takes as input the latitude and longitude of two coordinates and returns
     the absolute distance (in meters) from the first coordinate to the second. Assumes lat and
@@ -56,7 +57,7 @@ def getAddedAngles(theta, phi):
     return comb
 
 
-def eulerToQuaternion(roll: float, pitch: float, yaw: float) -> (float,float,float,float):
+def eulerToQuaternion(roll: float, pitch: float, yaw: float) -> Tuple[float,float,float,float]:
     """
     Given the roll, pitch, and yaw angles, we calculate and return the quaternion for it 
     """
