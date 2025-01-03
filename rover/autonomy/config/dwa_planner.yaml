@@ -5,7 +5,7 @@ v_max: 2.0
 w_min: -1.0
 w_max: 1.0
 
-max_accel_lin: 0.5
+max_accel_lin: 1.0
 max_accel_ang: 0.2
 dt: 0.1     # time step for simulation
 sim_time: 2 # simulation time in sec (Time horizon)    
@@ -21,14 +21,17 @@ w_ang: 1 # Weight for angular velocity (keep it average)
 w_obs: 1 # Weight for obstacle avoidance # NOT USING THIS YET
 
 # Robot Footprint
-robot_width: 1.0
-robot_length: 1.0
-robot_height: 1.0
+robot_width: 0.75
+robot_length: 0.75
+robot_height: 0.75
 robot_grid_n: 10
 
 # Obstacle avoidance parameters
 min_z: 0.3 # Minimum height to consider obstacles
 max_z: 1.5 # Maximum height to consider obstacles
+
+# Goal Tolerance Parameters
+xy_goal_tolerance: 0.2 # Distance to goal to consider it reached (in meters)
 
 # NOT USING THIS YET
 obstacle_threshold: 0.75 # Distance to obstacle to start avoiding it (in meters) - used in the cost function

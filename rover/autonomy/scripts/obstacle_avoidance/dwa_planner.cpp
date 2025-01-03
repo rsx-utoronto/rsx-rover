@@ -30,6 +30,7 @@ public:
     // Planning
     void plan();
     double compute_cost(const std::vector<Pose2D> &traj, double v, double w);
+    bool goal_reached();
 
     // Obstacle avoidance
     bool check_collision(const std::vector<Pose2D> &traj);
@@ -60,6 +61,7 @@ private:
     double v_min = 0.0;
     double w_min = 0.0;
     bool goal_received = false;
+    double xy_goal_tolerance;
     
     
     // ROS communication
@@ -137,6 +139,7 @@ void DWAPlanner::define_parameters(ros::NodeHandle &nh)
     nh.param<double>("min_z", oac.min_z, 0.0);
     nh.param<double>("max_z", oac.max_z, 1.0);
     nh.param<double>("obstacle_threshold", oac.obstacle_threshold, 0.5);
+    nh.param<double>("xy_goal_tolerance", xy_goal_tolerance, 0.1);
 
     // Initial pose set to 0 just in case the odom topic is not publishing
     current_pose.x = 0.0;
@@ -202,7 +205,7 @@ void DWAPlanner::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
 void DWAPlanner::goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
     // Get the goal position
-    bool goal_received = true;
+    this->goal_received = true;
     ROS_INFO("Goal received");
     goal.x = msg->pose.position.x;
     goal.y = msg->pose.position.y;
@@ -242,113 +245,128 @@ void DWAPlanner::plan()
     ros::Rate loop_rate(rate);
     while (ros::ok())
     {
-        ROS_INFO("Planning...");
-
-        // Need this check because the first few times the planner runs, it will not have an octomap, causing the node to crash
-        if (!octree_)
+        if (!goal_reached())
         {
-            ROS_WARN("No octomap received yet, skipping planning...");
-            ros::spinOnce();
-            loop_rate.sleep();
-            continue;
-        }
-        if (!goal_received)
-        {
-            ROS_WARN("No goal received yet, skipping planning...");
-            ros::spinOnce();
-            loop_rate.sleep();
-            continue;
-        }
+            ROS_INFO("Planning...");
 
-        // 1. Compute feasible velocity ranges (dynamic window)
-        this->v_min = std::max(this->vr.v_min, current_v - this->dwac.max_accel_lin * this->dwac.dt);
-        this->v_max = std::min(this->vr.v_max, current_v + this->dwac.max_accel_lin * this->dwac.dt);
-        this->w_min = std::max(this->vr.w_min, current_w - this->dwac.max_accel_ang * this->dwac.dt);
-        this->w_max = std::min(this->vr.w_max, current_w + this->dwac.max_accel_ang * this->dwac.dt);
-
-        // 2. Discretize velocity space
-        double best_cost = std::numeric_limits<double>::infinity();
-        double best_v = 0.0;
-        double best_w = 0.0;
-        std::vector<Pose2D> best_traj;
-        best_traj.push_back(current_pose);
-
-        get_octomap_bounds(octree_.get());
-
-        // 3. Iterate over all velocities
-        for (int i = 0; i < this->dwac.num_samples_v; i++)
-        {
-            double v = this->v_min + i * (this->v_max - this->v_min) / this->dwac.num_samples_v;
-            for (int j = 0; j < this->dwac.num_samples_w; j++)
+            // Need this check because the first few times the planner runs, it will not have an octomap, causing the node to crash
+            if (!octree_)
             {
-                double w = this->w_min + j * (this->w_max - this->w_min) / this->dwac.num_samples_w;
-
-                // 4. Simulate trajectory
-
-                // Gave up on tf lookup, using odom for now
-                // Target frame is map, source frame is base_link
-                // Target frame is the frame in which we need coordinates, source frame is the frame in which we have coordinates
-                // tf_lookup("map", "base_link", current_pose);
-
-                Pose2D sim_pose = current_pose;
-                std::vector<Pose2D> traj;
-
-                // For every velocity, simulate the trajectory for next sim_time sec and check for collision
-                // The trajectory has the same velocity for the entire sim_time
-                // Find the trajectory with the least cost
-                traj.push_back(sim_pose);
-                for (double t = this->dwac.dt; t < this->dwac.sim_time; t += this->dwac.dt)
-                {
-                    // 4.1 Add to the trajectory
-                    sim_pose.x += v * cos(sim_pose.theta) * this->dwac.dt;
-                    sim_pose.y += v * sin(sim_pose.theta) * this->dwac.dt;
-                    sim_pose.theta += w * this->dwac.dt;
-                    traj.push_back(sim_pose);
-                }                
-                // ROS_INFO("Number of points in trajectory: %lu", traj.size());
-                // 4.2 Check for collision
-                if (!check_collision(traj)) // check_collision returns true if there is a collision
-                {
-
-                    // 5. Compute cost
-
-                    // Less cost is better
-                    double cost = 0.0;
-                    cost = compute_cost(traj, v, w);
-
-                    // 6. Update best trajectory
-                    if (cost < best_cost)
-                    {
-                        best_cost = cost;
-                        best_v = v;
-                        best_w = w;
-                        best_traj = traj;
-                    }
-
-                }                
+                ROS_WARN("No octomap received yet, skipping planning...");
+                ros::spinOnce();
+                loop_rate.sleep();
+                continue;
             }
-        }
-        if (best_cost == std::numeric_limits<double>::infinity())
-        {
-            ROS_WARN("No feasible trajectory found");
+            if (!(this->goal_received))
+            {
+                ROS_WARN("No goal received yet, skipping planning...");
+                ros::spinOnce();
+                loop_rate.sleep();
+                continue;
+            }
+
+            // 1. Compute feasible velocity ranges (dynamic window)
+            this->v_min = std::max(this->vr.v_min, current_v - this->dwac.max_accel_lin * 1/this->rate);
+            this->v_max = std::min(this->vr.v_max, current_v + this->dwac.max_accel_lin * 1/this->rate);
+            this->w_min = std::max(this->vr.w_min, current_w - this->dwac.max_accel_ang * 1/this->rate);
+            this->w_max = std::min(this->vr.w_max, current_w + this->dwac.max_accel_ang * 1/this->rate);
+
+            // 2. Discretize velocity space
+            double best_cost = std::numeric_limits<double>::infinity();
+            double best_v = 0.0;
+            double best_w = 0.0;
+            std::vector<Pose2D> best_traj;
+            best_traj.push_back(current_pose);
+
+            // get_octomap_bounds(octree_.get());
+
+            // 3. Iterate over all velocities
+            for (int i = 0; i < this->dwac.num_samples_v; i++)
+            {
+                double v = this->v_min + i * (this->v_max - this->v_min) / this->dwac.num_samples_v;
+                for (int j = 0; j < this->dwac.num_samples_w; j++)
+                {
+                    double w = this->w_min + j * (this->w_max - this->w_min) / this->dwac.num_samples_w;
+
+                    // 4. Simulate trajectory
+
+                    // Gave up on tf lookup, using odom for now
+                    // Target frame is map, source frame is base_link
+                    // Target frame is the frame in which we need coordinates, source frame is the frame in which we have coordinates
+                    // tf_lookup("map", "base_link", current_pose);
+
+                    Pose2D sim_pose = current_pose;
+                    std::vector<Pose2D> traj;
+
+                    // For every velocity, simulate the trajectory for next sim_time sec and check for collision
+                    // The trajectory has the same velocity for the entire sim_time
+                    // Find the trajectory with the least cost
+                    traj.push_back(sim_pose);
+                    for (double t = this->dwac.dt; t < this->dwac.sim_time; t += this->dwac.dt)
+                    {
+                        // 4.1 Add to the trajectory
+                        sim_pose.x += v * cos(sim_pose.theta) * this->dwac.dt;
+                        sim_pose.y += v * sin(sim_pose.theta) * this->dwac.dt;
+                        sim_pose.theta += w * this->dwac.dt;
+                        traj.push_back(sim_pose);
+                    }                
+                    // ROS_INFO("Number of points in trajectory: %lu", traj.size());
+                    // 4.2 Check for collision
+                    if (!check_collision(traj)) // check_collision returns true if there is a collision
+                    {
+
+                        // 5. Compute cost
+
+                        // Less cost is better
+                        double cost = 0.0;
+                        cost = compute_cost(traj, v, w);
+
+                        // 6. Update best trajectory
+                        if (cost < best_cost)
+                        {
+                            best_cost = cost;
+                            best_v = v;
+                            best_w = w;
+                            best_traj = traj;
+                        }
+
+                    }                
+                }
+            }
+            if (best_cost == std::numeric_limits<double>::infinity())
+            {
+                ROS_WARN("No feasible trajectory found");
+            }
+            else
+            {
+                ROS_INFO("Best cost: %f", best_cost);
+                ROS_INFO("Best linear velocity: %f", best_v);
+                ROS_INFO("Best angular velocity: %f", best_w);
+                vis.publishTrajectory(best_traj);
+            }
+            
+            // 7. Publish the best velocity
+            geometry_msgs::Twist cmd_vel;
+            cmd_vel.linear.x = best_v;
+            cmd_vel.angular.z = best_w;
+            cmd_vel_pub.publish(cmd_vel);
         }
         else
         {
-            ROS_INFO("Best cost: %f", best_cost);
-            ROS_INFO("Best linear velocity: %f", best_v);
-            ROS_INFO("Best angular velocity: %f", best_w);
-            vis.publishTrajectory(best_traj);
+            ROS_INFO("Goal reached");
+            geometry_msgs::Twist cmd_vel;
+            cmd_vel.linear.x = 0.0;
+            cmd_vel.angular.z = 0.0;
+            cmd_vel_pub.publish(cmd_vel);
+            ROS_INFO("Waiting for a different goal...\n\n\n\n");
+            while (ros::ok() && goal_reached())
+            {
+                ros::spinOnce();
+                loop_rate.sleep();
+            }
         }
-        
-        // 7. Publish the best velocity
-        geometry_msgs::Twist cmd_vel;
-        cmd_vel.linear.x = best_v;
-        cmd_vel.angular.z = best_w;
-        cmd_vel_pub.publish(cmd_vel);
-
         ros::spinOnce();
         loop_rate.sleep();
-        
     }
 
 }
@@ -558,6 +576,18 @@ double DWAPlanner::compute_cost(const std::vector<Pose2D> &traj, double v, doubl
     return tot_cost;
 }
 
+bool DWAPlanner::goal_reached()
+{
+    // Check if the goal is reached
+    double dx = goal.x - current_pose.x;
+    double dy = goal.y - current_pose.y;
+    double dist = sqrt(pow(dx, 2) + pow(dy, 2));
+    if (dist < xy_goal_tolerance)
+    {
+        return true;
+    }
+    return false;
+}
 
 /* NOT USING THIS FOR NOW
 
@@ -624,6 +654,5 @@ int main(int argc, char **argv)
     tf2_ros::Buffer tfBuffer;
     dwa::DWAPlanner planner(nh, &tfBuffer);
     planner.plan();
-    ros::spin();
     return 0;
 }

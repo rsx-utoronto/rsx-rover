@@ -83,3 +83,11 @@ This is like notes of most of my decision making while coding this file, it's no
 ## Future Goals
 
 - Currently only supporting cuboid footprint for robot. Should be generalized to any convex polygon in future. Should also be generalized for 3D shapes.
+- Cost function for obstacles instead of yes/no when the rover footprint collides
+- No feasible trajectory found
+    - Most probable reason: Rover footprint is in an obstacle
+        - Either have a recovery behaviour or override this case somehow (maybe introducing cost for obstacles instead of yes/no)
+- Prevent a trajectory from going towards a wall and then realizing late
+    - Have the obstacle cost - distance from nearest obstacle
+- Planner should wait once it has reached the goal
+- Try giving dwa it's own velocity (from cmd_vel topic) instead of odom data (just in case odom data is really bad or in case rover doesn't actually move at the velocity that it's given)
