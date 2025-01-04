@@ -26,7 +26,7 @@ class RobotControlGUI(QWidget):
 
         self.controller = GuiControllerNode()  # Initialize controller
     # look at function at line 150 & 835
-        self.end_effector_coords = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.update_end_effector_coords) 
+        self.end_effector_coords = rospy.Subscriber("arm_end_effector_pos", Float32MultiArray, self.update_end_effector_coords) 
 
     # update the joint display values
         self.joint_display_values = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.set_joint_display)
@@ -107,23 +107,25 @@ class RobotControlGUI(QWidget):
         self.video_subscriber.frame_received.connect(self.update_image)
 
     def update_end_effector_coords(self, data):
-        # have to import ik_library.py
-        dh_table = createDHTable([-data.data[0], data.data[1] + pi/2, -data.data[2], data.data[3], data.data[5], -data.data[4]])
-        print('random')
+        # # have to import ik_library.py
+        # deg2rad(data.data)
 
-        # see the calculateRotationAngles for how the transformation matrix looks
-        transformation_matrix = calculateTransformToLink(dh_table, 6)
-        print(transformation_matrix)
+        # dh_table = createDHTable([-data.data[0], data.data[1] + pi/2, -data.data[2], data.data[3], data.data[5], -data.data[4]])
+        # print('random')
 
-        # returns [rx, ry, rz]
-        rotation_angles = calculateRotationAngles(transformation_matrix)
+        # # see the calculateRotationAngles for how the transformation matrix looks
+        # transformation_matrix = calculateTransformToLink(dh_table, 6)
+        # print(transformation_matrix)
 
-        x = transformation_matrix[0,3]
-        y = transformation_matrix[1,3]
-        z = transformation_matrix[2,3]
-        rx = rotation_angles[0]
-        ry = rotation_angles[1]
-        rz = rotation_angles[2]
+        # # returns [rx, ry, rz]
+        # rotation_angles = calculateRotationAngles(transformation_matrix)
+
+        x = data.data[3]
+        y = data.data[4]
+        z = data.data[5]
+        rx = data.data[0]
+        ry = data.data[1]
+        rz = data.data[2]
 
         self.x_coord.setText(f"X: {x:.2f} mm")
         self.y_coord.setText(f"Y: {y:.2f} mm")

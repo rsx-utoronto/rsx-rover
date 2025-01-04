@@ -53,9 +53,9 @@ class GuiControllerNode():
 
             # Rx
             if command == "Rx" or command == "joint4plus":
-                GuiToController.l1 = 1 * int(speedMultiplier/100)
+                GuiToController.l1 = 1 * 127#int(speedMultiplier)#/100)
             elif command == "-Rx" or command == "joint4minus":
-                GuiToController.r1 = 1 * int(speedMultiplier/100)
+                GuiToController.r1 = 1 * 127#int(speedMultiplier)#/100)
             
             # right vertical joystick emulation
             if command == "Ry" or command == "joint3plus":

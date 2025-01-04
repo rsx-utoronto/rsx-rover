@@ -150,6 +150,7 @@ class ForwardKin(ScriptState):
     def main(self, ikNode) -> None:
         global prevTargetValues
         global curArmAngles
+        global armPos
 
         curArmAngles = copy.deepcopy(liveArmAngles)
         adjustedCurAngles = curArmAngles
@@ -162,7 +163,14 @@ class ForwardKin(ScriptState):
         newTargetValues = [newRoll, newPitch, newYaw, [prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]]
         prevTargetValues = newTargetValues
 
-        print(newTargetValues)
+        temp = [newRoll, newPitch, newYaw, prevTargetTransform[0][3], prevTargetTransform[1][3], prevTargetTransform[2][3]]
+        
+        temp2 = Float32MultiArray()
+        temp2.data = temp
+
+        armPos.publish(temp2)
+
+        print(temp)
         self.updateDesiredEETransformation(newTargetValues)
         # publishNewAngles(liveArmAngles)
 
@@ -612,6 +620,7 @@ class InverseKinematicsNode():
     
     def __init__(self) -> None:
         global armAngles
+        global armPos
         global correctionsService
         global goToArmPosService
         global saveArmPosService
@@ -620,6 +629,8 @@ class InverseKinematicsNode():
         self.rate = rospy.Rate(NODE_RATE) # run at {NODE_RATE}Hz 
 
         armAngles = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
+
+        armPos = rospy.Publisher("arm_end_effector_pos", Float32MultiArray, queue_size=10)
 
         rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.updateLiveArmAngles)
         rospy.Subscriber("arm_state", String, self.onStateUpdate)
