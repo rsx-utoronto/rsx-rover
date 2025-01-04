@@ -100,4 +100,6 @@ This is like notes of most of my decision making while coding this file, it's no
     - Have the obstacle cost - distance from nearest obstacle
 - Try giving dwa it's own velocity (from cmd_vel topic) instead of odom data (just in case odom data is really bad or in case rover doesn't actually move at the velocity that it's given)
 
+- The rover doesn't move at velocities lower than 0.1 so fix that in code so dwa doesn't tell rover to move at that velocity
+
 - A problem I don't know how to solve: When distance is huge, it is automatically weighted more. For instance distance cost can be 300 but the other costs are always small (heading cost and height cost can't be as big). So any change in heading cost/height cost doesn't affect as much as the distance cost. However the distance cost can also be as small as 2 so I can't just weight it less because in that case, it is still important. So I am not sure how do I normalize these costs so they are in the same space and I can apply weights without thinking about some cost value blowing up or being too low in the same navigation.

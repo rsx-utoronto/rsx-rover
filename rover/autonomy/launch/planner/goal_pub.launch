@@ -1,0 +1,9 @@
+<launch>
+
+    <node name="dwa_goal" pkg="rover" type="dwa_goal.py" output="screen">
+        <param name="goal_topic" value="/goal" />
+        <param name="goal_x" value="5.0" />
+        <param name="goal_y" value="0.0" />
+    </node>
+
+</launch>

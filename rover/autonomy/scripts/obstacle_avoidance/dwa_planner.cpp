@@ -168,7 +168,7 @@ void DWAPlanner::plan()
     ros::Rate loop_rate(rate);
     while (ros::ok())
     {
-        if (!goal_reached())
+        if (!goal_reached() && this->goal_received)
         {
             ROS_INFO("Planning...");
 
@@ -176,13 +176,6 @@ void DWAPlanner::plan()
             if (!octree_)
             {
                 ROS_WARN("No octomap received yet, skipping planning...");
-                ros::spinOnce();
-                loop_rate.sleep();
-                continue;
-            }
-            if (!(this->goal_received))
-            {
-                ROS_WARN("No goal received yet, skipping planning...");
                 ros::spinOnce();
                 loop_rate.sleep();
                 continue;
@@ -288,6 +281,10 @@ void DWAPlanner::plan()
             cmd_vel.linear.x = best_v;
             cmd_vel.angular.z = best_w;
             cmd_vel_pub.publish(cmd_vel);
+        }
+        else if (!this->goal_received)
+        {
+            ROS_WARN("Goal not received yet");
         }
         else
         {
