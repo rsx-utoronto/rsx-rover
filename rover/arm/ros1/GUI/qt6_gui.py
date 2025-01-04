@@ -25,10 +25,11 @@ class RobotControlGUI(QWidget):
         self.initUI()
 
         self.controller = GuiControllerNode()  # Initialize controller
-    # look at function at line 150 & 835
+        
+        # look at function at line 150 & 835
         self.end_effector_coords = rospy.Subscriber("arm_end_effector_pos", Float32MultiArray, self.update_end_effector_coords) 
 
-    # update the joint display values
+        # update the joint display values
         self.joint_display_values = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.set_joint_display)
 
     # Send commands to the controller 
@@ -36,6 +37,19 @@ class RobotControlGUI(QWidget):
         self.controller.on_press(command)  # Send command to controller
         self.controller.on_release()       # Reset
         print(command)
+
+        # Grey Out Buttons based on Mode
+        if command == "Manual": # Grey Out the IK buttons
+            for _ , button in self.arrow_buttons.items():
+                button.setEnabled(False)
+            for button in self.joint_buttons:
+                button.setEnabled(True)
+        
+        if command == "Inverse Kin": # Grey Out the joint control buttons
+            for _ , button in self.arrow_buttons.items():
+                button.setEnabled(True)
+            for button in self.joint_buttons:
+                button.setEnabled(False)
 
     # Forward Kinematics (Individual Joint Angles) (MUST BE IN MANUAL MODE)
     def update_joint_value(self, joint_index, increment):
@@ -71,22 +85,12 @@ class RobotControlGUI(QWidget):
         }
         self.button_is_clicked(command_translator[(joint_index,increment)])
         
-        # For testing (REMOVE LATER)
-        #self.set_joint_value(joint_index,"Clicked")
-
-    # Update the current joint angle display (NOT CURRENTLY CONNECTED TO REST OF CODE / NEED TO CONNECT THIS TO RELEVANT ROS TOPIC)
-    # Now the code updates the values and is subscribed to the arm_curr_pos topic as seen above
-    def set_joint_display(self, data): #joint_index, value):
+    def set_joint_display(self, data):
         """
         Args:
             joint_index (int): Index of the joint to update.
             value (int): New value to set.
         """
-        ##joint_display = self.joint_displays[joint_index]
-        
-        # Enforce range limits (OPTIONAL)
-        # value = max(-360, min(360, value))
-
         # Updates each of the joint values in the GUI
         for joint in range(6):
             self.joint_displays[joint].setText(str(round(data.data[joint], 1)))
@@ -135,7 +139,6 @@ class RobotControlGUI(QWidget):
         self.rz_coord.setText(f"Rz: {rz:.2f}°")
 
         # return [x, y, z] + rotation_angles
-    
 
     # Main GUI code
     def initUI(self):
@@ -149,29 +152,29 @@ class RobotControlGUI(QWidget):
         # Arrow Buttons for movement
         directions = ["Up", "Down", "Left", "Right", "Forward", "Backward",
                       "Rx", "Ry", "Rz", "-Rx", "-Ry", "-Rz","Open Grip", "Close Grip"]
-        arrow_buttons = {d: QPushButton(d) for d in directions}
+        self.arrow_buttons = {d: QPushButton(d) for d in directions}
 
-        for direction, button in arrow_buttons.items():
+        for direction, button in self.arrow_buttons.items():
             button.clicked.connect(lambda _, d=direction: self.button_is_clicked(d))
             
-        coord_layout.addWidget(arrow_buttons["Up"], 1, 1)
-        coord_layout.addWidget(arrow_buttons["Down"], 3, 1)
-        coord_layout.addWidget(arrow_buttons["Left"], 2, 0)
-        coord_layout.addWidget(arrow_buttons["Right"], 2, 2)
-        coord_layout.addWidget(arrow_buttons["Forward"], 0, 0)
-        coord_layout.addWidget(arrow_buttons["Backward"], 0, 2)
+        coord_layout.addWidget(self.arrow_buttons["Up"], 1, 1)
+        coord_layout.addWidget(self.arrow_buttons["Down"], 3, 1)
+        coord_layout.addWidget(self.arrow_buttons["Left"], 2, 0)
+        coord_layout.addWidget(self.arrow_buttons["Right"], 2, 2)
+        coord_layout.addWidget(self.arrow_buttons["Forward"], 0, 0)
+        coord_layout.addWidget(self.arrow_buttons["Backward"], 0, 2)
 
         # Rotation Controls
-        coord_layout.addWidget(arrow_buttons["Rx"], 4, 0)
-        coord_layout.addWidget(arrow_buttons["-Rx"], 4, 1)
-        coord_layout.addWidget(arrow_buttons["Ry"], 5, 0)
-        coord_layout.addWidget(arrow_buttons["-Ry"], 5, 1)
-        coord_layout.addWidget(arrow_buttons["Rz"], 6, 0)
-        coord_layout.addWidget(arrow_buttons["-Rz"], 6, 1)
+        coord_layout.addWidget(self.arrow_buttons["Rx"], 4, 0)
+        coord_layout.addWidget(self.arrow_buttons["-Rx"], 4, 1)
+        coord_layout.addWidget(self.arrow_buttons["Ry"], 5, 0)
+        coord_layout.addWidget(self.arrow_buttons["-Ry"], 5, 1)
+        coord_layout.addWidget(self.arrow_buttons["Rz"], 6, 0)
+        coord_layout.addWidget(self.arrow_buttons["-Rz"], 6, 1)
 
         # Grip Control
-        coord_layout.addWidget(arrow_buttons["Open Grip"], 5, 2)
-        coord_layout.addWidget(arrow_buttons["Close Grip"], 6, 2)
+        coord_layout.addWidget(self.arrow_buttons["Open Grip"], 5, 2)
+        coord_layout.addWidget(self.arrow_buttons["Close Grip"], 6, 2)
         
         coordinates_group.setLayout(coord_layout)
 
@@ -240,6 +243,7 @@ class RobotControlGUI(QWidget):
         science_modules.setLayout(science_layout)
 
         self.joint_displays = []
+        self.joint_buttons = []  # Store references to the buttons
 
         # Joints Control Section
         joints_group = QGroupBox("Joints Control")
@@ -259,6 +263,10 @@ class RobotControlGUI(QWidget):
             # Increment and decrement buttons
             inc_button = QPushButton("+")
             dec_button = QPushButton("-")
+
+            # Store buttons in the list for bulk control
+            self.joint_buttons.append(inc_button)
+            self.joint_buttons.append(dec_button)
 
             # Connect buttons to functions
             inc_button.clicked.connect(lambda _, idx=i: self.update_joint_value(idx, 1))
@@ -339,22 +347,22 @@ class RobotControlGUI(QWidget):
         main_layout.addWidget(coords_group)
 
         # Bottom Buttons
-        bottom_layout = QHBoxLayout()
-        self.move_home = QPushButton("Move to Home")
-        self.move_home.clicked.connect(lambda _: self.button_is_clicked("Move to Home"))         
-        self.move_origin = QPushButton("Move to Origin")
-        self.move_origin.clicked.connect(lambda _: self.button_is_clicked("Move to Origin"))         
-        self.freemove = QPushButton("Freemove")
-        self.freemove.clicked.connect(lambda _: self.button_is_clicked("Freemove"))         
+        # bottom_layout = QHBoxLayout()
+        # self.move_home = QPushButton("Move to Home")
+        # self.move_home.clicked.connect(lambda _: self.button_is_clicked("Move to Home"))         
+        # self.move_origin = QPushButton("Move to Origin")
+        # self.move_origin.clicked.connect(lambda _: self.button_is_clicked("Move to Origin"))         
+        # self.freemove = QPushButton("Freemove")
+        # self.freemove.clicked.connect(lambda _: self.button_is_clicked("Freemove"))         
 
-        bottom_layout.addWidget(self.move_home)
-        bottom_layout.addWidget(self.move_origin)
-        bottom_layout.addWidget(self.freemove)
+        # bottom_layout.addWidget(self.move_home)
+        # bottom_layout.addWidget(self.move_origin)
+        # bottom_layout.addWidget(self.freemove)
 
         # Main Vertical Layout
         main_vertical_layout = QVBoxLayout(self)
         main_vertical_layout.addLayout(main_layout)
-        main_vertical_layout.addLayout(bottom_layout)
+        #main_vertical_layout.addLayout(bottom_layout)
         self.setLayout(main_vertical_layout)
 
 if __name__ == "__main__":
