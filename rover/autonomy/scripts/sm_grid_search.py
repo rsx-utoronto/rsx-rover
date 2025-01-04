@@ -14,20 +14,21 @@ class GridSearch:
     tolerance   - this is the limitation of our own equipment, ie. from camera, aruco only detected left right and dist of 3 m
                 - if this is unequal, take the smallest tolerance
     '''
-    def __init__(self, w, h, tolerance):
+    def __init__(self, w, h, tolerance, start_x, start_y):
         self.x = w 
         self.y = h
         self.tol = tolerance 
         # print(self.tol)
-        sub = rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) # change topic name
-        self.start_x = None
-        self.start_y = None
+        self.start_x = start_x
+        self.start_y = start_y
+        # rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) # change topic name
+        
 
-    def odom_callback(self, msg):
-        self.start_x = msg.pose.pose.position.x
-        self.start_y = msg.pose.pose.position.y
-        print(self.start_x)
-        print(self.start_y)
+    # def odom_callback(self, msg):
+    #     self.start_x = msg.pose.pose.position.x
+    #     self.start_y = msg.pose.pose.position.y
+    #     print(self.start_x)
+    #     print(self.start_y)
     
     '''
     Generates a list of targets for square straight line approach.
@@ -35,10 +36,10 @@ class GridSearch:
     def square_target(self):
         # dx, dy indicates direction (goes "up" first)
         dx, dy = 0, 1
-        while self.start_x == None:
-            # print("Waiting for odom...")
-            # rospy.loginfo("Waiting for odom...")
-            continue
+        # while self.start_x == None:
+        #     # print("Waiting for odom...")
+        #     # rospy.loginfo("Waiting for odom...")
+        #     continue
         targets = [(self.start_x,self.start_y)]
         step = 1
 
