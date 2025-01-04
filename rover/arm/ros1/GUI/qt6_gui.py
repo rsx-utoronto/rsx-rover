@@ -339,22 +339,22 @@ class RobotControlGUI(QWidget):
         main_layout.addWidget(coords_group)
 
         # Bottom Buttons
-        bottom_layout = QHBoxLayout()
-        self.move_home = QPushButton("Move to Home")
-        self.move_home.clicked.connect(lambda _: self.button_is_clicked("Move to Home"))         
-        self.move_origin = QPushButton("Move to Origin")
-        self.move_origin.clicked.connect(lambda _: self.button_is_clicked("Move to Origin"))         
-        self.freemove = QPushButton("Freemove")
-        self.freemove.clicked.connect(lambda _: self.button_is_clicked("Freemove"))         
+        # bottom_layout = QHBoxLayout()
+        # self.move_home = QPushButton("Move to Home")
+        # self.move_home.clicked.connect(lambda _: self.button_is_clicked("Move to Home"))         
+        # self.move_origin = QPushButton("Move to Origin")
+        # self.move_origin.clicked.connect(lambda _: self.button_is_clicked("Move to Origin"))         
+        # self.freemove = QPushButton("Freemove")
+        # self.freemove.clicked.connect(lambda _: self.button_is_clicked("Freemove"))         
 
-        bottom_layout.addWidget(self.move_home)
-        bottom_layout.addWidget(self.move_origin)
-        bottom_layout.addWidget(self.freemove)
+        # bottom_layout.addWidget(self.move_home)
+        # bottom_layout.addWidget(self.move_origin)
+        # bottom_layout.addWidget(self.freemove)
 
         # Main Vertical Layout
         main_vertical_layout = QVBoxLayout(self)
         main_vertical_layout.addLayout(main_layout)
-        main_vertical_layout.addLayout(bottom_layout)
+        #main_vertical_layout.addLayout(bottom_layout)
         self.setLayout(main_vertical_layout)
 
 if __name__ == "__main__":
