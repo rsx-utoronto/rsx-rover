@@ -89,5 +89,4 @@ This is like notes of most of my decision making while coding this file, it's no
         - Either have a recovery behaviour or override this case somehow (maybe introducing cost for obstacles instead of yes/no)
 - Prevent a trajectory from going towards a wall and then realizing late
     - Have the obstacle cost - distance from nearest obstacle
-- Planner should wait once it has reached the goal
 - Try giving dwa it's own velocity (from cmd_vel topic) instead of odom data (just in case odom data is really bad or in case rover doesn't actually move at the velocity that it's given)
