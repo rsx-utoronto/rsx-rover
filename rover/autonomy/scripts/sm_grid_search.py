@@ -30,9 +30,10 @@ class GridSearch:
         print(self.start_y)
     
     '''
-    Generates a list of targets for straight line approach.
+    Generates a list of targets for square straight line approach.
     '''
     def square_target(self):
+        # dx, dy indicates direction (goes "up" first)
         dx, dy = 0, 1
         while self.start_x == None:
             # print("Waiting for odom...")
@@ -45,11 +46,13 @@ class GridSearch:
             for i in range(2):  # 1, 1, 2, 2, 3, 3... etc
                 for j in range(step):
                     if step*self.tol > self.x: 
+                        print ("step is outside of accepted width: step*tol=", step*self.tol, "\tself.x=",self.x)
                         break
                     self.start_x, self.start_y = self.start_x + (self.tol*dx), self.start_y + (self.tol*dy)
                     targets.append((self.start_x, self.start_y))
                 dx, dy = -dy, dx
-            step += 1  
+            step += 1 
+        print ("these are the final targets", targets) 
         return targets
 
         # notice, up/down is odd amount, left/right is even amount        
