@@ -106,6 +106,7 @@ class MapViewer(QWidget):
 		self.circle_color: Dict[str, str] = {}
 
 	def centre_on_gps_callback(self,event):
+		#receives data from javascript on lnglat boundss
 		eastBound=event['_northEast']['lng']
 		westBound=event['_southWest']['lng']
 		northBound=event['_northEast']['lat']
@@ -116,22 +117,13 @@ class MapViewer(QWidget):
 			latitude >northBound or \
 			longitude <westBound or \
 			longitude>eastBound:
-			self.map.panTo( [latitude,longitude])
+			self.map.panTo( [latitude,longitude]) #moves to new centre point
 		
-		# return [eastBound,westBound, northBound, southBound]
-		
-		# coord=latLong.corner1[0]
+	#pan to new location on map when robot reeaches edge of map
 	def center_on_gps(self,gps_point):
-		"""Set the initial offset to keep the center of the map fixed."""
-		# Calculate the map's center (this will not change dynamically)
-
+		#calls on getBounds, which requires callback function, where centering occurs
 		self.map.getBounds(self.centre_on_gps_callback)
-		# import pprint
-		# pprint(bound)
-		# westBound =self.map.getBounds().getWest()
-		# northBound = self.map.getBounds().getNorth()
-		# southBound = self.map.getBounds().getSouth()
-		# # Adjust offset based on zoom level and widget dimensions
+
 		
 
 
