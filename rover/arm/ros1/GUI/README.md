@@ -3,6 +3,7 @@
 Some of the stuff we're currently working on!
 
 ## arm_gui_controller.py
+- Code to grey out buttons based on mode was implemented. Will likely need to be updated as more modes are implemented
 - Edit the speed_multiplier variable to change how fast the arm moves
     - 6900 seems to work for manual mode
     - IK needs a much smaller value (69 is the value used)
