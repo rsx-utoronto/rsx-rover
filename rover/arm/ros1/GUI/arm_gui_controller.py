@@ -11,6 +11,8 @@ class GuiControllerNode():
     def __init__(self) -> None:
         rospy.init_node("arm_gui_controller")
 
+        self.speedMultiplier = 6900
+
         self.inputPublisher = rospy.Publisher("arm_inputs", ArmInputs, queue_size=10)
         self.statePublisher = rospy.Publisher("arm_state", String, queue_size=10)
         
@@ -31,49 +33,50 @@ class GuiControllerNode():
         GuiToController.options      = 0
         GuiToController.r3           = 0
 
-        speedMultiplier = 6900
+        #self.speedMultiplier = 6900
         try:
             # left vertical joystick emulation
             if command == "Forward" or command == "joint1plus":
-                GuiToController.l_vertical = 1 * speedMultiplier
+                GuiToController.l_vertical = 1 * self.speedMultiplier
             elif command == "Backward" or command == "joint1minus":
-                GuiToController.l_vertical = -1 * speedMultiplier
+                GuiToController.l_vertical = -1 * self.speedMultiplier
 
             # left horizontal joystick emulation
             if command == "Left" or command == "joint0plus":
-                GuiToController.l_horizontal = 1 * speedMultiplier
+                GuiToController.l_horizontal = 1 * self.speedMultiplier
             elif command == "Right" or command == "joint0minus":
-                GuiToController.l_horizontal = -1 * speedMultiplier
+                GuiToController.l_horizontal = -1 * self.speedMultiplier
 
             # left and right triggers
             if command == "Up" or command == "joint5plus":
-                GuiToController.r2 = 1 * speedMultiplier
+                GuiToController.r2 = 1 * self.speedMultiplier
             if command == "Down" or command == "joint5minus":
-                GuiToController.l2 = 1 * speedMultiplier
+                GuiToController.l2 = 1 * self.speedMultiplier
 
             # Rx
             if command == "Rx" or command == "joint4plus":
-                GuiToController.l1 = 1 * 127#int(speedMultiplier)#/100)
+                for i in range(100):
+                    GuiToController.l1 = 1 * 127#int(self.speedMultiplier)#/100)
             elif command == "-Rx" or command == "joint4minus":
-                GuiToController.r1 = 1 * 127#int(speedMultiplier)#/100)
+                GuiToController.r1 = 1 * 127#int(self.speedMultiplier)#/100)
             
             # right vertical joystick emulation
             if command == "Ry" or command == "joint3plus":
-                GuiToController.r_vertical = 1 * speedMultiplier
+                GuiToController.r_vertical = 1 * self.speedMultiplier
             elif command == "-Ry" or command == "joint3minus":
-                GuiToController.r_vertical = -1 * speedMultiplier
+                GuiToController.r_vertical = -1 * self.speedMultiplier
 
             # right horizontal joystick emulation
             if command == "Rz" or command == "joint2plus":
-                GuiToController.r_horizontal = 1 * speedMultiplier
+                GuiToController.r_horizontal = 1 * self.speedMultiplier
             elif command == "-Rz" or command == "joint2minus":
-                GuiToController.r_horizontal = -1 * speedMultiplier
+                GuiToController.r_horizontal = -1 * self.speedMultiplier
 
             # shape button emulation
             if command == "Open Grip":
-                GuiToController.x = 1 *speedMultiplier
+                GuiToController.x = 1 *self.speedMultiplier
             if command == "Close Grip":
-                GuiToController.o = 1 * speedMultiplier
+                GuiToController.o = 1 * self.speedMultiplier
             if command == "useless":
                 GuiToController.triangle = 1
             if command == "useless":
@@ -90,8 +93,10 @@ class GuiControllerNode():
             # emulate d-pad as arrow keys
             if command == "Manual":
                 self.statePublisher.publish("Manual")
+                self.speedMultiplier = 6900
             if command == "Inverse Kin":
                 self.statePublisher.publish("IK")
+                self.speedMultiplier = 69
             if command == "Setup":
                 self.statePublisher.publish("Setup")
             if command == "Idle":
@@ -99,7 +104,13 @@ class GuiControllerNode():
         except:
             print("error!")
 
-        self.inputPublisher.publish(GuiToController)
+        # Only joint 5 (the slow moving one) is published 100 times
+        # (TEMPORARY FIX) 
+        if (command == "joint4plus" or command == "joint4minus"):    
+            for i in range(100):    
+              self.inputPublisher.publish(GuiToController)
+        else:
+            self.inputPublisher.publish(GuiToController)
 
     def on_release(self):
         keyboardToController = ArmInputs()
