@@ -84,7 +84,7 @@ class Joystick(QWidget):
         self.grabCenter = False
         self.__maxDistance = 100
         self.direction = Direction()
-        self.velocity_control = velocity_control
+        self.velocity_control = VelocityControl()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -253,7 +253,11 @@ class RoverGUI(QMainWindow):
         self.camera_selector_split.addItem("Butt camera")
         self.camera_selector_split.currentIndexChanged.connect(self.switch_camera)
 
+        # ROS functionality
+        self.camera_feed = CameraFeed(camera_label_selector)
+
         # Combine selector label and combo box
+        
         camera_selector_layout.addWidget(camera_label_selector, alignment=Qt.AlignRight)
         camera_selector_layout.addWidget(self.camera_selector_split)
         camera_layout.addLayout(camera_selector_layout)
