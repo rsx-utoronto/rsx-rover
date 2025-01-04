@@ -55,6 +55,7 @@ namespace dwa // These structs will only be used in the dwa namespace
         double w_dist;         ///< Weight for goal distance cost
         double w_lin;          ///< Weight for linear velocity cost
         double w_ang;          ///< Weight for angular velocity cost
+        double w_obs_height;   ///< Weight for obstacle height cost
         double w_obs;          ///< Weight for obstacle cost
     };
 

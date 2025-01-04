@@ -53,6 +53,7 @@ void DWAPlanner::define_parameters(ros::NodeHandle &nh)
     nh.param<double>("w_dist", dwac.w_dist, 1.0);
     nh.param<double>("w_lin", dwac.w_lin, 1.0);
     nh.param<double>("w_ang", dwac.w_ang, 1.0);
+    nh.param<double>("w_obs_height", dwac.w_obs_height, 1.0);
     nh.param<double>("w_obs", dwac.w_obs, 1.0);
     nh.param<double>("robot_length", rf.length, 0.5);
     nh.param<double>("robot_width", rf.width, 0.5);
@@ -252,7 +253,22 @@ void DWAPlanner::plan()
                             best_traj = traj;
                         }
 
-                    }                
+                    }
+                    else 
+                    {
+                        double cost = 0.0;
+                        cost = compute_cost(traj, v, w);
+                        cost += this->dwac.w_obs_height * this->height_cost;
+                        // ROS_INFO("Height Cost: %f", this->height_cost);
+
+                        if (cost < best_cost)
+                        {
+                            best_cost = cost;
+                            best_v = v;
+                            best_w = w;
+                            best_traj = traj;
+                        }
+                    }            
                 }
             }
             if (best_cost == std::numeric_limits<double>::infinity())
@@ -296,12 +312,17 @@ void DWAPlanner::plan()
 bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
 {
     /* Checks if the current trajectory is collision-free 
-    Returns true if there is a collision */
+    Returns true if there is a collision 
+    Also calculates the height cost, if an obstacle exists
+    */
 
     // // Just for debugging
     // int a = 0;
     // int b = 0;
     // int c = 0;
+
+    bool obstacle_found = false;
+    this->height_cost = 0.0; // Reset the height cost for every trajectory
 
     for (const auto &pose : traj)
     {
@@ -333,8 +354,10 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
         // i++;
         // Check if any of the grid cells are occupied in the octree
 
+        // Max height of the obstacle in the cells of the robot footprint
+        double local_max_z = -std::numeric_limits<double>::infinity();  
         for (const auto &cell : robot_grid)
-        {
+        {          
             for (double z = oac.min_z; z <= oac.max_z; z += ((oac.max_z - oac.min_z)/rf.robot_grid_n))
             {   
                 // a++;
@@ -373,14 +396,28 @@ bool DWAPlanner::check_collision(const std::vector<Pose2D> &traj)
                 if (node && this->octree_->isNodeOccupied(node))
                 {
                     // ROS_INFO("Checking cell (%f, %f, %f)", cell.first, cell.second, z);
-                    return true;
+                    obstacle_found = true;
+
+                    if (z >= local_max_z)
+                    {
+                        local_max_z = z;
+                    }
                 }
             }
         }
 
+        // If there is an obstacle in the cell, add the height of the obstacle to the height cost
+        // For every pose in the trajectory, add the height of the highest obstacle in the robot footprint
+        if (local_max_z > -std::numeric_limits<double>::infinity())
+        {
+            // ROS_INFO("Local max z: %f", local_max_z);
+            // Absolute value because that will consider obstacles/ground the slopes both up and down
+            this->height_cost += std::abs(local_max_z);
+        }
+
     }
 
-    return false;
+    return obstacle_found;
 }
 
 std::vector<std::pair<double, double>> DWAPlanner::transform_robot_footprint(const Pose2D &pose, std::vector<std::pair<double, double>> &robot_footprint)
@@ -453,6 +490,7 @@ double DWAPlanner::compute_cost(const std::vector<Pose2D> &traj, double v, doubl
     double dx = goal.x - final_pose.x;
     double dy = goal.y - final_pose.y;
     double dist_cost = sqrt(pow(dx, 2) + pow(dy, 2));
+    // ROS_INFO("Distance cost: %f", dist_cost);
     
     // 2. Heading Cost
     double heading_cost = std::fabs(std::atan2(dy, dx) - final_pose.theta);

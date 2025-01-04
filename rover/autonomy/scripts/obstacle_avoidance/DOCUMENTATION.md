@@ -78,15 +78,26 @@ This is like notes of most of my decision making while coding this file, it's no
             octree->expand();
             ```
             This tells the tree to expand all nodes (down to the max depth), so free space gets subdivided into child nodes. Then a subsequent `search(x, y, z)` might return a leaf node for those free coordinates rather than `nullptr`. (Be aware this can **dramatically** increase memory usage.)
+## Obstacle Cost System
+
+- **Current System:** I have implemented a height cost for obstacles. Every time a point in the robot footprint intersects with an occupied voxel, the max height at that (x, y) is calculated and added to the cost.
+- **Problems:**
+    - The cost becomes too high too fast especially if the code thinks that the robot footprint is in an obstacle.
+    - If the robot footprint is calculated with higher resolution, height cost would get larger in case of collisions
+    - Both of these problems cause height cost to be weighed more inevitably because of it's big number
+- **Solution:**
+    - Only calculate the height cost once per robot footprint, the max height the robot has to go through instead of the max height of every colliding point in the footprint
+        - This could reduce the weight of height cost though which might cause the robot to choose trajectories that go through wall just to get a lower distance cost
 
 
 ## Future Goals
 
 - Currently only supporting cuboid footprint for robot. Should be generalized to any convex polygon in future. Should also be generalized for 3D shapes.
-- Cost function for obstacles instead of yes/no when the rover footprint collides
 - No feasible trajectory found
     - Most probable reason: Rover footprint is in an obstacle
         - Either have a recovery behaviour or override this case somehow (maybe introducing cost for obstacles instead of yes/no)
 - Prevent a trajectory from going towards a wall and then realizing late
     - Have the obstacle cost - distance from nearest obstacle
 - Try giving dwa it's own velocity (from cmd_vel topic) instead of odom data (just in case odom data is really bad or in case rover doesn't actually move at the velocity that it's given)
+
+- A problem I don't know how to solve: When distance is huge, it is automatically weighted more. For instance distance cost can be 300 but the other costs are always small (heading cost and height cost can't be as big). So any change in heading cost/height cost doesn't affect as much as the distance cost. However the distance cost can also be as small as 2 so I can't just weight it less because in that case, it is still important. So I am not sure how do I normalize these costs so they are in the same space and I can apply weights without thinking about some cost value blowing up or being too low in the same navigation.

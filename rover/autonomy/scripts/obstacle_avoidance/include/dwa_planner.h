@@ -66,6 +66,7 @@ private:
     double w_min = 0.0;
     bool goal_received = false;
     double xy_goal_tolerance;
+    double height_cost = 0.0;
     
     
     // ROS communication
