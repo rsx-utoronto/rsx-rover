@@ -66,7 +66,7 @@ class Direction:
 class LngLatEntryBar(QWidget):
     def __init__(self):
         super().__init__()
-        self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray)
+        self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
         self.longitudeBar = QLineEdit()
         self.latitudeBar = QLineEdit()
         self.completeLong = False
@@ -134,7 +134,7 @@ class LngLatEntryBar(QWidget):
         self.array.data[self.array_index] = longitude
         self.array.data[self.array_index +1] = latitude
         self.array_index +=2
-        self.longLat_pub.publish(self.array.data)
+        self.longLat_pub.publish(self.array)
         print(f"Publish coordinates: Longitude = {longitude}, Latitude = {latitude}")
 
 
