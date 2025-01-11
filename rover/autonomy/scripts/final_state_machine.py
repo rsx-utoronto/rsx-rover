@@ -8,15 +8,25 @@ import smach
 import smach_ros
 import time 
 import math
-from optimal_path import OPmain
+from rover.autonomy.scripts.optimal_path import OPmain
 from thomas_grid_search import thomasgrid
 from ar_detection_node import ARucoTagDetectionNode  
 from aruco_homing import Aimer
+from std_msgs.msg import Float32MultiArray
+from geometry_msgs.msg import Twist
 
 #Change this section according to potential get functions
 
 
-#Should be implemented with the gui so that the locations written would be here
+#Should be implemented with the gui so that the locations written would be here (write a subscribing function from the gui)
+location_data = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray) # change topic name
+
+location
+for data in location_data:
+    if data is not None:
+        
+        
+
 locations = {
     "start": (43.6532, 79.3832), # Toronto
     "GNSS1": (40.6892, -74.0445),   # Statue of Liberty
@@ -46,6 +56,8 @@ locations = {
 
 #object_subscriber_node.py for object detection 
 
+#object_subscriber_node in scripts (can clone in autonomy) --> for detecting the objects, want to suscribe to their publisher, aruco homing goes towards the box
+
 
 def shortest_path(start: str, locations: dict) -> list:
     return OPmain(start, locations)
@@ -54,7 +66,7 @@ def grid_search_aruco(): #should return a True or False,  #needs to display tag!
     """
     Function for grid search
     """
-    # thomas grid needs to be switched out to a new program using straight line traversal kp
+    # thomas grid (sm grid search now) needs to be switched out to a new program using straight line traversal kp
     # to do grid search (ie. pass in cartesian oordinates that would make up the grid) since
     # thomas grid uses... timing :')
     tg = thomasgrid.move()
@@ -71,9 +83,16 @@ def signal_red_led():
     """
     #Body ommited for now- Possibly a class
 
-def rover_cruise(location) -> bool:
-    #straight_line_approach_kp 
-    return True
+def subscriber_node():
+    """Subscriber node to listen to the 'drive' topic."""
+    rospy.init_node('action_subscriber_node', anonymous=True)
+
+    rospy.Subscriber('drive', Twist, perform_action)
+
+    rospy.loginfo("Action Subscriber Node is running and listening to 'drive' topic.")
+
+    # Keep the node running
+    rospy.spin()
 
 def grid_search_object():
     '''
