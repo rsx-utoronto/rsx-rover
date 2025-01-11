@@ -247,12 +247,30 @@ class Joystick(QWidget):
 class CameraFeed:
     def __init__(self, label1, label2, splitter):
         self.bridge = CvBridge()
-        self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color", Image, self.callback1)
-        self.image_sub2 = rospy.Subscriber("/camera/color/image_raw", Image, self.callback2)
+        self.image_sub1 = None 
+        self.image_sub2 = None 
         self.label1 = label1
         self.label2 = label2
         self.splitter = splitter
         self.active_cameras = {"Zed (front) camera": False, "Butt camera": False}
+
+    def register_subscriber1(self):
+        if self.image_sub1 is None:  # Only register if not already registered
+            self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color", Image, self.callback1)
+
+    def unregister_subscriber1(self):
+        if self.image_sub1:
+            self.image_sub1.unregister()
+            self.image_sub1 = None
+
+    def register_subscriber2(self):
+        if self.image_sub2 is None:  # Only register if not already registered
+            self.image_sub2 = rospy.Subscriber("/camera/color/image_raw", Image, self.callback2)
+
+    def unregister_subscriber2(self):
+        if self.image_sub2:
+            self.image_sub2.unregister()
+            self.image_sub2 = None
 
     def callback1(self, data):
         if self.active_cameras["Zed (front) camera"]:
@@ -273,9 +291,23 @@ class CameraFeed:
 
     def update_active_cameras(self, active_cameras):
         self.active_cameras = active_cameras
+        self.update_subscribers()
         self.update_visibility()
 
+    def update_subscribers(self):
+        """Update the ROS subscribers based on active cameras."""
+        if self.active_cameras["Zed (front) camera"]:
+            self.register_subscriber1()
+        else:
+            self.unregister_subscriber1()
+
+        if self.active_cameras["Butt camera"]:
+            self.register_subscriber2()
+        else:
+            self.unregister_subscriber2()
+
     def update_visibility(self):
+        """Update the visibility of camera labels based on active cameras."""
         active_count = sum(self.active_cameras.values())
         if active_count == 0:
             self.label1.hide()
@@ -296,6 +328,7 @@ class CameraFeed:
             self.label2.show()
             self.splitter.setStretchFactor(0, 1)
             self.splitter.setStretchFactor(1, 1)
+
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
