@@ -7,7 +7,10 @@ import map_viewer as map_viewer
 from pathlib import Path
 
 
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, QCheckBox,QSplitter,QSizePolicy
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, \
+    QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, \
+    QCheckBox,QSplitter,QSizePolicy,QStylePainter, QStyleOptionComboBox, QStyle, \
+    QToolButton, QMenu, QLineEdit, QFormLayout
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from sensor_msgs.msg import Image
@@ -15,7 +18,7 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix  
 from cv_bridge import CvBridge
 import cv2
-from PyQt5.QtGui import QImage, QPixmap, QPainter
+from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel
 
 #cache folder of map tiles generated from tile_scraper.py
 CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
@@ -26,6 +29,7 @@ class mapOverlay(QWidget):
         super().__init__()
         
         self.viewer = map_viewer.MapViewer()
+        #sets the source of map tiles to local tile cache folder
         self.viewer.set_map_server(
             str(CACHE_DIR) + '/arcgis_world_imagery/{z}/{y}/{x}.jpg', 19
         )
@@ -35,6 +39,7 @@ class mapOverlay(QWidget):
         # ROS Subscriber for GPS coordinates
         rospy.Subscriber('/gps/fix', NavSatFix, self.update_gps_coordinates)
     
+    #initialize overall layout
     def initOverlayout(self):
         OverLayout = QGridLayout()
         OverLayout.addWidget(self.viewer)
@@ -50,11 +55,38 @@ class mapOverlay(QWidget):
 
 
 
-
+#object type for direction of rover
 class Direction: 
     def __init__(self):
         self.LinX =0
         self.AngleZ = 0
+
+#type bars widget for latitude longitude entry
+class LngLatEntryBar(QWidget):
+    def __init__(self):
+        # self.pub = rospy.Publisher('/lngLat',)
+        self.longitudeBar = QLineEdit()
+        self.latitudeBar = QLineEdit()
+        self.completeLong = False
+        self.completeLat = False
+        flo = QFormLayout()
+        flo.addrow("Longitude", self.longitudeBar)
+        flo.addrow("Latitude", self.latitudeBar)
+        self.latitudeBar.returnPressed.connect()
+        self.longitudeBar.returnPressed.connect()
+    def longitudeEntry(self):
+        self.completeLong = True
+        if self.completeLat == True:
+            #reset lat and long
+            self.sendCoordinates()
+    def latitudeEntry(self):
+        self.completeLat = True
+        if self.completeLong == True:
+            #reset lat and long
+            self.sendCoordinates()
+    def sendCoordinates():
+        print("publish coordinates")
+
 
 class VelocityControl:
     def __init__(self):
@@ -168,37 +200,59 @@ class Joystick(QWidget):
         self.joystickDirection()
 
 #camera feed that displays one camera at a time (use switch_camera)
+# Update the CameraFeed class to handle multiple labels
 class CameraFeed:
-    def __init__(self, widget):
+    def __init__(self, label1, label2, splitter):
         self.bridge = CvBridge()
-        #add more cameras here
         self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color", Image, self.callback1)
         self.image_sub2 = rospy.Subscriber("/camera/color/image_raw", Image, self.callback2)
-        self.current_camera = 1  # 1 for camera1, 2 for camera2
-        self.label = widget
+        self.label1 = label1
+        self.label2 = label2
+        self.splitter = splitter
+        self.active_cameras = {"Zed (front) camera": False, "Butt camera": False}
 
-    #require a new callback for each camera
     def callback1(self, data):
-        if self.current_camera == 1:
-            self.update_image(data)
+        if self.active_cameras["Zed (front) camera"]:
+            self.update_image(data, self.label1)
 
     def callback2(self, data):
-        if self.current_camera == 2:
-            self.update_image(data)
+        if self.active_cameras["Butt camera"]:
+            self.update_image(data, self.label2)
 
-    #display the new image from data sent from camera nodes
-    def update_image(self, data):
+    def update_image(self, data, label):
         cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         height, width, channel = cv_image.shape
         bytes_per_line = 3 * width
         qimg = QImage(cv_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(qimg)
-        self.label.setPixmap(pixmap)
+        label.setPixmap(pixmap)
 
-    def switch_camera(self, camera_index):
-        self.current_camera = camera_index
+    def update_active_cameras(self, active_cameras):
+        self.active_cameras = active_cameras
+        self.update_visibility()
 
+    def update_visibility(self):
+        active_count = sum(self.active_cameras.values())
+        if active_count == 0:
+            self.label1.hide()
+            self.label2.hide()
+        elif active_count == 1:
+            if self.active_cameras["Zed (front) camera"]:
+                self.label1.show()
+                self.label2.hide()
+                self.splitter.setStretchFactor(0, 1)
+                self.splitter.setStretchFactor(1, 0)
+            else:
+                self.label1.hide()
+                self.label2.show()
+                self.splitter.setStretchFactor(0, 0)
+                self.splitter.setStretchFactor(1, 1)
+        else:  # Both active
+            self.label1.show()
+            self.label2.show()
+            self.splitter.setStretchFactor(0, 1)
+            self.splitter.setStretchFactor(1, 1)
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
@@ -238,33 +292,32 @@ class RoverGUI(QMainWindow):
         camera_group = QGroupBox("Camera Feed")
         camera_layout = QVBoxLayout()
         
-        # Camera feed label
-        self.camera_label_splitter = QLabel(self.split_screen_tab)
-        self.camera_label_splitter.setMinimumSize(320, 240)  # Allow it to shrink
-        self.camera_label_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.camera_label_splitter.setFrameStyle(QFrame.Panel | QFrame.Sunken)
-        camera_layout.addWidget(self.camera_label_splitter)
 
-        # Add the camera selector (add more cameras here)
-        camera_selector_layout = QHBoxLayout()
-        camera_label_selector = QLabel("Select Camera:")  # Label for selector
-        self.camera_selector_split = QComboBox(self.split_screen_tab)
-        self.camera_selector_split.addItem("Zed (front) camera")
-        self.camera_selector_split.addItem("Butt camera")
-        self.camera_selector_split.currentIndexChanged.connect(self.switch_camera)
+        self.camera_label1 = QLabel()
+        self.camera_label1.setMinimumSize(320, 240)
+        self.camera_label1.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        
 
+        self.camera_label2 = QLabel()
+        self.camera_label2.setMinimumSize(320, 240)
+        self.camera_label2.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         # ROS functionality
-        self.camera_feed = CameraFeed(camera_label_selector)
-
-        # Combine selector label and combo box
+        self.camerasplitter = QSplitter(Qt.Horizontal)
+        self.camera_feed = CameraFeed(self.camera_label1, self.camera_label2,self.camerasplitter)
         
-        camera_selector_layout.addWidget(camera_label_selector, alignment=Qt.AlignRight)
-        camera_selector_layout.addWidget(self.camera_selector_split)
-        camera_layout.addLayout(camera_selector_layout)
 
-        # Set camera group layout
+        # Use CameraSelect menu-based selector
+        self.camera_selector = CameraSelect()
+        self.camera_selector.cameras_changed.connect(self.camera_feed.update_active_cameras)
+
+        camera_layout.addWidget(self.camera_selector)
+        self.camerasplitter.addWidget(self.camera_label1)
+        self.camerasplitter.addWidget(self.camera_label2)
+        camera_layout.addWidget(self.camerasplitter)
+
+        # camera_layout.addWidget(self.camera_label_splitter)
         camera_group.setLayout(camera_layout)
-        
+
         # Add map to the splitter
         map_group = QGroupBox("Map")
         map_layout = QVBoxLayout()
@@ -333,6 +386,66 @@ class RoverGUI(QMainWindow):
 
     def switch_camera(self, index):
         self.camera_feed.switch_camera(index + 1)
+
+class CheckableComboBox(QComboBox):
+    def __init__(self, title = '', parent=None):
+        super().__init__(parent)
+        self.setTitle(title)
+        self.view().pressed.connect(self.handleItemPressed)
+        self.setModel(QStandardItemModel())
+
+    def handleItemPressed(self, index):
+        item = self.model().itemFromIndex(index)
+        if item.checkState() == Qt.Checked:
+            item.setCheckState(Qt.Unchecked)
+        else:
+            item.setCheckState(Qt.Checked)
+
+    def title(self):
+        return self._title
+
+    def setTitle(self, title):
+        self._title = title
+        self.repaint()
+
+    def paintEvent(self, event):
+        painter = QStylePainter(self)
+        painter.setPen(self.palette().color(QPalette.Text))
+        opt = QStyleOptionComboBox()
+        self.initStyleOption(opt)
+        opt.currentText = self._title
+        painter.drawComplexControl(QStyle.CC_ComboBox, opt)
+        painter.drawControl(QStyle.CE_ComboBoxLabel, opt)
+
+class CameraSelect(QWidget):
+    cameras_changed = pyqtSignal(dict)
+
+    def __init__(self):
+        super().__init__()
+        self.layout = QVBoxLayout()
+
+        self.toolButton = QToolButton(self)
+        self.toolButton.setText("Cameras List")
+        self.toolMenu = QMenu(self)
+
+        self.cameras = ["Zed (front) camera", "Butt camera"]
+        self.selected_cameras = {camera: False for camera in self.cameras}
+
+        for camera in self.cameras:
+            action = self.toolMenu.addAction(camera)
+            action.setCheckable(True)
+            self.toolMenu.triggered.connect(self.handle_camera_selection)
+
+        self.toolButton.setMenu(self.toolMenu)
+        self.toolButton.setPopupMode(QToolButton.InstantPopup)
+        self.layout.addWidget(self.toolButton)
+        self.layout.addStretch()
+        self.setLayout(self.layout)
+
+    def handle_camera_selection(self, action):
+        camera = action.text()
+        self.selected_cameras[camera] = action.isChecked()
+        self.cameras_changed.emit(self.selected_cameras)
 
 
 if __name__ == '__main__':
