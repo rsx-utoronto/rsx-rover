@@ -74,9 +74,11 @@ class GuiControllerNode():
 
             # shape button emulation
             if command == "Open Grip":
-                GuiToController.x = 1 *self.speedMultiplier
+                GuiToController.x = 1 
+                print("grip opened!!!")
             if command == "Close Grip":
-                GuiToController.o = 1 * self.speedMultiplier
+                GuiToController.o = 1 
+                print("grip not opened!!!")
             if command == "useless":
                 GuiToController.triangle = 1
             if command == "useless":

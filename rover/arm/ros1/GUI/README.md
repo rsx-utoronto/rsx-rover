@@ -17,10 +17,6 @@ Some of the stuff we're currently working on!
 ### in __init__:
 - The topics in the camera_topic_name list need to be edited to work with actual robot
 
-### in set_joint_display:
-- Joint angles update, but not all work (WIP)
-    - Seems like the speed multiplier also needs to be updated to make joint 5 work better as well (right now it doesn't move quickly enough)
-
 ### in update_end_effector_coords:
 - Publisher from Parm's code, called arm_end_effector_pos, within arm_inverse_kinematics.py
 
