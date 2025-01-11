@@ -8,8 +8,8 @@ def publish_gps_coordinates():
     # Initialize the ROS node
     rospy.init_node('gps_publisher', anonymous=True)
     
-    # Create a publisher for the /gps/fix topic
-    gps_pub = rospy.Publisher('/gps/fix', NavSatFix, queue_size=10)
+    # Create a publisher for the /calian_gnss/gps topic
+    gps_pub = rospy.Publisher('/calian_gnss/gps', NavSatFix, queue_size=10)
     
     # Set the rate at which to publish (e.g., 1 Hz)
     rate = rospy.Rate(1)  # 1 Hz
