@@ -2,7 +2,14 @@
 
 """
 A* path planning with OctoMap integration for obstacle avoidance.
+
+Want to get map of surroundngs using octomap within 5m -> to process it we will give each block a value representing its cost. 
+The cost depends on height, density -> we go to lowest cost.
+Cost depends on height. follow threshold.
+1 for height
+1 for density 
 """
+
 
 import rospy
 import numpy as np
@@ -19,8 +26,8 @@ class OctoMapAStar:
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
         self.waypoint_topic = rospy.get_param("~waypoint_topic", "/waypoint")
         self.update_rate = rospy.get_param("~update_rate", 1.0)  # Frequency in Hz
-        self.height_min = rospy.get_param("~height_min", 2.0)  # Min height for obstacles
-        self.height_max = rospy.get_param("~height_max", 5.0)  # Max height for obstacles
+        self.height_min = rospy.get_param("~height_min", 0.2)  # Min height for obstacles
+        self.height_max = rospy.get_param("~height_max", 15)  # Max height for obstacles
 
         # Publishers and Subscribers
         self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
@@ -62,6 +69,8 @@ class OctoMapAStar:
                     occupancy_grid[x, y] = 1
 
         return occupancy_grid
+    
+
 
     def a_star(self, start, goal):
         """
@@ -139,7 +148,7 @@ class OctoMapAStar:
                 continue
 
             start = (10, 10)  # Example starting point
-            goal = (90, 90)  # Example goal point
+            goal = (100, 100)  # Example goal point
 
             rospy.loginfo("Running A* algorithm...")
             path = self.a_star(start, goal)
