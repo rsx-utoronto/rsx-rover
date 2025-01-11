@@ -51,6 +51,12 @@ class RobotControlGUI(QWidget):
             for button in self.joint_buttons:
                 button.setEnabled(False)
 
+        if command == "Idle":
+            for _ , button in self.arrow_buttons.items():
+                button.setEnabled(False)
+            for button in self.joint_buttons:
+                button.setEnabled(False)
+
     # Forward Kinematics (Individual Joint Angles) (MUST BE IN MANUAL MODE)
     def update_joint_value(self, joint_index, increment):
         """
