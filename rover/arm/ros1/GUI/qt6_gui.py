@@ -216,8 +216,8 @@ class RobotControlGUI(QWidget):
         self.power_on.clicked.connect(lambda _: self.button_is_clicked("ON"))         
         self.power_off = QPushButton("OFF")
         self.power_off.clicked.connect(lambda _: self.button_is_clicked("OFF"))         
-        self.power_reset = QPushButton("Reset")
-        self.power_reset.clicked.connect(lambda _: self.button_is_clicked("Reset"))         
+        self.move_origin = QPushButton("Move to Origin")
+        self.move_origin.clicked.connect(lambda _: self.button_is_clicked("Move to Origin"))         
         
         power_group.setStyleSheet('QPushButton {font-size: 20px}')
         self.power_on.setStyleSheet('QPushButton {background-color: #00FF00; color: #000000}')
@@ -225,7 +225,7 @@ class RobotControlGUI(QWidget):
 
         power_layout.addWidget(self.power_on)
         power_layout.addWidget(self.power_off)
-        power_layout.addWidget(self.power_reset)
+        power_layout.addWidget(self.move_origin)
 
         power_group.setLayout(power_layout)
         view_layout.addWidget(power_group)
