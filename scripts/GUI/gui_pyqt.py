@@ -16,6 +16,7 @@ from PyQt5.QtCore import Qt, QPointF
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix  
+from std_msgs.msg import Float32MultiArray
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel
@@ -37,7 +38,7 @@ class mapOverlay(QWidget):
         self.centreOnRover = False
         
         # ROS Subscriber for GPS coordinates
-        rospy.Subscriber('/gps/fix', NavSatFix, self.update_gps_coordinates)
+        rospy.Subscriber('/calian_gnss/gps', NavSatFix, self.update_gps_coordinates)
     
     #initialize overall layout
     def initOverlayout(self):
@@ -65,11 +66,14 @@ class Direction:
 class LngLatEntryBar(QWidget):
     def __init__(self):
         super().__init__()
+        self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray)
         self.longitudeBar = QLineEdit()
         self.latitudeBar = QLineEdit()
         self.completeLong = False
         self.completeLat = False
-
+        self.array = Float32MultiArray()
+        self.array.data = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] #adapt size for 
+        self.array_index = 0
         flo = QFormLayout()
         flo.addRow("Longitude", self.longitudeBar)
         flo.addRow("Latitude", self.latitudeBar)
@@ -127,6 +131,10 @@ class LngLatEntryBar(QWidget):
         """
         Send or print the coordinates.
         """
+        self.array.data[self.array_index] = longitude
+        self.array.data[self.array_index +1] = latitude
+        self.array_index +=2
+        self.longLat_pub.publish(self.array.data)
         print(f"Publish coordinates: Longitude = {longitude}, Latitude = {latitude}")
 
 
