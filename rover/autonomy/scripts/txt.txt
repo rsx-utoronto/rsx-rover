@@ -1,7 +1,0 @@
-
-start_lat = 38.42390688
-start_lon = -110.7852678
-
-# Target GPS coordinates
-target_lat = 38.42426632 # Example target latitude
-target_lon = -110.7851849  # Example target longitude

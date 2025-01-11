@@ -28,10 +28,7 @@ class compressedImage():
         decBuffer = cv2.imdecode(compressedBuffer, 1)
 
         self.compressed = self.bridge.cv2_to_imgmsg(decBuffer, encoding="passthrough")
-<<<<<<< HEAD
-=======
         self.publish()
->>>>>>> master
 
     def publish(self):
         self.outStream.publish(self.compressed)
@@ -40,13 +37,7 @@ if __name__ == '__main__':
     rospy.init_node('compressed', anonymous=True)
     compressed_image = compressedImage()
     rate = rospy.Rate(PUBLISH_RATE)
-<<<<<<< HEAD
-    while not rospy.is_shutdown():
-        compressed_image.publish()
-        rate.sleep()
-=======
     rospy.spin()
     while not rospy.is_shutdown():
         compressed_image.publish()
         #rate.sleep()
->>>>>>> master

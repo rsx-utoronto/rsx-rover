@@ -6,7 +6,6 @@ import time
 import cv2.aruco as aruco
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
-from rover.msg import StateMsg
 import numpy as np
 import os
 from std_msgs.msg import Float64MultiArray

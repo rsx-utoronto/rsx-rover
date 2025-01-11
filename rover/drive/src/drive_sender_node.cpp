@@ -3,7 +3,7 @@
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Bool.h>
-#include <rover/StateMsg.h>
+// #include <rover/StateMsg.h>
 #include <signal.h>
 #include <termios.h>
 #include <stdio.h>
@@ -22,7 +22,7 @@ public:
 	void pubConstSpeed();
 	void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
 	void networkCallback(const std_msgs::Bool::ConstPtr& net_stat);
-	void stateCallback(const rover::StateMsg::ConstPtr& state);
+	// void stateCallback(const rover::StateMsg::ConstPtr& state);
 	void SetVelocity();
 
 	ros::NodeHandle nh;
@@ -44,7 +44,7 @@ public:
 	ros::Subscriber state_sub;
 	bool network_status = false;
 	geometry_msgs::Twist twist;
-	bool MANUAL_ENABLED = true;
+	// bool MANUAL_ENABLED = true;
 	// The MANUAL variable is so that it doesn't keep sending the zero velocity values to the rover when we are not using the controller
 	// So that it doesn't interfere with autonomy
 	bool MANUAL = false;
@@ -63,7 +63,7 @@ TeleopRover::TeleopRover()
 	drive_pub = nh.advertise<geometry_msgs::Twist>("drive", 1);
 	TeleopRover::joy_sub = nh.subscribe("/software/joy", 10, &TeleopRover::joyCallback, this);
 	TeleopRover::net_sub = nh.subscribe("/network_status", 1, &TeleopRover::networkCallback, this);
-	TeleopRover::state_sub = nh.subscribe("/rover_state", 1, &TeleopRover::stateCallback, this);
+	// TeleopRover::state_sub = nh.subscribe("/rover_state", 1, &TeleopRover::stateCallback, this);
 	// network_status = false;
 }
 
@@ -82,9 +82,9 @@ void TeleopRover::networkCallback(const std_msgs::Bool::ConstPtr& net_stat){
 	network_status = net_stat->data;
 }
 
-void TeleopRover::stateCallback(const rover::StateMsg::ConstPtr& state_msg){
-	MANUAL_ENABLED = state_msg->MANUAL_ENABLED;
-}
+// void TeleopRover::stateCallback(const rover::StateMsg::ConstPtr& state_msg){
+// 	MANUAL_ENABLED = state_msg->MANUAL_ENABLED;
+// }
 
 void TeleopRover::SetVelocity(){
 	ros::Rate loop_rate(RATE);
@@ -109,7 +109,8 @@ void TeleopRover::SetVelocity(){
 				KILL_PRESSED = false;
 			}
 
-		if (MANUAL_ENABLED && ~KILL_PRESSED && MANUAL){
+		if (~KILL_PRESSED && MANUAL){
+			ROS_INFO("MANUAL MODE");
 			twist.linear.x = 0; 
 			twist.linear.y = 0;
 			twist.linear.z = 0;

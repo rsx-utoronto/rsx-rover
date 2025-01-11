@@ -9,6 +9,9 @@
 -->
 <launch>
 
+    <!-- <node name="odom_2d" pkg="rover" type="octomap_odom_zfix.py" output="screen"/> -->
+    <arg name="bag_filename"/>
+
     <node name="octomap_rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/autonomy/config/octomap.rviz"/>
 
     <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">

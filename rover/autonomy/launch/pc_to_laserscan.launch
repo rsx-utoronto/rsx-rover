@@ -1,6 +1,0 @@
-<launch>
-    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
-      <remap from="/zed_node/point_cloud/cloud_registered" to="cloud_in" />
-      <remap from="/scan" to="scan" />
-   </node>
-</launch>
