@@ -10,7 +10,7 @@ from pathlib import Path
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, \
     QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, \
     QCheckBox,QSplitter,QSizePolicy,QStylePainter, QStyleOptionComboBox, QStyle, \
-    QToolButton, QMenu, QLineEdit, QFormLayout
+    QToolButton, QMenu, QLineEdit, QFormLayout, QPushButton
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from sensor_msgs.msg import Image
@@ -64,28 +64,71 @@ class Direction:
 #type bars widget for latitude longitude entry
 class LngLatEntryBar(QWidget):
     def __init__(self):
-        # self.pub = rospy.Publisher('/lngLat',)
+        super().__init__()
         self.longitudeBar = QLineEdit()
         self.latitudeBar = QLineEdit()
         self.completeLong = False
         self.completeLat = False
+
         flo = QFormLayout()
-        flo.addrow("Longitude", self.longitudeBar)
-        flo.addrow("Latitude", self.latitudeBar)
-        self.latitudeBar.returnPressed.connect()
-        self.longitudeBar.returnPressed.connect()
+        flo.addRow("Longitude", self.longitudeBar)
+        flo.addRow("Latitude", self.latitudeBar)
+
+        # Create the button and connect it to the method
+        self.sendButton = QPushButton("Send Coordinates")
+        self.sendButton.clicked.connect(self.check_and_send_coordinates)
+
+        # Add button to the layout
+        flo.addWidget(self.sendButton)
+
+        self.setLayout(flo)
+
     def longitudeEntry(self):
         self.completeLong = True
-        if self.completeLat == True:
-            #reset lat and long
-            self.sendCoordinates()
+        if self.completeLat:
+            self.processCoordinates()
+
     def latitudeEntry(self):
         self.completeLat = True
-        if self.completeLong == True:
-            #reset lat and long
-            self.sendCoordinates()
-    def sendCoordinates():
-        print("publish coordinates")
+        if self.completeLong:
+            self.processCoordinates()
+
+    def processCoordinates(self):
+        """
+        Process the coordinates: fetch values, publish them, and reset the input fields.
+        """
+        longitude = self.longitudeBar.text()
+        latitude = self.latitudeBar.text()
+        self.sendCoordinates(longitude, latitude)
+        self.resetCoordinates()
+
+    def check_and_send_coordinates(self):
+        """
+        Checks if both longitude and latitude have values before sending.
+        """
+        longitude = self.longitudeBar.text()
+        latitude = self.latitudeBar.text()
+        if longitude and latitude:
+            self.sendCoordinates(longitude, latitude)
+            self.resetCoordinates()  # Optionally reset fields after sending
+        else:
+            print("Please enter both Longitude and Latitude.")
+
+    def resetCoordinates(self):
+        """
+        Reset the state of longitude and latitude completion flags and clear the input fields.
+        """
+        self.completeLong = False
+        self.completeLat = False
+        self.longitudeBar.clear()
+        self.latitudeBar.clear()
+
+    def sendCoordinates(self, longitude, latitude):
+        """
+        Send or print the coordinates.
+        """
+        print(f"Publish coordinates: Longitude = {longitude}, Latitude = {latitude}")
+
 
 
 class VelocityControl:
@@ -267,14 +310,18 @@ class RoverGUI(QMainWindow):
 
         # Create tab
         self.split_screen_tab = QWidget()
+        self.longlat_tab = QWidget()
 
         # Add tab to QTabWidget
         self.tabs.addTab(self.split_screen_tab, "Main Gui")
+        self.tabs.addTab(self.longlat_tab, "Long Lat")
 
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
 
         self.setup_split_screen_tab()
+        self.setup_lngLat_tab()
+
 
         
     #unused utility: if multiple tabs used can have triggers when tab sswitched
@@ -283,7 +330,11 @@ class RoverGUI(QMainWindow):
             print("map tab")  
         elif index == 2:  # Split Screen Tab
             print("split tab") # Show map viewer in split screen tab
-
+    def setup_lngLat_tab(self):
+        self.lngLatEntry = LngLatEntryBar()
+        Lnglat_tab_layout = QVBoxLayout()
+        Lnglat_tab_layout.addWidget(self.lngLatEntry)
+        self.longlat_tab.setLayout(Lnglat_tab_layout)
     #used to initialize main tab with splitters
     def setup_split_screen_tab(self):
         splitter = QSplitter(Qt.Horizontal)
