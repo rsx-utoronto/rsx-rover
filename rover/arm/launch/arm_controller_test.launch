@@ -1,0 +1,17 @@
+<launch>
+    
+    <rosparam file="$(find rover)/rover/arm/config/controllers.yaml" command="load"/>
+    <rosparam file="$(find rover)/rover/arm/config/joint_limits.yaml" command="load"/>
+
+    <node name="rsx_arm_hardware_interface" pkg="rover" type="rsx_arm_hardware_interface" output="screen"/>
+
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find arm_science_urdf_2025)/urdf/arm_science_urdf_2025.urdf"/>
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+    
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"
+        args="
+            RSX_Arm/joints_update
+            RSX_Arm/Joint_1_Controller
+        "/> 
+
+</launch>

@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   tf2
   pcl_ros
+  controller_manager
 )
 
 
@@ -128,7 +129,7 @@ generate_messages(
 catkin_package(
     #INCLUDE_DIRS include
     #LIBRARIES Rover
-    CATKIN_DEPENDS roscpp rospy std_msgs message_runtime message_filters
+    CATKIN_DEPENDS roscpp rospy std_msgs message_runtime message_filters controller_manager
     DEPENDS
 )
 
@@ -245,6 +246,9 @@ target_link_libraries(GNSSTargetAid ${catkin_LIBRARIES})
 
 add_executable(arm_point_cloud_assembler rover/arm/ros1/arm_point_cloud_assembler.cpp)
 target_link_libraries(arm_point_cloud_assembler ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(rsx_arm_hardware_interface rover/arm/ros1/rsx_arm_hardware_interface.cpp)
+target_link_libraries(rsx_arm_hardware_interface ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 # catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
 #  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
