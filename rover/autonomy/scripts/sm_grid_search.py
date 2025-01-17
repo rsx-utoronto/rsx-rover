@@ -14,7 +14,7 @@ class GridSearch:
     tolerance   - this is the limitation of our own equipment, ie. from camera, aruco only detected left right and dist of 3 m
                 - if this is unequal, take the smallest tolerance
     '''
-    def __init__(self, w, h, tolerance, start_x, start_y):
+    def __init__(self, w, h, tolerance, start_x, start_y): # AR1, OR AR2 (cartesian - fixed)
         self.x = w 
         self.y = h
         self.tol = tolerance 

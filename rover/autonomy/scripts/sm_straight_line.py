@@ -100,10 +100,10 @@ if __name__ == '__main__':
     except rospy.ROSInterruptException:
         pass
 
-    gs = GridSearch(4, 4, 1, x, y)  # define multiple target points here
+    gs = GridSearch(4, 4, 1, x, y)  # define multiple target points here: cartesian
     target = gs.square_target()
     print(target)
     try:
-        straight_line_approach(1, 0.5, target)
+        straight_line_approach(1, 0.5, target) #LOOK HERE
     except rospy.ROSInterruptException:
         pass
