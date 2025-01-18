@@ -3,8 +3,10 @@
 
 #note
 #positive angluar velocity is counter clockwise 
-
-
+"""
+The main file for integrating the different modules of the rover autonomy system for URC 2024, 
+will be replaced by State Machine in 2025
+"""
 import rospy
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion, quaternion_from_euler

@@ -18,6 +18,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   tf2
   pcl_ros
+  # octomap_msgs
+  visualization_msgs
 )
 
 
@@ -26,6 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
 #include_directories(${GTSAM_INCLUDE_DIR})
 
 find_package(PCL 1.2 REQUIRED)
+# find_package(octomap REQUIRED)
 
 # Variables set by the pcl config.cmake.in file
 include_directories(${PCL_INCLUDE_DIRS})
@@ -69,14 +72,15 @@ add_definitions(${PCL_DEFINITIONS})
 add_message_files(
   FILES
   ArmInputs.msg
-  StateMsg.msg
+  # StateMsg.msg
+  # StateMsg.msg
   UnityCmd.msg 
 )
 
 # Generate services in the 'srv' folder
 add_service_files(
   FILES
-  AddGoal.srv
+  # AddGoal.srv
   Corrections.srv
   GoToArmPos.srv
   SaveArmPos.srv
@@ -95,6 +99,7 @@ generate_messages(
   std_msgs
   sensor_msgs
   geometry_msgs
+  visualization_msgs
 )
 
 ################################################
@@ -140,13 +145,15 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
+  # $(OCTOMAP_INCLUDE_DIRS)
+  # rover/autonomy/scripts/obstacle_avoidance/include
 )
 
-## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/Rover.cpp
+# Declare a C++ library
+# add_library(dwa_visualizer
+#   rover/autonomy/scripts/obstacle_avoidance/trajectory_visualizer.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -169,8 +176,8 @@ include_directories(
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
+# Specify libraries to link a library or executable target against
+# target_link_libraries(dwa_visualizer
 #   ${catkin_LIBRARIES}
 # )
 
@@ -195,12 +202,12 @@ include_directories(
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
-## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
+# Mark cpp header files for installation
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  # FILES_MATCHING PATTERN "*.h"
+  # PATTERN ".svn" EXCLUDE
+)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES
@@ -229,11 +236,11 @@ include_directories(
 add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
 target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
 
-add_executable(GNSSLocalization rover/autonomy/src/GNSSLocalization.cpp)
-target_link_libraries(GNSSLocalization ${catkin_LIBRARIES})
+# add_executable(GNSSLocalization rover/autonomy/src/GNSSLocalization.cpp)
+# target_link_libraries(GNSSLocalization ${catkin_LIBRARIES})
 
-add_executable(GNSSTargetAid rover/autonomy/src/GNSSTargetAid.cpp)
-target_link_libraries(GNSSTargetAid ${catkin_LIBRARIES})
+# add_executable(GNSSTargetAid rover/autonomy/src/GNSSTargetAid.cpp)
+# target_link_libraries(GNSSTargetAid ${catkin_LIBRARIES})
 
 # add_executable(lidar_pcl_subscriber rover/autonomy/scripts/point_cloud_subscriber.cpp rover/autonomy/scripts/pcl_traversibility_score.cpp rover/autonomy/scripts/segment_pcl.cpp)
 # target_link_libraries(lidar_pcl_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -247,9 +254,12 @@ target_link_libraries(GNSSTargetAid ${catkin_LIBRARIES})
 add_executable(arm_point_cloud_assembler rover/arm/ros1/arm_point_cloud_assembler.cpp)
 target_link_libraries(arm_point_cloud_assembler ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
+# add_executable(dwa_planner rover/autonomy/scripts/obstacle_avoidance/dwa_planner.cpp)
+# target_link_libraries(dwa_planner ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} dwa_visualizer)
+
 # catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
 #  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-catkin_install_python(PROGRAMS rover/autonomy/scripts/gps_target_waypoint_updater.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+# catkin_install_python(PROGRAMS rover/autonomy/scripts/gps_target_waypoint_updater.py
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )

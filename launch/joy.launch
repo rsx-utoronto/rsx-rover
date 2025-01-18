@@ -13,7 +13,4 @@
         </node>
     </group>
 
-    <!-- Launch GUI -->
-    <!-- <node pkg="rover" type="rover_gui.py" name="rover_gui" output="screen"/> -->
-
 </launch>

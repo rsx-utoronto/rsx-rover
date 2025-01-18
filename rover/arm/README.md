@@ -6,7 +6,7 @@ To enable the CAN network, open a terminal and type the following (assuming you 
 
 ### Terminal 1
 ```
-cd ~/rover-ws/src/rsx-rover/scripts/utils/gen/setup_can.bash
+cd ~/rover_ws/src/rsx-rover/scripts/utils/gen
 ./setup_can.bash
 (Enter the password for your system)
 ```
@@ -32,19 +32,22 @@ roscore
 
 ### Terminal 2 (Assuming your joy node is setup. Refer to joy wiki for instructions on that)
 ```
+export ROS_NAMESPACE=arm # makes this instance of the joy node in the arm workspace
 rosrun joy joy_node
 ```
+
+[Joy Wiki for Setup](https://wiki.ros.org/joy/Tutorials/ConfiguringALinuxJoystick)
 
 #### Terminal 3 (Optional)
 To check whether joy node is receiving inputs properly, run the following command
 ```
-rostopic echo joy
+rostopic echo /arm/joy
 ```
 
 ### Terminal 3/4
 Launch arm_controlller, manual and safety nodes
 ```
-roslaunch rover arm_2023_complete.launch
+roslaunch rover arm_basics.launch
 ```
 
 ### Terminal 4/5
@@ -59,8 +62,13 @@ Run CAN_recv node (before CAN_send)
 rosrun rover CAN_recv.py
 ```
 
+Before proceeding further, make sure that all the angles that the arm thinks it are zero with:
+```
+rostopic echo /arm_curr_pos
+```
+
 ### Terminal 6/7
-Run CAN_recv node (before CAN_send)
+Run CAN_send node
 ```
 rosrun rover CAN_send.py
 ```
