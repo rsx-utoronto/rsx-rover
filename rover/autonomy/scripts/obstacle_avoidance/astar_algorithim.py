@@ -14,7 +14,9 @@ import rospy
 import numpy as np
 from octomap_msgs.msg import Octomap
 from nav_msgs.msg import OccupancyGrid
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Twist
+from sensor_msgs.msg import PointCloud2
+import ros_numpy
 from queue import PriorityQueue
 
 class OctoMapAStar:
@@ -24,13 +26,20 @@ class OctoMapAStar:
         # Parameters
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
         self.waypoint_topic = rospy.get_param("~waypoint_topic", "/waypoint")
-        self.update_rate = rospy.get_param("~update_rate", 1.0)  # Frequency in Hz
+        self.update_rate = rospy.get_param("~update_rate", 1.0)  # Frequency in Hz 
+        self.vel_topic = rospy.get_param("~vel_topic", "/cmd_vel")  # Velocity command
         self.height_min = rospy.get_param("~height_min", 0.2)  # Min height for obstacles
         self.height_max = rospy.get_param("~height_max", 15)  # Max height for obstacles
+        self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed/point_cloud/cloud_registered")
+        self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
+        self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
 
         # Publishers and Subscribers
         self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
         self.waypoint_pub = rospy.Publisher(self.waypoint_topic, PoseStamped, queue_size=10)
+        self.vel_pub = rospy.Publisher(self.vel_topic, Twist, queue_size=10)
+        self.pointcloud_sub = rospy.Subscriber(self.pointcloud_topic, PointCloud2, self.pointcloud_callback)
+        self.octomap_pub = rospy.Publisher(self.octomap_topic, Octomap, queue_size=10)
 
         # Map and planning variables
         self.occupancy_grid = None
@@ -38,6 +47,49 @@ class OctoMapAStar:
         self.grid_origin = None
         self.goal = None
         self.rate = rospy.Rate(self.update_rate)
+        self.tree = OcTree(self.tree_resolution)
+    
+    def pointcloud_callback(self, msg):
+            """
+            Callback function to process the point cloud data and update the OctoMap.
+            subscribes to the point cloud topic, processes the 3D points, and updates the OctoMap (a 3D occupancy grid).
+            """
+            rospy.loginfo("Received point cloud, processing...")
+
+            # Convert ROS PointCloud2 message to numpy array
+            point_cloud = ros_numpy.point_cloud2.pointcloud2_to_array(msg)
+            points = np.zeros((point_cloud.shape[0], 3), dtype=np.float32)
+
+            # Extract x, y, z values from point cloud
+            points[:, 0] = point_cloud['x']
+            points[:, 1] = point_cloud['y']
+            points[:, 2] = point_cloud['z']
+
+            # Filter out invalid points (NaN or Inf)
+            valid_mask = np.isfinite(points).all(axis=1)
+            points = points[valid_mask]
+
+            # Update the OctoMap tree with the valid points
+            for point in points:
+                self.tree.updateNode(tuple(point), True)
+
+            # Update inner occupancy probabilities
+            self.tree.updateInnerOccupancy()
+
+            # Publish the OctoMap
+            self.publish_octomap()
+
+    def publish_octomap(self):
+        """
+        Publish the generated OctoMap as a ROS message.
+        """
+        rospy.loginfo("Publishing OctoMap...")
+        octomap_msg = self.tree.writeBinaryMsg()
+        header = Header()
+        header.stamp = rospy.Time.now()
+        header.frame_id = "map"
+        octomap_msg.header = header
+        self.octomap_pub.publish(octomap_msg)
 
     def octomap_callback(self, msg):
         """
@@ -85,7 +137,7 @@ class OctoMapAStar:
 ### A* start
     def a_star(self, start, goal):
         """
-        A* pathfinding algorithm.
+        A* pathfinding algorithm with height cost.
         """
         open_set = PriorityQueue()
         open_set.put((0, start))
@@ -100,7 +152,8 @@ class OctoMapAStar:
                 return self.reconstruct_path(came_from, current)
 
             for neighbor in self.get_neighbors(current):
-                tentative_g_score = g_score[current] + 1
+                height_cost = self.height_cost(current, neighbor)
+                tentative_g_score = g_score[current] + 1 + height_cost
                 if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g_score
@@ -110,11 +163,21 @@ class OctoMapAStar:
         rospy.logwarn("A* failed to find a path")
         return []
 
+    def height_cost(self, current, neighbor):
+        """
+        Calculate the cost of height difference between two cells.
+        """
+        current_height = self.occupancy_grid[current[0], current[1]]
+        neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
+        return abs(current_height - neighbor_height)
+
     def heuristic(self, node, goal):
         """
-        Heuristic function (Euclidean distance).
+        Heuristic function with height cost.
         """
-        return np.linalg.norm(np.array(node) - np.array(goal))
+        xy_distance = np.linalg.norm(np.array(node) - np.array(goal))
+        height_difference = abs(self.occupancy_grid[node[0], node[1]] - self.occupancy_grid[goal[0], goal[1]])
+        return xy_distance + height_difference
 
     def get_neighbors(self, node):
         """
@@ -152,6 +215,33 @@ class OctoMapAStar:
         self.waypoint_pub.publish(wp)
 ### A* End
 
+    def publish_velocity(self, current_pos, next_pos):
+        """
+        Publish velocity commands to move towards the next waypoint.
+        speed will depend on how far away it is from somethin
+        """
+        velocity_msg = Twist()
+
+        # Calculate the difference in position
+        dx = next_pos[0] - current_pos[0]
+        dy = next_pos[1] - current_pos[1]
+        distance = math.sqrt(dx ** 2 + dy ** 2)
+
+        # Set a simple proportional controller for speed
+        if distance > 0.1:  # If the rover is not at the waypoint
+            # Linear velocity based on distance
+            velocity_msg.linear.x = min(0.5, distance)  # Limit max speed to 0.5 m/s
+
+            # Angular velocity to align with the direction
+            angle = math.atan2(dy, dx)
+            velocity_msg.angular.z = 2 * math.atan2(math.sin(angle), math.cos(angle))  # Basic P-controller for angular velocity
+        else:
+            velocity_msg.linear.x = 0  # Stop when the waypoint is reached
+            velocity_msg.angular.z = 0  # No rotation
+
+        self.vel_pub.publish(velocity_msg)
+
+
     def run(self):
         while not rospy.is_shutdown():
             if self.occupancy_grid is None:
@@ -164,15 +254,18 @@ class OctoMapAStar:
 
             rospy.loginfo("Running A* algorithm...")
             path = self.a_star(start, goal)
-
+            
+            rospy.spin()
             if path:
                 rospy.loginfo(f"Path found: {path}")
+                current_pos = start
                 for waypoint in path:
-                    self.publish_waypoint(waypoint)
-                    rospy.sleep(1 / self.update_rate)  # Publish waypoints at desired frequency
+                    self.publish_velocity(current_pos, waypoint)
+                    current_pos = waypoint
+                    rospy.sleep(1 / self.update_rate)  # Publish velocity at desired frequency
 
             self.rate.sleep()
-
+            
 
 if __name__ == "__main__":
     try:
