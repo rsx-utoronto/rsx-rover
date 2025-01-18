@@ -70,6 +70,7 @@ add_message_files(
   FILES
   ArmInputs.msg
   StateMsg.msg
+  UnityCmd.msg 
 )
 
 # Generate services in the 'srv' folder
