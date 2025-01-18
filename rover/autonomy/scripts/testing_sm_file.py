@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 import rospy
 import smach
@@ -26,6 +26,7 @@ class Bar(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo('Executing state BAR')
+        
         return 'outcome1'
         
 
@@ -38,7 +39,6 @@ class Bas(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Executing state BAS')
         return 'outcome3'
-
 
 
 
