@@ -72,4 +72,4 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         heading_filter.publish_heading()
         rate.sleep()
-        print('published heading:', heading_filter.imu.orientation)
+        # print('published heading:', heading_filter.imu.orientation)

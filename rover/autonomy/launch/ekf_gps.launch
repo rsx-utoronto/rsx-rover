@@ -1,4 +1,8 @@
 <launch>
+    <rosparam param="use_sim_time" value="true" />
+
+    <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_base_to_gps" args="0 0 0 0 0 0 1 base_link gps 100"/>
+    <!-- <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_gps_to_base" args="0 0 0 0 0 0 1 gps base_link 100"/> -->
 
     <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />  
 
@@ -115,6 +119,9 @@
         <!-- for toronto: -10.18513 => -0.177764053 (obtained jan 11, 2025) -->
 
         <param name="yaw_offset" value="0"/>
+        <param name="wait_for_datum" value="true" />
+        <rosparam param="datum">[43.660517, -79.396553, 0.0, map, base_link]</rosparam> 
+        <!-- [lat, lon, heading, world frame, base link] -->
 
         <remap from="/imu/data" to="/fused_heading" />
         <remap from="/gps/fix" to="/calian_gnss/gps" />
