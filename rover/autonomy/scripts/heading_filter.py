@@ -31,7 +31,8 @@ class HeadingFilter:
         # print('received imu heading:', data.orientation)
 
     def publish_heading(self):
-        if self.gnss_fix: # TODO: change to accuracy_2d < threshold or something like that
+        # if self.gnss_fix: 
+        if self.accuracy_2d < 1:
             self.imu.orientation.x = self.orientation.x
             self.imu.orientation.y = self.orientation.y
             self.imu.orientation.z = self.orientation.z
