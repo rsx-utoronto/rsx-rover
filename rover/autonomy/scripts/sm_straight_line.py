@@ -14,6 +14,7 @@ class StraightLineApproach:
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
         self.targets = targets
+        self.found = False
         self.x = 0
         self.y = 0
         self.heading = 0
@@ -53,8 +54,15 @@ class StraightLineApproach:
         cosy_cosp = 1 - 2 * (y * y + z * z)
         angles[2] = math.atan2(siny_cosp, cosy_cosp)
         return angles
+    
+    def detection_callback(self, data):
+        self.found = data
 
-    def move_to_target(self, target_x, target_y):
+
+    def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISHIT)
+        if not state=="Location Selection":
+            rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
+        
         rate = rospy.Rate(50)
         kp = 0.5
         threshold = 0.1
@@ -92,7 +100,7 @@ class StraightLineApproach:
             self.drive_publisher.publish(msg)
             rate.sleep()
 
-    def navigate(self):
+    def navigate(self, state="Location Selection"): #navigate needs to take in a state value as well
         for target_x, target_y in self.targets:
             print(f"Moving towards target: ({target_x}, {target_y})")
             self.move_to_target(target_x, target_y)
