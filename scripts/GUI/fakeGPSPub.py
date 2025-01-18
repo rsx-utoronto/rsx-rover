@@ -2,12 +2,49 @@
 
 import rospy
 from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import Bool, String
+import time
 import random
+import threading
+
+def aruco_found_publisher():
+    # Publisher for the 'aruco_found' topic (Bool)
+    aruco_found_pub = rospy.Publisher('aruco_found', Bool, queue_size=10)
+
+    # Alternate between True and False every 2 seconds
+    while not rospy.is_shutdown():
+        aruco_found_pub.publish(True)
+        rospy.loginfo("Published: Aruco Found = True")
+        time.sleep(2)
+        aruco_found_pub.publish(False)
+        rospy.loginfo("Published: Aruco Found = False")
+        time.sleep(2)
+
+def aruco_name_publisher():
+    # Publisher for the 'aruco_name' topic (String)
+    aruco_name_pub = rospy.Publisher('aruco_name', String, queue_size=10)
+    aruco_names = ["Aruco_1", "Aruco_2", "Aruco_3"]
+
+    # Publish a new ArUco name every second
+    while not rospy.is_shutdown():
+        for name in aruco_names:
+            aruco_name_pub.publish(name)
+            rospy.loginfo(f"Published: Aruco Name = {name}")
+            time.sleep(1)
+
+def led_colour_publisher():
+    # Publisher for the '/led_colour' topic (String)
+    led_colour_pub = rospy.Publisher('/led_colour', String, queue_size=10)
+    led_colors = ["red", "green", "yellow"]
+
+    # Publish a new LED color every 3 seconds
+    while not rospy.is_shutdown():
+        for color in led_colors:
+            led_colour_pub.publish(color)
+            rospy.loginfo(f"Published: LED Colour = {color}")
+            time.sleep(3)
 
 def publish_gps_coordinates():
-    # Initialize the ROS node
-    rospy.init_node('gps_publisher', anonymous=True)
-    
     # Create a publisher for the /calian_gnss/gps topic
     gps_pub = rospy.Publisher('/calian_gnss/gps', NavSatFix, queue_size=10)
     
@@ -43,7 +80,13 @@ def publish_gps_coordinates():
         rate.sleep()
 
 if __name__ == '__main__':
-    try:
-        publish_gps_coordinates()
-    except rospy.ROSInterruptException:
-        pass
+    # Initialize the ROS node only once in the main thread
+    rospy.init_node('test_publishers')
+
+    # Run each publisher in a separate thread
+    threading.Thread(target=aruco_found_publisher, daemon=True).start()
+    threading.Thread(target=aruco_name_publisher, daemon=True).start()
+    threading.Thread(target=led_colour_publisher, daemon=True).start()
+    threading.Thread(target=publish_gps_coordinates, daemon=True).start()
+
+    rospy.spin()
