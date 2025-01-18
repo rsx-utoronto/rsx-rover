@@ -19,6 +19,7 @@ from sm_straight_line import StraightLineApproach
 import sm_straight_line
 import gps_conversion_functions as functions
 import gps_to_pose as gps_to_pose
+from std_msgs.msg import String
 
 #Example locations
 #locations = {
@@ -32,15 +33,6 @@ import gps_to_pose as gps_to_pose
 #    "OBJ2": (41.8902, 12.4922),     # Colosseum
 #}
 
-
-#Changes regarding the logic of the code or additions due to integration:
-#   grid search should be running for these, should stop when it doesn't detect anything after completeing the circle
-#   ar_detection_node : Looks for AR tags, if it doesn't detect it will run, if it does detect it will print 
-#   the detected aruco tag bunch of times, the moment that it detects something it should call aruco_homing
-#   thomas_grid_search will return a bool value (both files are running at the same time)
-#   For rover_cruise call the straight_line_approach_kp 
-#   object_subscriber_node in scripts (can clone in autonomy) --> for detecting the objects, want to suscribe to their publisher, aruco homing goes towards the box
-#   object subscriber node --> object/bbox
 
 # ROVER USES STRAIGHT LINE TRAVERSAL TO GET TO ARUCO POINT
 # once it is AT the location for AR1/2, the two files need to run IMMEDIATELY and SIMULTANEOUSLY: 
@@ -70,14 +62,8 @@ def grid_search_aruco(): #should return a True or False,  #needs to display tag!
     """
     Function for grid search
     """
-    # thomas grid (sm grid search now) needs to be switched out to a new program using straight line traversal kp
-    # to do grid search (ie. pass in cartesian oordinates that would make up the grid) since
-    # thomas grid uses... timing :')
     tg = thomasgrid.move()
     
-    # run the grid search w ar_detection_node 
-    
-    # if ar_detection_node function "is_found" returns true at any point 
     return (True, (0,0))
     
 
@@ -106,56 +92,6 @@ def display_tag():
     import serial
     import time
 
-'''
-def get_curr_loc(port='/dev/ttyUSB0', baudrate=9600, timeout=1) -> tuple[float, float]:
-
-    try:
-        # Open the Serial Port
-        with serial.Serial(port, baudrate=baudrate, timeout=timoemout) as gps_serial:
-            while True:
-                # Read a line of data from the GPS Module
-                gps_data = gps.serial.readline().decode('utf-8', errors='ignore').strip()
-
-                # Check for NMEA sentence that includes latitude and longitude
-                if gps_data.startswith("$GPGGA"):
-                    parts = gps_data.split(',')
-
-                    if len(parts) > 5:
-                        # Take out latitude and longitude 
-                        raw_lat = float(parts[2])
-                        lat_direction = parts[3]
-                        raw_lon = float(parts[4])
-                        lon_direction = parts[5]
-
-                         # Convert raw latitude and longitude to degrees
-                        latitude = int(raw_lat / 100) + (raw_lat % 100) / 60.0
-                        longitude = int(raw_lon / 100) + (raw_lon % 100) / 60.0
-
-                         # Adjust for N/S and E/W directions
-                        if lat_direction == 'S':
-                            latitude = -latitude
-                        if lon_direction == 'W':
-                            longitude = -longitude
-                            return latitude, longitude
-                            
-    except serial.SerialException as e:
-        print(f"Error: Could not read from serial port {port}. {e}")
-        return None, None
-
-        # Continuously print the rover's current location
-if __name__ == "__main__":
-    while True:
-        lat, lon = get_curr_loc()
-        if lat is not None and lon is not None:
-            print(f"Current Location: Latitude = {lat}, Longitude = {lon}")
-        else:
-            print("No GPS data available.")
-        time.sleep(2)
-
-    """
-    """
-    #Body omitted- possibly an instance of a class
-'''
 
 def signal_green_led(): #happens for a few seconds and returns to red 
     """
@@ -180,7 +116,9 @@ class InitializeAutonomousNavigation(smach.State):
                              output_keys = ["cartesian"])
     
     def initialize(self):
-    #Should be implemented with the gui so that the locations written would be here (write a subscribing function from the gui)
+        status_pub = rospy.Publisher('/status', String, queue_size = 10) #make this globval
+
+        #Should be implemented with the gui so that the locations written would be here (write a subscribing function from the gui)
         location_data = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray) 
         locations = {}
         location_name_list = ["start", "GNSS1", "GNSS2", "AR1", "AR2", "AR3", "OBJ1", "OBJ2"]
@@ -190,7 +128,7 @@ class InitializeAutonomousNavigation(smach.State):
                 locations[location_name_list[i]] = data
                 i +=1
 
-        print ("Changing GPS coordinates to cartesian")
+        status_pub.publish("Changing GPS coordinates to cartesian") #at any print statement you can do this
         # locations [] -> carte_locations []
         cartesian = {}
 
@@ -204,6 +142,7 @@ class InitializeAutonomousNavigation(smach.State):
             cartesian.update(el, (x,y))
     
     def execute(self, userdata):
+        #Make an instance of the gps_to_pose class
         print("Initializing Autonomous Navigation")
         self.initialize()
         return "Tasks Execute"
@@ -242,6 +181,9 @@ class GNSS1(smach.State):
         # Verify through testing if it is correct 
 
         # THIS IS WHAT WE NEED FOR GNSS1, GNSS2 ^^
+
+        #For accessing the current location you can create a subscriber, look at the documentation online, get the x,y values, and 
+        #convert them into euclidian distance
 
         #if get_curr_loc() == userdata.aimed_location:
         print("Successful cruise")
@@ -442,7 +384,6 @@ def main():
         smach.StateMachine.add("Task Ended", TasksEnded())
 
     outcome = sm.execute()
-
 
 
 #We don't need to wait on the GUI we can tell it to initialize
