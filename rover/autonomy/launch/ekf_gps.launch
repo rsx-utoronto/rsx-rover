@@ -1,8 +1,7 @@
 <launch>
     <rosparam param="use_sim_time" value="true" />
 
-    <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_base_to_gps" args="0 0 0 0 0 0 1 base_link gps 100"/>
-    <!-- <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_gps_to_base" args="0 0 0 0 0 0 1 gps base_link 100"/> -->
+    <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_base_to_gps" args="0.2 0.355 0 0 0 0 1 base_link gps 100"/>
 
     <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />  
 
