@@ -10,7 +10,6 @@ Cost depends on height. follow threshold.
 1 for density 
 """
 
-
 import rospy
 import numpy as np
 from octomap_msgs.msg import Octomap
@@ -45,33 +44,45 @@ class OctoMapAStar:
         Convert OctoMap to a 2D occupancy grid.
         """
         # Parse OctoMap data and project into 2D grid
-        octomap_data = self.process_octomap(msg)
+        octomap_data = self.process_octomap(msg) # extract 3d data from octomap and converts into 2d grid 
         if octomap_data is not None:
-            self.occupancy_grid = octomap_data
+            self.occupancy_grid = octomap_data 
             rospy.loginfo("2D occupancy grid generated from OctoMap.")
-
+    
     def process_octomap(self, octomap_msg):
         """
-        Process OctoMap into a 2D occupancy grid.
+        Process OctoMap into a 2D occupancy grid based on actual height values.
         """
-        # Placeholder: Decode OctoMap binary data (custom implementation needed).
-        # You can use `pyoctomap` library for detailed processing.
-        # For this example, generate a dummy grid:
-        grid_size = (100, 100)  # Example grid size (meters)
-        occupancy_grid = np.zeros(grid_size, dtype=np.int8)
+        # Example grid size and resolution (adjust as needed)
+        grid_size = (100, 100)  # Number of cells in x and y
+        resolution = 0.1        # Grid resolution in meters (each cell represents 10cm)
 
-        # Populate grid based on height thresholds
-        # (Replace this with actual OctoMap data processing.)
-        for x in range(grid_size[0]):
-            for y in range(grid_size[1]):
-                # Example: Randomly mark some cells as occupied
-                if np.random.rand() > 0.8:
-                    occupancy_grid[x, y] = 1
+        # initialize an empty grid -> values are all 0 at first
+        occupancy_grid = np.zeros(grid_size, dtype=np.int8) 
 
+        # Parse the OctoMap message to extract 3D occupancy data
+        # (You may need to use a library like `pyoctomap` to parse the data)
+        occupied_points = self.decode_octomap(octomap_msg)  # Returns a list of (x, y, z) points
+
+        # Iterate through the occupied points
+        for point in occupied_points:
+            x, y, z = point
+
+            # Convert the 3D point's x, y coordinates into grid cell indices
+            grid_x = int(x / resolution)
+            grid_y = int(y / resolution)
+
+            # Ensure the indices are within the grid bounds
+            if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
+                # Check if height (z) is in the occupied range
+                if 200 <= z <= 1500: # threshold for occupied or not 0.2-1.5m 
+                    # Assign a cost based on height
+                    # Normalize z from 0.2 to 1.5 into a range [1, 100]
+                    normalized_cost = (z - 0.2) / (1.5 - 0.2) * 100
+                    occupancy_grid[grid_x, grid_y] = normalized_cost 
         return occupancy_grid
     
-
-
+### A* start
     def a_star(self, start, goal):
         """
         A* pathfinding algorithm.
@@ -139,6 +150,7 @@ class OctoMapAStar:
         wp.pose.position.x, wp.pose.position.y = waypoint
         wp.pose.orientation.w = 1.0
         self.waypoint_pub.publish(wp)
+### A* End
 
     def run(self):
         while not rospy.is_shutdown():
