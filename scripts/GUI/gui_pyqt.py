@@ -9,17 +9,17 @@ from pathlib import Path
 
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, \
     QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, \
-    QCheckBox,QSplitter,QSizePolicy,QStylePainter, QStyleOptionComboBox, QStyle, \
-    QToolButton, QMenu, QLineEdit, QFormLayout, QPushButton
+    QCheckBox,QSplitter,QStylePainter, QStyleOptionComboBox, QStyle, \
+    QToolButton, QMenu, QLineEdit, QFormLayout, QPushButton, QTextEdit
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix  
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, String, Bool
 from cv_bridge import CvBridge
 import cv2
-from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel
+from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
 
 #cache folder of map tiles generated from tile_scraper.py
 CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
@@ -61,6 +61,160 @@ class Direction:
     def __init__(self):
         self.LinX =0
         self.AngleZ = 0
+
+class ArucoWidget(QWidget):
+    # Define signals to communicate with the main thread
+    update_label_signal = pyqtSignal(bool)
+    update_list_signal = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+        # Connect signals to the corresponding update methods
+        self.update_label_signal.connect(self.update_label)
+        self.update_list_signal.connect(self.update_string_list)
+
+        # Initialize ROS subscribers
+        rospy.Subscriber('aruco_found', Bool, self.bool_callback)
+        rospy.Subscriber('aruco_name', String, self.string_callback)
+
+        self.received_strings = []
+
+    def init_ui(self):
+        # Create a label
+        self.label = QLabel("Aruco not found", self)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black;  
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label.setFont(QFont("Arial", 16, QFont.Bold))
+
+        # Create a scrollable box for received strings
+        self.string_list = QTextEdit(self)
+        self.string_list.setReadOnly(True)
+        self.string_list.setStyleSheet("""
+            background-color: #FFFFFF; 
+            color: black; 
+            border: 2px solid black;  
+            padding: 5px; 
+        """)
+
+        # Layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.label)
+        layout.addWidget(self.string_list)
+        self.setLayout(layout)
+
+    def bool_callback(self, msg):
+        # Emit signal to update the label in the main thread
+        self.update_label_signal.emit(msg.data)
+
+    def string_callback(self, msg):
+        # Emit signal to update the list in the main thread
+        self.update_list_signal.emit(msg.data.strip())
+
+    def update_label(self, found):
+        # Update the label in the main thread
+        if found:
+            self.label.setText("Aruco Found")
+            self.label.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label.setText("Aruco not found")
+            self.label.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
+
+    def update_string_list(self, new_string):
+        # Append the string to the list in the main thread
+        self.received_strings.append(new_string)
+        self.string_list.setPlainText("\n".join(self.received_strings))
+        self.string_list.moveCursor(QTextCursor.End)
+
+
+class StateMachineStatus(QWidget):
+    # Define signal to update the label
+    update_label_signal = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+        # Connect the signal to the update method
+        self.update_label_signal.connect(self.update_label)
+
+        # Initialize ROS subscriber
+        rospy.Subscriber('/led_colour', String, self.callback)
+
+    def init_ui(self):
+        # Create a label
+        self.label = QLabel("Uninitialized LED", self)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black; 
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label.setFont(QFont("Arial", 16, QFont.Bold))
+
+        # Layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.label)
+        self.setLayout(layout)
+
+    def callback(self, msg):
+        # Emit signal to update the label in the main thread
+        self.update_label_signal.emit(msg.data)
+
+    def update_label(self, color):
+        # Update the label based on the color in the main thread
+        if color == "red":
+            self.label.setText("Red status message")
+            self.label.setStyleSheet("""
+                background-color: red;  
+                color: black;           
+                border: 2px solid black;
+                border-radius: 10px;
+                padding: 10px;
+            """)
+        elif color == "green":
+            self.label.setText("Green status message")
+            self.label.setStyleSheet("""
+                background-color: green;  
+                color: black;            
+                border: 2px solid black;
+                border-radius: 10px;
+                padding: 10px;
+            """)
+        elif color == "yellow":
+            self.label.setText("Yellow status message")
+            self.label.setStyleSheet("""
+                background-color: yellow;  
+                color: black;              
+                border: 2px solid black;
+                border-radius: 10px;
+                padding: 10px;
+            """)
+
+        
+
+
 
 #type bars widget for latitude longitude entry
 class LngLatEntryBar(QWidget):
@@ -373,8 +527,13 @@ class RoverGUI(QMainWindow):
             print("split tab") # Show map viewer in split screen tab
     def setup_lngLat_tab(self):
         self.lngLatEntry = LngLatEntryBar()
+        self.stateMachineDialog = StateMachineStatus()
+        self.arucoBox= ArucoWidget()
         Lnglat_tab_layout = QVBoxLayout()
         Lnglat_tab_layout.addWidget(self.lngLatEntry)
+        Lnglat_tab_layout.addWidget(self.stateMachineDialog)
+        Lnglat_tab_layout.addWidget(self.arucoBox)
+
         self.longlat_tab.setLayout(Lnglat_tab_layout)
     #used to initialize main tab with splitters
     def setup_split_screen_tab(self):
