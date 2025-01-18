@@ -89,6 +89,8 @@ This is like notes of most of my decision making while coding this file, it's no
     - Only calculate the height cost once per robot footprint, the max height the robot has to go through instead of the max height of every colliding point in the footprint
         - This could reduce the weight of height cost though which might cause the robot to choose trajectories that go through wall just to get a lower distance cost
 
+- No height cost being calculated once the rover is stuck in an obstacle, why??????
+
 
 ## Future Goals
 
@@ -103,3 +105,6 @@ This is like notes of most of my decision making while coding this file, it's no
 - The rover doesn't move at velocities lower than 0.1 so fix that in code so dwa doesn't tell rover to move at that velocity
 
 - A problem I don't know how to solve: When distance is huge, it is automatically weighted more. For instance distance cost can be 300 but the other costs are always small (heading cost and height cost can't be as big). So any change in heading cost/height cost doesn't affect as much as the distance cost. However the distance cost can also be as small as 2 so I can't just weight it less because in that case, it is still important. So I am not sure how do I normalize these costs so they are in the same space and I can apply weights without thinking about some cost value blowing up or being too low in the same navigation.
+
+- Currently the rover goes to the goal and stops but doesn't care about it's orientation when it stops.
+    - In future, if required, also take in goal_yaw and have a cost that reduces the yaw upon reaching the goal
