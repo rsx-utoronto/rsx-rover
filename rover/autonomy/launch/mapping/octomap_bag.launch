@@ -36,5 +36,7 @@
     <param name="/use_sim_time" value="true" />
 
     <node name="playbag" pkg="rosbag" type="play"
-        args="--clock $(arg bag_filename)" />
+        args="--clock $(arg bag_filename)" /> 
 </launch>
+
+<!-- roslaunch rover octomap_bag.launch bag_filename:=/home/username/ -->

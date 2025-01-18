@@ -8,6 +8,11 @@ The cost depends on height, density -> we go to lowest cost.
 Cost depends on height. follow threshold.
 1 for height
 1 for density 
+
+
+visualize A* path using markers in ros 
+in rviz-> display marker -> show path generated (waypoints) 
+
 """
 
 import rospy
