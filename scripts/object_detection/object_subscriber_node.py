@@ -9,7 +9,8 @@ from cv_bridge import CvBridge, CvBridgeError
 from std_msgs.msg import Float64MultiArray, Bool
 import numpy as np
 
-bridge = CvBridge()
+
+# bridge = CvBridge()
 
 class ObjectDetectionNode():
 
@@ -22,6 +23,7 @@ class ObjectDetectionNode():
         self.waterbottle_pub = rospy.Publisher('waterbottle_detected', Bool, queue_size=1)
         self.bbox_pub = rospy.Publisher('object/bbox', Float64MultiArray, queue_size=10)
         self.vis_pub = rospy.Publisher('vis/object_detections', Image, queue_size=10)
+        self.bridge = CvBridge()
 
         self.K = None
         self.D = None
@@ -37,7 +39,7 @@ class ObjectDetectionNode():
 
     def image_callback(self, ros_image):
         try:
-            cv_image = bridge.imgmsg_to_cv2(ros_image, "bgr8")
+            cv_image = self.bridge.imgmsg_to_cv2(ros_image, "bgr8")
         except CvBridgeError as e:
             rospy.logerr(f"Failed to convert ROS image to CV2: {e}")
             return
@@ -81,7 +83,7 @@ class ObjectDetectionNode():
         self.waterbottle_pub.publish(Bool(data=waterbottle_found))
 
         # Publish visualized image
-        img_msg = bridge.cv2_to_imgmsg(img, encoding="bgr8")
+        img_msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
         self.vis_pub.publish(img_msg)
 
 

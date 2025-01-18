@@ -5,6 +5,9 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray
 import math
+import ar_detection_node
+import object_subscriber_node
+
 
 class StraightLineApproach:
     def __init__(self, lin_vel, ang_vel, targets):
@@ -18,6 +21,10 @@ class StraightLineApproach:
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
         self.drive_publisher = rospy.Publisher('drive', Twist, queue_size=10)
 
+        #new additions
+        self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        
     def odom_callback(self, msg):
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y

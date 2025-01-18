@@ -4,6 +4,8 @@ Code for the state machine
 
 """
 import rospy
+from rover.autonomy.scripts import aruco_homing
+from scripts.object_detection import object_subscriber_node
 import smach
 import smach_ros
 import time
@@ -19,7 +21,11 @@ from sm_straight_line import StraightLineApproach
 import sm_straight_line
 import gps_conversion_functions as functions
 import gps_to_pose as gps_to_pose
+import sm_grid_search
+import ar_detection_node
 from std_msgs.msg import String
+from geometry_msgs.msg import PoseStamped
+
 
 #Example locations
 #locations = {
@@ -53,52 +59,27 @@ from std_msgs.msg import String
 # You use homing to get close enough to the object to count for points (ie. 1 m)
 # FOR HOMING SPECIFICALLY - need Aimer, and AimerROS () - BBOX (subscribe to different box)
 
+#An element that stores the previous location visited
+
 #lin_vel = 0.6, ang_vel = 0.3
+
+#In order to initialize subscriber you need a callback function which automatically takes in the data and manipulates it
+#When it subscribes to it, it will iterate the process 
 
 def shortest_path(start: str, locations: dict) -> list:
     return OPmain(start, locations)
-
-def grid_search_aruco(): #should return a True or False,  #needs to display tag!
-    """
-    Function for grid search
-    """
-    tg = thomasgrid.move()
-    
-    return (True, (0,0))
-    
 
 def signal_red_led():
     """
     Function for signalling red led
     """
     #Body ommited for now- Possibly a class
-
-def rover_cruise(location):
-    cartesianLocation = locations[location]
-    StraightLineApproach(targets = cartesianLocation)
-
-def grid_search_object():
-    '''
-    has to be completed
-    '''
-    return (True, (0,0))
     
-def display_tag():
-    """
-    Function for displaying tag on GUI
-    """
-    #Body omitted for now- Possibly a class
-
-    import serial
-    import time
-
-
 def signal_green_led(): #happens for a few seconds and returns to red 
     """
     Function for signalling green led
     """
     #Body ommited for now- Possibly a class
-
 
     
 #*******************************************************
@@ -128,11 +109,13 @@ class InitializeAutonomousNavigation(smach.State):
                 locations[location_name_list[i]] = data
                 i +=1
 
+        cartesian_path = shortest_path('start', locations) #code for generating the optimal path
+
         status_pub.publish("Changing GPS coordinates to cartesian") #at any print statement you can do this
         # locations [] -> carte_locations []
         cartesian = {}
 
-        for el in locations: 
+        for el in cartesian_path: 
             distance = functions.getDistanceBetweenGPSCoordinates((locations["start"][0], locations["start"][1]), (el[0], el[1]))
             theta = functions.getHeadingBetweenGPSCoordinates(locations["start"][0], locations["start"][1], el[0], el[1])
             # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
@@ -142,7 +125,6 @@ class InitializeAutonomousNavigation(smach.State):
             cartesian.update(el, (x,y))
     
     def execute(self, userdata):
-        #Make an instance of the gps_to_pose class
         print("Initializing Autonomous Navigation")
         self.initialize()
         return "Tasks Execute"
@@ -151,20 +133,17 @@ class InitializeAutonomousNavigation(smach.State):
 class LocationSelection(smach.State): #goes through all states 
     def __init__(self):
         smach.State.__init__(self, outcomes = ["GNSS1", "GNSS2", "AR1", "AR2", "AR3", "OBJ1", "OBJ2", "Tasks Ended"],
-                             input_keys = ["rem_loc", "cartesian"], #remloc is remaining locations array
-                             output_keys = ["aimed_location"])
+                             input_keys = ["rem_loc", "locations_list_c"])
   
     def execute(self, userdata):
         print("Performing Location Search")
         path = userdata.rem_loc
         if path != []:
             try:
-                sla = StraightLineApproach(1, 0.5, cartesian[path[0]]) 
+                sla = StraightLineApproach(0.6, 0.3, self.cartesian[path[0]]) 
             except rospy.ROSInterruptException:
                 pass
             sla.navigate()
-            # rover_cruise(path[0])
-            # userdata.aimed_location = path[0]
             return path[0]
         else:
             return "Tasks Ended"  
@@ -172,7 +151,7 @@ class LocationSelection(smach.State): #goes through all states
 class GNSS1(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["aimed_location", "rem_loc"])
+                            input_keys = ["rem_loc"])
         
     def execute(self, userdata):
         print("Performing GNS 1")
@@ -184,10 +163,15 @@ class GNSS1(smach.State):
 
         #For accessing the current location you can create a subscriber, look at the documentation online, get the x,y values, and 
         #convert them into euclidian distance
+        
+        current_location_data = rospy.Subscriber('pose', PoseStamped, queue_size = 1) #rospy.Publisher('pose', PoseStamped, queue_size=1)
+        #should it loop over a couple of times in case of wrong measurements?
+        current_distance = ((current_location_data.pose.position.x - userdata.rem_loc[0][0])**2 + 
+                            (current_location_data.pose.position.y - userdata.rem_loc[0][1])**2)**(1/2)
 
-        #if get_curr_loc() == userdata.aimed_location:
-        print("Successful cruise")
-        signal_green_led() # Should also be passed to the GUI 
+        if current_distance < 2:
+            print("Successful cruise")
+            signal_green_led() # Should also be passed to the GUI 
         #else:
             #print("Done cruise")
             #provide new point?
@@ -199,51 +183,150 @@ class GNSS1(smach.State):
 class GNSS2(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["aimed_location", "rem_loc"])
-        curr_location = ()
+                            input_keys = ["rem_loc"])
         
     def execute(self, userdata):
         print("Performing GNS 2")
-        #if get_curr_loc() == userdata.aimed_location:
-        print("Successful cruise")
-        signal_green_led()
+        
+        #instantiate the publisher under the main function
+        current_location_data = rospy.Subscriber('pose', PoseStamped, queue_size = 1) #rospy.Publisher('pose', PoseStamped, queue_size=1)
+        current_location_data.pose.position.x
+        current_location_data.pose.position.y
+
+        #should it loop over a couple of times in case of wrong measurements?
+        current_distance = ((current_location_data.pose.position.x - userdata.rem_loc[0][0])**2 + 
+                            (current_location_data.pose.position.y - userdata.rem_loc[0][1])**2)**(1/2)
+
+        if current_distance < 2:
+            print("Successful cruise")
+            signal_green_led()
         #else:
         #print("Failed cruise")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
            
+#Should we also verify the current location for other missions?
 class AR1(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["aimed_location", "rem_loc"])
-        #curr_loc = get_curr_loc()
+                            input_keys = ["rem_loc"])
         
     def execute(self, userdata):
         print("Performing ArucoTag1 Search")
 
-        state,loc=grid_search_aruco() 
-        if state == True:
-            print("Successful grid search")
-            rover_cruise(loc) #The aruco tag code is already going to cruise when it detects
-            signal_green_led()
+        current_location_data = rospy.Subscriber('pose', PoseStamped, queue_size = 1) #rospy.Publisher('pose', PoseStamped, queue_size=1)
+        #should it loop over a couple of times in case of wrong measurements?
+        current_distance = ((current_location_data.pose.position.x - userdata.rem_loc[0][0])**2 + 
+                            (current_location_data.pose.position.y - userdata.rem_loc[0][1])**2)**(1/2)
+
+        if current_distance < 2:
+            print("Successful cruise")
+       
+            rospy.init_node('aruco_tag1_detector', anonymous=True)
+            ar_detector = ar_detection_node.ARucoTagDetectionNode()
+            gs = sm_grid_search
+            gs_points = gs.GridSearch(10, 10, 1, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian
+            targets = gs.square_target()
+            aruco_found = rospy.Subscriber("aruco_found", Bool, queue_size=1)
+            if not aruco_found:
+                for target in targets: #confirm that its true
+                    try:
+                        sla = StraightLineApproach(0.6, 0.3, target)
+                        sla.navigate() #should change the code so that while doing grid search the code should break after the ar node is detected
+                        if aruco_found: 
+                            print("Successful grid search")
+                            break
+                    except rospy.ROSInterruptException:
+                        pass
+            if aruco_found:
+                    #stop grid search
+                    rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
+                    pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
+                    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 0.5, 0.5) # change constants
+                    rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+                    rate = rospy.Rate(10) #this code needs to be adjusted
+                    while not rospy.is_shutdown():
+                        twist = Twist()
+                        if aimer.linear_v == 0 and aimer.angular_v == 0:
+                            print ("at weird", aimer.linear_v, aimer.angular_v)
+                            twist.linear.x = 0
+                            twist.angular.z = 0
+                            pub.publish(twist)
+                            return True
+                        if aimer.angular_v == 1:
+                            twist.angular.z = aimer.max_angular_v
+                            twist.linear.x = 0
+                        elif aimer.angular_v == -1:
+                            twist.angular.z = -aimer.max_angular_v
+                            twist.linear.x = 0
+                        elif aimer.linear_v == 1:
+                            twist.linear.x = aimer.max_linear_v
+                            twist.angular.z = 0
+                        
+                        pub.publish(twist)
+                        rate.sleep()
+                    
+                    signal_green_led()
+            else:
+                print("Failed grid search")
         else:
-            print("Failed grid search")
+            print("Failed to reach the location")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
 
 class AR2(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["aimed_location", "rem_loc"])
-        #curr_location = get_curr_loc()
+                            input_keys = ["rem_loc"])
         
     def execute(self, userdata):
         print("Performing ArucoTag2 Search")
-        state,loc = grid_search_aruco()
-        if state == True:
-            print("Successful grid search")
-            rover_cruise(loc)
-            signal_green_led()
+
+        rospy.init_node('aruco_tag2_detector', anonymous=True)
+        ar_detector = ar_detection_node.ARucoTagDetectionNode()
+        gs = sm_grid_search
+        gs_points = gs.GridSearch(10, 10, 1, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian
+        targets = gs.square_target()
+        aruco_found = rospy.Subscriber("aruco_found", Bool, queue_size=1)
+        if not aruco_found:
+            for target in targets: #confirm that its true
+                try:
+                    sla = StraightLineApproach(0.6, 0.3, target)
+                    sla.navigate() #should change the code so that while doing grid search the code should break after the ar node is detected
+                    if aruco_found: 
+                        print("Successful grid search")
+                        break
+                except rospy.ROSInterruptException:
+                    pass
+        if aruco_found:
+                #stop grid search
+                rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
+                pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
+                aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 0.5, 0.5) # change constants
+                rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+                rate = rospy.Rate(10) #this code needs to be adjusted
+                while not rospy.is_shutdown():
+                    twist = Twist()
+                    if aimer.linear_v == 0 and aimer.angular_v == 0:
+                        print ("at weird", aimer.linear_v, aimer.angular_v)
+                        twist.linear.x = 0
+                        twist.angular.z = 0
+                        pub.publish(twist)
+                        return True
+                    if aimer.angular_v == 1:
+                        twist.angular.z = aimer.max_angular_v
+                        twist.linear.x = 0
+                    elif aimer.angular_v == -1:
+                        twist.angular.z = -aimer.max_angular_v
+                        twist.linear.x = 0
+                    elif aimer.linear_v == 1:
+                        twist.linear.x = aimer.max_linear_v
+                        twist.angular.z = 0
+                    
+                    pub.publish(twist)
+                    rate.sleep()
+
+                signal_green_led()
         else:
             print("Failed grid search")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
@@ -252,54 +335,135 @@ class AR2(smach.State):
 class AR3(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["aimed_location", "rem_loc"])
-        #curr_location = get_curr_loc()
+                            input_keys = ["rem_loc"])
         
     def execute(self, userdata):
         print("Performing ArucoTag3 Search")
-        state,loc=grid_search_aruco()
-        if state == True:
-            print("Successful grid search")
-            rover_cruise(loc)
-            signal_green_led()
+
+        rospy.init_node('aruco_tag3_detector', anonymous=True)
+        ar_detector = ar_detection_node.ARucoTagDetectionNode()
+        gs = sm_grid_search
+        gs_points = gs.GridSearch(10, 10, 1, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian
+        targets = gs.square_target()
+        aruco_found = rospy.Subscriber("aruco_found", Bool, queue_size=1)
+        if not aruco_found:
+            for target in targets: #confirm that its true
+                try:
+                    sla = StraightLineApproach(0.6, 0.3, target)
+                    sla.navigate() #should change the code so that while doing grid search the code should break after the ar node is detected
+                    if aruco_found: 
+                        print("Successful grid search")
+                        break
+                except rospy.ROSInterruptException:
+                    pass
+        if aruco_found:
+                #stop grid search
+                rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
+                pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
+                aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 0.5, 0.5) # change constants
+                rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+                rate = rospy.Rate(10) #this code needs to be adjusted
+                while not rospy.is_shutdown():
+                    twist = Twist()
+                    if aimer.linear_v == 0 and aimer.angular_v == 0:
+                        print ("at weird", aimer.linear_v, aimer.angular_v)
+                        twist.linear.x = 0
+                        twist.angular.z = 0
+                        pub.publish(twist)
+                        return True
+                    if aimer.angular_v == 1:
+                        twist.angular.z = aimer.max_angular_v
+                        twist.linear.x = 0
+                    elif aimer.angular_v == -1:
+                        twist.angular.z = -aimer.max_angular_v
+                        twist.linear.x = 0
+                    elif aimer.linear_v == 1:
+                        twist.linear.x = aimer.max_linear_v
+                        twist.angular.z = 0
+                    
+                    pub.publish(twist)
+                    rate.sleep()
+                
+                signal_green_led()
         else:
             print("Failed grid search")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
 
-class OBJ1(smach.State):
+#Should we also verify the current location for other missions?
+#
+class OBJ1(smach.State): #mallet
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["aimed_location", "rem_loc"])
-        #curr_location = get_curr_loc()
+                            input_keys = ["rem_loc"])
     
     def execute(self, userdata):
         print("Performing ObjectNav 1")
-        state,loc = grid_search_object()
-        if state == True:
-            print("Successful grid search")
-            signal_green_led()
+        rospy.init_node('mallet_detector', anonymous=True) 
+        object_detector = object_subscriber_node.ObjectDetectionNode()
+        gs = sm_grid_search
+        gs_points = gs.GridSearch(5, 5, 3, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian
+        targets = gs.square_target()
+        mallet_detected = rospy.Subscriber("mallet_detected", Bool, queue_size = 1)
+
+        if not mallet_detected:
+            for target in targets: #confirm that its true
+                try:
+                    sla = StraightLineApproach(0.6, 0.3, target)
+                    sla.navigate() #should change the code so that while doing grid search the code should break after the ar node is detected
+                    if mallet_detected:
+                        print("Successful grid search") 
+                        break
+                except rospy.ROSInterruptException:
+                    pass
+        if mallet_detected:
+                #stop grid search
+                rospy.init_node('malet_homing', anonymous=True) # change node name if needed
+                pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
+                aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 0.5, 0.5) # change constants, numbers will be changed later
+                rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+                signal_green_led()
         else:
             print("Failed grid search")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
     
-class OBJ2(smach.State):
+class OBJ2(smach.State): #waterbottle
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["aimed_location", "rem_loc"])
-        #get_curr_location = ()
+                            input_keys = ["rem_loc"])
     
     def execute(self, userdata):
         print("Performing ObjectNav 2")
-        state,loc=grid_search_object()
-        if state == True:
-            print("Successful grid search")
-            signal_green_led()
+        rospy.init_node('waterbottle_detector', anonymous=True) 
+        object_detector = object_subscriber_node.ObjectDetectionNode()
+        gs = sm_grid_search
+        gs_points = gs.GridSearch(5, 5, 3, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian
+        targets = gs.square_target()
+        waterbottle_detected = rospy.Subscriber("waterbottle_detected", Bool, queue_size = 1)
+
+        if not waterbottle_detected:
+            for target in targets: #confirm that its true
+                try:
+                    sla = StraightLineApproach(0.6, 0.3, target)
+                    sla.navigate() #should change the code so that while doing grid search the code should break after the ar node is detected
+                    if waterbottle_detected: 
+                        print("Successful grid search")
+                        break
+                except rospy.ROSInterruptException:
+                    pass
+        if waterbottle_detected:
+                #stop grid search
+                rospy.init_node('malet_homing', anonymous=True) # change node name if needed
+                pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
+                aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 0.5, 0.5) # change constants, numbers will be changed later
+                rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+                print()
+                signal_green_led()
         else:
             print("Failed grid search")
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
-        return "Location Selection" 
+        return "Location Selection"
 
 class TasksEnded(smach.State):
     def __init__(self):
@@ -312,22 +476,24 @@ class TasksEnded(smach.State):
 def main():
 
     rospy.init_node('RSX_Rover')
+    gui_status = rospy.Publisher('gui_status', String, queue_size=10)
+    
     sm = smach.StateMachine(outcomes = ["Tasks Ended"])
-    sm.cartesian = {}
+    sm.userdata.cartesian = {}
     
     with sm:
         smach.StateMachine.add("Initialize Autonomous Navigation", InitializeAutonomousNavigation(),
                                transitions = {"Tasks Execute": "Tasks Execute"},
                                remapping = {"cartesian": "cartesian"})
-        
         #Create a global variable that passes the cartesian list to location selection
-        temp_locations_list = shortest_path('start', locations)
-        temp_locations_list.remove('start')
-        #Pass the path to the GUI
+        #temp_locations_list = shortest_path('start', sm.cartesian)  #shortest path needs GPS coordinates 
+        
+        #sm.userdata.cartesian.remove('start')
+        #Pass the path to the GUI --> can be done in initialize
         sm_tasks_execute = smach.StateMachine(outcomes = ["Tasks Ended"])
-        sm_tasks_execute.userdata.locations_list = temp_locations_list
-        sm_tasks_execute.userdata.rem_loc = temp_locations_list.copy()
-        sm_tasks_execute.userdata.aimed_location = ''
+        sm_tasks_execute.userdata.locations_list_c = sm.userdata.cartesian.copy().remove("start")
+        sm_tasks_execute.userdata.rem_loc = sm_tasks_execute.userdata.locations_list_c.copy()
+        #sm_tasks_execute.userdata.aimed_location = ''
 
 
         with sm_tasks_execute:
@@ -340,43 +506,36 @@ def main():
                                         "AR3": "AR3",
                                         "OBJ1": "OBJ1",
                                         "OBJ2": "OBJ2"},
-                        remapping = {"rem_loc": "locations_list",
-                                     "aimed_location": "aimed_location"})
+                        remapping = {"rem_loc": "rem_loc",
+                                     "locations_list_c" : "locations_list_c",}) #locations_list --> path that we are going to follow, rem_loc --> unvisited missions
         
             smach.StateMachine.add("GNSS1", GNSS1(),
                                 transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "locations_list",
-                                     "aimed_location": "aimed_location"})
+                                remapping = {"rem_loc": "rem_loc"})
             
             smach.StateMachine.add("GNSS2", GNSS2(),
                                 transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "locations_list",
-                                     "aimed_location": "aimed_location"})
+                                remapping = {"rem_loc": "rem_loc"})
             
             smach.StateMachine.add("AR1", AR1(),
                                 transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "locations_list",
-                                     "aimed_location": "aimed_location"})
+                                remapping = {"rem_loc": "rem_loc"})
             
             smach.StateMachine.add("AR2", AR2(),
                                 transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "locations_list",
-                                     "aimed_location": "aimed_location"})
+                                remapping = {"rem_loc": "rem_loc"})
             
             smach.StateMachine.add("AR3", AR3(),
                                 transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "locations_list",
-                                     "aimed_location": "aimed_location"})
+                                remapping = {"rem_loc": "rem_loc"})
             
             smach.StateMachine.add("OBJ1", OBJ1(),
                                 transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "locations_list",
-                                     "aimed_location": "aimed_location"})
+                                remapping = {"rem_loc": "rem_loc"})
                                 
             smach.StateMachine.add("OBJ2", OBJ2(),
                                 transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "locations_list",
-                                     "aimed_location": "aimed_location"})
+                                remapping = {"rem_loc": "rem_loc"})
         
         smach.StateMachine.add("Tasks Execute", sm_tasks_execute,
                                transitions = {"Tasks Ended": "Tasks Ended"})
@@ -394,10 +553,5 @@ def main():
 #There should be a case that also considers going to the previous task teleop
 
 if __name__ == "__main__":
-    # run kat's code here
-    InitializeAutonomousNavigation
-    #t = time.time()
-    #while (time.time()-t) < 10:
-    print("Passing time until Autonomous Initialization")
-        #pass
+    print("Starting the autonomous missions")
     main()
