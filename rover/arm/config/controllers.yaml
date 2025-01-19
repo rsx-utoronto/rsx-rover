@@ -6,5 +6,5 @@ RSX_Arm:
     
     Joint_1_Controller:                                               # Name of the controller
       type: position_controllers/JointPositionController         # Since JointA uses effort interface this controller type is  used      
-      joint: Joint_1                                                                # Name of the joint for which this controller belongs to.
+      joint: joint_1                                                                # Name of the joint for which this controller belongs to.
       pid: {p: 100.0, i: 10.0, d: 1.0}                                    # PID values

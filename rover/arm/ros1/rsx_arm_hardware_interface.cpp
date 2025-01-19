@@ -39,7 +39,7 @@ class RSX_Arm: public hardware_interface::RobotHW
 
     public:
         void init(){
-            const char* joints[JOINT_NUM] = {"Joint_1"};
+            const char* joints[JOINT_NUM] = {"joint_1"};
 
             hardware_interface::JointStateHandle stateHandel1(joints[0], &joint_position[0], 
                 &joint_velocity[0], &joint_effort[0]);
