@@ -24,8 +24,15 @@ from sensor_msgs.msg import Image
 
 import cv2
 from cv_bridge import CvBridge
-from pygigev import PyGigEV as gev
+from pygigev import PyGigEV as gev # pip install pygigev
 
+
+"""
+This code is experiencing performance issues
+
+See the note at the top of the README for explanation:
+https://github.com/JSeam2/pyGigE-V
+"""
 
 
 
