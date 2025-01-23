@@ -10,7 +10,7 @@ from std_msgs.msg import Float64MultiArray, Bool
 import numpy as np
 
 
-# bridge = CvBridge()
+# bridge = CvBridge() 
 
 class ObjectDetectionNode():
 
@@ -91,7 +91,6 @@ def main():
     rospy.init_node('object_detector', anonymous=True)
     object_detector = ObjectDetectionNode()
     rospy.spin()
-
 
 if __name__ == "__main__":
     main()
