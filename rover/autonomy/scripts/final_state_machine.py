@@ -19,8 +19,8 @@ from std_msgs.msg import Float32MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
 import sm_straight_line
-import gps_conversion_functions as functions
-import gps_to_pose as gps_to_pose
+import gps.gps_conversion_functions as functions
+import gps.gps_to_pose as gps_to_pose
 import sm_grid_search
 import ar_detection_node
 from std_msgs.msg import String

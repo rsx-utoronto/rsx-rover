@@ -3,7 +3,7 @@ import rospy
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped
 from math import atan2, pi, sin, cos
-import functions
+import gps_conversion_functions as functions
 import message_filters
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
 
@@ -38,8 +38,9 @@ ANGLE_CORRECTION = pi/2 - ORIG_HEADING
 
 class GPSToPose: 
     
-    def __init__(self):
-        self.origin_coordinates = None
+    def __init__(self, origin_coordinates=None):
+        rospy.init_node("gps_to_pose")
+        self.origin_coordinates = origin_coordinates
         self.gps1 = message_filters.Subscriber(GPS_ANTENNA_1, GnssSignalStatus)
         self.gps2 = message_filters.Subscriber(GPS_ANTENNA_2, GnssSignalStatus)
         # here 5 is the size of the queue and 0.2 is the time allowed between messages
@@ -47,6 +48,9 @@ class GPSToPose:
         self.ts.registerCallback(self.callback)
         self.pose_pub = rospy.Publisher('pose', PoseStamped, queue_size=1)
         self.msg = PoseStamped()
+        self.x = 0
+        self.y = 0
+
 
     def callback(self, gps1, gps2):
         # first we get the most recent longitudes and latitudes
@@ -84,15 +88,15 @@ class GPSToPose:
             distance = functions.getDistanceBetweenGPSCoordinates((orig_lat, orig_long), (lat1, long1))
             theta = functions.getHeadingBetweenGPSCoordinates(orig_lat, orig_long, lat1, long1)
             # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
-            x = -distance * sin(theta)
-            y = distance * cos(theta)
+            self.x = -distance * sin(theta)
+            self.y = distance * cos(theta)
 
         # now that we have the coordinate and angle quaternion information we can return the pose message
         msg = self.msg
         msg.header.stamp = rospy.Time.now()
         msg.header.frame_id = "map"
-        msg.pose.position.x = x
-        msg.pose.position.y = y
+        msg.pose.position.x = self.x
+        msg.pose.position.y = self.y
         msg.pose.position.z = 0.0
         
         msg.pose.orientation.x = qx
@@ -103,8 +107,7 @@ class GPSToPose:
 
 
 def main():
-    rospy.init_node("gps_to_pose")
-    gps_converter = GPSToPose()
+    gps_converter = GPSToPose(None)
     rospy.spin()
 
 
