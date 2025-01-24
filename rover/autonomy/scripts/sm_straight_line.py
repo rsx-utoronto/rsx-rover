@@ -3,11 +3,10 @@
 import rospy
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64MultiArray, Bool
 import math
-import ar_detection_node
-import object_subscriber_node
-
+import ar_detection_node as adn
+import object_subscriber_node as osn
 
 class StraightLineApproach:
     def __init__(self, lin_vel, ang_vel, targets):
@@ -23,7 +22,8 @@ class StraightLineApproach:
         self.drive_publisher = rospy.Publisher('drive', Twist, queue_size=10)
 
         #new additions
-        self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        self.aruco_found = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
         self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         
     def odom_callback(self, msg):
@@ -58,11 +58,7 @@ class StraightLineApproach:
     def detection_callback(self, data):
         self.found = data
 
-
     def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISHIT)
-        if not state=="Location Selection":
-            rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
-        
         rate = rospy.Rate(50)
         kp = 0.5
         threshold = 0.1

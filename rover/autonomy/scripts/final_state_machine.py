@@ -15,7 +15,7 @@ from rover.autonomy.scripts.optimal_path import OPmain
 from thomas_grid_search import thomasgrid
 from ar_detection_node import ARucoTagDetectionNode  
 from aruco_homing import Aimer
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
 import sm_straight_line
@@ -248,6 +248,12 @@ class GNSS2(smach.State):
         return "Location Selection"
            
 #Should we also verify the current location for other missions?
+
+
+# NOTE: AR 1-3 should be modified 
+#
+#
+
 class AR1(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
@@ -276,7 +282,9 @@ class AR1(smach.State):
             gs = sm_grid_search
             gs_points = gs.GridSearch(10, 10, 1, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian
             targets = gs.square_target()
-            aruco_found = rospy.Subscriber("aruco_found", Bool, queue_size=1)
+
+            aruco_found = rospy.Subscriber("aruco_found", Bool, ar_detector)
+
             if not aruco_found:
                 for target in targets: #confirm that its true
                     try:
