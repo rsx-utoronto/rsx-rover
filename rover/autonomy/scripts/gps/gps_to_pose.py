@@ -125,7 +125,7 @@ class GPSToPose:
 
 
 def main():
-    gps_converter = GPSToPose(None)
+    gps_converter = GPSToPose(None, (0, 0), (0.3889375, 0.434975))
     rospy.spin()
 
 
