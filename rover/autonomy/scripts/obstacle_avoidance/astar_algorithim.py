@@ -21,6 +21,8 @@ from sensor_msgs.msg import PointCloud2
 import ros_numpy
 from octree import OctreeNode
 from queue import PriorityQueue
+from std_msgs.msg import Header
+import math
 
 
 class OctoMapAStar:
@@ -37,7 +39,8 @@ class OctoMapAStar:
         self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed/point_cloud/cloud_registered")
         self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
         self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
-        self.boundary= ((-1000, -1000, -10), (1000, 1000, 10)) 
+        self.boundary= ((-100000, -1000000, -100000), (100000, 100000, 100000)) 
+        
 
         # Publishers and Subscribers
         self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
@@ -106,38 +109,61 @@ class OctoMapAStar:
             self.occupancy_grid = octomap_data 
             rospy.loginfo("2D occupancy grid generated from OctoMap.")
     
+    import rospy
+
+    def decode_octomap(self, octomap_msg):
+        """
+        Decode an OctoMap binary message into a list of occupied points without using struct.
+        """
+        rospy.loginfo("Decoding OctoMap...")
+
+        if octomap_msg.binary:
+            data = octomap_msg.data
+            resolution = octomap_msg.resolution
+
+            # Initialize an empty list to store occupied points
+            occupied_points = []
+
+            # Iterate through the data byte-by-byte
+            for offset, byte in enumerate(data):
+                voxel_data = byte  # Access the raw byte as an integer
+
+                # Check if the voxel is occupied
+                if voxel_data == 1:
+                    # Calculate the 3D coordinates of the voxel
+                    x = (offset % 256) * resolution
+                    y = ((offset // 256) % 256) * resolution
+                    z = ((offset // (256 * 256)) % 256) * resolution
+
+                    # Add the voxel's coordinates to the occupied points
+                    occupied_points.append((x, y, z))
+
+            rospy.loginfo(f"Decoded {len(occupied_points)} occupied points from OctoMap.")
+            return occupied_points
+    
     def process_octomap(self, octomap_msg):
         """
         Process OctoMap into a 2D occupancy grid based on actual height values.
         """
-        # Example grid size and resolution (adjust as needed)
         grid_size = (100, 100)  # Number of cells in x and y
-        resolution = 0.1        # Grid resolution in meters (each cell represents 10cm)
+        resolution = 0.1        # Grid resolution in meters
 
-        # initialize an empty grid -> values are all 0 at first
-        occupancy_grid = np.zeros(grid_size, dtype=np.int8) 
+        occupancy_grid = np.zeros(grid_size, dtype=np.int8)
+        
+        occupied_points = self.decode_octomap(octomap_msg)
 
-        # Parse the OctoMap message to extract 3D occupancy data
-        # (You may need to use a library like `pyoctomap` to parse the data)
-        occupied_points = self.decode_octomap(octomap_msg)  # Returns a list of (x, y, z) points
-
-        # Iterate through the occupied points
         for point in occupied_points:
             x, y, z = point
-
-            # Convert the 3D point's x, y coordinates into grid cell indices
             grid_x = int(x / resolution)
             grid_y = int(y / resolution)
 
-            # Ensure the indices are within the grid bounds
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
-                # Check if height (z) is in the occupied range
-                if 200 <= z <= 1500: # threshold for occupied or not 0.2-1.5m 
-                    # Assign a cost based on height
-                    # Normalize z from 0.2 to 1.5 into a range [1, 100]
+                if 0.2 <= z <= 1.5:
                     normalized_cost = (z - 0.2) / (1.5 - 0.2) * 100
-                    occupancy_grid[grid_x, grid_y] = normalized_cost 
+                    occupancy_grid[grid_x, grid_y] = normalized_cost
+
         return occupancy_grid
+
     
 ### A* start
     def a_star(self, start, goal):
@@ -181,6 +207,7 @@ class OctoMapAStar:
         Heuristic function with height cost.
         """
         xy_distance = np.linalg.norm(np.array(node) - np.array(goal))
+
         height_difference = abs(self.occupancy_grid[node[0], node[1]] - self.occupancy_grid[goal[0], goal[1]])
         return xy_distance + height_difference
 
@@ -217,6 +244,7 @@ class OctoMapAStar:
         wp.header.frame_id = "map"
         wp.pose.position.x, wp.pose.position.y = waypoint
         wp.pose.orientation.w = 1.0
+        print("THIS",self.waypoint_pub)
         self.waypoint_pub.publish(wp)
 ### A* End
 
@@ -248,12 +276,15 @@ class OctoMapAStar:
 
 
     def run(self):
+       
         while not rospy.is_shutdown():
             if self.occupancy_grid is None:
                 rospy.logwarn("Waiting for occupancy grid...")
                 self.rate.sleep()
                 continue
 
+            print("RUNNING")
+        
             start = (10, 10)  # Example starting point
             goal = (100, 100)  # Example goal point
 
