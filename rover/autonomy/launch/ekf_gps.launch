@@ -4,6 +4,7 @@
     <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_base_to_gps" args="0.2 0.355 0 0 0 0 1 base_link gps 100"/>
 
     <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />  
+    <node pkg="rover" type="gps_to_pose.py" name="gps_to_pose" output="screen" />
 
     <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" >
         <param name="publish_tf" value="false" />

@@ -3,13 +3,13 @@
 # gps and magnetometer heading filter
 
 import rospy
-from calian_gnss_ros2_msg.msg import GnssSignalStatus
+from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Imu
 import math
 
 class HeadingFilter:
     def __init__(self):
-        self.gnss_sub = rospy.Subscriber('/calian_gnss/gps_extended', GnssSignalStatus, self.gnss_callback)
+        self.gnss_sub = rospy.Subscriber('/pose', PoseStamped, self.gnss_callback)
         self.imu_sub = rospy.Subscriber('/imu/orient', Imu, self.imu_callback)
         self.heading_pub = rospy.Publisher('/fused_heading', Imu, queue_size=1)
         self.orientation = Quaternion()
@@ -20,10 +20,8 @@ class HeadingFilter:
         self.mag_declination = rospy.get_param('~magnetic_declination_radians')
     
     def gnss_callback(self, data):
-        self.orientation.set_heading_to_quaternion(2*math.pi - (math.radians(data.heading) - self.mag_declination) + math.pi/2)
-        self.gnss_fix = data.valid_fix
-        self.accuracy_2d = data.accuracy_2d
-        self.accuracy_3d = data.accuracy_3d
+        self.orientation.set_heading_to_quaternion(self.orientation.quaternion_to_heading(data.pose.orientation) + self.mag_declination)
+        self.accuracy_2d = data.pose.position.z
         # print('received gnss heading:', data.heading, data.valid_fix)
 
     def imu_callback(self, data):
@@ -57,6 +55,10 @@ class Quaternion:
         self.z = math.sin(heading_rad / 2)
         
         return self
+    
+    def quaternion_to_heading(self, data):
+        # Convert input quaternion to heading (in radians)
+        return math.atan2(2*(data.w*data.z + data.x*data.y), 1 - 2*(data.y**2 + data.z**2))
     
     def set(self, x, y, z, w):
         self.x = x
