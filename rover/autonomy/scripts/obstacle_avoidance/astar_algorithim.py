@@ -8,6 +8,8 @@ The cost depends on height, density -> we go to lowest cost.
 Cost depends on height. follow threshold.
 1 for height
 1 for density 
+
+make a trajectory visualizer in a different file 
 """
 
 import rospy
