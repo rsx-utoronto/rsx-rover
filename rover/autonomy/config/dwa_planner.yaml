@@ -1,0 +1,25 @@
+controller_frequency: 10 # Rate in Hz
+
+v_min: -2.0
+v_max: 2.0
+w_min: -1.0
+w_max: 1.0
+
+max_accel_lin: 0.5
+max_accel_ang: 0.2
+dt: 0.1     # time step for simulation
+sim_time: 2 # simulation time in sec (Time horizon)    
+num_samples_v: 100
+num_samples_w: 100
+
+# Cost function weights
+
+w_heading: 1
+w_dist: 1
+w_vel: 1
+
+# Robot Footprint
+robot_width: 1.0
+robot_length: 1.0
+robot_height: 1.0
+robot_grid_n: 10
