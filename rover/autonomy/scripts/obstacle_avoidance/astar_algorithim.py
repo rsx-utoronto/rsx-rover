@@ -50,7 +50,7 @@ class OctoMapAStar:
         self.grid_origin = None
         self.goal = None
         self.rate = rospy.Rate(self.update_rate)
-        self.tree = OctreeNode(self.tree_resolution)
+        self.tree = OctreeNode(self.boundary, self.tree_resolution)
     
     def pointcloud_callback(self, msg):
             """
