@@ -29,23 +29,23 @@ class Safety_Node():
     def __init__(self):
 
         # Attributes to hold data from subscribed topics
-        self.GOAL_POS             = [0, 0, 0, 0, 0, 0]
-        self.CURR_POS             = [0, 0, 0, 0, 0, 0]
-        self.MOTOR_CURR           = [0, 0, 0, 0, 0, 0]
-        self.LIMIT_SWITCH         = [False, False, False, False, False, False]
+        self.GOAL_POS             = [0, 0, 0, 0, 0, 0, 0]
+        self.CURR_POS             = [0, 0, 0, 0, 0, 0, 0]
+        self.MOTOR_CURR           = [0, 0, 0, 0, 0, 0, 0]
+        self.LIMIT_SWITCH         = [False, False, False, False, False, False, False]
         self.STATE                = 'Idle'
 
         # Attributes to hold data for publishing to topics
         self.ERRORS               = UInt8MultiArray()
-        self.ERRORS.data          = [0, 0, 0, 0, 0, 0]
+        self.ERRORS.data          = [0, 0, 0, 0, 0, 0, 0]
         self.SAFE_GOAL_POS        = Float32MultiArray()
-        self.SAFE_GOAL_POS.data   = [0, 0, 0, 0, 0, 0]
+        self.SAFE_GOAL_POS.data   = [0, 0, 0, 0, 0, 0, 0]
         self.ERROR_OFFSET         = Float32MultiArray()
-        self.ERROR_OFFSET.data    = [0, 0, 0, 0, 0, 0]
+        self.ERROR_OFFSET.data    = [0, 0, 0, 0, 0, 0, 0]
 
         # Attributes needed for detecting whether motor current is exceeding
-        self.TIME                 = [0, 0, 0, 0, 0, 0]
-        self.FIRST                = [True, True, True, True, True, True]
+        self.TIME                 = [0, 0, 0, 0, 0, 0, 0]
+        self.FIRST                = [True, True, True, True, True, True, True]
 
         # Variables for ROS publishers and subscribers
         self.Goal_sub             = rospy.Subscriber("arm_goal_pos", Float32MultiArray, self.callback_Goal)
