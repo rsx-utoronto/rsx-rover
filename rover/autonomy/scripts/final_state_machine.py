@@ -178,7 +178,8 @@ class LocationSelection(smach.State): #goes through all states
 class GNSS1(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["rem_loc"])
+                            input_keys = ["rem_loc"],
+                            output_keys = ["prev_loc"])
         self.glob_msg = None
         
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -209,7 +210,8 @@ class GNSS1(smach.State):
         #else:
             #print("Done cruise")
             #provide new point?
-        
+
+        userdata.prev_loc = userdata.rem_loc[0]
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         self.glob_msg.pub_state("GNSS 1")
 
@@ -219,7 +221,8 @@ class GNSS1(smach.State):
 class GNSS2(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["rem_loc"])
+                            input_keys = ["rem_loc"],
+                            output_keys = ["prev_loc"])
         self.glob_msg = None
         
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -242,6 +245,7 @@ class GNSS2(smach.State):
             signal_green_led()
         #else:
         #print("Failed cruise")
+        userdata.prev_loc = userdata.rem_loc[0]
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         self.glob_msg.pub_state("GNSS 2")
 
@@ -257,7 +261,8 @@ class GNSS2(smach.State):
 class AR1(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["rem_loc"])
+                            input_keys = ["rem_loc"],
+                            output_keys = ["prev_loc"])
         self.glob_msg = None
         
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -278,14 +283,29 @@ class AR1(smach.State):
             self.glob_msg.pub_state("Reached AR1 GNSS")
 
             rospy.init_node('aruco_tag1_detector', anonymous=True)
-            ar_detector = ar_detection_node.ARucoTagDetectionNode()
-            gs = sm_grid_search
+            ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
+            gs = sm_grid_search 
             gs_points = gs.GridSearch(10, 10, 1, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian
-            targets = gs.square_target()
+            targets = gs.square_target() #generates multiple targets 
+            gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets)
 
             aruco_found = rospy.Subscriber("aruco_found", Bool, ar_detector)
+            gs_traversal_object.navigate("AR1")
 
-            if not aruco_found:
+            for target in targets: 
+                    try:
+                        #do we need to call the navigate function at all?
+                        gs_traversal_object.move_to_target(target[0], target[1], "AR1") #should publish a message when object is found
+                        if aruco_found: 
+                            self.glob_msg.pub_state("AR1 Found.")
+                            print("Successful grid search")
+                            break
+                        
+                    except rospy.ROSInterruptException:
+                        pass
+
+
+            if not aruco_found: #can get rid off these if statements afterwards
                 for target in targets: #confirm that its true
                     try:
                         sla = StraightLineApproach(0.6, 0.3, target)
@@ -330,13 +350,15 @@ class AR1(smach.State):
         else:
             self.glob_msg.pub_state("Did not reach AR1 GNSS")
             # print("Failed to reach the location")
+        userdata.prev_loc = userdata.rem_loc[0]
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
 
 class AR2(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["rem_loc"])
+                            input_keys = ["rem_loc"],
+                            output_keys = ["prev_loc"])
         self.glob_msg = None
         
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -396,13 +418,15 @@ class AR2(smach.State):
                 signal_green_led()
         else:
             print("Failed grid search")
+        userdata.prev_loc = userdata.rem_loc[0]
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
 
 class AR3(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["rem_loc"])
+                            input_keys = ["rem_loc"],
+                            output_keys = ["prev_loc"])
         self.glob_msg = None
         
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -460,6 +484,7 @@ class AR3(smach.State):
                 signal_green_led()
         else:
             print("Failed grid search")
+        userdata.prev_loc = userdata.rem_loc[0]
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
 
@@ -468,7 +493,8 @@ class AR3(smach.State):
 class OBJ1(smach.State): #mallet
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["rem_loc"])
+                            input_keys = ["rem_loc"],
+                            output_keys = ["prev_loc"])
         self.glob_msg = None
         
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -505,13 +531,15 @@ class OBJ1(smach.State): #mallet
                 signal_green_led()
         else:
             print("Failed grid search")
+        userdata.prev_loc = userdata.rem_loc[0]
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
     
 class OBJ2(smach.State): #waterbottle
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection"],
-                            input_keys = ["rem_loc"])
+                            input_keys = ["rem_loc"],
+                            output_keys = ["prev_loc"])
         self.glob_msg = None
         
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -549,8 +577,60 @@ class OBJ2(smach.State): #waterbottle
                 signal_green_led()
         else:
             print("Failed grid search")
+        userdata.prev_loc = userdata.rem_loc[0]
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
         return "Location Selection"
+    
+    
+class Abort(smach.State):  # Abort state
+    def __init__(self):
+        smach.State.__init__(
+            self,
+            outcomes=["Abort Complete", "Abort Failed"],
+            input_keys=["prev_loc", "start_location"],
+        )
+        self.glob_msg = None
+
+    def set_msg(self, glob_msg: GLOB_MSGS):
+        self.glob_msg = glob_msg
+
+    def execute(self, userdata):
+        # Determine the location to return to
+        if not userdata.prev_loc:
+            rospy.logwarn("No previous location available; returning to start location.")
+            return_location = userdata.start_location
+        elif len(userdata.prev_loc) == 1 and userdata.prev_loc[0] == "start":
+            rospy.loginfo("Aborting back to start location as it's the first task.")
+            return_location = userdata.start_location
+        else:
+            return_location = userdata.prev_loc
+
+        self.glob_msg.pub_state(f"Aborting to location: {return_location}")
+
+        try:
+            # Perform straight-line traversal back to the determined location
+            sla = StraightLineApproach(0.6, 0.3, return_location)
+            sla.navigate()
+
+            # Check final distance to the target location
+            current_pose = self.glob_msg.get_pose()
+            distance = math.sqrt(
+                (current_pose.pose.position.x - return_location[0]) ** 2
+                + (current_pose.pose.position.y - return_location[1]) ** 2
+            )
+
+            if distance < 2.0:  # Threshold for successful navigation
+                rospy.loginfo("Successfully returned to the abort location.")
+                signal_green_led()
+                return "Abort Complete"
+            else:
+                rospy.logwarn("Failed to reach the abort location within threshold.")
+                return "Abort Failed"
+
+        except rospy.ROSInterruptException as e:
+            rospy.logerr(f"ROS Interrupt Exception during abort: {e}")
+            return "Abort Failed"
+
 
 class TasksEnded(smach.State):
     def __init__(self):
@@ -561,11 +641,10 @@ class TasksEnded(smach.State):
 
 
 def main():
-
     rospy.init_node('RSX_Rover')
     gui_status = rospy.Publisher('gui_status', String, queue_size=10)
     
-    sm = smach.StateMachine(outcomes = ["Tasks Ended"])
+    sm = smach.StateMachine(outcomes=["Tasks Ended"])
     sm.userdata.cartesian = {}
 
     glob_msg = GLOB_MSGS()
@@ -577,7 +656,8 @@ def main():
     ar3 = AR3()
     obj1 = OBJ1()
     obj2 = OBJ2()
-    
+    abort = Abort((0.0, 0.0))  # Specify the start location
+
     init.set_msg(glob_msg)
     gnss1.set_msg(glob_msg)
     gnss2.set_msg(glob_msg)
@@ -586,69 +666,147 @@ def main():
     ar3.set_msg(glob_msg)
     obj1.set_msg(glob_msg)
     obj2.set_msg(glob_msg)
-    
-    with sm:
-        smach.StateMachine.add("Initialize Autonomous Navigation", init,
-                               transitions = {"Tasks Execute": "Tasks Execute"},
-                               remapping = {"cartesian": "cartesian"})
-        #Create a global variable that passes the cartesian list to location selection
-        #temp_locations_list = shortest_path('start', sm.cartesian)  #shortest path needs GPS coordinates 
-        
-        #sm.userdata.cartesian.remove('start')
-        #Pass the path to the GUI --> can be done in initialize
-        sm_tasks_execute = smach.StateMachine(outcomes = ["Tasks Ended"])
-        sm_tasks_execute.userdata.locations_list_c = sm.userdata.cartesian.copy().remove("start")
-        sm_tasks_execute.userdata.rem_loc = sm_tasks_execute.userdata.locations_list_c.copy()
-        #sm_tasks_execute.userdata.aimed_location = ''
+    abort.set_msg(glob_msg)
 
+    with sm:
+        smach.StateMachine.add(
+            "Initialize Autonomous Navigation",
+            init,
+            transitions={"Tasks Execute": "Tasks Execute"},
+            remapping={"cartesian": "cartesian"}
+        )
+        
+        # Define the tasks execution sub-state machine
+        sm_tasks_execute = smach.StateMachine(outcomes=["Tasks Ended"])
+        sm_tasks_execute.userdata.locations_list_c = sm.userdata.cartesian.copy()
+        start_location = sm_tasks_execute.userdata.locations_list_c.pop("start")
+        sm_tasks_execute.userdata.rem_loc = sm_tasks_execute.userdata.locations_list_c.copy()
+        sm_tasks_execute.userdata.prev_loc = None  # Initialize with no previous location
 
         with sm_tasks_execute:
+            smach.StateMachine.add(
+                "Location Selection",
+                LocationSelection(),
+                transitions={
+                    "GNSS1": "GNSS1",
+                    "GNSS2": "GNSS2",
+                    "AR1": "AR1",
+                    "AR2": "AR2",
+                    "AR3": "AR3",
+                    "OBJ1": "OBJ1",
+                    "OBJ2": "OBJ2",
+                },
+                remapping={
+                    "rem_loc": "rem_loc",
+                    "locations_list_c": "locations_list_c",
+                    "prev_loc": "prev_loc",  # Add remapping for prev_loc
+                    "start_location" : "start_location"
+                }
+            )
+            
+            smach.StateMachine.add(
+                "GNSS1",
+                gnss1,
+                transitions={"Location Selection": "Location Selection"},
+                remapping={
+                    "rem_loc": "rem_loc",
+                    "prev_loc": "prev_loc"  # Output the last completed location
+     
+                }
+            )
+            
+            smach.StateMachine.add(
+                "GNSS2",
+                gnss2,
+                transitions={"Location Selection": "Location Selection"},
+                remapping={
+                    "rem_loc": "rem_loc",
+                    "prev_loc": "prev_loc"
+                    
+                }
+            )
+            
+            smach.StateMachine.add(
+                "AR1",
+                ar1,
+                transitions={"Location Selection": "Location Selection"},
+                remapping={
+                    "rem_loc": "rem_loc",
+                    "prev_loc": "prev_loc"
 
-            smach.StateMachine.add("Location Selection", LocationSelection(),
-                        transitions = {"GNSS1": "GNSS1",
-                                        "GNSS2": "GNSS2",
-                                        "AR1": "AR1",
-                                        "AR2": "AR2",
-                                        "AR3": "AR3",
-                                        "OBJ1": "OBJ1",
-                                        "OBJ2": "OBJ2"},
-                        remapping = {"rem_loc": "rem_loc",
-                                     "locations_list_c" : "locations_list_c",}) #locations_list --> path that we are going to follow, rem_loc --> unvisited missions
+                }
+            )
+            
+            smach.StateMachine.add(
+                "AR2",
+                ar2,
+                transitions={"Location Selection": "Location Selection"},
+                remapping={
+                    "rem_loc": "rem_loc",
+                    "prev_loc": "prev_loc"
+                    
+                }
+            )
+            
+            smach.StateMachine.add(
+                "AR3",
+                ar3,
+                transitions={"Location Selection": "Location Selection"},
+                remapping={
+                    "rem_loc": "rem_loc",
+                    "prev_loc": "prev_loc"
+
+                }
+            )
+            
+            smach.StateMachine.add(
+                "OBJ1",
+                obj1,
+                transitions={"Location Selection": "Location Selection"},
+                remapping={
+                    "rem_loc": "rem_loc",
+                    "prev_loc": "prev_loc"
+                    
+                }
+            )
+            
+            smach.StateMachine.add(
+                "OBJ2",
+                obj2,
+                transitions={"Location Selection": "Location Selection"},
+                remapping={
+                    "rem_loc": "rem_loc",
+                    "prev_loc": "prev_loc"
+                }
+            )
+            
+            smach.StateMachine.add(
+                "Abort",
+                abort,
+                transitions={
+                    "Abort Complete": "Location Selection",
+                    "Abort Failed": "Tasks Ended", #What should do in this case?
+                },
+                remapping= {
+                    "prev_loc": "prev_loc",  # Use the previous location for abort
+                    "start_location" : "start_location"
+                }
+            )
+            
+        smach.StateMachine.add(
+            "Tasks Execute",
+            sm_tasks_execute,
+            transitions={"Tasks Ended": "Tasks Ended"}
+        )
         
-            smach.StateMachine.add("GNSS1", gnss1,
-                                transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "rem_loc"})
-            
-            smach.StateMachine.add("GNSS2", gnss2,
-                                transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "rem_loc"})
-            
-            smach.StateMachine.add("AR1", ar1,
-                                transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "rem_loc"})
-            
-            smach.StateMachine.add("AR2", ar2,
-                                transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "rem_loc"})
-            
-            smach.StateMachine.add("AR3", ar3,
-                                transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "rem_loc"})
-            
-            smach.StateMachine.add("OBJ1", obj1,
-                                transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "rem_loc"})
-                                
-            smach.StateMachine.add("OBJ2", obj2,
-                                transitions = {"Location Selection": "Location Selection"},
-                                remapping = {"rem_loc": "rem_loc"})
+        smach.StateMachine.add(
+            "Task Ended",
+            TasksEnded()
+        )
         
-        smach.StateMachine.add("Tasks Execute", sm_tasks_execute,
-                               transitions = {"Tasks Ended": "Tasks Ended"})
-        
-        smach.StateMachine.add("Task Ended", TasksEnded())
 
     outcome = sm.execute()
+
 
 
 #We don't need to wait on the GUI we can tell it to initialize
