@@ -62,6 +62,41 @@ class Direction:
         self.LinX =0
         self.AngleZ = 0
 
+class statusTerminal(QWidget):
+    update_status_signal = pyqtSignal(str)
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+        # Connect signals to the corresponding update methods
+        self.update_status_signal.connect(self.update_string_list)
+        rospy.Subscriber('/status', String, self.string_callback)
+        self.received_strings = []
+    def init_ui(self):
+        
+        # Create a scrollable box for received strings
+        self.string_list = QTextEdit(self)
+        self.string_list.setReadOnly(True)
+        self.string_list.setStyleSheet("""
+            background-color: #FFFFFF; 
+            color: black; 
+            border: 2px solid black;  
+            padding: 5px; 
+        """)
+
+        # Layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.string_list)
+        self.setLayout(layout)
+    
+    def string_callback(self, msg):
+        self.update_status_signal.emit(msg.data.strip())  
+
+    def update_string_list(self, new_string):
+        self.received_strings.append(new_string)
+        self.string_list.setPlainText("\n".join(self.received_strings))
+        self.string_list.moveCursor(QTextCursor.End)
+
 class ArucoWidget(QWidget):
     # Define signals to communicate with the main thread
     update_label_signal = pyqtSignal(bool)
@@ -528,11 +563,27 @@ class RoverGUI(QMainWindow):
     def setup_lngLat_tab(self):
         self.lngLatEntry = LngLatEntryBar()
         self.stateMachineDialog = StateMachineStatus()
-        self.arucoBox= ArucoWidget()
+        self.arucoBox = ArucoWidget()
+        self.statusTerminal = statusTerminal()
+
+        # Create a group box for the ArucoWidget
+        self.arucoGroupBox = QGroupBox("Aruco Tags")
+        aruco_layout = QVBoxLayout()
+        aruco_layout.addWidget(self.arucoBox)
+        self.arucoGroupBox.setLayout(aruco_layout)
+
+        # Create a group box for the status terminal
+        self.statusTermGroupBox = QGroupBox("Status Messages")
+        status_term_layout = QVBoxLayout()
+        status_term_layout.addWidget(self.statusTerminal)
+        self.statusTermGroupBox.setLayout(status_term_layout)
+
+        # Main layout for the tab
         Lnglat_tab_layout = QVBoxLayout()
         Lnglat_tab_layout.addWidget(self.lngLatEntry)
         Lnglat_tab_layout.addWidget(self.stateMachineDialog)
-        Lnglat_tab_layout.addWidget(self.arucoBox)
+        Lnglat_tab_layout.addWidget(self.arucoGroupBox) 
+        Lnglat_tab_layout.addWidget(self.statusTermGroupBox) 
 
         self.longlat_tab.setLayout(Lnglat_tab_layout)
     #used to initialize main tab with splitters
