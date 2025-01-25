@@ -544,7 +544,7 @@ class RoverGUI(QMainWindow):
 
         # Add tab to QTabWidget
         self.tabs.addTab(self.split_screen_tab, "Main Gui")
-        self.tabs.addTab(self.longlat_tab, "Long Lat")
+        self.tabs.addTab(self.longlat_tab, "State Machine")
 
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
