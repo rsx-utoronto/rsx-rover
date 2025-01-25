@@ -20,7 +20,7 @@ class HeadingFilter:
         self.mag_declination = rospy.get_param('~magnetic_declination_radians')
     
     def gnss_callback(self, data):
-        self.orientation.set_heading_to_quaternion(math.radians(data.heading) - self.mag_declination)
+        self.orientation.set_heading_to_quaternion(2*math.pi - (math.radians(data.heading) - self.mag_declination) + math.pi/2)
         self.gnss_fix = data.valid_fix
         self.accuracy_2d = data.accuracy_2d
         self.accuracy_3d = data.accuracy_3d
