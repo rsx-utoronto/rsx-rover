@@ -128,23 +128,42 @@ def main():
     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
     # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
     rate = rospy.Rate(10)
+    prev_flag =  ""
+    flag = ""
     while not rospy.is_shutdown():
         twist = Twist()
+        if(time.time()-startRotationTime) > 35:
+            print ("failure", aimer.linear_v, aimer.angular_v)
+            twist.linear.x = 0
+            twist.angular.z = 0
+            pub.publish(twist)
+            return False
         if aimer.linear_v == 0 and aimer.angular_v == 0:
             print ("at weird", aimer.linear_v, aimer.angular_v)
             twist.linear.x = 0
             twist.angular.z = 0
             pub.publish(twist)
             return True
-        if aimer.angular_v == 1:
-            twist.angular.z = aimer.max_angular_v
-            twist.linear.x = 0
-        elif aimer.angular_v == -1:
-            twist.angular.z = -aimer.max_angular_v
-            twist.linear.x = 0
-        elif aimer.linear_v == 1:
-            twist.linear.x = aimer.max_linear_v
-            twist.angular.z = 0
+        else:
+
+            if aimer.angular_v == 1:
+                
+                flag = "right"
+
+                twist.angular.z = aimer.max_angular_v
+                twist.linear.x = 0
+            elif aimer.angular_v == -1:
+                flag = "left"
+                twist.angular.z = -aimer.max_angular_v
+                twist.linear.x = 0
+            elif aimer.linear_v == 1:
+                twist.linear.x = aimer.max_linear_v
+                twist.angular.z = 0
+        
+        if prev_flag!=flag:
+            #velocity thing
+            startRotationTime = time.time()
+        prev_flag = flag
         
         pub.publish(twist)
         rate.sleep()
