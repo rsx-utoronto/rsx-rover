@@ -17,8 +17,9 @@ from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import PoseStamped, Twist
 from sensor_msgs.msg import PointCloud2
 import ros_numpy
-import octree
+from octree import OctreeNode
 from queue import PriorityQueue
+
 
 class OctoMapAStar:
     def __init__(self):
@@ -48,7 +49,8 @@ class OctoMapAStar:
         self.grid_origin = None
         self.goal = None
         self.rate = rospy.Rate(self.update_rate)
-        self.tree = octree(self.tree_resolution)
+        self.tree = OctreeNode(self.tree_resolution)
+        #test push 
     
     def pointcloud_callback(self, msg):
             """
