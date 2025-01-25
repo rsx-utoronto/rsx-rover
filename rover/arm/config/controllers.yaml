@@ -5,6 +5,8 @@ RSX_Arm:
       publish_rate: 50
     
     Joint_1_Controller:                                               # Name of the controller
-      type: position_controllers/JointPositionController         # Since JointA uses effort interface this controller type is  used      
-      joint: joint_1                                                                # Name of the joint for which this controller belongs to.
-      pid: {p: 100.0, i: 10.0, d: 1.0}                                    # PID values
+      type: position_controllers/JointTrajectoryController # change to positionController_controllers/JointTrajector         # Since JointA uses effort interface this controller type is  used      
+      joints: 
+        - joint_1                                                                # Name of the joint for which this controller belongs to.
+      gains: 
+        joint_1: {p: 100.0, i: 10.0, d: 1.0}                                    # PID values
