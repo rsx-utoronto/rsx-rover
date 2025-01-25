@@ -35,6 +35,7 @@ class OctoMapAStar:
         self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed/point_cloud/cloud_registered")
         self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
         self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
+        self.boundary= ((-1000, -1000, -10), (1000, 1000, 10)) 
 
         # Publishers and Subscribers
         self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
@@ -50,7 +51,6 @@ class OctoMapAStar:
         self.goal = None
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.tree_resolution)
-        #test push 
     
     def pointcloud_callback(self, msg):
             """
