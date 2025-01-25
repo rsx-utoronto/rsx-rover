@@ -2,7 +2,7 @@
 import rospy
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped
-from math import atan2, pi, sin, cos
+from math import atan2, pi, sin, cos, radians
 import gps_conversion_functions as functions
 import message_filters
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
@@ -78,8 +78,8 @@ class GPSToPose:
         qx,qy,qz,qw = functions.eulerToQuaternion(0.0, 0.0, heading)
         """
         
-        # let's first transform our heading
-        heading = gps1.heading
+        # let's first transform our heading (also changing it to anti-clockwise being positive, east is 0.0)
+        heading = 2*pi - radians(gps1.heading) + pi/2
         
         rover_heading = self.transform_heading(heading)
         qx,qy,qz,qw = functions.eulerToQuaternion(0.0, 0.0, rover_heading)        
