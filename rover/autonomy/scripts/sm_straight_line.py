@@ -6,7 +6,6 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Bool
 import math
 import ar_detection_node as adn
-import object_subscriber_node as osn
 
 class StraightLineApproach:
     def __init__(self, lin_vel, ang_vel, targets):
