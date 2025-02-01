@@ -116,6 +116,7 @@ class GPSToPose:
         msg.pose.position.x = self.x
         msg.pose.position.y = self.y
         msg.pose.position.z = (gps1.accuracy_2d + (gps2.accuracy_2d)) / 2 if gps1.valid_fix and gps2.valid_fix else 1000000
+
         
         msg.pose.orientation.x = qx
         msg.pose.orientation.y = qy
