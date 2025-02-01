@@ -1,5 +1,12 @@
 # Arm Code
 
+## Pre-Steps
+
+- make sure the arm is connected to the CAN network
+  - RSX uses a CAN USB like [this](https://www.amazon.ca/DSD-TECH-Adapter-Hardware-Canable/dp/B0BQ5G3KLR?pd_rd_w=MVljX&content-id=amzn1.sym.03d0a222-babc-4fe5-b7df-e90dd70bc007&pf_rd_p=03d0a222-babc-4fe5-b7df-e90dd70bc007&pf_rd_r=8DTA2VFZT7G3QNVWZZQ3&pd_rd_wg=6qoEh&pd_rd_r=cea5c5e8-ec16-4a88-9ab4-614c6502759c&pd_rd_i=B0BQ5G3KLR)
+- make sure the arm has enough power
+  - power supply capable of delivering at least 12V with a high current limit
+
 ## CAN Setup
 
 To enable the CAN network, open a terminal and type the following (assuming you have the repository cloned)
