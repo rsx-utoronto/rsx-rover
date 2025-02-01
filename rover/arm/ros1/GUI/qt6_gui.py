@@ -24,6 +24,8 @@ class RobotControlGUI(QWidget):
         self.camera_topic_name = ["/camera/color/image_king", "/camera/color/image_raw"]
         self.initUI()
 
+        self.scienceOn = False
+
         self.controller = GuiControllerNode()  # Initialize controller
         
         # look at function at line 150 & 835
@@ -42,8 +44,12 @@ class RobotControlGUI(QWidget):
         if command == "Manual": # Grey Out the IK buttons
             for _ , button in self.arrow_buttons.items():
                 button.setEnabled(False)
-            for button in self.joint_buttons:
-                button.setEnabled(True)
+            if self.scienceOn:
+                for i in range(6):
+                    self.joint_buttons[i].setEnabled(True)
+            else: 
+                for button in self.joint_buttons:
+                    button.setEnabled(True)
         
         if command == "Inverse Kin": # Grey Out the joint control buttons
             for _ , button in self.arrow_buttons.items():
@@ -57,17 +63,18 @@ class RobotControlGUI(QWidget):
             for button in self.joint_buttons:
                 button.setEnabled(False)
         
-        # gray out only 4 - gripper in forward kinematics
+        # gray out only 4 - 6 in forward kinematics
         if command in ["Module 1", "Module 2", "Module 3", "Module 4"]:
+            self.scienceOn = not self.scienceOn
             if self.joint_buttons[0].isEnabled():
                 if self.joint_buttons[3].isEnabled():
-                    for k in range(3, 6):
+                    for k in range(6, 12):
                         self.joint_buttons[k].setEnabled(False)
                 else:
-                    for k in range(3, 6):
+                    for k in range(6, 12):
                         self.joint_buttons[k].setEnabled(True)
             else:
-                for k in range(3, 6):
+                for k in range(6, 12):
                     self.joint_buttons[k].setEnabled(False)
 
     # Forward Kinematics (Individual Joint Angles) (MUST BE IN MANUAL MODE)
