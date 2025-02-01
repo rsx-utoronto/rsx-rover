@@ -122,7 +122,15 @@ class GenieCameraPublisher:
     
 
 
+    def capture_image(self, filename="captured_image.jpg"):
+        """
+        Capture one image from the camera and save it locally.
+        """
+        img = self._get_image()
+        cv2.imwrite(filename, img)
+        print(f"Image saved as {filename}")
 
+        
 
     def publish_ros_topic(self):
         """
@@ -156,6 +164,7 @@ if __name__ == "__main__":
 
         if g.camera_found:
             g.publish_ros_topic()
+            g.capture_image("captured_image.jpg")  
         else:
             print("No Genie camera found.")
 
