@@ -116,7 +116,8 @@ class GenieCameraPublisher:
         # simply return numpy array for first image in buffer
         img = self.ctx.GevGetImageBuffer().reshape(self.height, self.width)
         if self.width > 600 or self.height > 600:
-            img = cv2.resize(img, (int(self.width*0.25), int(self.height*0.25)))
+           # img = cv2.resize(img, (int(self.width*0.25), int(self.height*0.25)))
+           img = cv2.resize(img, ( 300,300))
 
         return img
     
