@@ -100,7 +100,9 @@ class RobotControlGUI(QWidget):
             (4,1):"joint4plus",
             (4,-1):"joint4minus",
             (5,1):"joint5plus",
-            (5,-1):"joint5minus"
+            (5,-1):"joint5minus",
+            (6,1):"joint6plus",
+            (6,-1):"joint6minus"
         }
         self.button_is_clicked(command_translator[(joint_index,increment)])
         
@@ -269,9 +271,12 @@ class RobotControlGUI(QWidget):
         joints_layout = QVBoxLayout()
 
         self.joint_controls = []
-        for i in range(6):
+        for i in range(7):
             joint_control = QHBoxLayout()
-            joint_label = QLabel(f"Joint {i + 1}")
+            if i < 6:
+                joint_label = QLabel(f"Joint {i + 1}")
+            else:
+                joint_label = QLabel("Gripper")
             
             # Label to display the joint angle
             joint_display = QLabel("0")
