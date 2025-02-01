@@ -56,6 +56,19 @@ class RobotControlGUI(QWidget):
                 button.setEnabled(False)
             for button in self.joint_buttons:
                 button.setEnabled(False)
+        
+        # gray out only 4 - gripper in forward kinematics
+        if command in ["Module 1", "Module 2", "Module 3", "Module 4"]:
+            if self.joint_buttons[0].isEnabled():
+                if self.joint_buttons[3].isEnabled():
+                    for k in range(3, 6):
+                        self.joint_buttons[k].setEnabled(False)
+                else:
+                    for k in range(3, 6):
+                        self.joint_buttons[k].setEnabled(True)
+            else:
+                for k in range(3, 6):
+                    self.joint_buttons[k].setEnabled(False)
 
     # Forward Kinematics (Individual Joint Angles) (MUST BE IN MANUAL MODE)
     def update_joint_value(self, joint_index, increment):
