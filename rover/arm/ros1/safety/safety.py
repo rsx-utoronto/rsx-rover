@@ -240,7 +240,7 @@ class Safety_Node():
             # Publish any errors that we need to
             self.Offset_pub.publish(self.ERROR_OFFSET)
             #pass
-            self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0]
+            self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
         
         # If there are any errors, publish the error offsets and reset them
         elif Errors.ERROR_EXCEEDING_POS.value in self.ERRORS.data:
@@ -248,7 +248,7 @@ class Safety_Node():
             print("publishing offsets:", self.ERROR_OFFSET.data)
             self.Offset_pub.publish(self.ERROR_OFFSET)
             #pass
-            self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0]
+            self.ERROR_OFFSET.data  = [0, 0, 0, 0, 0, 0, 0]
         
         # # Repeat the function if needed in 'IK' mode
         # if self.STATE == "IK" and max(abs(np.array(self.GOAL_POS) - np.array(self.CURR_POS))):
@@ -270,14 +270,14 @@ class Safety_Node():
         # TODO
         # Limits for position safety (Need to test these values)
         #limit = [1.25, 1.25, 1.25, 20, 1.25, 1.25, 1.25]
-        limit = [5, 5, 5, 10, 120, 80]
+        limit = [5, 5, 5, 10, 120, 80, 40] # 40 was an old value for this limit, no clue if it is correct for now
 
         if not pos:
             pos = self.GOAL_POS
 
         # Going through each element of GOAL_POS
         #for i in range(len(self.GOAL_POS)):
-        for i in [0, 1, 2, 3, 4, 5]:    
+        for i in [0, 1, 2, 3, 4, 5, 6]:    
             # Doing position comparisons for safety
             if (abs(pos[i] - self.CURR_POS[i]) > limit[i]):
 
