@@ -151,8 +151,6 @@ roslaunch rover arm_rviz.launch # or use gazebo
 The GUI control uses a graphical interface to mimic the robots inputs. The setup process is kind of tedious, but doing these commands ensures everything will go well:
 ```
 roscore
-rosrun rover qt6_gui.py
-rostopic echo /arm_goal_pos
-roslaunch rover arm_rviz.launch ik_on:=true
+roslaunch arm_gui_run.launch
 ```
 After these, be sure to set the arm into manual on the gui for the arm adjustment to work. 
