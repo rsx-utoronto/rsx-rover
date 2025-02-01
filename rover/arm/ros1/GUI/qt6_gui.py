@@ -66,16 +66,23 @@ class RobotControlGUI(QWidget):
         # gray out only 4 - 6 in forward kinematics
         if command in ["Module 1", "Module 2", "Module 3", "Module 4"]:
             self.scienceOn = not self.scienceOn
-            if self.joint_buttons[0].isEnabled():
-                if self.joint_buttons[3].isEnabled():
-                    for k in range(6, 12):
-                        self.joint_buttons[k].setEnabled(False)
+            if not self.scienceOn:
+                # need to set the joint buttons to be enabled
+                if not self.arrow_buttons["Up"].isEnabled():
+                    # check manual mode is ON
+                    for button in self.joint_buttons:
+                        button.setEnabled(True)
+            else:
+                if self.joint_buttons[0].isEnabled():
+                    if self.joint_buttons[6].isEnabled():
+                        for k in range(6, 12):
+                            self.joint_buttons[k].setEnabled(False)
+                    else:
+                        for k in range(6, 12):
+                            self.joint_buttons[k].setEnabled(True)
                 else:
                     for k in range(6, 12):
-                        self.joint_buttons[k].setEnabled(True)
-            else:
-                for k in range(6, 12):
-                    self.joint_buttons[k].setEnabled(False)
+                        self.joint_buttons[k].setEnabled(False)
 
     # Forward Kinematics (Individual Joint Angles) (MUST BE IN MANUAL MODE)
     def update_joint_value(self, joint_index, increment):
