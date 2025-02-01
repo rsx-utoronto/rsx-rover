@@ -8,7 +8,6 @@ import math
 from nav_msgs.msg import Odometry
 import aruco_homing as aruco_homing
 import ar_detection_node as ar_detect
-import object_subscriber_node as ob_sub
 import sm_straight_line as StraightLineApproach
 
 

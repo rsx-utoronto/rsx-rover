@@ -12,7 +12,7 @@ scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(scripts_dir)
 
 import rospy
-import object_subscriber_node
+# import object_subscriber_node
 import smach_ros
 import time
 import math
@@ -24,15 +24,12 @@ from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
 import sm_straight_line
-import gps.gps_conversion_functions as functions
-import gps.gps_to_pose as gps_to_pose
+import gps_conversion_functions as functions
+import gps_to_pose as gps_to_pose
 import sm_grid_search
 import ar_detection_node
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
-print("all imports worked")
-
-
 
 
 
