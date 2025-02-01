@@ -260,7 +260,10 @@ class RobotControlGUI(QWidget):
         self.joint_controls = []
         for i in range(7):
             joint_control = QHBoxLayout()
-            joint_label = QLabel(f"Joint {i + 1}")
+            if i < 6:
+                joint_label = QLabel(f"Joint {i + 1}")
+            else:
+                joint_label = QLabel("Gripper")
             
             # Label to display the joint angle
             joint_display = QLabel("0")
