@@ -5,13 +5,12 @@ Code for the state machine
 """
 import rospy
 import object_subscriber_node
-import smach_ros
+import smach
 import time
 import math
 from optimal_path import OPmain
 from thomas_grid_search import thomasgrid
-from ar_detection_node import ARucoTagDetectionNode  
-from aruco_homing import Aimer
+import ar_detection_node  
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
@@ -90,6 +89,7 @@ class GLOB_MSGS:
         self.pub = rospy.Publisher("gui_status", String, queue_size=10)
         self.sub = rospy.Subscriber("pose", PoseStamped, self.pose_callback)
         self.gui_loc = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray, self.coord_callback) 
+        self.locations = None
         
     def pose_callback(self, msg):
         self.pose = msg
@@ -98,9 +98,18 @@ class GLOB_MSGS:
     def get_pose(self):
         return self.pose
 
-    #def coord_callback(self): --> done inside the initialize class
-        # need to get the array of locations from the gui to initialize in the class.
-        #pass
+    def coord_callback(self, data): 
+        location_data = data 
+
+        locations = {}
+        location_name_list = ["start", "GNSS1", "GNSS2", "AR1", "AR2", "AR3", "OBJ1", "OBJ2"]
+        for data in location_data:
+            i = 0
+            if data is not None:
+                locations[location_name_list[i]] = data
+                i +=1
+        
+        self.locations = locations
 
     def pub_state(self, state):
         self.pub.publish(state)
@@ -117,41 +126,32 @@ class InitializeAutonomousNavigation(smach.State):
     def set_msg(self, glob_msg: GLOB_MSGS):
         self.glob_msg = glob_msg
     
-    def location_data_callback(self, data): #check if correct
-        location_data = data 
-
-        locations = {}
-        location_name_list = ["start", "GNSS1", "GNSS2", "AR1", "AR2", "AR3", "OBJ1", "OBJ2"]
-        for data in location_data:
-            i = 0
-            if data is not None:
-                locations[location_name_list[i]] = data
-                i +=1
-        
-        return locations
-        
 
     def initialize(self):
         
         #status_pub = rospy.Publisher('/status', String, queue_size = 10) #make this globval --> done+
-        locations = rospy.Subscriber("/long_lat_goal_array", Float32MultiArray, self.location_data_callback) #gui location publisher
-
-        cartesian_path = shortest_path('start', locations) #code for generating the optimal path
+        
+        rospy.Subscriber("/long_lat_goal_array", Float32MultiArray, self.glob_msg.coord_callback) #gui location publisher
+        while (self.glob_msg.locations is None and rospy.is_shutdown() == False):
+            time.sleep(1)
+            print("Waiting for locations")
+        
+        cartesian_path = shortest_path('start', self.glob_msg.locations) #code for generating the optimal path
 
         self.glob_msg.pub_state("Changing GPS coordinates to cartesian") #at any print statement you can do this +
         # locations [] -> carte_locations []
-        cartesian = {}
 
         for el in cartesian_path: 
-            distance = functions.getDistanceBetweenGPSCoordinates((locations["start"][0], locations["start"][1]), (el[0], el[1]))
-            theta = functions.getHeadingBetweenGPSCoordinates(locations["start"][0], locations["start"][1], el[0], el[1])
+            distance = functions.getDistanceBetweenGPSCoordinates((self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1]), (el[0], el[1]))
+            theta = functions.getHeadingBetweenGPSCoordinates(self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1], el[0], el[1])
             # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
-            x = -distance * sin(theta)
-            y = distance * cos(theta)
+            x = -distance * math.sin(theta)
+            y = distance * math.cos(theta)
 
-            cartesian.update(el, (x,y))
+            self.cartesian.update(el, (x,y))
         
-        gps_to_pose.GPSToPose(locations['start'], (0,0), (0,0))
+        gps_to_pose.GPSToPose(self.glob_msg.locations['start'], (0,0), (0,0))
+        
     
     def execute(self, userdata):
         print("Initializing Autonomous Navigation")
@@ -571,7 +571,7 @@ def main():
         # Define the tasks execution sub-state machine
         sm_tasks_execute = smach.StateMachine(outcomes=["Tasks Ended"])
         sm_tasks_execute.userdata.locations_list_c = sm.userdata.cartesian.copy()
-        sm_tasks_execute.userdata.start_location = sm_tasks_execute.userdata.locations_list_c.pop("start")
+        #sm_tasks_execute.userdata.start_location = sm_tasks_execute.userdata.locations_list_c.pop("start")
         sm_tasks_execute.userdata.rem_loc = sm_tasks_execute.userdata.locations_list_c.copy()
         sm_tasks_execute.userdata.prev_loc = None  # Initialize with no previous location
 

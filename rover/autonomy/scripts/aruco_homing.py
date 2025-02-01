@@ -122,7 +122,6 @@ class AimerROS(Aimer):  #updates coords continuously
         self.update(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right)
 
 def main():
-    rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
     pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
     aimer = AimerROS(640, 360, 1000, 100, 100, 0.5, 0.5) # change constants
     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
@@ -149,4 +148,6 @@ def main():
         pub.publish(twist)
         rate.sleep()
 
-main()
+if __name__ == '__main__':
+    rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
+    main()
