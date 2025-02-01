@@ -3,15 +3,20 @@
 Code for the state machine
 
 """
+import sys
+import os
+
+# Get scripts directory
+scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+
+sys.path.append(scripts_dir)
+
 import rospy
-from rover.autonomy.scripts import aruco_homing
-from scripts.object_detection import object_subscriber_node
-import smach
+import object_subscriber_node
 import smach_ros
 import time
 import math
-from math import atan2, pi, sin, cos
-from rover.autonomy.scripts.optimal_path import OPmain
+from optimal_path import OPmain
 from thomas_grid_search import thomasgrid
 from ar_detection_node import ARucoTagDetectionNode  
 from aruco_homing import Aimer
@@ -25,6 +30,10 @@ import sm_grid_search
 import ar_detection_node
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
+print("all imports worked")
+
+
+
 
 
 #Example locations
@@ -93,7 +102,6 @@ class GLOB_MSGS:
         self.pub = rospy.Publisher("gui_status", String, queue_size=10)
         self.sub = rospy.Subscriber("pose", PoseStamped, self.pose_callback)
         self.gui_loc = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray, self.coord_callback) 
-        self.pose = PoseStamped()
         
     def pose_callback(self, msg):
         self.pose = msg
@@ -136,8 +144,9 @@ class InitializeAutonomousNavigation(smach.State):
         
 
     def initialize(self):
+        
         #status_pub = rospy.Publisher('/status', String, queue_size = 10) #make this globval --> done+
-        locations = rospy.Subscriber("object/bbox", Float64MultiArray, self.location_data_callback) #gui location publisher
+        locations = rospy.Subscriber("/long_lat_goal_array", Float32MultiArray, self.location_data_callback) #gui location publisher
 
         cartesian_path = shortest_path('start', locations) #code for generating the optimal path
 
@@ -153,6 +162,8 @@ class InitializeAutonomousNavigation(smach.State):
             y = distance * cos(theta)
 
             cartesian.update(el, (x,y))
+        
+        gps_to_pose.GPSToPose(locations['start'], (0,0), (0,0))
     
     def execute(self, userdata):
         print("Initializing Autonomous Navigation")
