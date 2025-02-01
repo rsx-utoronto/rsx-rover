@@ -3,16 +3,8 @@
 Code for the state machine
 
 """
-import sys
-import os
-
-# Get scripts directory
-scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-
-sys.path.append(scripts_dir)
-
 import rospy
-# import object_subscriber_node
+import object_subscriber_node
 import smach_ros
 import time
 import math
@@ -30,7 +22,6 @@ import sm_grid_search
 import ar_detection_node
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
-
 
 
 #Example locations
