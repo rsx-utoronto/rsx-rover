@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QComboBox, QSlider, QGridLayout, QGroupBox, QSpinBox
-from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtGui import QPixmap, QIcon, QImage
 from PyQt5.QtCore import Qt
 import sys
 import os
@@ -21,6 +21,8 @@ class RobotControlGUI(QWidget):
         super().__init__()
         self.setWindowTitle("Robot Control Interface")
         self.setGeometry(100, 100, 800, 600)
+        self.setWindowIcon(QIcon("RsxLogo.png"));
+
         self.camera_topic_name = ["/camera/color/image_king", "/camera/color/image_raw"]
         self.initUI()
 
