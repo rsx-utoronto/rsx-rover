@@ -14,7 +14,7 @@ To enable the CAN network, open a terminal and type the following (assuming you 
 ### Terminal 1
 ```
 cd ~/rover_ws/src/rsx-rover/scripts/utils/gen
-./setup_can.bash
+./setup_can.sh
 (Enter the password for your system)
 ```
 
