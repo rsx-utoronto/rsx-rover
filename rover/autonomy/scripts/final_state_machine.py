@@ -100,16 +100,17 @@ class GLOB_MSGS:
 
     def coord_callback(self, data): 
         location_data = data 
+        if (len(location_data.data) == 16): 
 
-        locations = {}
-        location_name_list = ["start", "GNSS1", "GNSS2", "AR1", "AR2", "AR3", "OBJ1", "OBJ2"]
-        for data in location_data:
-            i = 0
-            if data is not None:
-                locations[location_name_list[i]] = data
-                i +=1
-        
-        self.locations = locations
+            locations = {}
+            location_name_list = ["start", "GNSS1", "GNSS2", "AR1", "AR2", "AR3", "OBJ1", "OBJ2"]
+            for name in location_name_list:
+                i = 0
+                if location_data.data[i] is not None and location_data.data[i+1] is not None:
+                    locations[name] = (location_data.data[i], location_data.data[i+1])
+                    i +=2
+            
+            self.locations = locations
 
     def pub_state(self, state):
         self.pub.publish(state)
@@ -120,6 +121,7 @@ class InitializeAutonomousNavigation(smach.State):
     def __init__(self):
         smach.State.__init__(self, 
                              outcomes = ["Tasks Execute"],
+                             input_keys = ["cartesian"],
                              output_keys = ["cartesian"])
         self.glob_msg = None
         
@@ -127,7 +129,7 @@ class InitializeAutonomousNavigation(smach.State):
         self.glob_msg = glob_msg
     
 
-    def initialize(self):
+    def initialize(self, cartesian):
         
         #status_pub = rospy.Publisher('/status', String, queue_size = 10) #make this globval --> done+
         
@@ -142,34 +144,41 @@ class InitializeAutonomousNavigation(smach.State):
         # locations [] -> carte_locations []
 
         for el in cartesian_path: 
-            distance = functions.getDistanceBetweenGPSCoordinates((self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1]), (el[0], el[1]))
-            theta = functions.getHeadingBetweenGPSCoordinates(self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1], el[0], el[1])
+            distance = functions.getDistanceBetweenGPSCoordinates((self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1]), (self.glob_msg.locations[el][0], self.glob_msg.locations[el][1]))
+            theta = functions.getHeadingBetweenGPSCoordinates(self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1], self.glob_msg.locations[el][0], self.glob_msg.locations[el][1])
             # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
             x = -distance * math.sin(theta)
             y = distance * math.cos(theta)
 
-            self.cartesian.update(el, (x,y))
+            cartesian[el] = (x,y)
         
-        gps_to_pose.GPSToPose(self.glob_msg.locations['start'], (0,0), (0,0))
+        gps_to_pose.GPSToPose(self.glob_msg.locations['start'], (0,0), (0.4, 0.58))
         
     
     def execute(self, userdata):
         print("Initializing Autonomous Navigation")
-        self.initialize()
+        self.initialize(userdata.cartesian)
         return "Tasks Execute"
 
         
 class LocationSelection(smach.State): #goes through all states 
     def __init__(self):
         smach.State.__init__(self, outcomes = ["GNSS1", "GNSS2", "AR1", "AR2", "AR3", "OBJ1", "OBJ2", "Tasks Ended"],
-                             input_keys = ["rem_loc", "locations_list_c"])
+                             input_keys = ["rem_loc", "locations_list_c", 'prev_loc'])
+        self.glob_msg = None
+        
+    def set_msg(self, glob_msg: GLOB_MSGS):
+        self.glob_msg = glob_msg
   
     def execute(self, userdata):
         print("Performing Location Search")
+        if userdata.prev_loc == None:
+            userdata.locations_list_c = self.glob_msg.locations.copy() #loc_name, (lat, lon)
+            userdata.rem_loc = self.glob_msg.locations.copy()
         path = userdata.rem_loc
         if path != []:
             try:
-                sla = StraightLineApproach(0.6, 0.3, self.cartesian[path[0]]) 
+                sla = StraightLineApproach(0.6, 0.3, userdata.locations_list_c[path[path.keys]]) 
             except rospy.ROSInterruptException:
                 pass
             sla.navigate()
@@ -541,6 +550,7 @@ def main():
 
     glob_msg = GLOB_MSGS()
     init = InitializeAutonomousNavigation()
+    locselect = LocationSelection()
     gnss1 = GNSS1()
     gnss2 = GNSS2()
     ar1 = AR1()
@@ -551,6 +561,7 @@ def main():
     #abort = ABORT() 
 
     init.set_msg(glob_msg)
+    locselect.set_msg(glob_msg)
     gnss1.set_msg(glob_msg)
     gnss2.set_msg(glob_msg)
     ar1.set_msg(glob_msg)
@@ -578,7 +589,7 @@ def main():
         with sm_tasks_execute:
             smach.StateMachine.add(
                 "Location Selection",
-                LocationSelection(),
+                locselect,
                 transitions={
                     "GNSS1": "GNSS1",
                     "GNSS2": "GNSS2",

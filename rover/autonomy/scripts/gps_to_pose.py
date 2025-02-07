@@ -18,7 +18,7 @@ class GPSToPose:
             base_coordinates: coordinates of the moving base gps antenna in rover frame. Defaults to None.
             rover_coordinates: coordinates of rover gps in rover frame. Defaults to None.
         """
-        rospy.init_node("gps_to_pose")
+        
         self.origin_coordinates = origin_coordinates
         self.base_coordinates = base_coordinates
         self.rover_coordinates = rover_coordinates
@@ -131,4 +131,5 @@ def main():
 
 
 if __name__ == "__main__":
+    rospy.init_node("gps_to_pose")
     main()
