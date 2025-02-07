@@ -2,14 +2,15 @@ global_frame: map # sometimes '/map' works but in documentation, it says that '/
 # Whether or not to use a rolling window version of the costmap. 
 rolling_window: false # If the static_map parameter is set to true, this parameter must be set to false.
 track_unknown_space: false # false so that it traverses unknown space freely as if there is no obstacle
+transform_tolerance: 0.6 # default 0.5
 
 plugins:
   - {name: static,                  type: "costmap_2d::StaticLayer"}
   - {name: inflation,               type: "costmap_2d::InflationLayer"}
 
 update_frequency: 0.2
-width: 200
-height: 200
+width: 20
+height: 20
 
 
 

@@ -57,7 +57,7 @@ CMD_API_PARAM_ACCESS    = 0x300
 
 # REDUCTION Ratios
 REDUCTION               = [160, 100, 100*2, 100, 120, 120] # 7th Motor is a DC motor without a gearbox
-WRIST_RATIO             = 1
+WRIST_RATIO             = 5/4
 
 ########## SHARED FUNCTIONS ##########
 

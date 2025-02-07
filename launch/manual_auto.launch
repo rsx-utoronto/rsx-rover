@@ -1,0 +1,12 @@
+<launch>
+    <!-- Launch Joy nodes-->
+    <group ns="auto">
+        <node pkg="joy" type="joy_node" name="joy_node">
+            <param name="dev" value="/dev/input/js0"/>
+        </node>
+    </group>
+
+    <node name="auto_switch" pkg="rover" type="manual_switch.py" output="screen">
+    </node>
+
+</launch>

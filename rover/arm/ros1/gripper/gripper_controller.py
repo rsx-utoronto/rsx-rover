@@ -8,8 +8,9 @@ from rover.msg import ArmInputs
 from std_msgs.msg import *
 from arm_serial_connector import *
 
-GRIPPER_CONVERSION = 64 # 64 encoder ticks result in 1 rotation of the gripper motor
-GRIPPER_REDUCTION  = 30 # 30:1 Gear ratio on the gripper motor
+GRIPPER_CONVERSION = 28 # 28 encoder ticks result in 1 rotation of the gripper motor
+GRIPPER_REDUCTION  = 60 # 60:1 Gear ratio on the gripper motor
+# COUNTER = 10
 
 class Gripper():
     """
@@ -17,13 +18,13 @@ class Gripper():
 
     This class represents all the functioning of the gripper motor.
     """
-
-    def __init__(self, gripper_name= "STMicroelectronics_STM32_STLink_066DFF485671664867172828", servo_name= "1a86_USB2.0-Ser_"):
+    
+    def __init__(self, gripper_name= "STMicroelectronics_STM32_STLink_066DFF353542543351022252", servo_name= "1a86_USB2.0-Ser_"):
         
         ## Variables for serial connection
         # Gripper port
         self.gripper_connection = Serial_Port(device_name= gripper_name)
-        self.gripper_connection.open_device_port(baudrate= 9600)
+        self.gripper_connection.open_device_port(baudrate= 115200)
 
         # Servo controller port
         self.servo_connection = Serial_Port(device_name= servo_name)
@@ -36,18 +37,19 @@ class Gripper():
         # Start with "Idle"
         self.state               = 'Idle'
 
-        # Variable for storing gripper_pos
-        self.gripper_pos         = 0
+        # Variable for storing goal and current position of gripper
+        self.gripper_goal         = 0
+        self.gripper_curr         = 0
 
         # Set speed limit for the gripper
-        self.gripper_speed       = 5
+        self.gripper_speed       = 0.43
 
         # Variable to to hold gripper roll positions (angles)
         self.gripper_roll        = 0
 
         ## Variables for ROS publishers and subscribers
         self.state_sub           = rospy.Subscriber("arm_state", String, self.CallbackState)
-        self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput)
+        self.input               = rospy.Subscriber("arm_inputs", ArmInputs, self.CallbackInput, queue_size= 1)
         self.SafePos_sub 		 = rospy.Subscriber("arm_safe_goal_pos", Float32MultiArray, self.CallbackSafePos)
 
     def CallbackState (self, state: String) -> None:
@@ -84,16 +86,37 @@ class Gripper():
         
         # Get inputs for the gripper and update the position
         gripper_input           = inputs.x - inputs.o
-        self.gripper_pos        = gripper_input * self.gripper_speed + self.gripper_pos
+
+        # If gripper opening and closing buttons are not pressed, exit the function
+        if gripper_input == 0:
+            return
+        
+        self.gripper_goal        = gripper_input * self.gripper_speed + self.gripper_goal
         
         servo_config_flip       = inputs.square
 
-        gripper_ticks           = int(self.gripper_pos / 360 * GRIPPER_CONVERSION * GRIPPER_REDUCTION)
+        gripper_ticks           = int(self.gripper_goal / 360 * GRIPPER_CONVERSION * GRIPPER_REDUCTION)
         # Checking the state, only proceed if not in Idle
         if self.state != "Idle":
-            print('goal callback', str(gripper_ticks))
-            # Send the new position
-            self.gripper_connection.send_bytes(data= str(gripper_ticks) + 'x')
+
+            print('Gripper Goal:', self.gripper_goal)
+
+            # Checking if new goal position is within 50 degrees of currently recorded position
+            if abs(self.gripper_curr - self.gripper_goal) < 50:
+
+                # Send the new position
+                self.gripper_connection.send_bytes(data= str(gripper_ticks) + '\n')
+
+                # Try to read the message containing current position information from motor controller
+                received = self.gripper_connection.read_bytes()
+                if "Curr" in received:
+                    self.gripper_curr = int(received[10:-1]) * 360 / (GRIPPER_CONVERSION * GRIPPER_REDUCTION)
+            
+            # If not within the 50 degrees range, motor might be stuck and drawing a lot of current
+            else:
+                print("ERROR: Gripper Motor Stuck, Curr Pos:", self.gripper_curr)
+                self.gripper_goal = self.gripper_curr
+            
             
             if self.servo_connection.device_port:
                 # TODO Add servo functionality here for future use
@@ -116,18 +139,36 @@ class Gripper():
         # Get the difference between current gripper goal pos and goal gripper pos
         difference          = new_gripper_roll - self.gripper_roll
 
-        # Update the self.gripper_roll if changed
-        if difference != 0:
-            self.gripper_roll = new_gripper_roll
+        # Update the self.gripper_roll and gripper goal position only if roll was performed
+        if difference == 0:
+            return
+        
+        self.gripper_roll = new_gripper_roll
         
         # Set new gripper position
-        self.gripper_pos    = self.gripper_pos + difference
+        self.gripper_goal    = self.gripper_goal - difference
 
         # Calculate the ticks for the motor
-        gripper_ticks       = int((self.gripper_pos) / 360 * GRIPPER_CONVERSION * GRIPPER_REDUCTION)
-        print('safe goal callback', str(gripper_ticks))
+        gripper_ticks       = int((self.gripper_goal) / 360 * GRIPPER_CONVERSION * GRIPPER_REDUCTION)
+        # print('safe goal callback', str(gripper_ticks))
         # Send the correction to the gripper motor
-        self.gripper_connection.send_bytes(data= str(gripper_ticks) + 'x')
+        print('Gripper Goal:', self.gripper_goal)
+
+        # Checking if new goal position is within 50 degrees of currently recorded position
+        if abs(self.gripper_curr - self.gripper_goal) < 50:
+
+            # Send the new position
+            self.gripper_connection.send_bytes(data= str(gripper_ticks) + '\n')
+            
+            # Try to read the message containing current position information from motor controller
+            received = self.gripper_connection.read_bytes()
+            if "Curr" in received:
+                self.gripper_curr = int(received[10:-1]) * 360 / (GRIPPER_CONVERSION * GRIPPER_REDUCTION)
+                        
+        # If not within the 50 degrees range, motor might be stuck and drawing a lot of current
+        else:
+            print("ERROR: Gripper Motor Stuck, Curr Pos:", self.gripper_curr)
+            self.gripper_goal = self.gripper_curr
 
 
 if __name__ == "__main__":
@@ -135,7 +176,7 @@ if __name__ == "__main__":
     try:
         rospy.init_node("Arm_Gripper")
         
-        Gripper_Node = Gripper(gripper_name= '1a86_USB2.0-Serial')
+        Gripper_Node = Gripper()
 
         rospy.spin()
 

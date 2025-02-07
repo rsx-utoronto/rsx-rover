@@ -5,7 +5,7 @@ NavfnROS:
   allow_unknown: true # default: true # Specifies whether or not to allow navfn to create plans that traverse unknown space.
   # if you are using layered costmaps with voxel or obstacle layer, you must also set track_unknown_space param to true
   # otherwise it will convert all unknown space to free space and happily go through it.
-  default_tolerance: 0.1 # A tolerance on the goal point for the planner.
+  default_tolerance: 0.8 # A tolerance on the goal point for the planner.
   # planner_window_x: 100.0 # default: 0.0
   # planner_window_y: 100.0 # default: 0.0
 
@@ -27,12 +27,12 @@ DWAPlannerROS:
   min_vel_rot: 2.0 # 0.4
 
   # Goal Tolerance Parameters
-  yaw_goal_tolerance: 0.2
-  xy_goal_tolerance: 0.2
+  yaw_goal_tolerance: 0.5
+  xy_goal_tolerance: 0.5
   latch_xy_goal_tolerance: false
 
   # # Forward Simulation Parameters
-  sim_time: 2.0
+  sim_time: 2.0 # how far in the future it simulates the path/trajectory (in seconds)
   prune_plan: false
   # sim_granularity: 0.02
   # vx_samples: 6

@@ -1,13 +1,20 @@
 # Arm Code
 
+## Pre-Steps
+
+- make sure the arm is connected to the CAN network
+  - RSX uses a CAN USB like [this](https://www.amazon.ca/DSD-TECH-Adapter-Hardware-Canable/dp/B0BQ5G3KLR?pd_rd_w=MVljX&content-id=amzn1.sym.03d0a222-babc-4fe5-b7df-e90dd70bc007&pf_rd_p=03d0a222-babc-4fe5-b7df-e90dd70bc007&pf_rd_r=8DTA2VFZT7G3QNVWZZQ3&pd_rd_wg=6qoEh&pd_rd_r=cea5c5e8-ec16-4a88-9ab4-614c6502759c&pd_rd_i=B0BQ5G3KLR)
+- make sure the arm has enough power
+  - power supply capable of delivering at least 12V with a high current limit
+
 ## CAN Setup
 
 To enable the CAN network, open a terminal and type the following (assuming you have the repository cloned)
 
 ### Terminal 1
 ```
-cd ~/rover-ws/src/rsx-rover/scripts/utils/gen/setup_can.bash
-./setup_can.bash
+cd ~/rover_ws/src/rsx-rover/scripts/utils/gen
+./setup_can.sh
 (Enter the password for your system)
 ```
 
@@ -32,19 +39,22 @@ roscore
 
 ### Terminal 2 (Assuming your joy node is setup. Refer to joy wiki for instructions on that)
 ```
+export ROS_NAMESPACE=arm # makes this instance of the joy node in the arm workspace
 rosrun joy joy_node
 ```
+
+[Joy Wiki for Setup](https://wiki.ros.org/joy/Tutorials/ConfiguringALinuxJoystick)
 
 #### Terminal 3 (Optional)
 To check whether joy node is receiving inputs properly, run the following command
 ```
-rostopic echo joy
+rostopic echo /arm/joy
 ```
 
 ### Terminal 3/4
 Launch arm_controlller, manual and safety nodes
 ```
-roslaunch rover arm_2023_complete.launch
+roslaunch rover arm_basics.launch
 ```
 
 ### Terminal 4/5
@@ -59,8 +69,13 @@ Run CAN_recv node (before CAN_send)
 rosrun rover CAN_recv.py
 ```
 
+Before proceeding further, make sure that all the angles that the arm thinks it are zero with:
+```
+rostopic echo /arm_curr_pos
+```
+
 ### Terminal 6/7
-Run CAN_recv node (before CAN_send)
+Run CAN_send node
 ```
 rosrun rover CAN_send.py
 ```

@@ -217,8 +217,8 @@ class Safety_Node():
             # Check if the goal position is safe 
             #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
             self.postion_check()
-            self.current_check()
-            self.limitSwitch_check()
+            # self.current_check()
+            # self.limitSwitch_check()
             #self.GOAL_POS      = list(np.array(self.GOAL_POS) - np.array(self.ERROR_OFFSET.data))
 
         else:
@@ -270,7 +270,7 @@ class Safety_Node():
         # TODO
         # Limits for position safety (Need to test these values)
         #limit = [1.25, 1.25, 1.25, 20, 1.25, 1.25, 1.25]
-        limit = [5, 5, 5, 10, 15, 20]
+        limit = [5, 5, 5, 10, 120, 80]
 
         if not pos:
             pos = self.GOAL_POS
