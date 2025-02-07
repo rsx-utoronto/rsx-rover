@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayou
     QToolButton, QMenu, QLineEdit, QFormLayout, QPushButton, QTextEdit
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix  
 from std_msgs.msg import Float32MultiArray, String, Bool
@@ -261,18 +261,27 @@ class LngLatEntryBar(QWidget):
         self.completeLong = False
         self.completeLat = False
         self.array = Float32MultiArray()
-        self.array.data = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] #adapt size for 
-        self.array_index = 0
+        self.array.data = []
+        self.old_array = Float32MultiArray()
+        self.old_array.data = []
+        self.coord_counter = 0 # 1-8
+        self.long_lat_pub = False
         flo = QFormLayout()
-        flo.addRow("Longitude", self.longitudeBar)
         flo.addRow("Latitude", self.latitudeBar)
+        flo.addRow("Longitude", self.longitudeBar)
+        
 
         # Create the button and connect it to the method
         self.sendButton = QPushButton("Send Coordinates")
         self.sendButton.clicked.connect(self.check_and_send_coordinates)
 
+        # Create a button for publishing the last given coordinates
+        self.publishButton = QPushButton("Publish Coordinates Again :(")
+        self.publishButton.clicked.connect(self.send_old_coordinates)
+
         # Add button to the layout
         flo.addWidget(self.sendButton)
+        flo.addWidget(self.publishButton)
 
         self.setLayout(flo)
 
@@ -301,11 +310,22 @@ class LngLatEntryBar(QWidget):
         """
         longitude = self.longitudeBar.text()
         latitude = self.latitudeBar.text()
+        longitude = float(longitude)
+        latitude = float(latitude)
         if longitude and latitude:
             self.sendCoordinates(longitude, latitude)
             self.resetCoordinates()  # Optionally reset fields after sending
         else:
             print("Please enter both Longitude and Latitude.")
+    def send_old_coordinates(self):
+        """
+        Publish the last given coordinates.
+        """
+        if self.long_lat_pub:
+            self.longLat_pub.publish(self.old_array)
+            print(f"Publishing coordinates: {self.old_array.data}")
+        else:
+            print("No coordinates to publish.")
 
     def resetCoordinates(self):
         """
@@ -320,11 +340,23 @@ class LngLatEntryBar(QWidget):
         """
         Send or print the coordinates.
         """
-        self.array.data[self.array_index] = longitude
-        self.array.data[self.array_index +1] = latitude
-        self.array_index +=2
-        self.longLat_pub.publish(self.array)
-        print(f"Publish coordinates: Longitude = {longitude}, Latitude = {latitude}")
+        self.coord_counter += 1
+        if self.coord_counter < 8:
+            self.array.data.append(latitude)
+            self.array.data.append(longitude)
+            
+            print("Added coordinate: ", latitude, longitude)
+        elif self.coord_counter == 8:
+            self.array.data.append(latitude)
+            self.array.data.append(longitude)
+            self.longLat_pub.publish(self.array)
+            print(f"Publishing coordinates: {self.array.data}")
+            self.long_lat_pub = True
+            self.old_array.data = self.array.data.copy()
+            self.coord_counter = 0
+            self.array.data = []
+            
+        
 
 
 
