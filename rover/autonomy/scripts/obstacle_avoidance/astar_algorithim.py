@@ -32,7 +32,7 @@ class OctoMapAStar:
         # Parameters
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
         self.waypoint_topic = rospy.get_param("~waypoint_topic", "/waypoint")
-        self.update_rate = rospy.get_param("~update_rate", 1.0)  # Frequency in Hz 
+        self.update_rate = rospy.get_param("~update_rate", 100.0)  # Frequency in Hz 
         self.vel_topic = rospy.get_param("~vel_topic", "/cmd_vel")  # Velocity command
         self.height_min = rospy.get_param("~height_min", 0.2)  # Min height for obstacles
         self.height_max = rospy.get_param("~height_max", 15)  # Max height for obstacles
@@ -52,8 +52,8 @@ class OctoMapAStar:
         # Map and planning variables
         self.occupancy_grid = None
         self.grid_resolution = 0.1  # Resolution of 2D grid (meters per cell)
-        self.grid_origin = None
-        self.goal = None
+        self.grid_origin = (0.0,0.0)
+        self.goal = (20.0,20.0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
     
@@ -143,26 +143,31 @@ class OctoMapAStar:
     
     def process_octomap(self, octomap_msg):
         """
-        Process OctoMap into a 2D occupancy grid based on actual height values.
+        Process OctoMap into a 2D occupancy grid based on height values.
         """
-        grid_size = (100, 100)  # Number of cells in x and y
+        grid_size = (200, 200)  # Number of cells in x and y
         resolution = 0.1        # Grid resolution in meters
 
         occupancy_grid = np.zeros(grid_size, dtype=np.int8)
         
+        # Decode the OctoMap message
         occupied_points = self.decode_octomap(octomap_msg)
 
         for point in occupied_points:
             x, y, z = point
-            grid_x = int(x / resolution)
-            grid_y = int(y / resolution)
 
+            # Convert to grid indices
+            grid_x = int((x - self.grid_origin[0]) / resolution)
+            grid_y = int((y - self.grid_origin[1]) / resolution)
+
+            # Clamp indices to valid bounds
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
-                if 0.2 <= z <= 1.5:
-                    normalized_cost = (z - 0.2) / (1.5 - 0.2) * 100
+                if 0.2 <= z <= 1.5:  # Height threshold
+                    normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
                     occupancy_grid[grid_x, grid_y] = normalized_cost
 
         return occupancy_grid
+
 
     
 ### A* start
@@ -207,7 +212,7 @@ class OctoMapAStar:
         Heuristic function with height cost.
         """
         xy_distance = np.linalg.norm(np.array(node) - np.array(goal))
-
+       
         height_difference = abs(self.occupancy_grid[node[0], node[1]] - self.occupancy_grid[goal[0], goal[1]])
         return xy_distance + height_difference
 
@@ -236,6 +241,7 @@ class OctoMapAStar:
         return path
 
     def publish_waypoint(self, waypoint):
+        print("PUBLISHING WAYpoints")
         """
         Publish a waypoint for the local planner.
         """
@@ -244,7 +250,7 @@ class OctoMapAStar:
         wp.header.frame_id = "map"
         wp.pose.position.x, wp.pose.position.y = waypoint
         wp.pose.orientation.w = 1.0
-        print("THIS",self.waypoint_pub)
+        print("THISssssssssss",self.waypoint_pub)
         self.waypoint_pub.publish(wp)
 ### A* End
 
@@ -279,27 +285,28 @@ class OctoMapAStar:
        
         while not rospy.is_shutdown():
             if self.occupancy_grid is None:
+                print("STOPPED looking for path")
                 rospy.logwarn("Waiting for occupancy grid...")
                 self.rate.sleep()
                 continue
 
             print("RUNNING")
         
-            start = (10, 10)  # Example starting point
-            goal = (100, 100)  # Example goal point
+            start = (0, 0)  # Example starting point
+            goal = (20, 20)  # Example goal point
 
             rospy.loginfo("Running A* algorithm...")
             path = self.a_star(start, goal)
-            
-            rospy.spin()
+        
             if path:
+                print("PATHHHHHH")
                 rospy.loginfo(f"Path found: {path}")
                 current_pos = start
                 for waypoint in path:
                     self.publish_velocity(current_pos, waypoint)
                     current_pos = waypoint
                     rospy.sleep(1 / self.update_rate)  # Publish velocity at desired frequency
-
+            
             self.rate.sleep()
             
 
