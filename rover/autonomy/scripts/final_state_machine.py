@@ -104,8 +104,8 @@ class GLOB_MSGS:
 
             locations = {}
             location_name_list = ["start", "GNSS1", "GNSS2", "AR1", "AR2", "AR3", "OBJ1", "OBJ2"]
+            i = 0
             for name in location_name_list:
-                i = 0
                 if location_data.data[i] is not None and location_data.data[i+1] is not None:
                     locations[name] = (location_data.data[i], location_data.data[i+1])
                     i +=2
@@ -138,6 +138,7 @@ class InitializeAutonomousNavigation(smach.State):
             time.sleep(1)
             print("Waiting for locations")
         
+        print(self.glob_msg.locations) #Delete later
         cartesian_path = shortest_path('start', self.glob_msg.locations) #code for generating the optimal path
 
         self.glob_msg.pub_state("Changing GPS coordinates to cartesian") #at any print statement you can do this +
@@ -171,7 +172,7 @@ class LocationSelection(smach.State): #goes through all states
         self.glob_msg = glob_msg
   
     def execute(self, userdata):
-        print("Performing Location Search")
+        print("Performing  Location Search")
         if userdata.prev_loc == None:
             userdata.locations_list_c = self.glob_msg.locations.copy() #loc_name, (lat, lon)
             userdata.rem_loc = self.glob_msg.locations.copy()
