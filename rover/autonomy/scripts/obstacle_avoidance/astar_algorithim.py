@@ -316,4 +316,3 @@ if __name__ == "__main__":
         planner.run()
     except rospy.ROSInterruptException:
         pass
-    
