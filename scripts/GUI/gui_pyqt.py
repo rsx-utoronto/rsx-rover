@@ -588,8 +588,8 @@ class RoverGUI(QMainWindow):
         
     #unused utility: if multiple tabs used can have triggers when tab sswitched
     def on_tab_changed(self, index):
-        if index == 1:  # Map Tab
-            print("map tab")  
+        if index == 1:  # State Machine Tab
+            print("State Machine Tab")
         elif index == 2:  # Split Screen Tab
             print("split tab") # Show map viewer in split screen tab
     def setup_lngLat_tab(self):
