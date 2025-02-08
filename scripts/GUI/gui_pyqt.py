@@ -10,7 +10,8 @@ from pathlib import Path
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, \
     QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, \
     QCheckBox,QSplitter,QStylePainter, QStyleOptionComboBox, QStyle, \
-    QToolButton, QMenu, QLineEdit, QFormLayout, QPushButton, QTextEdit
+    QToolButton, QMenu, QLineEdit, QFormLayout, QPushButton, QTextEdit,\
+    QListWidget, QListWidgetItem
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from sensor_msgs.msg import Image
@@ -252,79 +253,80 @@ class StateMachineStatus(QWidget):
 
 
 #type bars widget for latitude longitude entry
+class EditableComboBox(QComboBox):
+    def __init__(self):
+        super().__init__()
+        
+
+        self.setEditable(False)  # Using a QListWidget for custom items
+        self.list_widget = QListWidget()
+        self.setModel(self.list_widget.model())
+        self.setView(self.list_widget)
+
+        self.items_data = []  # Stores references to text edit fields
+        self.populate_items()
+
+    def populate_items(self):
+        coordArray =["GNSS 1","GNSS 2", "AR 1", "AR 2", "AR 3", "OBJ 1", "OBJ 2"]
+        for i in range(7):  # Example: 5 items in dropdown
+            item_widget = QWidget()
+            layout = QHBoxLayout()
+
+            label = QLabel(f"Item {coordArray[i]}")  # Static text (not editable)
+            text1 = QLineEdit()  # Editable box 1
+            text2 = QLineEdit()  # Editable box 2
+
+            self.items_data.append((label, text1, text2))  # Store references
+
+            layout.addWidget(label)
+            layout.addWidget(text1)
+            layout.addWidget(text2)
+            layout.setContentsMargins(0, 0, 0, 0)
+            item_widget.setLayout(layout)
+
+            item = QListWidgetItem(self.list_widget)
+            item.setSizeHint(item_widget.sizeHint())
+            self.list_widget.addItem(item)
+            self.list_widget.setItemWidget(item, item_widget)
+
+    def get_all_data(self):
+        data = []
+        for label, text1, text2 in self.items_data:
+            if text1.text()=="":
+                data.append(0)
+            else:
+                data.append(float(text1.text()))
+            if text2.text()=="":
+                data.append(0)
+            else:
+                data.append( float(text2.text()))
+        return data
+
 class LngLatEntryBar(QWidget):
     def __init__(self):
         super().__init__()
         self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
-        self.longitudeBar = QLineEdit()
-        self.latitudeBar = QLineEdit()
-        self.completeLong = False
-        self.completeLat = False
         self.array = Float32MultiArray()
-        self.array.data = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] #adapt size for 
-        self.array_index = 0
-        flo = QFormLayout()
-        flo.addRow("Longitude", self.longitudeBar)
-        flo.addRow("Latitude", self.latitudeBar)
+        layout = QVBoxLayout(self)
 
-        # Create the button and connect it to the method
-        self.sendButton = QPushButton("Send Coordinates")
-        self.sendButton.clicked.connect(self.check_and_send_coordinates)
+        self.combo = EditableComboBox()
+        layout.addWidget(self.combo)
 
-        # Add button to the layout
-        flo.addWidget(self.sendButton)
+        # Add button to collect data
+        self.submit_button = QPushButton("Get Data")
+        self.submit_button.clicked.connect(self.collect_data)
+        layout.addWidget(self.submit_button)
 
-        self.setLayout(flo)
+        self.setLayout(layout)
 
-    def longitudeEntry(self):
-        self.completeLong = True
-        if self.completeLat:
-            self.processCoordinates()
-
-    def latitudeEntry(self):
-        self.completeLat = True
-        if self.completeLong:
-            self.processCoordinates()
-
-    def processCoordinates(self):
-        """
-        Process the coordinates: fetch values, publish them, and reset the input fields.
-        """
-        longitude = self.longitudeBar.text()
-        latitude = self.latitudeBar.text()
-        self.sendCoordinates(longitude, latitude)
-        self.resetCoordinates()
-
-    def check_and_send_coordinates(self):
-        """
-        Checks if both longitude and latitude have values before sending.
-        """
-        longitude = self.longitudeBar.text()
-        latitude = self.latitudeBar.text()
-        if longitude and latitude:
-            self.sendCoordinates(longitude, latitude)
-            self.resetCoordinates()  # Optionally reset fields after sending
-        else:
-            print("Please enter both Longitude and Latitude.")
-
-    def resetCoordinates(self):
-        """
-        Reset the state of longitude and latitude completion flags and clear the input fields.
-        """
-        self.completeLong = False
-        self.completeLat = False
-        self.longitudeBar.clear()
-        self.latitudeBar.clear()
-
-    def sendCoordinates(self, longitude, latitude):
-        """
-        Send or print the coordinates.
-        """
-        self.array.data[self.array_index] = longitude
-        self.array.data[self.array_index +1] = latitude
-        self.array_index +=2
+    def collect_data(self):
+        data = self.combo.get_all_data()
+        print("Collected Data:")
+        self.array.data = data
         self.longLat_pub.publish(self.array)
-        print(f"Publish coordinates: Longitude = {longitude}, Latitude = {latitude}")
+        for item in data:
+            print(item)  # Prints each row's values
+
 
 
 
