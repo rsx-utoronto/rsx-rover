@@ -10,6 +10,13 @@ Cost depends on height. follow threshold.
 1 for density 
 
 make a trajectory visualizer in a different file 
+
+Feb 8 update: 
+- communication is established between a star algo and a star trajectory
+- next steps: 
+    make sure we can see trajectory in RVIZ
+    ensure A* is producing right code
+
 """
 
 import rospy

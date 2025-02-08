@@ -93,7 +93,7 @@ class Visualizer:
         for waypoint in self.waypoints:
             while self.distance_to_goal(robot_position, waypoint) > threshold:
                 rospy.loginfo(f"Navigating to waypoint {waypoint}")
-                self.publish_trajectory([robot_position, waypoint])
+                self.publish_waypoints([robot_position, waypoint])
 
                 # Simulate reaching the waypoint
                 robot_position[0] += 0.1 * (waypoint[0] - robot_position[0])
