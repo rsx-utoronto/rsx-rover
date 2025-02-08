@@ -541,16 +541,20 @@ class RoverGUI(QMainWindow):
         # Create tab
         self.split_screen_tab = QWidget()
         self.longlat_tab = QWidget()
+        self.controlTab = QWidget()
 
         # Add tab to QTabWidget
         self.tabs.addTab(self.split_screen_tab, "Main Gui")
         self.tabs.addTab(self.longlat_tab, "State Machine")
+        self.tabs.addTab(self.controlTab, "Controls")
 
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
 
         self.setup_split_screen_tab()
         self.setup_lngLat_tab()
+        self.setup_control_tab()
+
 
 
         
@@ -560,6 +564,39 @@ class RoverGUI(QMainWindow):
             print("map tab")  
         elif index == 2:  # Split Screen Tab
             print("split tab") # Show map viewer in split screen tab
+
+    def setup_control_tab(self):
+        # Controls section
+        controls_group = QGroupBox("Controls")
+        controls_layout = QHBoxLayout()
+
+        # Joystick
+        self.joystick_splitter = Joystick(self.velocity_control)
+        joystick_group = QGroupBox("Joystick")
+        joystick_layout = QVBoxLayout()
+        joystick_layout.addWidget(self.joystick_splitter)
+        joystick_group.setLayout(joystick_layout)
+
+        # Gear slider
+        gear_group = QGroupBox("Gear Control")
+        slider_layout = QVBoxLayout()
+        self.gear_slider_splitter = QSlider(Qt.Horizontal, self.split_screen_tab)
+        self.gear_slider_splitter.setRange(1, 10)
+        self.gear_slider_splitter.setTickPosition(QSlider.TicksBelow)
+        self.gear_slider_splitter.setTickInterval(1)
+        self.gear_slider_splitter.valueChanged.connect(self.change_gear)
+        slider_layout.addWidget(self.gear_slider_splitter)
+        gear_group.setLayout(slider_layout)
+
+        # Add joystick and gear controls side by side
+        controls_layout.addWidget(joystick_group)
+        controls_layout.addWidget(gear_group)
+        controls_group.setLayout(controls_layout)
+        # vertical_splitter.addWidget(controls_group)
+        control_tab_layout = QVBoxLayout()
+        control_tab_layout.addWidget(controls_group)
+        self.controlTab.setLayout(control_tab_layout)
+
     def setup_lngLat_tab(self):
         self.lngLatEntry = LngLatEntryBar()
         self.stateMachineDialog = StateMachineStatus()
@@ -589,7 +626,6 @@ class RoverGUI(QMainWindow):
     #used to initialize main tab with splitters
     def setup_split_screen_tab(self):
         splitter = QSplitter(Qt.Horizontal)
-        vertical_splitter = QSplitter(Qt.Vertical)
         # Add camera feed to the splitter
         camera_group = QGroupBox("Camera Feed")
         camera_layout = QVBoxLayout()
@@ -640,38 +676,9 @@ class RoverGUI(QMainWindow):
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
         
-        # Controls section
-        controls_group = QGroupBox("Controls")
-        controls_layout = QHBoxLayout()
-
-        # Joystick
-        self.joystick_splitter = Joystick(self.velocity_control)
-        joystick_group = QGroupBox("Joystick")
-        joystick_layout = QVBoxLayout()
-        joystick_layout.addWidget(self.joystick_splitter)
-        joystick_group.setLayout(joystick_layout)
-
-        # Gear slider
-        gear_group = QGroupBox("Gear Control")
-        slider_layout = QVBoxLayout()
-        self.gear_slider_splitter = QSlider(Qt.Horizontal, self.split_screen_tab)
-        self.gear_slider_splitter.setRange(1, 10)
-        self.gear_slider_splitter.setTickPosition(QSlider.TicksBelow)
-        self.gear_slider_splitter.setTickInterval(1)
-        self.gear_slider_splitter.valueChanged.connect(self.change_gear)
-        slider_layout.addWidget(self.gear_slider_splitter)
-        gear_group.setLayout(slider_layout)
-
-        # Add joystick and gear controls side by side
-        controls_layout.addWidget(joystick_group)
-        controls_layout.addWidget(gear_group)
-        controls_group.setLayout(controls_layout)
-        vertical_splitter.addWidget(splitter)
-        vertical_splitter.addWidget(controls_group)
-        split_screen_layout = QVBoxLayout()
-        split_screen_layout.addWidget(vertical_splitter)
         
-
+        split_screen_layout = QVBoxLayout()
+        split_screen_layout.addWidget(splitter)
         self.split_screen_tab.setLayout(split_screen_layout)
 
     def on_checkbox_state_changed(self, state,map_overlay):
