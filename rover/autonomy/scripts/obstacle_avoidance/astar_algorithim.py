@@ -23,6 +23,9 @@ from octree import OctreeNode
 from queue import PriorityQueue
 from std_msgs.msg import Header
 import math
+from std_msgs.msg import Float32MultiArray
+from geometry_msgs.msg import Point, Pose
+
 
 
 class OctoMapAStar:
@@ -45,6 +48,7 @@ class OctoMapAStar:
         # Publishers and Subscribers
         self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
         self.waypoint_pub = rospy.Publisher(self.waypoint_topic, PoseStamped, queue_size=10)
+        self.astar_pub = rospy.Publisher('/astar_waypoints', Float32MultiArray, queue_size=10)
         self.vel_pub = rospy.Publisher(self.vel_topic, Twist, queue_size=10)
         self.pointcloud_sub = rospy.Subscriber(self.pointcloud_topic, PointCloud2, self.pointcloud_callback)
         self.octomap_pub = rospy.Publisher(self.octomap_topic, Octomap, queue_size=10)
@@ -98,6 +102,7 @@ class OctoMapAStar:
         header.frame_id = "map"
         octomap_msg.header = header
         self.octomap_pub.publish(octomap_msg)
+        
 
     def octomap_callback(self, msg):
         """
@@ -165,9 +170,7 @@ class OctoMapAStar:
                 if 0.2 <= z <= 1.5:  # Height threshold
                     normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
                     occupancy_grid[grid_x, grid_y] = normalized_cost
-
         return occupancy_grid
-
 
     
 ### A* start
@@ -247,11 +250,15 @@ class OctoMapAStar:
         """
         wp = PoseStamped()
         wp.header.stamp = rospy.Time.now()
-        wp.header.frame_id = "map"
-        wp.pose.position.x, wp.pose.position.y = waypoint
-        wp.pose.orientation.w = 1.0
-        print("THISssssssssss",self.waypoint_pub)
+        wp.header.frame_id = "map"     
         self.waypoint_pub.publish(wp)
+        wp.pose.position.x = waypoint[0]
+        wp.pose.position.y = waypoint[1]
+        wp.pose.position.z = 0  # You might want to set a z-value if necessary
+        # If you're using a 2D planner, you can set orientation.w = 1.0 for no rotation
+        wp.pose.orientation.w = 1.0  # Quaternion with no rotation
+        self.waypoint_pub.publish(wp)
+        
 ### A* End
 
     def publish_velocity(self, current_pos, next_pos):
@@ -280,6 +287,22 @@ class OctoMapAStar:
 
         self.vel_pub.publish(velocity_msg)
 
+    def publish_waypoints(self, waypoints):
+        # Create the Float32MultiArray message
+        msg = Float32MultiArray()
+
+        # Flatten the waypoint list (e.g., [(x1, y1), (x2, y2)] -> [x1, y1, x2, y2])
+        flattened_waypoints = [coord for waypoint in waypoints for coord in waypoint]
+        msg.data = flattened_waypoints  # Set the data field with the flattened list
+
+        # Optionally set the layout (if needed, but not mandatory for basic use)
+        # msg.layout.dim.append(MultiArrayDimension())
+        # msg.layout.dim[0].label = 'waypoints'
+        # msg.layout.dim[0].size = len(waypoints)
+        # msg.layout.dim[0].stride = len(flattened_waypoints)
+
+        # Publish the waypoints
+        self.astar_pub.publish(msg)
 
     def run(self):
        
@@ -290,8 +313,6 @@ class OctoMapAStar:
                 self.rate.sleep()
                 continue
 
-            print("RUNNING")
-        
             start = (0, 0)  # Example starting point
             goal = (20, 20)  # Example goal point
 
@@ -299,14 +320,14 @@ class OctoMapAStar:
             path = self.a_star(start, goal)
         
             if path:
-                print("PATHHHHHH")
+                print("PATH Found", path)
                 rospy.loginfo(f"Path found: {path}")
                 current_pos = start
                 for waypoint in path:
                     self.publish_velocity(current_pos, waypoint)
                     current_pos = waypoint
                     rospy.sleep(1 / self.update_rate)  # Publish velocity at desired frequency
-            
+                self.publish_waypoints(path)
             self.rate.sleep()
             
 

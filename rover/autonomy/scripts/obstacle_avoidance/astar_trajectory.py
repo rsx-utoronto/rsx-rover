@@ -4,18 +4,20 @@ import rospy
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
 from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import String
 
 class Visualizer:
     def __init__(self, nh, frame_id):
+        self.pub=rospy.Publisher("waypoints", String, queue_size=10)
         self.frame_id = frame_id
-        self.marker_array_pub = nh.advertise('/dwa_trajectories', MarkerArray, queue_size=1)
-        self.line_marker_pub = nh.advertise('/dwa_trajectory', Marker, queue_size=1)
-        self.footprint_pub = nh.advertise('/robot_footprint', Marker, queue_size=1)
-        self.grid_pub = nh.advertise('/robot_grid', Marker, queue_size=1)
+        self.marker_array_pub = rospy.Publisher('/dwa_trajectories', MarkerArray, queue_size=1)
+        self.line_marker_pub = rospy.Publisher('/dwa_trajectory', Marker, queue_size=1)
+        self.footprint_pub = rospy.Publisher('/robot_footprint', Marker, queue_size=1)
+        self.grid_pub = rospy.Publisher('/robot_grid', Marker, queue_size=1)
 
-        # Subscribe to the A* waypoints topic
-        self.astar_sub = nh.subscribe('/astar_waypoints', Float32MultiArray, self.astar_callback)
-        self.waypoints = []  # Store waypoints received from the A* algorithm
+        # Subscribe to A* waypoints
+        self.astar_sub = rospy.Subscriber('/astar_waypoints', Float32MultiArray, self.astar_callback)
+        self.waypoints = []  # Store A* waypoints
 
     def astar_callback(self, msg):
         """
@@ -87,6 +89,7 @@ class Visualizer:
         self.line_marker_pub.publish(waypoint_marker)
 
     def navigate_waypoints(self, robot_position, threshold=0.2):
+        print("VISUALIZING WAYPOINTS")
         for waypoint in self.waypoints:
             while self.distance_to_goal(robot_position, waypoint) > threshold:
                 rospy.loginfo(f"Navigating to waypoint {waypoint}")
@@ -107,6 +110,7 @@ class Visualizer:
 
 # Example usage
 if __name__ == "__main__":
+  
     rospy.init_node("trajectory_visualizer")
     nh = rospy
 
