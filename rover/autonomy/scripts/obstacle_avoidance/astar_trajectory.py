@@ -41,8 +41,8 @@ class Visualizer:
             line_marker.action = Marker.ADD
 
             line_marker.scale.x = 0.02
-            line_marker.color.r = 1.0
-            line_marker.color.g = 0.0
+            line_marker.color.r = 0.0
+            line_marker.color.g = 1.0
             line_marker.color.b = 0.0
             line_marker.color.a = 1.0
 
@@ -64,6 +64,7 @@ class Visualizer:
         self.marker_array_pub.publish(marker_array)
 
     def publish_waypoints(self, waypoints):
+        print("THIS IS PUBLSIHING")
         waypoint_marker = Marker()
         waypoint_marker.header.frame_id = self.frame_id
         waypoint_marker.header.stamp = rospy.Time.now()
@@ -87,6 +88,7 @@ class Visualizer:
             waypoint_marker.points.append(p)
 
         self.line_marker_pub.publish(waypoint_marker)
+       # self.footprint_pub.publish(waypoint)
 
     def navigate_waypoints(self, robot_position, threshold=0.2):
         print("VISUALIZING WAYPOINTS")

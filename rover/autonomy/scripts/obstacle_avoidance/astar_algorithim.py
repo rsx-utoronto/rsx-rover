@@ -160,14 +160,13 @@ class OctoMapAStar:
         grid_size = (200, 200)  # Number of cells in x and y
         resolution = 0.1        # Grid resolution in meters
 
-        occupancy_grid = np.zeros(grid_size, dtype=np.int8)
+        occupancy_grid = np.zeros(grid_size, dtype=np.int32)
         
         # Decode the OctoMap message
         occupied_points = self.decode_octomap(octomap_msg)
 
         for point in occupied_points:
             x, y, z = point
-
             # Convert to grid indices
             grid_x = int((x - self.grid_origin[0]) / resolution)
             grid_y = int((y - self.grid_origin[1]) / resolution)
@@ -175,16 +174,15 @@ class OctoMapAStar:
             # Clamp indices to valid bounds
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
                 if 0.2 <= z <= 1.5:  # Height threshold
+                    #print("OBSTACLE IS HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", grid_x, grid_y)
                     normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
-                    occupancy_grid[grid_x, grid_y] = normalized_cost
+                    occupancy_grid[grid_x, grid_y] = 100000000
+                    #print("cost is", occupancy_grid[grid_x, grid_y])
         return occupancy_grid
 
-    
-### A* start
+### A* start 
+    '''
     def a_star(self, start, goal):
-        """
-        A* pathfinding algorithm with height cost.
-        """
         open_set = PriorityQueue()
         open_set.put((0, start))
         came_from = {}
@@ -208,36 +206,22 @@ class OctoMapAStar:
 
         rospy.logwarn("A* failed to find a path")
         return []
-
+    '''
     def height_cost(self, current, neighbor):
         """
         Calculate the cost of height difference between two cells.
         """
+        print("THIS RUNSSSSSSSSSS")
         current_height = self.occupancy_grid[current[0], current[1]]
+        print("CURRENT positionnnnnnnnnnnnn", current)
         neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
         return abs(current_height - neighbor_height)
-
+    
     def heuristic(self, node, goal):
         """
-        Heuristic function with height cost.
+        Heuristic function with euclidean
         """
-        xy_distance = np.linalg.norm(np.array(node) - np.array(goal))
-       
-        height_difference = abs(self.occupancy_grid[node[0], node[1]] - self.occupancy_grid[goal[0], goal[1]])
-        return xy_distance + height_difference
-
-    def get_neighbors(self, node):
-        """
-        Get neighboring cells in the grid.
-        """
-        neighbors = []
-        x, y = node
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
-                if self.occupancy_grid[nx, ny] == 0:  # Free space
-                    neighbors.append((nx, ny))
-        return neighbors
+        return np.linalg.norm(np.array(node) - np.array(goal))
 
     def reconstruct_path(self, came_from, current):
         """
@@ -249,24 +233,50 @@ class OctoMapAStar:
             current = came_from[current]
         path.reverse()
         return path
-
-    def publish_waypoint(self, waypoint):
-        print("PUBLISHING WAYpoints")
-        """
-        Publish a waypoint for the local planner.
-        """
-        wp = PoseStamped()
-        wp.header.stamp = rospy.Time.now()
-        wp.header.frame_id = "map"     
-        self.waypoint_pub.publish(wp)
-        wp.pose.position.x = waypoint[0]
-        wp.pose.position.y = waypoint[1]
-        wp.pose.position.z = 0  # You might want to set a z-value if necessary
-        # If you're using a 2D planner, you can set orientation.w = 1.0 for no rotation
-        wp.pose.orientation.w = 1.0  # Quaternion with no rotation
-        self.waypoint_pub.publish(wp)
+    
+    def a_star(self, start, goal):
+        open_set = PriorityQueue()
+        open_set.put((0, start))
         
-### A* End
+        came_from = {}
+        g_score = {start: 0}
+        f_score = {start: self.heuristic(start, goal)}
+
+        while not open_set.empty():
+            _, current = open_set.get()
+
+            if current == goal:
+                return self.reconstruct_path(came_from, current)
+
+            for neighbor in self.get_neighbors(current):
+                tentative_g_score = g_score[current] + 1  # Uniform movement cost
+                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g_score
+                    f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)
+                    open_set.put((f_score[neighbor], neighbor))
+
+        rospy.logwarn("A* failed to find a path")
+        return []
+    
+    def get_neighbors(self, node):
+        """
+        Get neighboring cells in the grid while avoiding obstacles.
+        """
+        neighbors = []
+        x, y = node
+        moves = [(-1, 0), (1, 0), (0, -1), (0, 1),  # Cardinal directions
+                (-1, -1), (-1, 1), (1, -1), (1, 1)]  # Diagonal moves
+
+        for dx, dy in moves:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
+                if self.occupancy_grid[nx, ny] == 0:  # Ensure cell is not an obstacle
+                    neighbors.append((nx, ny))
+
+        return neighbors
+    
+### A* END
 
     def publish_velocity(self, current_pos, next_pos):
         """
@@ -301,14 +311,6 @@ class OctoMapAStar:
         # Flatten the waypoint list (e.g., [(x1, y1), (x2, y2)] -> [x1, y1, x2, y2])
         flattened_waypoints = [coord for waypoint in waypoints for coord in waypoint]
         msg.data = flattened_waypoints  # Set the data field with the flattened list
-
-        # Optionally set the layout (if needed, but not mandatory for basic use)
-        # msg.layout.dim.append(MultiArrayDimension())
-        # msg.layout.dim[0].label = 'waypoints'
-        # msg.layout.dim[0].size = len(waypoints)
-        # msg.layout.dim[0].stride = len(flattened_waypoints)
-
-        # Publish the waypoints
         self.astar_pub.publish(msg)
 
     def run(self):
