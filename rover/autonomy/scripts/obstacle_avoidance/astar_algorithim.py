@@ -21,6 +21,7 @@ Feb 8 update:
 
 import rospy
 import numpy as np
+from nav_msgs.msg import Odometry
 from octomap_msgs.msg import Octomap
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import PoseStamped, Twist
@@ -50,10 +51,13 @@ class OctoMapAStar:
         self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
         self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
         self.boundary= ((-100000, -1000000, -100000), (100000, 100000, 100000)) 
+        self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")
+        self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+      
         
-
         # Publishers and Subscribers
         self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
+        #self.pose_sub = rospy.Subscriber(self.pose_topic, PoseStamped, self.odom_callback)
         self.waypoint_pub = rospy.Publisher(self.waypoint_topic, PoseStamped, queue_size=10)
         self.astar_pub = rospy.Publisher('/astar_waypoints', Float32MultiArray, queue_size=10)
         self.vel_pub = rospy.Publisher(self.vel_topic, Twist, queue_size=10)
@@ -63,7 +67,7 @@ class OctoMapAStar:
         # Map and planning variables
         self.occupancy_grid = None
         self.grid_resolution = 0.1  # Resolution of 2D grid (meters per cell)
-        self.grid_origin = (0.0,0.0)
+        self.grid_origin=(0.0,0.0)
         self.goal = (20.0,20.0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
@@ -98,6 +102,19 @@ class OctoMapAStar:
             # Publish the OctoMap
             self.publish_octomap()
 
+    def odom_callback(self, msg):
+        """
+        Callback to receive odometry or localization data.
+        """
+        # Extract robot's position from the Odometry message
+        self.current_position = msg.pose.pose.position
+        print("HEREEEEEE",msg.pose.pose.position)
+        rospy.loginfo("Current position: x=%f, y=%f, z=%f", 
+                    self.current_position.x, 
+                    self.current_position.y, 
+                    self.current_position.z)
+    
+        
     def publish_octomap(self):
         """
         Publish the generated OctoMap as a ROS message.
@@ -109,7 +126,6 @@ class OctoMapAStar:
         header.frame_id = "map"
         octomap_msg.header = header
         self.octomap_pub.publish(octomap_msg)
-        
 
     def octomap_callback(self, msg):
         """
@@ -120,8 +136,6 @@ class OctoMapAStar:
         if octomap_data is not None:
             self.occupancy_grid = octomap_data 
             rospy.loginfo("2D occupancy grid generated from OctoMap.")
-    
-    import rospy
 
     def decode_octomap(self, octomap_msg):
         """
@@ -174,46 +188,21 @@ class OctoMapAStar:
             # Clamp indices to valid bounds
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
                 if 0.2 <= z <= 1.5:  # Height threshold
-                    #print("OBSTACLE IS HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", grid_x, grid_y)
+                    
                     normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
                     occupancy_grid[grid_x, grid_y] = 100000000
-                    #print("cost is", occupancy_grid[grid_x, grid_y])
+                   
         return occupancy_grid
 
 ### A* start 
-    '''
-    def a_star(self, start, goal):
-        open_set = PriorityQueue()
-        open_set.put((0, start))
-        came_from = {}
-        g_score = {start: 0}
-        f_score = {start: self.heuristic(start, goal)}
 
-        while not open_set.empty():
-            _, current = open_set.get()
-
-            if current == goal:
-                return self.reconstruct_path(came_from, current)
-
-            for neighbor in self.get_neighbors(current):
-                height_cost = self.height_cost(current, neighbor)
-                tentative_g_score = g_score[current] + 1 + height_cost
-                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
-                    came_from[neighbor] = current
-                    g_score[neighbor] = tentative_g_score
-                    f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)
-                    open_set.put((f_score[neighbor], neighbor))
-
-        rospy.logwarn("A* failed to find a path")
-        return []
-    '''
     def height_cost(self, current, neighbor):
         """
         Calculate the cost of height difference between two cells.
         """
-        print("THIS RUNSSSSSSSSSS")
+      #  print("THIS RUNSSSSSSSSSS")
         current_height = self.occupancy_grid[current[0], current[1]]
-        print("CURRENT positionnnnnnnnnnnnn", current)
+      #  print("CURRENT positionnnnnnnnnnnnn", current)
         neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
         return abs(current_height - neighbor_height)
     
@@ -236,11 +225,10 @@ class OctoMapAStar:
     
     def a_star(self, start, goal):
         open_set = PriorityQueue()
-        open_set.put((0, start))
-        
+        open_set.put((0, start))  # Put start with f_score = 0
         came_from = {}
-        g_score = {start: 0}
-        f_score = {start: self.heuristic(start, goal)}
+        g_score = {start: 0}  # The cost of getting to the start node is 0
+        f_score = {start: self.heuristic(start, goal)}  # Initial f_score based on heuristic
 
         while not open_set.empty():
             _, current = open_set.get()
@@ -249,11 +237,12 @@ class OctoMapAStar:
                 return self.reconstruct_path(came_from, current)
 
             for neighbor in self.get_neighbors(current):
-                tentative_g_score = g_score[current] + 1  # Uniform movement cost
+                height_cost = self.height_cost(current, neighbor)  # Get height-based cost
+                tentative_g_score = g_score[current] + height_cost  # Add the height cost to the g_score
                 if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g_score
-                    f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)
+                    f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)  # f = g + h
                     open_set.put((f_score[neighbor], neighbor))
 
         rospy.logwarn("A* failed to find a path")
@@ -261,19 +250,15 @@ class OctoMapAStar:
     
     def get_neighbors(self, node):
         """
-        Get neighboring cells in the grid while avoiding obstacles.
+        Get neighboring cells in the grid, avoiding obstacles (e.g., value of 100000).
         """
         neighbors = []
         x, y = node
-        moves = [(-1, 0), (1, 0), (0, -1), (0, 1),  # Cardinal directions
-                (-1, -1), (-1, 1), (1, -1), (1, 1)]  # Diagonal moves
-
-        for dx, dy in moves:
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:  # Check neighboring cells (up, down, left, right)
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
-                if self.occupancy_grid[nx, ny] == 0:  # Ensure cell is not an obstacle
+                if self.occupancy_grid[nx, ny] < 100000:  # Ensure the neighbor is not an obstacle
                     neighbors.append((nx, ny))
-
         return neighbors
     
 ### A* END
@@ -314,7 +299,6 @@ class OctoMapAStar:
         self.astar_pub.publish(msg)
 
     def run(self):
-       
         while not rospy.is_shutdown():
             if self.occupancy_grid is None:
                 print("STOPPED looking for path")
@@ -322,16 +306,17 @@ class OctoMapAStar:
                 self.rate.sleep()
                 continue
 
-            start = (0, 0)  # Example starting point
+            start =  (0,0)
             goal = (20, 20)  # Example goal point
-
+            print("Current !!!!!!!!!!!!!!!!!!!!!!!!!!!")
             rospy.loginfo("Running A* algorithm...")
             path = self.a_star(start, goal)
-        
+            
             if path:
                 print("PATH Found", path)
                 rospy.loginfo(f"Path found: {path}")
                 current_pos = start
+                
                 for waypoint in path:
                     self.publish_velocity(current_pos, waypoint)
                     current_pos = waypoint
