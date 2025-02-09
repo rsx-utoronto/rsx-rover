@@ -1,6 +1,6 @@
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QFileDialog, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QImage
 from PIL import Image
@@ -12,13 +12,11 @@ class PhotoViewerApp(QWidget):
         super().__init__()
 
         self.setWindowTitle("Photo Viewer")
-        self.setGeometry(100, 100, 800, 700)
+        self.setGeometry(100, 100, 1000, 900)  # Increased window size for a larger image display
 
         self.folder_path = None
         self.photos = []
         self.current_photo_idx = 0
-        self.image_width = 0
-        self.image_height = 0
 
         # Layouts
         self.main_layout = QVBoxLayout()
@@ -34,39 +32,39 @@ class PhotoViewerApp(QWidget):
         self.canvas.setScene(self.scene)
 
         # Mouse coordinates and greyscale label
-        self.coords_label = QLabel("Mouse Coordinates: (x, y)\nImage Dimensions: (width, height)", self)
-
-        # Change Photo button
-        self.change_button = QPushButton("Toggle Photo")
-        self.change_button.clicked.connect(self.change_photo)
+        self.coords_label = QLabel("Mouse Coordinates: (x, y)\nGreyscale Values:", self)
 
         # Add widgets to the main layout
         self.main_layout.addWidget(self.open_button)
         self.main_layout.addWidget(self.canvas)
         self.main_layout.addWidget(self.coords_label)
-        self.main_layout.addWidget(self.change_button)
 
         # Mouse move and click events
         self.canvas.setMouseTracking(True)
         self.canvas.mouseMoveEvent = self.show_coordinates
         self.canvas.mousePressEvent = self.show_greyscale_value
 
+
     def open_folder(self):
-        """Open the folder and load 12 photos."""
+        """Open the folder and load photos."""
         folder = QFileDialog.getExistingDirectory(self, "Open Folder")
         if folder:
             self.folder_path = folder
             self.load_photos()
             self.display_photo()
 
+
     def load_photos(self):
-        """Load exactly 12 photos from the selected folder."""
+        """Load photos from the selected folder."""
         self.photos.clear()
         for filename in os.listdir(self.folder_path):
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):  # Check for image files
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):  # Add more formats if needed
                 img_path = os.path.join(self.folder_path, filename)
-                img = Image.open(img_path)
-                self.photos.append(img)
+                try:
+                    img = Image.open(img_path)
+                    self.photos.append(img)
+                except Exception as e:
+                    print(f"Error loading image {filename}: {e}")
 
         # Ensure there are exactly 12 photos
         if len(self.photos) != 12:
@@ -74,21 +72,40 @@ class PhotoViewerApp(QWidget):
             self.folder_path = None
             return
 
+
     def display_photo(self):
         """Display the current main photo on the canvas."""
+        if not self.photos:
+            print("No photos loaded.")  # Debug: No photos loaded
+            return
+        
         photo = self.photos[self.current_photo_idx]
-        pixmap = QPixmap.fromImage(self.pil_to_qimage(photo))
+        print(f"Displaying photo {self.current_photo_idx + 1}")  # Debug: Show which photo is being displayed
+
+        # Resize the photo to make it 1000x1000
+        self.resized_photo = photo.resize((1000, 1000), Image.Resampling.LANCZOS)  # Updated to 1000x1000
+
+        # Convert the resized photo to QPixmap
+        pixmap = QPixmap.fromImage(self.pil_to_qimage(self.resized_photo))
+
+        # Create a QGraphicsPixmapItem for the resized image
         item = QGraphicsPixmapItem(pixmap)
-        self.scene.clear()  # Clear previous photo
+        
+        # Clear previous photo and add the new item
+        self.scene.clear()
         self.scene.addItem(item)
         self.canvas.setScene(self.scene)
 
-        # Store image dimensions
-        self.image_width = photo.width
-        self.image_height = photo.height
+        # Update the image dimensions
+        self.image_width = self.resized_photo.width
+        self.image_height = self.resized_photo.height
 
-        # Update the label with the image dimensions
-        self.coords_label.setText(f"Mouse Coordinates: (x, y)\nImage Dimensions: ({self.image_width}, {self.image_height})")
+        # Update the label with the image dimensions and current photo info
+        self.coords_label.setText(f"Mouse Coordinates: (x, y)\nImage Dimensions: ({self.image_width}, {self.image_height})\n"
+                                  f"Displaying Photo {self.current_photo_idx + 1} of 12")
+
+        print(f"Photo dimensions: {self.image_width} x {self.image_height}")  # Debug: Check photo size
+
 
     def pil_to_qimage(self, pil_image):
         """Convert PIL image to QImage."""
@@ -96,94 +113,80 @@ class PhotoViewerApp(QWidget):
         data = rgb_image.tobytes("raw", "RGB")
         return QImage(data, rgb_image.width, rgb_image.height, QImage.Format_RGB888)
 
-    def change_photo(self):
-        """Change to the next photo."""
-        self.current_photo_idx = (self.current_photo_idx + 1) % 12
-        self.display_photo()
 
     def show_coordinates(self, event):
-        """Display mouse coordinates and greyscale values for all 12 photos on hover."""
-        # Get the mouse position in the view
-        view_pos = event.pos()
+        """Display mouse coordinates and greyscale values on hover."""
+        # Ensure the scene has at least one item (the image)
+        items = self.scene.items()
+        if not items:
+            print("No items in the scene.")
+            return  # Exit early if the scene is empty
         
-        # Transform the view position to scene coordinates
+        view_pos = event.pos()
         scene_pos = self.canvas.mapToScene(view_pos)
         
-        # Get the pixmap item in the scene (the image)
-        item = self.scene.items()[0]
+        # Get the image's pixmap item
+        item = items[0]
         
-        # Get the image's transformation matrix (used for scaling/translation)
+        # Apply the transformation to get the coordinates in the image
         transform = item.transform()
-        
-        # Apply the transformation to the mouse position
         image_pos = transform.inverted()[0].map(scene_pos)
 
-        # Convert to integer coordinates for pixel access
         x, y = int(image_pos.x()), int(image_pos.y())
         
-        # Ensure the coordinates are within the bounds of the image
-        if 0 <= x < item.pixmap().width() and 0 <= y < item.pixmap().height():
-            self.coords_label.setText(f"Mouse Coordinates: ({x}, {y})\nImage Dimensions: ({self.image_width}, {self.image_height})")
-            
-            # Calculate greyscale values for all photos at the hovered pixel
+        # Ensure the coordinates are within the image bounds
+        if 0 <= x < self.resized_photo.width and 0 <= y < self.resized_photo.height:
+            self.coords_label.setText(f"Mouse Coordinates: ({x}, {y})")
+
+            # Calculate greyscale values for all photos
             greyscale_values = []
             for photo in self.photos:
-                pixel = photo.convert("L").getpixel((x, y))  # Convert to greyscale and get the pixel value
+                pixel = photo.convert("L").getpixel((x, y))  # Get greyscale value from original image
                 greyscale_values.append(pixel)
             
-            # Display the greyscale values for all 12 photos
             greyscale_text = "Greyscale Values: " + ", ".join([str(value) for value in greyscale_values])
             self.coords_label.setText(f"{self.coords_label.text()}\n{greyscale_text}")
 
+
     def show_greyscale_value(self, event):
         """Plot the greyscale values for all photos at the clicked pixel."""
-        # Get the mouse click position in the view (canvas coordinates)
         view_pos = event.pos()
-        
-        # Transform the canvas coordinates to scene coordinates
         scene_pos = self.canvas.mapToScene(view_pos)
         
-        # Get the pixmap item in the scene (the image)
-        item = self.scene.items()[0]
+        # Ensure the scene has at least one item (the image)
+        items = self.scene.items()
+        if not items:
+            return  # No item in the scene, so return without further processing
         
-        # Get the image's transformation matrix (used for scaling/translation)
+        # Get the image's pixmap item
+        item = items[0]
+        
+        # Apply the transformation to get the coordinates in the image
         transform = item.transform()
-        
-        # Apply the transformation to the mouse position
         image_pos = transform.inverted()[0].map(scene_pos)
         
-        # Convert to integer coordinates for pixel access
         x, y = int(image_pos.x()), int(image_pos.y())
 
-        # Ensure the coordinates are within the bounds of the image
-        if 0 <= x < item.pixmap().width() and 0 <= y < item.pixmap().height():
+        if 0 <= x < self.resized_photo.width and 0 <= y < self.resized_photo.height:
             greyscale_values = []
-            
-            # Get the greyscale values for all photos at the clicked pixel
             for photo in self.photos:
-                pixel = photo.convert("L").getpixel((x, y))  # Convert to greyscale and get the pixel value
+                pixel = photo.convert("L").getpixel((x, y))  # Get greyscale value from original image
                 greyscale_values.append(pixel)
             
-            # Plot the greyscale values for the 12 images
+            # Plot the greyscale values
             self.plot_greyscale_values(greyscale_values)
 
+
     def plot_greyscale_values(self, greyscale_values):
-        """Plot the greyscale values on a line plot with fixed y-axis range."""
+        """Plot the greyscale values for all photos."""
         plt.figure(figsize=(10, 6))
         plt.plot(range(1, 13), greyscale_values, marker='o', linestyle='-', color='b')
-
-        # Set fixed y-axis limits
         plt.ylim(0, 255)
-
-        # Title and labels with better formatting
         plt.title("Greyscale Values at Clicked Pixel", fontsize=14, fontweight='bold')
-        plt.xlabel("Photo Index (Filters)", fontsize=12)
+        plt.xlabel("Photo Index", fontsize=12)
         plt.ylabel("Greyscale Value (0-255)", fontsize=12)
-        
-        # Set x-ticks and y-ticks with labels
-        plt.xticks(range(1, 13), [f"Filter {i}" for i in range(1, 13)], rotation=45)
+        plt.xticks(range(1, 13), [f"Photo {i}" for i in range(1, 13)], rotation=45)
         plt.yticks(range(0, 256, 51), [str(i) for i in range(0, 256, 51)])
-        
         plt.grid(True)
         plt.tight_layout()
         plt.show()
@@ -194,3 +197,5 @@ if __name__ == "__main__":
     viewer = PhotoViewerApp()
     viewer.show()
     sys.exit(app.exec_())
+
+
