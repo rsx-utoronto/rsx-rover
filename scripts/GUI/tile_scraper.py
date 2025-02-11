@@ -106,7 +106,7 @@ def main():
 	]
 
 	locations = [
-		neo_mars
+		front_campus
 	]
 
 	internet_map_servers = [MapServers.ARCGIS_World_Imagery]

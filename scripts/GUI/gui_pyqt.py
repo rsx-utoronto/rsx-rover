@@ -10,10 +10,11 @@ from pathlib import Path
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, \
     QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, \
     QCheckBox,QSplitter,QStylePainter, QStyleOptionComboBox, QStyle, \
-    QToolButton, QMenu, QLineEdit, QFormLayout, QPushButton, QTextEdit
+    QToolButton, QMenu, QLineEdit, QFormLayout, QPushButton, QTextEdit,\
+    QListWidget, QListWidgetItem
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
-from sensor_msgs.msg import Image, CompressedImage
+from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix  
 from std_msgs.msg import Float32MultiArray, String, Bool
@@ -70,7 +71,7 @@ class statusTerminal(QWidget):
 
         # Connect signals to the corresponding update methods
         self.update_status_signal.connect(self.update_string_list)
-        rospy.Subscriber('/status', String, self.string_callback)
+        rospy.Subscriber('/gui_status', String, self.string_callback)
         self.received_strings = []
     def init_ui(self):
         
@@ -252,111 +253,80 @@ class StateMachineStatus(QWidget):
 
 
 #type bars widget for latitude longitude entry
+class EditableComboBox(QComboBox):
+    def __init__(self):
+        super().__init__()
+        
+
+        self.setEditable(False)  # Using a QListWidget for custom items
+        self.list_widget = QListWidget()
+        self.setModel(self.list_widget.model())
+        self.setView(self.list_widget)
+
+        self.items_data = []  # Stores references to text edit fields
+        self.populate_items()
+
+    def populate_items(self):
+        coordArray =["Start", "GNSS 1","GNSS 2", "AR 1", "AR 2", "AR 3", "OBJ 1", "OBJ 2"]
+        for i in range(8):  # Example: 5 items in dropdown
+            item_widget = QWidget()
+            layout = QHBoxLayout()
+
+            label = QLabel(f"Item {coordArray[i]}")  # Static text (not editable)
+            text1 = QLineEdit()  # Editable box 1
+            text2 = QLineEdit()  # Editable box 2
+
+            self.items_data.append((label, text1, text2))  # Store references
+
+            layout.addWidget(label)
+            layout.addWidget(text1)
+            layout.addWidget(text2)
+            layout.setContentsMargins(0, 0, 0, 0)
+            item_widget.setLayout(layout)
+
+            item = QListWidgetItem(self.list_widget)
+            item.setSizeHint(item_widget.sizeHint())
+            self.list_widget.addItem(item)
+            self.list_widget.setItemWidget(item, item_widget)
+
+    def get_all_data(self):
+        data = []
+        for label, text1, text2 in self.items_data:
+            if text1.text()=="":
+                data.append(0)
+            else:
+                data.append(float(text1.text()))
+            if text2.text()=="":
+                data.append(0)
+            else:
+                data.append( float(text2.text()))
+        return data
+
 class LngLatEntryBar(QWidget):
     def __init__(self):
         super().__init__()
         self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
-        self.longitudeBar = QLineEdit()
-        self.latitudeBar = QLineEdit()
-        self.completeLong = False
-        self.completeLat = False
         self.array = Float32MultiArray()
-        self.array.data = []
-        self.old_array = Float32MultiArray()
-        self.old_array.data = []
-        self.coord_counter = 0 # 1-8
-        self.long_lat_pub = False
-        flo = QFormLayout()
-        flo.addRow("Latitude", self.latitudeBar)
-        flo.addRow("Longitude", self.longitudeBar)
-        
+        layout = QVBoxLayout(self)
 
-        # Create the button and connect it to the method
-        self.sendButton = QPushButton("Send Coordinates")
-        self.sendButton.clicked.connect(self.check_and_send_coordinates)
+        self.combo = EditableComboBox()
+        layout.addWidget(self.combo)
 
-        # Create a button for publishing the last given coordinates
-        self.publishButton = QPushButton("Publish Coordinates Again :(")
-        self.publishButton.clicked.connect(self.send_old_coordinates)
+        # Add button to collect data
+        self.submit_button = QPushButton("Get Data")
+        self.submit_button.clicked.connect(self.collect_data)
+        layout.addWidget(self.submit_button)
 
-        # Add button to the layout
-        flo.addWidget(self.sendButton)
-        flo.addWidget(self.publishButton)
+        self.setLayout(layout)
 
-        self.setLayout(flo)
+    def collect_data(self):
+        data = self.combo.get_all_data()
+        print("Collected Data:")
+        self.array.data = data
+        self.longLat_pub.publish(self.array)
+        for item in data:
+            print(item)  # Prints each row's values
 
-    def longitudeEntry(self):
-        self.completeLong = True
-        if self.completeLat:
-            self.processCoordinates()
-
-    def latitudeEntry(self):
-        self.completeLat = True
-        if self.completeLong:
-            self.processCoordinates()
-
-    def processCoordinates(self):
-        """
-        Process the coordinates: fetch values, publish them, and reset the input fields.
-        """
-        longitude = self.longitudeBar.text()
-        latitude = self.latitudeBar.text()
-        self.sendCoordinates(longitude, latitude)
-        self.resetCoordinates()
-
-    def check_and_send_coordinates(self):
-        """
-        Checks if both longitude and latitude have values before sending.
-        """
-        longitude = self.longitudeBar.text()
-        latitude = self.latitudeBar.text()
-        longitude = float(longitude)
-        latitude = float(latitude)
-        if longitude and latitude:
-            self.sendCoordinates(longitude, latitude)
-            self.resetCoordinates()  # Optionally reset fields after sending
-        else:
-            print("Please enter both Longitude and Latitude.")
-    def send_old_coordinates(self):
-        """
-        Publish the last given coordinates.
-        """
-        if self.long_lat_pub:
-            self.longLat_pub.publish(self.old_array)
-            print(f"Publishing coordinates: {self.old_array.data}")
-        else:
-            print("No coordinates to publish.")
-
-    def resetCoordinates(self):
-        """
-        Reset the state of longitude and latitude completion flags and clear the input fields.
-        """
-        self.completeLong = False
-        self.completeLat = False
-        self.longitudeBar.clear()
-        self.latitudeBar.clear()
-
-    def sendCoordinates(self, longitude, latitude):
-        """
-        Send or print the coordinates.
-        """
-        self.coord_counter += 1
-        if self.coord_counter < 8:
-            self.array.data.append(latitude)
-            self.array.data.append(longitude)
-            
-            print("Added coordinate: ", latitude, longitude)
-        elif self.coord_counter == 8:
-            self.array.data.append(latitude)
-            self.array.data.append(longitude)
-            self.longLat_pub.publish(self.array)
-            print(f"Publishing coordinates: {self.array.data}")
-            self.long_lat_pub = True
-            self.old_array.data = self.array.data.copy()
-            self.coord_counter = 0
-            self.array.data = []
-            
-        
 
 
 
@@ -573,16 +543,20 @@ class RoverGUI(QMainWindow):
         # Create tab
         self.split_screen_tab = QWidget()
         self.longlat_tab = QWidget()
+        self.controlTab = QWidget()
 
         # Add tab to QTabWidget
         self.tabs.addTab(self.split_screen_tab, "Main Gui")
         self.tabs.addTab(self.longlat_tab, "State Machine")
+        self.tabs.addTab(self.controlTab, "Controls")
 
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
 
         self.setup_split_screen_tab()
         self.setup_lngLat_tab()
+        self.setup_control_tab()
+
 
 
         
@@ -592,6 +566,39 @@ class RoverGUI(QMainWindow):
             print("map tab")  
         elif index == 2:  # Split Screen Tab
             print("split tab") # Show map viewer in split screen tab
+
+    def setup_control_tab(self):
+        # Controls section
+        controls_group = QGroupBox("Controls")
+        controls_layout = QHBoxLayout()
+
+        # Joystick
+        self.joystick_splitter = Joystick(self.velocity_control)
+        joystick_group = QGroupBox("Joystick")
+        joystick_layout = QVBoxLayout()
+        joystick_layout.addWidget(self.joystick_splitter)
+        joystick_group.setLayout(joystick_layout)
+
+        # Gear slider
+        gear_group = QGroupBox("Gear Control")
+        slider_layout = QVBoxLayout()
+        self.gear_slider_splitter = QSlider(Qt.Horizontal, self.split_screen_tab)
+        self.gear_slider_splitter.setRange(1, 10)
+        self.gear_slider_splitter.setTickPosition(QSlider.TicksBelow)
+        self.gear_slider_splitter.setTickInterval(1)
+        self.gear_slider_splitter.valueChanged.connect(self.change_gear)
+        slider_layout.addWidget(self.gear_slider_splitter)
+        gear_group.setLayout(slider_layout)
+
+        # Add joystick and gear controls side by side
+        controls_layout.addWidget(joystick_group)
+        controls_layout.addWidget(gear_group)
+        controls_group.setLayout(controls_layout)
+        # vertical_splitter.addWidget(controls_group)
+        control_tab_layout = QVBoxLayout()
+        control_tab_layout.addWidget(controls_group)
+        self.controlTab.setLayout(control_tab_layout)
+
     def setup_lngLat_tab(self):
         self.lngLatEntry = LngLatEntryBar()
         self.stateMachineDialog = StateMachineStatus()
@@ -621,7 +628,6 @@ class RoverGUI(QMainWindow):
     #used to initialize main tab with splitters
     def setup_split_screen_tab(self):
         splitter = QSplitter(Qt.Horizontal)
-        vertical_splitter = QSplitter(Qt.Vertical)
         # Add camera feed to the splitter
         camera_group = QGroupBox("Camera Feed")
         camera_layout = QVBoxLayout()
@@ -672,38 +678,9 @@ class RoverGUI(QMainWindow):
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
         
-        # Controls section
-        controls_group = QGroupBox("Controls")
-        controls_layout = QHBoxLayout()
-
-        # Joystick
-        self.joystick_splitter = Joystick(self.velocity_control)
-        joystick_group = QGroupBox("Joystick")
-        joystick_layout = QVBoxLayout()
-        joystick_layout.addWidget(self.joystick_splitter)
-        joystick_group.setLayout(joystick_layout)
-
-        # Gear slider
-        gear_group = QGroupBox("Gear Control")
-        slider_layout = QVBoxLayout()
-        self.gear_slider_splitter = QSlider(Qt.Horizontal, self.split_screen_tab)
-        self.gear_slider_splitter.setRange(1, 10)
-        self.gear_slider_splitter.setTickPosition(QSlider.TicksBelow)
-        self.gear_slider_splitter.setTickInterval(1)
-        self.gear_slider_splitter.valueChanged.connect(self.change_gear)
-        slider_layout.addWidget(self.gear_slider_splitter)
-        gear_group.setLayout(slider_layout)
-
-        # Add joystick and gear controls side by side
-        controls_layout.addWidget(joystick_group)
-        controls_layout.addWidget(gear_group)
-        controls_group.setLayout(controls_layout)
-        vertical_splitter.addWidget(splitter)
-        vertical_splitter.addWidget(controls_group)
-        split_screen_layout = QVBoxLayout()
-        split_screen_layout.addWidget(vertical_splitter)
         
-
+        split_screen_layout = QVBoxLayout()
+        split_screen_layout.addWidget(splitter)
         self.split_screen_tab.setLayout(split_screen_layout)
 
     def on_checkbox_state_changed(self, state,map_overlay):

@@ -99,8 +99,8 @@ def OPmain(start, locations):
     #print("Shortest path visiting all locations:")
     #print(" -> ".join(path))
     #print(f"Total distance: {total_distance:.2f} km")
+    #plot_locations(path, locations)
     
-    plot_locations(path, locations)
     path.remove('start')
 
     return path
