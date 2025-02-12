@@ -3,7 +3,7 @@
     <!-- Launch the full software stack on base laptop -->
 
     <!-- Launch setip setmaster -->
-    <exec command = "setip; setmaster"/>
+    <!--exec command = "setip; setmaster"/-->
 
     <!-- Launch the GUI -->
     <node pkg="scripts" type="gui_pyqt.py" name="rover_gui" output="screen"/>
