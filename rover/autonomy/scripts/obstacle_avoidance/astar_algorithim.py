@@ -16,9 +16,7 @@ Feb 8 update:
 - next steps: 
     make sure we can see trajectory in RVIZ
     ensure A* is producing right code
-
 """
-#test
 import rospy
 import numpy as np
 from nav_msgs.msg import Odometry
@@ -71,6 +69,9 @@ class OctoMapAStar:
         self.goal = (20.0,20.0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
+        self.current_position_x=0
+        self.current_position_y=0 
+        self.current_position_z=0
     
     def pointcloud_callback(self, msg):
             """
@@ -108,12 +109,10 @@ class OctoMapAStar:
         """
         # Extract robot's position from the Odometry message
         self.current_position = msg.pose.pose.position
-        self.current_position_x = self.current_position.x
-
-        print("EH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!YY", self.current_position_x)
-        
-        #self.current_position_y = msg.pose.pose.position.y
-        #self.current_position_z = msg.pose.pose.position.z
+        self.current_position_x=msg.pose.pose.position.x
+        self.current_position_y= msg.pose.pose.position.y
+        self.current_position_z= msg.pose.pose.position.z
+      
         rospy.loginfo("Current position: x=%f, y=%f, z=%f", 
                     self.current_position.x, 
                     self.current_position.y, 
@@ -310,17 +309,19 @@ class OctoMapAStar:
                 rospy.logwarn("Waiting for occupancy grid...")
                 self.rate.sleep()
                 continue
-            print("LAST TRY", self.current_position_x)
+           
 
-            start =  (int(0), int(0))
+            start =  (int(self.current_position_x), int(self.current_position_y))
+            print("THIS IS START", start)
             goal = (20, 20)  # change this!
+
             rospy.loginfo("Running A* algorithm...")
             path = self.a_star(start, goal)
             if path:
                 print("PATH Found", path)
                 rospy.loginfo(f"Path found: {path}")
                 current_pos = start
-                
+            
                 for waypoint in path:
                     self.publish_velocity(current_pos, waypoint)
                     current_pos = waypoint

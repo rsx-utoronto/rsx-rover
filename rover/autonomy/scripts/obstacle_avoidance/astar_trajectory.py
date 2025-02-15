@@ -30,6 +30,7 @@ class Visualizer:
     def publish_trajectories(self, trajectories):
         marker_array = MarkerArray()
         marker_id = 0
+        line_marker.lifetime = rospy.Duration(0) 
 
         for traj in trajectories:
             line_marker = Marker()
@@ -41,10 +42,10 @@ class Visualizer:
             line_marker.action = Marker.ADD
 
             line_marker.scale.x = 0.02
-            line_marker.color.r = 0.0
+            line_marker.color.r = 1.0
             line_marker.color.g = 1.0
-            line_marker.color.b = 0.0
-            line_marker.color.a = 1.0
+            line_marker.color.b = 1.0
+            line_marker.color.a = 0.0
 
             line_marker.pose.orientation.x = 0.0
             line_marker.pose.orientation.y = 0.0
@@ -110,7 +111,6 @@ class Visualizer:
         dy = current_position[1] - goal_position[1]
         return (dx ** 2 + dy ** 2) ** 0.5
 
-# Example usage
 if __name__ == "__main__":
   
     rospy.init_node("trajectory_visualizer")
