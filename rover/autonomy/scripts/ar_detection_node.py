@@ -10,6 +10,7 @@ import numpy as np
 import os
 from std_msgs.msg import Float64MultiArray
 from std_msgs.msg import Bool
+from std_msgs.msg import String
 
 bridge = CvBridge()
 
@@ -19,8 +20,10 @@ class ARucoTagDetectionNode():
         # self.image_topic = "/camera/color/image_raw"
         self.image_topic = "/zed_node/rgb/image_rect_color"
         self.info_topic = "/zed_node/rgb/camera_info"
+        self.state_topic = "state"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
+        self.state_sub = rospy.Subscriber(self.state_topic, String, self.state_callback)
         #self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         #self.aruco_pub = rospy.Publisher('aruco_node/rover_state', StateMsg, queue_size=10)
         #self.scanned_pub = rospy.Publisher('aruco_scanned_node/rover_state', StateMsg, queue_size=10)
@@ -29,7 +32,7 @@ class ARucoTagDetectionNode():
         self.bbox_pub = rospy.Publisher('aruco_node/bbox', Float64MultiArray, queue_size=10)
         t = time.time()
         while (time.time() - t) < 2:
-            print("Passing time")
+            #print("Passing time") 
             pass
         self.bridge = CvBridge()
         #self.current_state = StateMsg()
@@ -43,6 +46,7 @@ class ARucoTagDetectionNode():
         #self.updated_state_msg = StateMsg()
         #self.scanned_state_smg = StateMsg()
         self.found = False
+        self.curr_state = None
 
     def image_callback(self, ros_image):
         try:
@@ -51,7 +55,8 @@ class ARucoTagDetectionNode():
             print(e)
         else:
             # Do we need to undistort?
-            self.findArucoMarkers(cv_image)
+            if self.curr_state == "AR1" or self.curr_state == "AR2" or self.curr_state == "AR3":
+                self.findArucoMarkers(cv_image)
     
     def info_callback(self, info_msg):
 
@@ -59,10 +64,13 @@ class ARucoTagDetectionNode():
         self.K = np.array(info_msg.K)
         self.K = self.K.reshape(3,3)
 
+    def state_callback(self, state):
+        self.curr_state = state.data
 
-    def state_callback(self, state_msg):
-        
-        self.current_state = state_msg
+
+    #def state_callback(self, state_msg):
+    #    
+    #    self.current_state = state_msg
 
     # from CIRC rules, 4*4_50
     # https://circ.cstag.ca/2022/rules/#autonomy-guidelines:~:text=All%20ArUco%20markers%20will%20be%20from%20the%204x4_50%20dictionary.%20They%20range%20from%20marker%200%20to%2049.
@@ -117,6 +125,8 @@ class ARucoTagDetectionNode():
             
             img_msg = bridge.cv2_to_imgmsg(img, encoding="passthrough")
             self.vis_pub.publish(img_msg)
+
+            
             
         #self.updated_state_msg = self.current_state
 

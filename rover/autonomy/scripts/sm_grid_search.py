@@ -76,15 +76,15 @@ class GS_Traversal:
         return angles
     
     def aruco_detection_callback(self, data):
-        self.aruco_found = data
+        self.aruco_found = data.data
         self.found_objects["aruco_detected"] = True
     
     def mallet_detection_callback(self, data):
-        self.mallet_found = data
+        self.mallet_found = data.data
         self.found_objects["mallet_detected"] = True
 
     def waterbottle_detection_callback(self, data):
-        self.waterbottle_found = data
+        self.waterbottle_found = data.data
         self.found_objects["waterbottle_detected"] = True
 
     def move_to_target(self, target_x, target_y, state): #navigate needs to take in a state value as well (FINISHIT)
@@ -94,11 +94,13 @@ class GS_Traversal:
 
         # logic here might not be ideal - could be some weird scenario where the state is not one of these despite 
         # only being called when grid_search is required
+        obj = self.mallet_found or self.waterbottle_found
+        
         mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
                    "AR3":self.aruco_found,
-                   "OBJ1":self.mallet_found,
-                   "OBJ2":self.waterbottle_found}
+                   "OBJ1":obj,
+                   "OBJ2":obj}
 
         while not rospy.is_shutdown():
             msg = Twist()
@@ -147,7 +149,7 @@ class GS_Traversal:
                         twist.linear.x = 0
                         twist.angular.z = 0
                         pub.publish(twist)
-                        return True
+                        return
                     if aimer.angular_v == 1:
                         twist.angular.z = aimer.max_angular_v
                         twist.linear.x = 0
@@ -161,7 +163,7 @@ class GS_Traversal:
                     pub.publish(twist)
                     rate.sleep()
 
-                pass #break?
+                break
 
             self.drive_publisher.publish(msg)
             rate.sleep()
@@ -170,10 +172,14 @@ class GS_Traversal:
         for target_x, target_y in self.targets:
             if self.found_objects[state]: #should be one of aruco, mallet, waterbottle
                 print(f"Object detected during navigation: {state}")
-                break
+                return True
             self.move_to_target(target_x, target_y) #changed from navigate_to_target
 
             rospy.sleep(1)
+
+        if self.found_objects[state]:
+            return True
+        return False #Signalling that grid search has been done
 
 class GridSearch:
     '''

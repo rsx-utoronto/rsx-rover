@@ -6,7 +6,7 @@ import time
 import torch
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
-from std_msgs.msg import Float64MultiArray, Bool
+from std_msgs.msg import Float64MultiArray, Bool, String
 import numpy as np
 
 
@@ -17,18 +17,23 @@ class ObjectDetectionNode():
     def __init__(self):
         self.image_topic = "/zed_node/rgb/image_rect_color"
         self.info_topic = "/zed_node/rgb/camera_info"
+        self.state_topic = "state"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
+        self.state_sub = rospy.Subscriber(self.state_topic, String, self.state_callback)
         self.mallet_pub = rospy.Publisher('mallet_detected', Bool, queue_size=1)
         self.waterbottle_pub = rospy.Publisher('waterbottle_detected', Bool, queue_size=1)
         self.bbox_pub = rospy.Publisher('object/bbox', Float64MultiArray, queue_size=10)
         self.vis_pub = rospy.Publisher('vis/object_detections', Image, queue_size=10)
         self.bridge = CvBridge()
+        self.mallet_found = False
+        self.waterbottle_found = False
 
         self.K = None
         self.D = None
         self.model = torch.hub.load('ultralytics/yolov8', 'custom', path='taskModel.pt')  # Load YOLO model
         self.model.conf = 0.5  # Set confidence threshold
+        self.curr_state = None
 
         # Mapping class indices to object names (update as per your model's training labels)
         self.class_map = {0: "mallet", 1: "waterbottle"}  # Adjust indices based on your model's label order
@@ -43,15 +48,15 @@ class ObjectDetectionNode():
         except CvBridgeError as e:
             rospy.logerr(f"Failed to convert ROS image to CV2: {e}")
             return
-
-        self.detect_objects(cv_image)
+        if self.curr_state == "OBJ1" or self.curr_state == "OBJ2":
+            self.detect_objects(cv_image)
+    
+    def state_callback(self, state):
+        self.curr_state = state.data
 
     def detect_objects(self, img):
         results = self.model(img)  # Run YOLO detection
         detections = results.xyxy[0].cpu().numpy()  # Get detections in xyxy format
-
-        mallet_found = False
-        waterbottle_found = False
 
         for *bbox, conf, cls in detections:
             cls = int(cls)  # Convert class to integer
@@ -74,13 +79,13 @@ class ObjectDetectionNode():
 
             # Mark objects as found
             if obj_name == "mallet":
-                mallet_found = True
+                self.mallet_found = True
             elif obj_name == "waterbottle":
-                waterbottle_found = True
+                self.waterbottle_found = True
 
         # Publish detection status
-        self.mallet_pub.publish(Bool(data=mallet_found))
-        self.waterbottle_pub.publish(Bool(data=waterbottle_found))
+        self.mallet_pub.publish(Bool(data=self.mallet_found))
+        self.waterbottle_pub.publish(Bool(data=self.waterbottle_found))
 
         # Publish visualized image
         img_msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
