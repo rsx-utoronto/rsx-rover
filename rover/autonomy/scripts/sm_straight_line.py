@@ -2,6 +2,7 @@
 
 import rospy
 from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Bool
 import math
@@ -16,7 +17,7 @@ class StraightLineApproach:
         self.x = 0
         self.y = 0
         self.heading = 0
-        self.odom_subscriber = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        self.odom_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
         self.drive_publisher = rospy.Publisher('drive', Twist, queue_size=10)
 
@@ -24,7 +25,14 @@ class StraightLineApproach:
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.aruco_found = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
         self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        
+    
+    def pose_callback(self, msg):
+        self.x = msg.pose.position.x
+        self.y = msg.pose.position.y
+        self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
+                                            msg.pose.orientation.y, msg.pose.orientation.z)[2]
+
+    
     def odom_callback(self, msg):
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y

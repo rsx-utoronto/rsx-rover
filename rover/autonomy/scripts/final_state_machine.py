@@ -14,7 +14,6 @@ import ar_detection_node
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
-import sm_straight_line
 import gps_conversion_functions as functions
 import gps_to_pose as gps_to_pose
 import sm_grid_search
@@ -158,7 +157,7 @@ class InitializeAutonomousNavigation(smach.State):
         
         self.glob_msg.cartesian = cartesian
         
-        gps_to_pose.GPSToPose(self.glob_msg.locations['start'], (0,0), (0.4, 0.58))
+        gps_to_pose.GPSToPose(self.glob_msg.locations['start'], (0,0), (1.1, 0))
         
     
     def execute(self, userdata):
@@ -178,13 +177,17 @@ class LocationSelection(smach.State): #goes through all states
         self.glob_msg = glob_msg
   
     def execute(self, userdata):
-        self.glob_msg.pub_state("Performing  Location Search")
+        self.glob_msg.pub_state("Performing Next Task")
         if userdata.prev_loc == None:
             userdata.locations_list_c = self.glob_msg.cartesian.copy() #loc_name, (lat, lon)
+            print (userdata.locations_list_c)
             userdata.rem_loc = userdata.locations_list_c.copy()
+            print (userdata.rem_loc)
         path = userdata.rem_loc
+        print (path)
         if path != []:
             try:
+                print ("in the try")
                 target = path[list(path.items())[0][0]]
                 sla = StraightLineApproach(0.6, 0.3, [target])
             except rospy.ROSInterruptException:
@@ -211,12 +214,13 @@ class GNSS1(smach.State):
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc[0][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc[0][1])**2)**(1/2)
 
+        
+        
         if current_distance < 2:
             self.glob_msg.pub_state("GNSS 1 reached, successful cruise")
             signal_green_led() # Should also be passed to the GUI 
-        #else:
-            #print("Done cruise")
-            #provide new point?
+        else:
+            pass
 
         userdata.prev_loc = userdata.rem_loc[0]
         userdata.rem_loc.remove(self.__class__.__name__) #remove state from location list
@@ -237,12 +241,11 @@ class GNSS2(smach.State):
     def execute(self, userdata):
         self.glob_msg.pub_state("Performing GNSS 2")
         
-
         current_location_data = self.glob_msg.get_pose()
-
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc[0][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc[0][1])**2)**(1/2)
 
+        
         if current_distance < 2:
             self.glob_msg.pub_state("GNSS 2 reached, successful cruise")
             signal_green_led()
@@ -275,7 +278,7 @@ class AR1(smach.State):
             # print("Successful cruise")
             self.glob_msg.pub_state("Reached AR1 GNSS")
 
-            rospy.init_node('aruco_tag1_detector', anonymous=True)
+            # rospy.init_node('aruco_tag1_detector', anonymous=True)
             ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs = sm_grid_search 
             gs_points = gs.GridSearch(10, 10, 1, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian
@@ -322,7 +325,7 @@ class AR2(smach.State):
             # print("Successful cruise")
             self.glob_msg.pub_state("Reached AR2 GNSS")  
 
-            rospy.init_node('aruco_tag2_detector', anonymous=True)
+            # rospy.init_node('aruco_tag2_detector', anonymous=True)
             ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs = sm_grid_search 
             gs_points = gs.GridSearch(10, 10, 1, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian
@@ -368,7 +371,7 @@ class AR3(smach.State):
             # print("Successful cruise")
             self.glob_msg.pub_state("Reached AR3 GNSS")
 
-            rospy.init_node('aruco_tag3_detector', anonymous=True)
+            # rospy.init_node('aruco_tag3_detector', anonymous=True)
             ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs = sm_grid_search 
             gs_points = gs.GridSearch(10, 10, 1, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian
@@ -414,7 +417,7 @@ class OBJ1(smach.State): #mallet
             # print("Successful cruise")
             self.glob_msg.pub_state("Reached Object1 GNSS")
 
-            rospy.init_node('object1_detector', anonymous=True) 
+            # rospy.init_node('object1_detector', anonymous=True) 
             object_detector = object_subscriber_node.ObjectDetectionNode()
             gs = sm_grid_search
             gs_points = gs.GridSearch(5, 5, 3, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian
@@ -461,7 +464,7 @@ class OBJ2(smach.State): #waterbottle
             # print("Successful cruise")
             self.glob_msg.pub_state("Reached Object2 GNSS")
 
-            rospy.init_node('object2_detector', anonymous=True) 
+            # rospy.init_node('object2_detector', anonymous=True) 
             object_detector = object_subscriber_node.ObjectDetectionNode()
             gs = sm_grid_search
             gs_points = gs.GridSearch(5, 5, 3, userdata.rem_loc[0][0], userdata.rem_loc[0][1])  # define multiple target points here: cartesian

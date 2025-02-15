@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from sensor_msgs.msg import NavSatFix
+from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from math import atan2, pi, sin, cos, radians
 import gps_conversion_functions as functions
@@ -126,7 +127,7 @@ class GPSToPose:
 
 
 def main():
-    gps_converter = GPSToPose(None, (0, 0), (0.4, 0.58))
+    gps_converter = GPSToPose(None, (0, 0), (1.1, 0))
     rospy.spin()
 
 
