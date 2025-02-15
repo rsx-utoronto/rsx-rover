@@ -11,11 +11,10 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, \
     QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, \
     QCheckBox,QSplitter,QStylePainter, QStyleOptionComboBox, QStyle, \
-    QToolButton, QMenu, QLineEdit, QFormLayout, QPushButton, QTextEdit,\
+    QToolButton, QMenu, QLineEdit , QPushButton, QTextEdit,\
     QListWidget, QListWidgetItem
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
-from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix, CompressedImage
 from std_msgs.msg import Float32MultiArray, String, Bool
@@ -348,7 +347,7 @@ class VelocityControl:
         twist.linear.x = linear_x
         twist.angular.z = angular_z
         self.pub.publish(twist)
-        print(f"Publishing to /drive: linear_x = {linear_x}, angular_z = {angular_z}, gear = {self.gear}")
+        print(f"Publishing to /drive: linear_x = {linear_x}\n, angular_z = {angular_z}\n, gear = {self.gear}")
 
 #joystick that controlss velocity magnitude and direction
 class Joystick(QWidget):
@@ -360,6 +359,14 @@ class Joystick(QWidget):
         self.__maxDistance = 100
         self.direction = Direction()
         self.velocity_control = velocity_control
+        self.current_linX = 0
+        self.current_angleZ = 0 
+        self.target_linX = 0
+        self.target_angleZ = 0
+        self.smooth_timer = QTimer(self)  
+        self.smooth_timer.timeout.connect(self.update_velocity)
+        self.smooth_timer.start(100)  # 50ms update interval
+
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -384,25 +391,28 @@ class Joystick(QWidget):
 
     def joystickDirection(self):
         if not self.grabCenter:
-            return 0
+            return
+
         normVector = QLineF(self._center(), self.movingOffset)
         currentDistance = normVector.length()
         angle = normVector.angle()
 
         distance = min(currentDistance / self.__maxDistance, 1.0)
-        linX = distance if 0 <= angle < 180 else -distance
-        angleZ = 0
+        target_linX = distance if 0 <= angle < 180 else -distance
+        target_angleZ = 0
 
         if 0 <= angle < 90:
-            # scale from 0 to 90 degrees, closer to 0-> closser to 1
-            angleZ = -(90-angle)/90
-        elif 270 <= angle < 360: # bottome left
-            angleZ = -(angle - 270) / 90
+            target_angleZ = -(90 - angle) / 90
+        elif 270 <= angle < 360:
+            target_angleZ = -(angle - 270) / 90
         elif 90 <= angle < 180:
-            angleZ = (angle - 90) / 90
-            print(angle)
-        else: # from 180 to 270
-            angleZ = (angle - 180) / 90
+            target_angleZ = (angle - 90) / 90
+        else:
+            target_angleZ = (270 - angle ) / 90
+
+        # Store target values (will be gradually reached in `update_velocity`)
+        self.target_linX = target_linX
+        self.target_angleZ = target_angleZ
 
 
         """
@@ -426,10 +436,33 @@ class Joystick(QWidget):
             self.direction.AngleZ -= increment  # Decrease angular velocity
 
         # Send the updated velocities to the rover
-        """
+        
         self.direction.LinX= linX
         self.direction.AngleZ = angleZ
         self.velocity_control.send_velocity(self.direction.LinX, self.direction.AngleZ)
+        """
+    def update_velocity(self):
+        """Gradually adjust current velocity towards the target values"""
+        step = 0.1  # Acceleration step per tick
+
+        # Update linear velocity smoothly
+        if abs(self.target_linX - self.current_linX) < step:
+            self.current_linX = self.target_linX  # Snap to target if close
+        elif self.target_linX > self.current_linX:
+            self.current_linX += step
+        else:
+            self.current_linX -= step
+
+        # Update angular velocity smoothly
+        if abs(self.target_angleZ - self.current_angleZ) < step:
+            self.current_angleZ = self.target_angleZ  # Snap to target if close
+        elif self.target_angleZ > self.current_angleZ:
+            self.current_angleZ += step
+        else:
+            self.current_angleZ -= step
+
+        # Send smooth velocity to ROS
+        self.velocity_control.send_velocity(self.current_linX, self.current_angleZ)
 
     def mousePressEvent(self, ev):
         self.grabCenter = self._centerEllipse().contains(ev.pos())
@@ -439,6 +472,10 @@ class Joystick(QWidget):
         self.grabCenter = False
         self.movingOffset = QPointF(0, 0)
         self.velocity_control.send_velocity(0, 0)
+        self.target_linX = 0
+        self.target_angleZ = 0
+        self.current_angleZ = 0
+        self.current_linX = 0
         self.update()
 
     def mouseMoveEvent(self, event):
