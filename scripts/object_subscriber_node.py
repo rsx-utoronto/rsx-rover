@@ -25,7 +25,7 @@ class ObjectDetectionNode():
 
         self.K = None
         self.D = None
-        self.model = YOLO('taskModel.pt')  # Load YOLO model
+        self.model = YOLO('scripts/best.pt')  # Load YOLO model
         self.model.conf = 0.5  # Set confidence threshold
 
         # Mapping class indices to object names (update as per your model's training labels)
@@ -69,7 +69,7 @@ class ObjectDetectionNode():
                 area = width * height
 
                 # Publish bounding box
-                bbox_data = Float64MultiArray(data=[x1, y1, x2, y2, area, cls])
+                bbox_data = Float64MultiArray(data=[x1, y1, x2, y1,x1,y2,x2,y2 ])
                 self.bbox_pub.publish(bbox_data)
 
                 # Draw bounding box and label on image
