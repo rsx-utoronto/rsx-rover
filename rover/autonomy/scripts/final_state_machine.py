@@ -132,7 +132,7 @@ class InitializeAutonomousNavigation(smach.State):
         self.glob_msg = glob_msg
     
 
-    def initialize(self, cartesian):
+    def initialize(self):
         
         #status_pub = rospy.Publisher('/status', String, queue_size = 10) #make this globval --> done+
         
@@ -146,6 +146,8 @@ class InitializeAutonomousNavigation(smach.State):
 
         self.glob_msg.pub_state("Changing GPS coordinates to cartesian") #at any print statement you can do this +
         # locations [] -> carte_locations []
+
+        cartesian = {}
 
         for el in cartesian_path: 
             distance = functions.getDistanceBetweenGPSCoordinates((self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1]), (self.glob_msg.locations[el][0], self.glob_msg.locations[el][1]))
@@ -163,7 +165,7 @@ class InitializeAutonomousNavigation(smach.State):
     
     def execute(self, userdata):
         self.glob_msg.pub_state("Initializing Autonomous Navigation")
-        self.initialize(userdata.cartesian)
+        self.initialize()
         return "Tasks Execute"
 
         
@@ -187,9 +189,9 @@ class LocationSelection(smach.State): #goes through all states
             try:
                 target = path[list(path.items())[0][0]]
                 sla = StraightLineApproach(0.6, 0.3, [target])
+                sla.navigate()
             except rospy.ROSInterruptException:
                 pass
-            sla.navigate()
             return path[0]
         else:
             return "Tasks Ended"  
@@ -581,8 +583,7 @@ def main():
         smach.StateMachine.add(
             "Initialize Autonomous Navigation",
             init,
-            transitions={"Tasks Execute": "Tasks Execute"},
-            remapping={"cartesian": "cartesian"}
+            transitions={"Tasks Execute": "Tasks Execute"}
         )
         
         # Define the tasks execution sub-state machine
