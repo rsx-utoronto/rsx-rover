@@ -19,8 +19,8 @@ class CAN_Send():
 		self.triggered = 0
 
 		# Subscriber buffers
-		self.CURR_POS			= [0, 0, 0, 0, 0, 0]
-		self.SAFE_GOAL_POS	 	= [0, 0, 0, 0, 0, 0]	
+		self.CURR_POS			= [0, 0, 0, 0, 0, 0, 0] # ADDED BACK 7TH MOTOR
+		self.SAFE_GOAL_POS	 	= [0, 0, 0, 0, 0, 0, 0]	# ADDED BACK 7TH MOTOR
 
 		# Variables for ROS publishers and subscribers
 		self.SafePos_sub 		= rospy.Subscriber("arm_safe_goal_pos", Float32MultiArray, self.callback_SafePos)
