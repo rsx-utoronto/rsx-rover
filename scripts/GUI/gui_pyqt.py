@@ -5,6 +5,7 @@ import sys
 import rospy
 import map_viewer as map_viewer
 from pathlib import Path
+import numpy as np
 
 
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, \
@@ -16,7 +17,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import NavSatFix  
+from sensor_msgs.msg import NavSatFix, CompressedImage
 from std_msgs.msg import Float32MultiArray, String, Bool
 from cv_bridge import CvBridge
 import cv2
@@ -455,7 +456,7 @@ class CameraFeed:
 
     def register_subscriber1(self):
         if self.image_sub1 is None:  # Only register if not already registered
-            self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color", Image, self.callback1)
+            self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color/compressed", CompressedImage, self.callback1)
 
     def unregister_subscriber1(self):
         if self.image_sub1:
@@ -480,8 +481,10 @@ class CameraFeed:
             self.update_image(data, self.label2)
 
     def update_image(self, data, label):
-        cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+        np_arr = np.frombuffer(data.data, np.uint8)  # Convert compressed data to NumPy array
+        cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)  # Decode the image
+        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB
+        
         height, width, channel = cv_image.shape
         bytes_per_line = 3 * width
         qimg = QImage(cv_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
