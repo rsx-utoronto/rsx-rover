@@ -44,8 +44,8 @@ class Visualizer:
             line_marker.scale.x = 0.02
             line_marker.color.r = 1.0
             line_marker.color.g = 1.0
-            line_marker.color.b = 1.0
-            line_marker.color.a = 0.0
+            line_marker.color.b = 0.0
+            line_marker.color.a = 1.0
 
             line_marker.pose.orientation.x = 0.0
             line_marker.pose.orientation.y = 0.0
@@ -73,13 +73,14 @@ class Visualizer:
         waypoint_marker.id = 0
         waypoint_marker.type = Marker.POINTS
         waypoint_marker.action = Marker.ADD
-
+        #actual colors: 
         waypoint_marker.scale.x = 0.1
         waypoint_marker.scale.y = 0.1
-        waypoint_marker.color.r = 0.0
+        waypoint_marker.color.r = 1.0
         waypoint_marker.color.g = 1.0
-        waypoint_marker.color.b = 1.0
+        waypoint_marker.color.b = 0.0
         waypoint_marker.color.a = 1.0
+        waypoint_marker.lifetime = rospy.Duration(0)
 
         for waypoint in waypoints:
             p = Point()

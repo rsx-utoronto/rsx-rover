@@ -109,9 +109,9 @@ class OctoMapAStar:
         """
         # Extract robot's position from the Odometry message
         self.current_position = msg.pose.pose.position
-        self.current_position_x=msg.pose.pose.position.x
-        self.current_position_y= msg.pose.pose.position.y
-        self.current_position_z= msg.pose.pose.position.z
+        self.current_position_x = msg.pose.pose.position.x
+        self.current_position_y = msg.pose.pose.position.y
+        self.current_position_z = msg.pose.pose.position.z
       
         rospy.loginfo("Current position: x=%f, y=%f, z=%f", 
                     self.current_position.x, 
@@ -192,10 +192,8 @@ class OctoMapAStar:
             # Clamp indices to valid bounds
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
                 if 0.2 <= z <= 1.5:  # Height threshold
-                    
-                    normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
+                    #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
                     occupancy_grid[grid_x, grid_y] = 100000000
-                   
         return occupancy_grid
 
 ### A* start 
@@ -258,11 +256,13 @@ class OctoMapAStar:
         """
         neighbors = []
         x, y = node
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:  # Check neighboring cells (up, down, left, right)
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1), (1, 1), (-1, -1)]:  # Check neighboring cells (up, down, left, right)
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
                 if self.occupancy_grid[nx, ny] < 100000:  # Ensure the neighbor is not an obstacle
                     neighbors.append((nx, ny))
+                else: 
+                    print("OBJECT DETECTED")
         return neighbors
     
 ### A* END
