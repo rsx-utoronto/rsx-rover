@@ -18,7 +18,7 @@ Feb 8 update:
     ensure A* is producing right code
 
 """
-
+#test
 import rospy
 import numpy as np
 from nav_msgs.msg import Odometry
