@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayou
     QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, \
     QCheckBox,QSplitter,QStylePainter, QStyleOptionComboBox, QStyle, \
     QToolButton, QMenu, QLineEdit , QPushButton, QTextEdit,\
-    QListWidget, QListWidgetItem
+    QListWidget, QListWidgetItem, QStyleOptionSlider
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
@@ -458,6 +458,49 @@ class Joystick(QWidget):
             self.update()
         self.joystickDirection()
 
+class Slider(QSlider):
+    valueUpdated =pyqtSignal(int)  # Custom signal
+
+    def __init__(self, orientation, parent=None):
+        super(Slider, self).__init__(orientation, parent)
+        self.setTickInterval(10)  # Set tick interval (adjust as needed)
+        self.setTickPosition(QSlider.TicksBelow)  # Show ticks below (for horizontal)
+        self.setSingleStep(10)  # Ensure movement in fixed steps
+        self.valueChanged.connect(self.on_value_changed)  # Connect slider movement
+
+    def mousePressEvent(self, event):
+        super(Slider, self).mousePressEvent(event)
+        if event.button() == Qt.LeftButton:
+            val = self.pixelPosToRangeValue(event.pos())
+            rounded_val = round(val / 10) * 10  # Snap to nearest tick (adjust step size)
+            self.setValue(rounded_val)
+            self.valueUpdated.emit(rounded_val)  # Emit updated value
+
+    def pixelPosToRangeValue(self, pos):
+        opt = QStyleOptionSlider()
+        self.initStyleOption(opt)
+        gr = self.style().subControlRect(QStyle.CC_Slider, opt, QStyle.SC_SliderGroove, self)
+        sr = self.style().subControlRect(QStyle.CC_Slider, opt, QStyle.SC_SliderHandle, self)
+
+        if self.orientation() == Qt.Horizontal:
+            sliderLength = sr.width()
+            sliderMin = gr.x()
+            sliderMax = gr.right() - sliderLength + 1
+        else:
+            sliderLength = sr.height()
+            sliderMin = gr.y()
+            sliderMax = gr.bottom() - sliderLength + 1
+        pr = pos - sr.center() + sr.topLeft()
+        p = pr.x() if self.orientation() == Qt.Horizontal else pr.y()
+        return QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), p - sliderMin,
+                                                        sliderMax - sliderMin, opt.upsideDown)
+
+    def on_value_changed(self, value):
+        rounded_val = round(value / 10) * 10  # Snap to nearest tick
+        self.setValue(rounded_val)  # Force snapping
+        self.valueUpdated.emit(rounded_val)  # Emit updated value
+
+
 #camera feed that displays one camera at a time (use switch_camera)
 # Update the CameraFeed class to handle multiple labels
 class CameraFeed:
@@ -601,11 +644,24 @@ class RoverGUI(QMainWindow):
         # Gear slider
         gear_group = QGroupBox("Gear Control")
         slider_layout = QVBoxLayout()
+        # make a new slider object 
+        self.gear_slider_splitter = Slider(Qt.Horizontal)
+        self.gear_slider_splitter.setMinimum(0)
+        self.gear_slider_splitter.setMaximum(100)
+        self.gear_slider_splitter.setValue(0)
+
+
+        # Connect the signal to the function
+        self.gear_slider_splitter.valueUpdated.connect(self.change_gear)
+        """
         self.gear_slider_splitter = QSlider(Qt.Horizontal, self.split_screen_tab)
         self.gear_slider_splitter.setRange(1, 10)
         self.gear_slider_splitter.setTickPosition(QSlider.TicksBelow)
         self.gear_slider_splitter.setTickInterval(1)
+        
         self.gear_slider_splitter.valueChanged.connect(self.change_gear)
+
+        """
         slider_layout.addWidget(self.gear_slider_splitter)
         gear_group.setLayout(slider_layout)
 
@@ -711,7 +767,7 @@ class RoverGUI(QMainWindow):
             # Perform actions for the unchecked state
 
     def change_gear(self, value):
-        self.velocity_control.set_gear(value)
+        self.velocity_control.set_gear(value/10+1)
         print(f"Changed to Gear: {value}")
 
     def switch_camera(self, index):
