@@ -653,15 +653,7 @@ class RoverGUI(QMainWindow):
 
         # Connect the signal to the function
         self.gear_slider_splitter.valueUpdated.connect(self.change_gear)
-        """
-        self.gear_slider_splitter = QSlider(Qt.Horizontal, self.split_screen_tab)
-        self.gear_slider_splitter.setRange(1, 10)
-        self.gear_slider_splitter.setTickPosition(QSlider.TicksBelow)
-        self.gear_slider_splitter.setTickInterval(1)
         
-        self.gear_slider_splitter.valueChanged.connect(self.change_gear)
-
-        """
         slider_layout.addWidget(self.gear_slider_splitter)
         gear_group.setLayout(slider_layout)
 
