@@ -14,7 +14,7 @@
     <include file='$(find calian_gnss_ros2)/launch/moving_baseline_rtk.launch'/>
 
     <!-- Launch the State Machine -->
-    <node pkg="rover" type="final_state_machine.py" name="rover_state_machine" output="screen"/>
+    <!--node pkg="rover" type="final_state_machine.py" name="rover_state_machine" output="screen"/-->
 
 
 </launch>

@@ -2,6 +2,7 @@
 
 import rospy
 from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Bool
 import math
@@ -28,8 +29,8 @@ class GS_Traversal:
             "waterbottle_detected": False,
         }
         
-
-        self.odom_subscriber = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        # self.odom_subscriber = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
         self.drive_publisher = rospy.Publisher('drive', Twist, queue_size=10)
 
@@ -38,8 +39,13 @@ class GS_Traversal:
         self.mallet_found = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
         self.waterbottle_found = rospy.Subscriber('waterbottle_detected', callback=self.waterbottle_detection_callback)
 
-        self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        # self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         
+    def pose_callback(self, msg):
+        self.x = msg.pose.position.x
+        self.y = msg.pose.position.y
+        self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
+                                            msg.pose.orientation.y, msg.pose.orientation.z)[2]
     def odom_callback(self, msg):
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
@@ -129,7 +135,7 @@ class GS_Traversal:
             else: #if mapping[state] is True --> if the object is found
                 # call homing
                 # should publish that it is found
-                rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
+                # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
                 aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 0.5, 0.5) # change constants
                 rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
