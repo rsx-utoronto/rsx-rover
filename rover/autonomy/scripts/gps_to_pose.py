@@ -55,7 +55,7 @@ class GPSToPose:
         # using the same scale as above puts the heading at pi/2, if the calculated heading between antenna is not
         # this then we need to correct any given angle by the difference (note pi is added first to simiplify there
         # being positive and negative values for ORIG_HEADING)
-        ANGLE_CORRECTION = pi/2 - ORIG_HEADING
+        ANGLE_CORRECTION = - ORIG_HEADING
         # the above angle correct means if we calculate the heading from antenna 1 to 2, then add the correction
         # we get the heading of the direction of the front of the rover
         # print(math.degrees(ANGLE_CORRECTION))
@@ -127,7 +127,8 @@ class GPSToPose:
 
 
 def main():
-    gps_converter = GPSToPose(None, (0, 0), (1.1, 0))
+    # base gps on the right, heading gps on the left
+    gps_converter = GPSToPose(None, (0, 0), (0, 1.055))
     rospy.spin()
 
 
