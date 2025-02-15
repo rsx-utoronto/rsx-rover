@@ -359,7 +359,7 @@ class Joystick(QWidget):
         self.grabCenter = False
         self.__maxDistance = 100
         self.direction = Direction()
-        self.velocity_control = VelocityControl()
+        self.velocity_control = velocity_control
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -465,7 +465,7 @@ class CameraFeed:
 
     def register_subscriber2(self):
         if self.image_sub2 is None:  # Only register if not already registered
-            self.image_sub2 = rospy.Subscriber("/camera/color/image_raw", Image, self.callback2)
+            self.image_sub2 = rospy.Subscriber("/camera/color/image_raw/compressed", CompressedImage, self.callback2)
 
     def unregister_subscriber2(self):
         if self.image_sub2:
