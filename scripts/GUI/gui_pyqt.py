@@ -394,16 +394,18 @@ class Joystick(QWidget):
         angleZ = 0
 
         if 0 <= angle < 90:
-            angleZ = angle / 45
-        elif 270 <= angle < 360:
-            angleZ = (angle - 270) / 45
+            # scale from 0 to 90 degrees, closer to 0-> closser to 1
+            angleZ = -(90-angle)/90
+        elif 270 <= angle < 360: # bottome left
+            angleZ = -(angle - 270) / 90
         elif 90 <= angle < 180:
-            angleZ = -(angle - 90) / 45
-        else:
-            angleZ = -(angle - 180) / 45
+            angleZ = (angle - 90) / 90
+            print(angle)
+        else: # from 180 to 270
+            angleZ = (angle - 180) / 90
 
 
-
+        """
         # Define a small constant increment for smooth acceleration
         increment = 0.05
 
@@ -424,6 +426,9 @@ class Joystick(QWidget):
             self.direction.AngleZ -= increment  # Decrease angular velocity
 
         # Send the updated velocities to the rover
+        """
+        self.direction.LinX= linX
+        self.direction.AngleZ = angleZ
         self.velocity_control.send_velocity(self.direction.LinX, self.direction.AngleZ)
 
     def mousePressEvent(self, ev):
