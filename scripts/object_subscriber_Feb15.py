@@ -8,6 +8,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from std_msgs.msg import Float64MultiArray, Bool
 import numpy as np
 from ultralytics import YOLO
+import os
 
 bridge = CvBridge()
 
@@ -25,7 +26,11 @@ class ObjectDetectionNode():
 
         self.K = None
         self.D = None
-        self.model = YOLO('taskModel.pt')  # Load YOLO model
+        script_dir=os.path.dirname(os.path.abspath(__file__))
+        model_path=os.path.join(script_dir, 'best.pt')
+        self.model = YOLO(model_path)  # Load YOLO model
+        
+        #self.model = YOLO('best.pt')  #Load YOLO model
         self.model.conf = 0.5  # Set confidence threshold
 
         # Mapping class indices to object names (update as per your model's training labels)
@@ -45,6 +50,8 @@ class ObjectDetectionNode():
         self.detect_objects(cv_image)
 
     def detect_objects(self, img):
+        if self.model==None: 
+            print("Model is NULL")
         # Run YOLO detection
         results = self.model(img)  # Inference
         # `results` contains predictions for the image
@@ -84,7 +91,6 @@ class ObjectDetectionNode():
 def main():
     rospy.init_node('object_detector', anonymous=True)
     object_detector = ObjectDetectionNode()
-
     rospy.spin()
 
 

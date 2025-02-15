@@ -8,6 +8,8 @@ from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
 from std_msgs.msg import Float64MultiArray, Bool
 import numpy as np
+import os
+from ultralytics import YOLO
 
 bridge = CvBridge()
 
@@ -25,9 +27,13 @@ class ObjectDetectionNode():
 
         self.K = None
         self.D = None
-        self.model = torch.hub.load('ultralytics/yolov8', 'custom', path='taskModel.pt')  # Load YOLO model
+        script_dir=os.path.dirname(os.path.abspath(__file__))
+        model_path=os.path.join(script_dir, 'best.pt')
+        self.model = YOLO(model_path)  # Load YOLO model
+        
+        #self.model = torch.hub.load('ultralytics/yolov8', 'custom', path=model_path)  # Load YOLO model
+        
         self.model.conf = 0.5  # Set confidence threshold
-
         # Mapping class indices to object names (update as per your model's training labels)
         self.class_map = {0: "mallet", 1: "waterbottle"}  # Adjust indices based on your model's label order
 
@@ -46,7 +52,8 @@ class ObjectDetectionNode():
 
     def detect_objects(self, img):
         results = self.model(img)  # Run YOLO detection
-        detections = results.xyxy[0].cpu().numpy()  # Get detections in xyxy format
+       # detections = results[0].xyxy.cpu().numpy()  # Get detections in xyxy format
+        detections = results[0].boxes.xyxy.cpu().numpy()  
 
         mallet_found = False
         waterbottle_found = False

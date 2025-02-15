@@ -1,7 +1,7 @@
-from ultralytics import YOLO
 import cv2
 import numpy as np
 import torch 
+from ultralytics import YOLO
 # Load the model
 
 #model = model.load("yolov8s.pt")
