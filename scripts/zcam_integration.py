@@ -127,8 +127,5 @@ def main():
 if __name__ == '__main__':
     main()
 
-
-
-
 aimer = AimerROS(1133, 378, 1000, 100, 100, 0.5, 0.5) # change constants
     #waterbottle 21.5 cm (812) tall 9 cm (340) diameter 

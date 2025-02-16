@@ -4,10 +4,14 @@ import cv2
 import numpy as np
 import torch 
 from ultralytics import YOLO
+from ultralytics import YOLO
 # Load the model
+import os
 
 #model = model.load("yolov8s.pt")
-model=YOLO("best.pt")
+script_dir=os.path.dirname(os.path.abspath(__file__))
+model_path=os.path.join(script_dir, 'best.pt')
+model=YOLO(model_path)
 cap = cv2.VideoCapture(0)
 
 while True:
