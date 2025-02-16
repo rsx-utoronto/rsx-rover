@@ -5,19 +5,19 @@ import sys
 import rospy
 import map_viewer as map_viewer
 from pathlib import Path
+import numpy as np
 
 
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, \
     QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, \
     QCheckBox,QSplitter,QStylePainter, QStyleOptionComboBox, QStyle, \
-    QToolButton, QMenu, QLineEdit, QFormLayout, QPushButton, QTextEdit,\
-    QListWidget, QListWidgetItem
+    QToolButton, QMenu, QLineEdit , QPushButton, QTextEdit,\
+    QListWidget, QListWidgetItem, QStyleOptionSlider
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
-from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import NavSatFix  
-from std_msgs.msg import Float32MultiArray, String, Bool
+from sensor_msgs.msg import NavSatFix, CompressedImage
+from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
@@ -71,7 +71,7 @@ class statusTerminal(QWidget):
 
         # Connect signals to the corresponding update methods
         self.update_status_signal.connect(self.update_string_list)
-        rospy.Subscriber('/gui_status', String, self.string_callback)
+        rospy.Subscriber('/status', String, self.string_callback)
         self.received_strings = []
     def init_ui(self):
         
@@ -247,7 +247,6 @@ class StateMachineStatus(QWidget):
                 border-radius: 10px;
                 padding: 10px;
             """)
-
         
 
 
@@ -267,8 +266,8 @@ class EditableComboBox(QComboBox):
         self.populate_items()
 
     def populate_items(self):
-        coordArray =["Start", "GNSS 1","GNSS 2", "AR 1", "AR 2", "AR 3", "OBJ 1", "OBJ 2"]
-        for i in range(8):  # Example: 5 items in dropdown
+        coordArray =["GNSS 1","GNSS 2", "AR 1", "AR 2", "AR 3", "OBJ 1", "OBJ 2"]
+        for i in range(7):  # Example: 5 items in dropdown
             item_widget = QWidget()
             layout = QHBoxLayout()
 
@@ -347,7 +346,7 @@ class VelocityControl:
         twist.linear.x = linear_x
         twist.angular.z = angular_z
         self.pub.publish(twist)
-        print(f"Publishing to /drive: linear_x = {linear_x}, angular_z = {angular_z}, gear = {self.gear}")
+        print(f"Publishing to /drive: linear_x = {linear_x}\n, angular_z = {angular_z}\n, gear = {self.gear}")
 
 #joystick that controlss velocity magnitude and direction
 class Joystick(QWidget):
@@ -358,7 +357,15 @@ class Joystick(QWidget):
         self.grabCenter = False
         self.__maxDistance = 100
         self.direction = Direction()
-        self.velocity_control = VelocityControl()
+        self.velocity_control = velocity_control
+        self.current_linX = 0
+        self.current_angleZ = 0 
+        self.target_linX = 0
+        self.target_angleZ = 0
+        self.smooth_timer = QTimer(self)  
+        self.smooth_timer.timeout.connect(self.update_velocity)
+        self.smooth_timer.start(100)  # 50ms update interval
+
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -383,47 +390,52 @@ class Joystick(QWidget):
 
     def joystickDirection(self):
         if not self.grabCenter:
-            return 0
+            return
+
         normVector = QLineF(self._center(), self.movingOffset)
         currentDistance = normVector.length()
         angle = normVector.angle()
 
         distance = min(currentDistance / self.__maxDistance, 1.0)
-        linX = distance if 0 <= angle < 180 else -distance
-        angleZ = 0
+        target_linX = distance if 0 <= angle < 180 else -distance
+        target_angleZ = 0
 
         if 0 <= angle < 90:
-            angleZ = angle / 45
+            target_angleZ = -(90 - angle) / 90
         elif 270 <= angle < 360:
-            angleZ = (angle - 270) / 45
+            target_angleZ = -(angle - 270) / 90
         elif 90 <= angle < 180:
-            angleZ = -(angle - 90) / 45
+            target_angleZ = (angle - 90) / 90
         else:
-            angleZ = -(angle - 180) / 45
+            target_angleZ = (270 - angle ) / 90
+
+        # Store target values (will be gradually reached in `update_velocity`)
+        self.target_linX = target_linX
+        self.target_angleZ = target_angleZ
 
 
+    def update_velocity(self):
+        """Gradually adjust current velocity towards the target values"""
+        step = 0.1  # Acceleration step per tick
 
-        # Define a small constant increment for smooth acceleration
-        increment = 0.05
-
-        # Gradually adjust current linear velocity towards the target
-        if abs(linX - self.direction.LinX) < increment:
-            self.direction.LinX = linX  # Close enough to target, snap to it
-        elif linX > self.direction.LinX:
-            self.direction.LinX += increment  # Increase linearly
+        # Update linear velocity smoothly
+        if abs(self.target_linX - self.current_linX) < step:
+            self.current_linX = self.target_linX  # Snap to target if close
+        elif self.target_linX > self.current_linX:
+            self.current_linX += step
         else:
-            self.direction.LinX -= increment  # Decrease linearly
+            self.current_linX -= step
 
-        # Gradually adjust current angular velocity towards the target
-        if abs(angleZ - self.direction.AngleZ) < increment:
-            self.direction.AngleZ = angleZ  # Close enough to target, snap to it
-        elif angleZ > self.direction.AngleZ:
-            self.direction.AngleZ += increment  # Increase angular velocity
+        # Update angular velocity smoothly
+        if abs(self.target_angleZ - self.current_angleZ) < step:
+            self.current_angleZ = self.target_angleZ  # Snap to target if close
+        elif self.target_angleZ > self.current_angleZ:
+            self.current_angleZ += step
         else:
-            self.direction.AngleZ -= increment  # Decrease angular velocity
+            self.current_angleZ -= step
 
-        # Send the updated velocities to the rover
-        self.velocity_control.send_velocity(self.direction.LinX, self.direction.AngleZ)
+        # Send smooth velocity to ROS
+        self.velocity_control.send_velocity(self.current_linX, self.current_angleZ)
 
     def mousePressEvent(self, ev):
         self.grabCenter = self._centerEllipse().contains(ev.pos())
@@ -433,6 +445,10 @@ class Joystick(QWidget):
         self.grabCenter = False
         self.movingOffset = QPointF(0, 0)
         self.velocity_control.send_velocity(0, 0)
+        self.target_linX = 0
+        self.target_angleZ = 0
+        self.current_angleZ = 0
+        self.current_linX = 0
         self.update()
 
     def mouseMoveEvent(self, event):
@@ -441,6 +457,49 @@ class Joystick(QWidget):
             self.update()
         self.joystickDirection()
 
+class Slider(QSlider):
+    valueUpdated =pyqtSignal(int)  # Custom signal
+
+    def __init__(self, orientation, parent=None):
+        super(Slider, self).__init__(orientation, parent)
+        self.setTickInterval(10)  # Set tick interval (adjust as needed)
+        self.setTickPosition(QSlider.TicksBelow)  # Show ticks below (for horizontal)
+        self.setSingleStep(10)  # Ensure movement in fixed steps
+        self.valueChanged.connect(self.on_value_changed)  # Connect slider movement
+
+    def mousePressEvent(self, event):
+        super(Slider, self).mousePressEvent(event)
+        if event.button() == Qt.LeftButton:
+            val = self.pixelPosToRangeValue(event.pos())
+            rounded_val = round(val / 10) * 10  # Snap to nearest tick (adjust step size)
+            self.setValue(rounded_val)
+            self.valueUpdated.emit(rounded_val)  # Emit updated value
+
+    def pixelPosToRangeValue(self, pos):
+        opt = QStyleOptionSlider()
+        self.initStyleOption(opt)
+        gr = self.style().subControlRect(QStyle.CC_Slider, opt, QStyle.SC_SliderGroove, self)
+        sr = self.style().subControlRect(QStyle.CC_Slider, opt, QStyle.SC_SliderHandle, self)
+
+        if self.orientation() == Qt.Horizontal:
+            sliderLength = sr.width()
+            sliderMin = gr.x()
+            sliderMax = gr.right() - sliderLength + 1
+        else:
+            sliderLength = sr.height()
+            sliderMin = gr.y()
+            sliderMax = gr.bottom() - sliderLength + 1
+        pr = pos - sr.center() + sr.topLeft()
+        p = pr.x() if self.orientation() == Qt.Horizontal else pr.y()
+        return QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), p - sliderMin,
+                                                        sliderMax - sliderMin, opt.upsideDown)
+
+    def on_value_changed(self, value):
+        rounded_val = round(value / 10) * 10  # Snap to nearest tick
+        self.setValue(rounded_val)  # Force snapping
+        self.valueUpdated.emit(rounded_val)  # Emit updated value
+
+
 #camera feed that displays one camera at a time (use switch_camera)
 # Update the CameraFeed class to handle multiple labels
 class CameraFeed:
@@ -448,14 +507,22 @@ class CameraFeed:
         self.bridge = CvBridge()
         self.image_sub1 = None 
         self.image_sub2 = None 
+        self.bbox_sub = rospy.Subscriber("aruco_node/bbox", Float64MultiArray, self.bbox_callback)
+
         self.label1 = label1
         self.label2 = label2
         self.splitter = splitter
         self.active_cameras = {"Zed (front) camera": False, "Butt camera": False}
 
+        self.bbox = None  # Stores the latest bounding box
+        self.bbox_timer = QTimer()  # Timer to clear bbox if no updates
+        self.bbox_timer.setInterval(1000)  # 1 second timeout
+        self.bbox_timer.timeout.connect(self.clear_bbox)  # Connect timeout to clear function
+        self.bbox_timer.setSingleShot(True)
+
     def register_subscriber1(self):
-        if self.image_sub1 is None:  # Only register if not already registered
-            self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color", Image, self.callback1)
+        if self.image_sub1 is None:
+            self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color/compressed", CompressedImage, self.callback1)
 
     def unregister_subscriber1(self):
         if self.image_sub1:
@@ -463,25 +530,51 @@ class CameraFeed:
             self.image_sub1 = None
 
     def register_subscriber2(self):
-        if self.image_sub2 is None:  # Only register if not already registered
-            self.image_sub2 = rospy.Subscriber("/camera/color/image_raw", Image, self.callback2)
+        if self.image_sub2 is None:
+            self.image_sub2 = rospy.Subscriber("/camera/color/image_raw/compressed", CompressedImage, self.callback2)
 
     def unregister_subscriber2(self):
         if self.image_sub2:
             self.image_sub2.unregister()
             self.image_sub2 = None
 
+    def bbox_callback(self, msg):
+        """Callback to update the bounding box when a new message arrives."""
+        if len(msg.data) == 4:
+            self.bbox = [int(msg.data[0]), int(msg.data[1]), int(msg.data[2]), int(msg.data[3])]
+        else:
+            self.bbox = None  # If the message is empty, remove bbox
+
+        self.bbox_timer.start()  # Restart the timer whenever we get a new bbox
+        QMetaObject.invokeMethod(self.bbox_timer, "start", Qt.QueuedConnection)
+
+    def clear_bbox(self):
+        """Clear the bounding box when no message is received for 1 second."""
+        self.bbox = None
+        self.bbox_timer.stop()
+        QMetaObject.invokeMethod(self.label1, "update", Qt.QueuedConnection)
+
     def callback1(self, data):
+        """Callback to update the first camera feed (Zed)."""
         if self.active_cameras["Zed (front) camera"]:
             self.update_image(data, self.label1)
 
     def callback2(self, data):
+        """Callback to update the second camera feed."""
         if self.active_cameras["Butt camera"]:
             self.update_image(data, self.label2)
 
     def update_image(self, data, label):
-        cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+        """Decode and update the camera image with the bounding box if available."""
+        np_arr = np.frombuffer(data.data, np.uint8)
+        cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+
+        # Draw bounding box if available
+        if self.bbox:
+            x1, y1, x2, y2 = self.bbox
+            cv2.rectangle(cv_image, (x1, y1), (x2, y2), (0, 255, 0), 3)  # Green box
+
         height, width, channel = cv_image.shape
         bytes_per_line = 3 * width
         qimg = QImage(cv_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
@@ -582,11 +675,16 @@ class RoverGUI(QMainWindow):
         # Gear slider
         gear_group = QGroupBox("Gear Control")
         slider_layout = QVBoxLayout()
-        self.gear_slider_splitter = QSlider(Qt.Horizontal, self.split_screen_tab)
-        self.gear_slider_splitter.setRange(1, 10)
-        self.gear_slider_splitter.setTickPosition(QSlider.TicksBelow)
-        self.gear_slider_splitter.setTickInterval(1)
-        self.gear_slider_splitter.valueChanged.connect(self.change_gear)
+        # make a new slider object 
+        self.gear_slider_splitter = Slider(Qt.Horizontal)
+        self.gear_slider_splitter.setMinimum(0)
+        self.gear_slider_splitter.setMaximum(100)
+        self.gear_slider_splitter.setValue(0)
+
+
+        # Connect the signal to the function
+        self.gear_slider_splitter.valueUpdated.connect(self.change_gear)
+        
         slider_layout.addWidget(self.gear_slider_splitter)
         gear_group.setLayout(slider_layout)
 
@@ -603,7 +701,7 @@ class RoverGUI(QMainWindow):
         self.lngLatEntry = LngLatEntryBar()
         self.stateMachineDialog = StateMachineStatus()
         self.arucoBox = ArucoWidget()
-        
+        self.statusTerminal = statusTerminal()
 
         # Create a group box for the ArucoWidget
         self.arucoGroupBox = QGroupBox("Aruco Tags")
@@ -611,15 +709,18 @@ class RoverGUI(QMainWindow):
         aruco_layout.addWidget(self.arucoBox)
         self.arucoGroupBox.setLayout(aruco_layout)
 
-        
-        
+        # Create a group box for the status terminal
+        self.statusTermGroupBox = QGroupBox("Status Messages")
+        status_term_layout = QVBoxLayout()
+        status_term_layout.addWidget(self.statusTerminal)
+        self.statusTermGroupBox.setLayout(status_term_layout)
 
         # Main layout for the tab
         Lnglat_tab_layout = QVBoxLayout()
         Lnglat_tab_layout.addWidget(self.lngLatEntry)
         Lnglat_tab_layout.addWidget(self.stateMachineDialog)
         Lnglat_tab_layout.addWidget(self.arucoGroupBox) 
-        
+        Lnglat_tab_layout.addWidget(self.statusTermGroupBox) 
 
         self.longlat_tab.setLayout(Lnglat_tab_layout)
     #used to initialize main tab with splitters
@@ -628,7 +729,6 @@ class RoverGUI(QMainWindow):
         # Add camera feed to the splitter
         camera_group = QGroupBox("Camera Feed")
         camera_layout = QVBoxLayout()
-        
         
 
         self.camera_label1 = QLabel()
@@ -675,18 +775,10 @@ class RoverGUI(QMainWindow):
         splitter.addWidget(map_group)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
-
         
         
         split_screen_layout = QVBoxLayout()
         split_screen_layout.addWidget(splitter)
-        # Create a group box for the status terminal
-        self.statusTerminal = statusTerminal()
-        self.statusTermGroupBox = QGroupBox("Status Messages")
-        status_term_layout = QVBoxLayout()
-        status_term_layout.addWidget(self.statusTerminal)
-        self.statusTermGroupBox.setLayout(status_term_layout)
-        split_screen_layout.addWidget(self.statusTermGroupBox) 
         self.split_screen_tab.setLayout(split_screen_layout)
 
     def on_checkbox_state_changed(self, state,map_overlay):
@@ -698,7 +790,7 @@ class RoverGUI(QMainWindow):
             # Perform actions for the unchecked state
 
     def change_gear(self, value):
-        self.velocity_control.set_gear(value)
+        self.velocity_control.set_gear(value/10+1)
         print(f"Changed to Gear: {value}")
 
     def switch_camera(self, index):
