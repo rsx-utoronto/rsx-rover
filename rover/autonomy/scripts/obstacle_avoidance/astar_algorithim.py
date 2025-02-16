@@ -66,7 +66,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1  # Resolution of 2D grid (meters per cell)
         self.grid_origin=(0.0,0.0)
-        self.goal = (20.0,20.0)
+        self.goal = (9.0,7.0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -178,9 +178,8 @@ class OctoMapAStar:
         grid_size = (200, 200)  # Number of cells in x and y
         resolution = 0.1        # Grid resolution in meters
 
-        occupancy_grid = np.zeros(grid_size, dtype=np.int32)
+        occupancy_grid = np.zeros(grid_size, dtype=np.float32)
         
-        # Decode the OctoMap message
         occupied_points = self.decode_octomap(octomap_msg)
 
         for point in occupied_points:
@@ -188,36 +187,31 @@ class OctoMapAStar:
             # Convert to grid indices
             grid_x = int((x - self.grid_origin[0]) / resolution)
             grid_y = int((y - self.grid_origin[1]) / resolution)
-
+    
             # Clamp indices to valid bounds
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
-                if 0.2 <= z <= 1.5:  # Height threshold
+                if 0 <= z <= 50:  # Height threshold -< this should be 0.2<z<1.5!!!
                     #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
-                    occupancy_grid[grid_x, grid_y] = 100000000
+                    occupancy_grid[grid_x, grid_y] = np.inf
+           # rospy.loginfo(f"Grid position: ({grid_x}, {grid_y}) -> Cost: {occupancy_grid[grid_x, grid_y]}")
         return occupancy_grid
 
 ### A* start 
 
-    def height_cost(self, current, neighbor):
-        """
-        Calculate the cost of height difference between two cells.
-        """
-      #  print("THIS RUNSSSSSSSSSS")
+    def height_cost(self, current, neighbor): #this is g function
         current_height = self.occupancy_grid[current[0], current[1]]
-      #  print("CURRENT positionnnnnnnnnnnnn", current)
         neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
+
+        if current_height == -1 or neighbor_height == -1:  
+            return np.inf 
+        if current_height == np.inf or neighbor_height==np.inf: 
+            return np.inf
         return abs(current_height - neighbor_height)
     
-    def heuristic(self, node, goal):
-        """
-        Heuristic function with euclidean
-        """
+    def heuristic(self, node, goal): #h fucntion -> euclidean distance
         return np.linalg.norm(np.array(node) - np.array(goal))
 
     def reconstruct_path(self, came_from, current):
-        """
-        Reconstruct the path from A* results.
-        """
         path = []
         while current in came_from:
             path.append(current)
@@ -241,12 +235,14 @@ class OctoMapAStar:
             for neighbor in self.get_neighbors(current):
                 height_cost = self.height_cost(current, neighbor)  # Get height-based cost
                 tentative_g_score = g_score[current] + height_cost  # Add the height cost to the g_score
-                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
-                    came_from[neighbor] = current
-                    g_score[neighbor] = tentative_g_score
-                    f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)  # f = g + h
-                    open_set.put((f_score[neighbor], neighbor))
-
+                if height_cost != np.inf: 
+                    if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                        came_from[neighbor] = current
+                        g_score[neighbor] = tentative_g_score
+                        f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)  # f = g + h
+                        open_set.put((f_score[neighbor], neighbor))
+                else: 
+                    print("H is actually infinity")
         rospy.logwarn("A* failed to find a path")
         return []
     
@@ -259,7 +255,7 @@ class OctoMapAStar:
         for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1), (1, 1), (-1, -1)]:  # Check neighboring cells (up, down, left, right)
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
-                if self.occupancy_grid[nx, ny] < 100000:  # Ensure the neighbor is not an obstacle
+                if self.occupancy_grid[nx, ny] !=np.inf:  
                     neighbors.append((nx, ny))
                 else: 
                     print("OBJECT DETECTED")
