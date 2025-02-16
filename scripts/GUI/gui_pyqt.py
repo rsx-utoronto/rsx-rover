@@ -17,7 +17,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix, CompressedImage
-from std_msgs.msg import Float32MultiArray, String, Bool
+from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
@@ -247,7 +247,6 @@ class StateMachineStatus(QWidget):
                 border-radius: 10px;
                 padding: 10px;
             """)
-
         
 
 
@@ -508,13 +507,21 @@ class CameraFeed:
         self.bridge = CvBridge()
         self.image_sub1 = None 
         self.image_sub2 = None 
+        self.bbox_sub = rospy.Subscriber("aruco_node/bbox", Float64MultiArray, self.bbox_callback)
+
         self.label1 = label1
         self.label2 = label2
         self.splitter = splitter
         self.active_cameras = {"Zed (front) camera": False, "Butt camera": False}
 
+        self.bbox = None  # Stores the latest bounding box
+        self.bbox_timer = QTimer()  # Timer to clear bbox if no updates
+        self.bbox_timer.setInterval(1000)  # 1 second timeout
+        self.bbox_timer.timeout.connect(self.clear_bbox)  # Connect timeout to clear function
+        self.bbox_timer.setSingleShot(True)
+
     def register_subscriber1(self):
-        if self.image_sub1 is None:  # Only register if not already registered
+        if self.image_sub1 is None:
             self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color/compressed", CompressedImage, self.callback1)
 
     def unregister_subscriber1(self):
@@ -523,7 +530,7 @@ class CameraFeed:
             self.image_sub1 = None
 
     def register_subscriber2(self):
-        if self.image_sub2 is None:  # Only register if not already registered
+        if self.image_sub2 is None:
             self.image_sub2 = rospy.Subscriber("/camera/color/image_raw/compressed", CompressedImage, self.callback2)
 
     def unregister_subscriber2(self):
@@ -531,19 +538,43 @@ class CameraFeed:
             self.image_sub2.unregister()
             self.image_sub2 = None
 
+    def bbox_callback(self, msg):
+        """Callback to update the bounding box when a new message arrives."""
+        if len(msg.data) == 4:
+            self.bbox = [int(msg.data[0]), int(msg.data[1]), int(msg.data[2]), int(msg.data[3])]
+        else:
+            self.bbox = None  # If the message is empty, remove bbox
+
+        self.bbox_timer.start()  # Restart the timer whenever we get a new bbox
+        QMetaObject.invokeMethod(self.bbox_timer, "start", Qt.QueuedConnection)
+
+    def clear_bbox(self):
+        """Clear the bounding box when no message is received for 1 second."""
+        self.bbox = None
+        self.bbox_timer.stop()
+        QMetaObject.invokeMethod(self.label1, "update", Qt.QueuedConnection)
+
     def callback1(self, data):
+        """Callback to update the first camera feed (Zed)."""
         if self.active_cameras["Zed (front) camera"]:
             self.update_image(data, self.label1)
 
     def callback2(self, data):
+        """Callback to update the second camera feed."""
         if self.active_cameras["Butt camera"]:
             self.update_image(data, self.label2)
 
     def update_image(self, data, label):
-        np_arr = np.frombuffer(data.data, np.uint8)  # Convert compressed data to NumPy array
-        cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)  # Decode the image
-        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB
-        
+        """Decode and update the camera image with the bounding box if available."""
+        np_arr = np.frombuffer(data.data, np.uint8)
+        cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+
+        # Draw bounding box if available
+        if self.bbox:
+            x1, y1, x2, y2 = self.bbox
+            cv2.rectangle(cv_image, (x1, y1), (x2, y2), (0, 255, 0), 3)  # Green box
+
         height, width, channel = cv_image.shape
         bytes_per_line = 3 * width
         qimg = QImage(cv_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
