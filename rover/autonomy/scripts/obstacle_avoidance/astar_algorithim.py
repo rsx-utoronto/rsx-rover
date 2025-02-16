@@ -221,12 +221,12 @@ class OctoMapAStar:
 
     def a_star(self, start, goal):
         # Convert real-world coordinates to grid coordinates with proper rounding
-        start_x = int(round((self.current_position_x - self.grid_origin[0]) / self.grid_resolution)
-        start_y = int(round((self.current_position_y - self.grid_origin[1]) / self.grid_resolution)
+        start_x = int(round((self.current_position_x - self.grid_origin[0]) / self.grid_resolution))
+        start_y = int(round((self.current_position_y - self.grid_origin[1]) / self.grid_resolution))
         start = (start_x, start_y)
         
-        goal_x = int(round((self.goal[0] - self.grid_origin[0]) / self.grid_resolution)
-        goal_y = int(round((self.goal[1] - self.grid_origin[1]) / self.grid_resolution)
+        goal_x = int(round((self.goal[0] - self.grid_origin[0]) / self.grid_resolution))
+        goal_y = int(round((self.goal[1] - self.grid_origin[1]) / self.grid_resolution))
         goal = (goal_x, goal_y)
 
         # Validate start and goal positions
@@ -269,7 +269,7 @@ class OctoMapAStar:
         """
         Process OctoMap into a 2D occupancy grid based on height values.
         """
-        grid_size = (200, 200)
+        grid_size = (500, 500)
         resolution = 0.1
         occupancy_grid = np.zeros(grid_size, dtype=np.float32)
         
@@ -309,11 +309,11 @@ class OctoMapAStar:
                 continue
 
             # Set goal in real-world coordinates
-            self.goal = (9.0, 7.0)  # Example real-world position
+            self.goal = (26, 3)  # Example real-world position
             
             # Convert current position to grid coordinates
-            start_x = int(round((self.current_position_x - self.grid_origin[0]) / self.grid_resolution)
-            start_y = int(round((self.current_position_y - self.grid_origin[1]) / self.grid_resolution)
+            start_x = int(round((self.current_position_x - self.grid_origin[0]) / self.grid_resolution))
+            start_y = int(round((self.current_position_y - self.grid_origin[1]) / self.grid_resolution))
             start = (start_x, start_y)
 
             rospy.loginfo(f"Starting A* from {start} to {self.goal}")
