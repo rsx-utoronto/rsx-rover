@@ -309,7 +309,7 @@ class OctoMapAStar:
 
             start =  (int(self.current_position_x), int(self.current_position_y))
             print("THIS IS START", start)
-            goal = (20, 20)  # change this!
+            goal = (27, 3)  # change this!
 
             rospy.loginfo("Running A* algorithm...")
             path = self.a_star(start, goal)
