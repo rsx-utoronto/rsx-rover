@@ -701,7 +701,7 @@ class RoverGUI(QMainWindow):
         self.lngLatEntry = LngLatEntryBar()
         self.stateMachineDialog = StateMachineStatus()
         self.arucoBox = ArucoWidget()
-        self.statusTerminal = statusTerminal()
+        
 
         # Create a group box for the ArucoWidget
         self.arucoGroupBox = QGroupBox("Aruco Tags")
@@ -709,18 +709,14 @@ class RoverGUI(QMainWindow):
         aruco_layout.addWidget(self.arucoBox)
         self.arucoGroupBox.setLayout(aruco_layout)
 
-        # Create a group box for the status terminal
-        self.statusTermGroupBox = QGroupBox("Status Messages")
-        status_term_layout = QVBoxLayout()
-        status_term_layout.addWidget(self.statusTerminal)
-        self.statusTermGroupBox.setLayout(status_term_layout)
+        
 
         # Main layout for the tab
         Lnglat_tab_layout = QVBoxLayout()
         Lnglat_tab_layout.addWidget(self.lngLatEntry)
         Lnglat_tab_layout.addWidget(self.stateMachineDialog)
         Lnglat_tab_layout.addWidget(self.arucoGroupBox) 
-        Lnglat_tab_layout.addWidget(self.statusTermGroupBox) 
+        
 
         self.longlat_tab.setLayout(Lnglat_tab_layout)
     #used to initialize main tab with splitters
@@ -773,12 +769,20 @@ class RoverGUI(QMainWindow):
         # Add widgets to the splitter
         splitter.addWidget(camera_group)
         splitter.addWidget(map_group)
+        
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
         
+        # Create a group box for the status terminal
+        self.statusTerminal = statusTerminal()
+        self.statusTermGroupBox = QGroupBox("Status Messages")
+        status_term_layout = QVBoxLayout()
+        status_term_layout.addWidget(self.statusTerminal)
+        self.statusTermGroupBox.setLayout(status_term_layout)
         
         split_screen_layout = QVBoxLayout()
         split_screen_layout.addWidget(splitter)
+        split_screen_layout.addWidget(self.statusTermGroupBox) 
         self.split_screen_tab.setLayout(split_screen_layout)
 
     def on_checkbox_state_changed(self, state,map_overlay):
