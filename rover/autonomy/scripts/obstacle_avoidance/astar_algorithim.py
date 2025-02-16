@@ -32,8 +32,6 @@ import math
 from std_msgs.msg import Float32MultiArray
 from geometry_msgs.msg import Point, Pose
 
-
-
 class OctoMapAStar:
     def __init__(self):
         rospy.init_node("octomap_a_star_planner", anonymous=True)
@@ -219,47 +217,99 @@ class OctoMapAStar:
         path.reverse()
         return path
     
-    def a_star(self, start, goal):
+        def a_star(self, start, goal):
         open_set = PriorityQueue()
-        open_set.put((0, start))  # Put start with f_score = 0
+        open_set.put((self.heuristic(start, goal), start))
         came_from = {}
-        g_score = {start: 0}  # The cost of getting to the start node is 0
-        f_score = {start: self.heuristic(start, goal)}  # Initial f_score based on heuristic
+        g_score = {start: 0}
+        closed_set = set()
 
         while not open_set.empty():
-            _, current = open_set.get()
+            current_f, current = open_set.get()
+
+            # Skip nodes we have already processed
+            if current in closed_set:
+                continue
+            closed_set.add(current)
 
             if current == goal:
                 return self.reconstruct_path(came_from, current)
 
             for neighbor in self.get_neighbors(current):
-                height_cost = self.height_cost(current, neighbor)  # Get height-based cost
-                tentative_g_score = g_score[current] + height_cost  # Add the height cost to the g_score
-                if height_cost != np.inf: 
-                    if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
-                        came_from[neighbor] = current
-                        g_score[neighbor] = tentative_g_score
-                        f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)  # f = g + h
-                        open_set.put((f_score[neighbor], neighbor))
-                else: 
-                    print("H is actually infinity")
+                if neighbor in closed_set:
+                    continue
+
+                dx = neighbor[0] - current[0]
+                dy = neighbor[1] - current[1]
+
+                # Prevent diagonal moves that cut through walls.
+                # For a diagonal move, check that the adjacent horizontal and vertical moves are free.
+                if abs(dx) == 1 and abs(dy) == 1:
+                    if (self.occupancy_grid[current[0], neighbor[1]] == np.inf or
+                        self.occupancy_grid[neighbor[0], current[1]] == np.inf):
+                        continue
+
+                # Compute Euclidean distance between current and neighbor.
+                distance = math.sqrt(dx**2 + dy**2)
+                # Get the height-based cost; if it's infinite, skip this neighbor.
+                h_cost = self.height_cost(current, neighbor)
+                if h_cost == np.inf:
+                    continue
+
+                # Combine the move distance and height difference into the total cost for this step.
+                move_cost = distance + h_cost
+                tentative_g_score = g_score[current] + move_cost
+
+                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g_score
+                    f_score = tentative_g_score + self.heuristic(neighbor, goal)
+                    open_set.put((f_score, neighbor))
+
         rospy.logwarn("A* failed to find a path")
         return []
+
     
-    def get_neighbors(self, node):
+        def get_neighbors(self, node):
         """
-        Get neighboring cells in the grid, avoiding obstacles (e.g., value of 100000).
+        Get valid neighboring cells in the grid while preventing
+        diagonal moves that cut through obstacles.
         """
         neighbors = []
         x, y = node
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1), (1, 1), (-1, -1)]:  # Check neighboring cells (up, down, left, right)
+        # Define all eight potential moves (cardinal and diagonal)
+        moves = [(-1, 0), (1, 0), (0, -1), (0, 1),
+                 (-1, -1), (-1, 1), (1, -1), (1, 1)]
+        
+        grid_shape = self.occupancy_grid.shape
+        
+        for dx, dy in moves:
             nx, ny = x + dx, y + dy
-            if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
-                if self.occupancy_grid[nx, ny] !=np.inf:  
-                    neighbors.append((nx, ny))
-                else: 
-                    print("OBJECT DETECTED")
+            # Check that the neighbor is within bounds
+            if not (0 <= nx < grid_shape[0] and 0 <= ny < grid_shape[1]):
+                continue
+            
+            # Skip if the neighbor cell is an obstacle.
+            if self.occupancy_grid[nx, ny] == np.inf:
+                continue
+
+            # If moving diagonally, ensure that the adjacent cardinal cells are free.
+            if dx != 0 and dy != 0:
+                # Determine the indices of the two adjacent cells.
+                adj1 = (x + dx, y)
+                adj2 = (x, y + dy)
+                # Check bounds for the adjacent cells.
+                if not (0 <= adj1[0] < grid_shape[0] and 0 <= adj1[1] < grid_shape[1]):
+                    continue
+                if not (0 <= adj2[0] < grid_shape[0] and 0 <= adj2[1] < grid_shape[1]):
+                    continue
+                # If either adjacent cell is an obstacle, skip the diagonal neighbor.
+                if self.occupancy_grid[adj1[0], adj1[1]] == np.inf or self.occupancy_grid[adj2[0], adj2[1]] == np.inf:
+                    continue
+
+            neighbors.append((nx, ny))
         return neighbors
+
     
 ### A* END
 
@@ -309,7 +359,7 @@ class OctoMapAStar:
 
             start =  (int(self.current_position_x), int(self.current_position_y))
             print("THIS IS START", start)
-            goal = (27, 3)  # change this!
+            goal = (20, 20)  # change this!
 
             rospy.loginfo("Running A* algorithm...")
             path = self.a_star(start, goal)
