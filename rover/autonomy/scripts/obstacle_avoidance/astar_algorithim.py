@@ -217,7 +217,7 @@ class OctoMapAStar:
         path.reverse()
         return path
     
-        def a_star(self, start, goal):
+    def a_star(self, start, goal):
         open_set = PriorityQueue()
         open_set.put((self.heuristic(start, goal), start))
         came_from = {}
@@ -270,7 +270,7 @@ class OctoMapAStar:
         return []
 
     
-        def get_neighbors(self, node):
+    def get_neighbors(self, node):
         """
         Get valid neighboring cells in the grid while preventing
         diagonal moves that cut through obstacles.
