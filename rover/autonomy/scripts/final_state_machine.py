@@ -5,6 +5,7 @@ Code for the state machine
 """
 import rospy
 import object_subscriber_node
+from rover.autonomy.scripts import led_light
 import smach
 import time
 import math
@@ -67,20 +68,6 @@ from geometry_msgs.msg import PoseStamped
 def shortest_path(start: str, locations: dict) -> list:
     return OPmain(start, locations)
 
-def signal_red_led():
-    """
-    Function for signalling red led
-    """
-    #Body ommited for now- Possibly a class
-    
-def signal_green_led(): #happens for a few seconds and returns to red 
-    """
-    Function for signalling green led
-    """
-    print("Green Light Yeey!!!")
-    #Body ommited for now- Possibly a class
-
-    
 #*******************************************************
 
 # should be able to access in all other classes 
@@ -88,8 +75,10 @@ class GLOB_MSGS:
     def __init__(self):
         self.pub = rospy.Publisher("gui_status", String, queue_size=10)
         self.state_publisher = rospy.Publisher("state", String, queue_size=10) #ask about que size
+        self.led_publisher = rospy.Publisher("led_light", String, queue_size = 10)
         self.sub = rospy.Subscriber("pose", PoseStamped, self.pose_callback)
         self.gui_loc = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray, self.coord_callback) 
+        self.led_subscriber = rospy.Subscriber("led_light", String, led_light.state_callback) #How to get it to flash?
         self.locations = None
         self.cartesian = None
         self.ar_detection_node = ar_detection_node.ARucoTagDetectionNode() #Initializes the node
@@ -124,6 +113,9 @@ class GLOB_MSGS:
     def pub_state_name(self, state):
         self.state_publisher.publish(state)
     
+    def pub_led_light(self, msg):
+        self.led_publisher.publish(msg)
+    
     
 
 class InitializeAutonomousNavigation(smach.State):
@@ -142,6 +134,7 @@ class InitializeAutonomousNavigation(smach.State):
         
         #status_pub = rospy.Publisher('/status', String, queue_size = 10) #make this globval --> done+
         
+
         rospy.Subscriber("/long_lat_goal_array", Float32MultiArray, self.glob_msg.coord_callback) #gui location publisher
         while (self.glob_msg.locations is None and rospy.is_shutdown() == False):
             time.sleep(1)
@@ -170,6 +163,7 @@ class InitializeAutonomousNavigation(smach.State):
         
     
     def execute(self, userdata):
+        self.glob_msg.pub_led_light("red\n")
         self.glob_msg.pub_state("Initializing Autonomous Navigation")
         self.initialize()
         return "Tasks Execute"
@@ -228,10 +222,11 @@ class GNSS1(smach.State):
         
         if current_distance < 2:
             self.glob_msg.pub_state("GNSS 1 reached, successful cruise")
-            signal_green_led() # Should also be passed to the GUI 
+            self.glob_msg.pub_led_light("green\n")
+            self.glob_msg.pub_led_light("red\n")
         else:
             pass
-
+            
         userdata.prev_loc = "GNSS1"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
 
@@ -258,7 +253,10 @@ class GNSS2(smach.State):
         
         if current_distance < 2:
             self.glob_msg.pub_state("GNSS 2 reached, successful cruise")
-            signal_green_led()
+            self.glob_msg.pub_led_light("green\n")
+            self.glob_msg.pub_led_light("red\n")
+        else:
+            pass
         #else:
         #print("Failed cruise")
         userdata.prev_loc = "GNSS2"
@@ -307,7 +305,8 @@ class AR1(smach.State):
                 self.glob_msg.pub_state("Grid Search did find AR1") #Will publish the messages afterwards but there are topics to publish when detected 
                 if ar_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to AR1") 
-                    signal_green_led()
+                    self.glob_msg.pub_led_light("green\n")
+                    self.glob_msg.pub_led_light("red\n")
 
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR1")
@@ -361,7 +360,8 @@ class AR2(smach.State):
                 self.glob_msg.pub_state("Grid Search did find AR2") #Will publish the messages afterwards but there are topics to publish when detected 
                 if ar_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to AR2") 
-                    signal_green_led()
+                    self.glob_msg.pub_led_light("green\n")
+                    self.glob_msg.pub_led_light("red\n")
 
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR2")
@@ -414,7 +414,8 @@ class AR3(smach.State):
                 self.glob_msg.pub_state("Grid Search did find AR3") #Will publish the messages afterwards but there are topics to publish when detected 
                 if ar_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to AR3") 
-                    signal_green_led()
+                    self.glob_msg.pub_led_light("green\n")
+                    self.glob_msg.pub_led_light("red\n")
 
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR3")
@@ -475,7 +476,8 @@ class OBJ1(smach.State): #mallet
                     self.glob_msg.pub_state("Grid Search did find Waterbottle")
                 if obj1_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to Object1") 
-                    signal_green_led()
+                    self.glob_msg.pub_led_light("green\n")
+                    self.glob_msg.pub_led_light("red\n")
 
                 else:
                     self.glob_msg.pub_state("Grid Search did not find Object1")
@@ -534,7 +536,8 @@ class OBJ2(smach.State): #waterbottle
                     self.glob_msg.pub_state("Grid Search did find Waterbottle")
                 if obj1_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to Object1") 
-                    signal_green_led()
+                    self.glob_msg.pub_led_light("green\n")
+                    self.glob_msg.pub_led_light("red\n")
 
                 else:
                     self.glob_msg.pub_state("Grid Search did not find Object1")
@@ -586,7 +589,8 @@ class ABORT(smach.State):  # Abort State --> In case of failure what should it d
 
             if distance < 2.0:  # Threshold for successful navigation
                 self.glob_msg.pub_state("Successfully returned to the abort location.")
-                signal_green_led()
+                self.glob_msg.pub_led_light("green\n")
+                rospy.Subscriber("led_light", String, led_light.state_callback) #How to get it to flash?
                 return "Location Selection"
             else:
                 self.glob_msg.pub_state("Failed to reach the abort location within threshold.")
