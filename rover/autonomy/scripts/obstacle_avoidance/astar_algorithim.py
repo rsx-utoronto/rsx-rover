@@ -190,7 +190,7 @@ class OctoMapAStar:
     
             # Clamp indices to valid bounds
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
-                if 0 <= z <= 50:  # Height threshold -< this should be 0.2<z<1.5!!!
+                if 0 <= z <= 500:  # Height threshold -< this should be 0.2<z<1.5!!!
                     #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
                     occupancy_grid[grid_x, grid_y] = np.inf
            # rospy.loginfo(f"Grid position: ({grid_x}, {grid_y}) -> Cost: {occupancy_grid[grid_x, grid_y]}")
@@ -252,7 +252,7 @@ class OctoMapAStar:
         """
         neighbors = []
         x, y = node
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1), (1, 1), (-1, -1)]:  # Check neighboring cells (up, down, left, right)
+        for dx, dy in [(-1, -1), (1, 1), (1, -1), (0, -1), (0, 1), (1, 0), (-1, 0)]:  # Check neighboring cells (up, down, left, right)
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
                 if self.occupancy_grid[nx, ny] !=np.inf:  
