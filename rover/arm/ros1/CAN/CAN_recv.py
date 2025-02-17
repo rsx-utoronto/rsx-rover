@@ -16,10 +16,11 @@ class CAN_Recv():
         #self.pub_rate           = 100000000
 
         # Attributes to hold data from publishers or to publish
-        self.CURR_POS 			= [0, 0, 0, 0, 0, 0]
-        self.CURR_ANGLE         = [0, 0, 0, 0, 0, 0]
-        self.MOTOR_CURR 		= [0, 0, 0, 0, 0, 0]
-        self.LIMIT_SWITCH 		= [0, 0, 0, 0, 0, 0]
+
+        self.CURR_POS 			= [0, 0, 0, 0, 0, 0, 0] # ADDED BACK 7TH MOTOR
+        self.CURR_ANGLE         = [0, 0, 0, 0, 0, 0, 0] # ADDED BACK 7TH MOTOR
+        self.MOTOR_CURR 		= [0, 0, 0, 0, 0, 0, 0] # ADDED BACK 7TH MOTOR
+        self.LIMIT_SWITCH 		= [0, 0, 0, 0, 0, 0, 0] # ADDED BACK 7TH MOTOR
 
         # Variables for ROS publishers and subscribers
         self.Angles_pub 		= rospy.Publisher('arm_curr_pos', Float32MultiArray, queue_size=0)
