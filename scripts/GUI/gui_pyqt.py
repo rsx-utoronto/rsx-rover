@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayou
     QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, \
     QCheckBox,QSplitter,QStylePainter, QStyleOptionComboBox, QStyle, \
     QToolButton, QMenu, QLineEdit , QPushButton, QTextEdit,\
-    QListWidget, QListWidgetItem, QStyleOptionSlider
+    QListWidget, QListWidgetItem, QStyleOptionSlider, QSizePolicy
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
@@ -435,7 +435,8 @@ class Joystick(QWidget):
             self.current_angleZ -= step
 
         # Send smooth velocity to ROS
-        self.velocity_control.send_velocity(self.current_linX, self.current_angleZ)
+        if not(self.current_linX == 0 and self.current_angleZ ==0):
+            self.velocity_control.send_velocity(self.current_linX, self.current_angleZ)
 
     def mousePressEvent(self, ev):
         self.grabCenter = self._centerEllipse().contains(ev.pos())
@@ -511,7 +512,12 @@ class CameraFeed:
 
         self.label1 = label1
         self.label2 = label2
+        self.label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         self.splitter = splitter
+        self.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         self.active_cameras = {"Zed (front) camera": False, "Butt camera": False}
 
         self.bbox = None  # Stores the latest bounding box
@@ -722,6 +728,8 @@ class RoverGUI(QMainWindow):
     #used to initialize main tab with splitters
     def setup_split_screen_tab(self):
         splitter = QSplitter(Qt.Horizontal)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         # Add camera feed to the splitter
         camera_group = QGroupBox("Camera Feed")
         camera_layout = QVBoxLayout()
@@ -730,14 +738,19 @@ class RoverGUI(QMainWindow):
         self.camera_label1 = QLabel()
         self.camera_label1.setMinimumSize(320, 240)
         self.camera_label1.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
         
 
         self.camera_label2 = QLabel()
         self.camera_label2.setMinimumSize(320, 240)
         self.camera_label2.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         # ROS functionality
         self.camerasplitter = QSplitter(Qt.Horizontal)
         self.camera_feed = CameraFeed(self.camera_label1, self.camera_label2,self.camerasplitter)
+        self.camerasplitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         
 
         # Use CameraSelect menu-based selector
@@ -774,15 +787,18 @@ class RoverGUI(QMainWindow):
         splitter.setStretchFactor(1, 1)
         
         # Create a group box for the status terminal
+        vertSplitter = QSplitter(Qt.Vertical)
+        vertSplitter.addWidget(splitter)
         self.statusTerminal = statusTerminal()
         self.statusTermGroupBox = QGroupBox("Status Messages")
         status_term_layout = QVBoxLayout()
         status_term_layout.addWidget(self.statusTerminal)
         self.statusTermGroupBox.setLayout(status_term_layout)
-        
+        vertSplitter.addWidget(self.statusTermGroupBox)
         split_screen_layout = QVBoxLayout()
-        split_screen_layout.addWidget(splitter)
-        split_screen_layout.addWidget(self.statusTermGroupBox) 
+        # split_screen_layout.addWidget(splitter)
+        split_screen_layout.addWidget(vertSplitter)
+        # split_screen_layout.addWidget(self.statusTermGroupBox) 
         self.split_screen_tab.setLayout(split_screen_layout)
 
     def on_checkbox_state_changed(self, state,map_overlay):
