@@ -289,11 +289,11 @@ class IKMode(ScriptState):
                 targetEEPos = self.controlEEPosition(isButtonPressed, joystickAxesStatus, prevTargetValues, 
                                         prevTargetTransform)
                 targetAngles = ik.inverseKinematics(dhTable, targetEEPos)
-                # targetAngles = self.continousInvTan(targetAngles, curArmAngles)
+                targetAngles = self.continousInvTan(targetAngles, curArmAngles)
 
             movementSpeed = originalSpeed
 
-            # targetAngles.append(self.controlGripperAngle(isButtonPressed, curArmAngles))
+            targetAngles.append(self.controlGripperAngle(isButtonPressed, curArmAngles))
 
             prevArmAngles = curArmAngles
             curArmAngles = targetAngles
@@ -301,8 +301,8 @@ class IKMode(ScriptState):
             prevTargetValues = newTargetValues
         except ik.CannotReachTransform:
             print("Cannot reach outside of arm workspace")
-        except Exception as ex:
-            print(ex)
+        # except Exception as ex:
+        #     print(ex)
 
     def continousInvTan(self, armAngles, prevArmAngles):
         ''' Makes output of atan continous instead of fliping 180 degrees
@@ -813,7 +813,7 @@ class InverseKinematicsNode():
         global savedCanAngles
 
         ikAngles = Float32MultiArray()
-        adjustedAngles = [0, 0, 0, 0, 0, 0]
+        adjustedAngles = [0, 0, 0, 0, 0, 0, 0]
         for i in range(adjustedAngles.__len__()):
             adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] + savedCanAngles[i]
             adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
@@ -822,8 +822,8 @@ class InverseKinematicsNode():
         adjustedAngles[1] = adjustedAngles[1] #+ 73.6
         adjustedAngles[2] = -adjustedAngles[2] 
         adjustedAngles[3] = adjustedAngles[3] % 360
-        adjustedAngles[4] = -adjustedAngles[4]
-        adjustedAngles[5] = -adjustedAngles[5]
+        adjustedAngles[4] = adjustedAngles[4]
+        adjustedAngles[5] = adjustedAngles[5]
 
         # print(adjustedAngles[3])
         temp = adjustedAngles[5]
@@ -886,8 +886,8 @@ class InverseKinematicsNode():
                 print(type(self.scriptMode).__name__)
 
                 savedCanAngles = copy.deepcopy(liveArmAngles) 
-                liveArmAngles = [0, 0, 0, 0, 0, 0]
-                curArmAngles = [0, 0, 0, 0, 0, 0]
+                liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
+                curArmAngles = [0, 0, 0, 0, 0, 0, 0]
 
                 dhTable = ik.createDHTable([0, pi/2, 0, 0, 0, 0, 0])
                 prevTargetTransform = ik.calculateTransformToLink(dhTable, 6)
@@ -986,22 +986,22 @@ class InverseKinematicsNode():
 # Main Area
 
 if __name__ == "__main__":
-    angleCorrections = [0, 0, 0, 0, 0, 0]
-    curArmAngles = [0, 0, 0, 0, 0, 0]
-    prevArmAngles = [0, 0, 0, 0, 0, 0]
-    liveArmAngles = [0, 0, 0, 0, 0, 0]
+    angleCorrections = [0, 0, 0, 0, 0, 0, 0]
+    curArmAngles = [0, 0, 0, 0, 0, 0, 0]
+    prevArmAngles = [0, 0, 0, 0, 0, 0, 0]
+    liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
     prevTargetValues = [0, 0, 0, [250, 0, 450]] # start position for ik
     newTargetValues = prevTargetValues
     prevTargetTransform = ik.createEndEffectorTransform(prevTargetValues[0], prevTargetValues[1],
                                                         prevTargetValues[2], prevTargetValues[3])
-    goToPosValues = [False, [0, 0, 0, 0, 0, 0]]
-    savedCanAngles = [0, 0, 0, 0, 0, 0]
+    goToPosValues = [False, [0, 0, 0, 0, 0, 0, 0]]
+    savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
 
     isIKEntered = False
     movementSpeed = 10/NODE_RATE
     isMovementNormalized = False
 
-    nRevTheta = [0, 0, 0, 0, 0, 0]
+    nRevTheta = [0, 0, 0, 0, 0, 0, 0]
         
     ikNode = InverseKinematicsNode()
 
