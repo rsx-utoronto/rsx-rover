@@ -769,6 +769,7 @@ class RoverGUI(QMainWindow):
         map_group = QGroupBox("Map")
         map_layout = QVBoxLayout()
         self.map_overlay_splitter = mapOverlay()
+        self.map_overlay_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.checkbox_setting_splitter = QCheckBox("Recentre map when rover offscreen")
         self.checkbox_setting_splitter.setChecked(False)  # Set the default state to unchecked
         # self.checkbox_setting_splitter.stateChanged.connect(self.on_checkbox_state_changed)
