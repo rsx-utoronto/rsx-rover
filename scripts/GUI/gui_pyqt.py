@@ -546,12 +546,11 @@ class CameraFeed:
 
     def bbox_callback(self, msg):
         """Callback to update the bounding box when a new message arrives."""
-        if len(msg.data) == 4:
-            self.bbox = [int(msg.data[0]), int(msg.data[1]), int(msg.data[2]), int(msg.data[3])]
+        if len(msg.data) == 8:
+            self.bbox = [int(msg.data[0]), int(msg.data[1]), int(msg.data[2]), int(msg.data[5])]
         else:
             self.bbox = None  # If the message is empty, remove bbox
 
-        self.bbox_timer.start()  # Restart the timer whenever we get a new bbox
         QMetaObject.invokeMethod(self.bbox_timer, "start", Qt.QueuedConnection)
 
     def clear_bbox(self):
@@ -576,8 +575,8 @@ class CameraFeed:
         cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
-        # Draw bounding box if available
-        if self.bbox:
+        # Draw bounding box **only on label1 (Zed front camera)**
+        if label == self.label1 and self.bbox:
             x1, y1, x2, y2 = self.bbox
             cv2.rectangle(cv_image, (x1, y1), (x2, y2), (0, 255, 0), 3)  # Green box
 
