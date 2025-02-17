@@ -76,12 +76,15 @@ class ARucoTagDetectionNode():
     # https://circ.cstag.ca/2022/rules/#autonomy-guidelines:~:text=All%20ArUco%20markers%20will%20be%20from%20the%204x4_50%20dictionary.%20They%20range%20from%20marker%200%20to%2049.
 
     def findArucoMarkers(self, img, markerSize=4, totalMarkers=100, draw=True):
+        print("Finding Aruco Markers")
         imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         key = getattr(aruco, 'DICT_' + str(markerSize) + 'X' + str(markerSize) + "_" + str(totalMarkers))
         arucoDict = aruco.getPredefinedDictionary(key)
-        arucoParam = aruco.DetectorParameters_create()
-        bboxs, ids, rejected = aruco.detectMarkers(imgGray,arucoDict,parameters=arucoParam)
-
+        arucoParam = aruco.DetectorParameters()
+        detector = aruco.ArucoDetector(arucoDict, arucoParam)
+        bboxs, ids, rejected = detector.detectMarkers(imgGray)
+        # bboxs, ids, rejected = aruco.detectMarkers(imgGray,arucoDict,parameters=arucoParam)
+        # print("bbox", bboxs)
         if ids is not None:
             print("AR detected!")
             print(ids)
@@ -101,13 +104,17 @@ class ARucoTagDetectionNode():
             rospy.loginfo(f"An AR tag was detected with the ID {best_detection}")
             #self.scanned_state_smg.AR_SCANNED = True
             bboxs = bboxs[0]
+            
             if draw:
                 for bbox, id in zip(bboxs, ids):
-                    cv2.rectangle(img, (bbox[0][0], bbox[0][1]) , (bbox[2][0], bbox[2][1]), (0,255,0), 4)
+                    print(bbox)
+                    print(type(bbox[0,0]))
+
+                    cv2.rectangle(img, (int(bbox[0,0]), int(bbox[0,1])) , (int(bbox[2,0]), int(bbox[2,1])), (0,255,0), 4)
                     # font
 
                    # print (bbox[0][0],bbox[0][1],bbox[2][0],bbox[2][1])
-                    self.array=[bbox[0][0], bbox[0][1], bbox[2][0], bbox[0][1], bbox[0][0], bbox[2][1], bbox[2][0], bbox[2][1]]
+                    self.array=[bbox[0,0], bbox[0,1], bbox[2,0], bbox[0,1], bbox[0,0], bbox[2,1], bbox[2,0], bbox[2,1]]
                     data = Float64MultiArray(data=self.array)
                     self.bbox_pub.publish(data)
                     
@@ -116,7 +123,7 @@ class ARucoTagDetectionNode():
                     print((self.array[6]-self.array[0])*(self.array[7]-self.array[1]))
                     
                     font = cv2.FONT_HERSHEY_SIMPLEX
-                    org = (int(bbox[0][0]), int(bbox[0][1] - 20))
+                    org = (int(bbox[0,0]), int(bbox[0,1] - 20))
                     fontScale = 1
                     color = (0, 255, 0)
                     thickness = 2
@@ -125,8 +132,6 @@ class ARucoTagDetectionNode():
             
             img_msg = bridge.cv2_to_imgmsg(img, encoding="passthrough")
             self.vis_pub.publish(img_msg)
-
-            
             
         #self.updated_state_msg = self.current_state
 

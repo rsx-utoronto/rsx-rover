@@ -123,7 +123,7 @@ class AimerROS(Aimer):  #updates coords continuously
 
 def main():
     pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
-    aimer = AimerROS(640, 360, 1000, 100, 100, 0.5, 0.5) # change constants
+    aimer = AimerROS(640, 360, 1000, 100, 100, 1.8, 0.8) # change constants
     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
     # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
     rate = rospy.Rate(10)
