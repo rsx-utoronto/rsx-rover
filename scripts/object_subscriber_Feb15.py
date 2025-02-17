@@ -21,7 +21,7 @@ class ObjectDetectionNode():
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
         self.mallet_pub = rospy.Publisher('mallet_detected', Bool, queue_size=1)
         self.waterbottle_pub = rospy.Publisher('waterbottle_detected', Bool, queue_size=1)
-        self.bbox_pub = rospy.Publisher('object/bbox', Float64MultiArray, queue_size=10)
+        self.bbox_pub = rospy.Publisher('aruco_node/bbox', Float64MultiArray, queue_size=10)
         self.vis_pub = rospy.Publisher('vis/object_detections', Image, queue_size=10)
 
         self.K = None
@@ -70,7 +70,7 @@ class ObjectDetectionNode():
                 width, height = x2 - x1, y2 - y1
                 area = width * height
                 # Publish bounding box
-                bbox_data = Float64MultiArray(data=[x1, y1, x2, y2, area, cls])
+                bbox_data = Float64MultiArray(data=[x1, y1, x2, y1, x1, y2, x2, y2])
                 self.bbox_pub.publish(bbox_data)
                 # Draw bounding box and label on image
                 cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
