@@ -12,7 +12,7 @@ from geometry_msgs.msg import Twist, TransformStamped
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
 from std_srvs.srv import Empty, EmptyResponse
-from rover.msg import StateMsg
+# from rover.msg import StateMsg
 
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import numpy as np
