@@ -34,9 +34,9 @@ class ARucoTagDetectionNode():
         while (time.time() - t) < 2:
             #print("Passing time") 
             pass
-        self.bridge = CvBridge()
+        
         #self.current_state = StateMsg()
-        self.curr_aruco_detections = {}
+        
         self.detected_aruco_ids = []
         self.aruco_locations = []
         self.detect_thresh = 5
