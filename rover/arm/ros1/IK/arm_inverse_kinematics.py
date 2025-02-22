@@ -818,11 +818,11 @@ class InverseKinematicsNode():
             adjustedAngles[i] = newJointAngles[i] - angleCorrections[i] + savedCanAngles[i]
             adjustedAngles[i] = np.rad2deg(adjustedAngles[i])
 
-        adjustedAngles[0] = adjustedAngles[0]
+        adjustedAngles[0] = -adjustedAngles[0]
         adjustedAngles[1] = adjustedAngles[1] #+ 73.6
         adjustedAngles[2] = -adjustedAngles[2] 
-        adjustedAngles[3] = adjustedAngles[3] % 360
-        adjustedAngles[4] = adjustedAngles[4]
+        adjustedAngles[3] = adjustedAngles[3]
+        adjustedAngles[4] = -adjustedAngles[4]
         adjustedAngles[5] = adjustedAngles[5]
 
         # print(adjustedAngles[3])
