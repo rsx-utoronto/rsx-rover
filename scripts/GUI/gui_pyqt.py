@@ -584,7 +584,11 @@ class CameraFeed:
         bytes_per_line = 3 * width
         qimg = QImage(cv_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(qimg)
-        label.setPixmap(pixmap)
+
+        # Scale to exactly match QLabel size
+        scaled_pixmap = pixmap.scaled(label.width(), label.height(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+        label.setPixmap(scaled_pixmap)
+
 
     def update_active_cameras(self, active_cameras):
         self.active_cameras = active_cameras
@@ -626,6 +630,16 @@ class CameraFeed:
             self.splitter.setStretchFactor(0, 1)
             self.splitter.setStretchFactor(1, 1)
 
+class ResizableLabel(QLabel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setScaledContents(True)  # This allows QLabel to auto-resize the image
+
+    def resizeEvent(self, event):
+        if self.pixmap():
+            self.setPixmap(self.pixmap().scaled(self.width(), self.height(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+        super().resizeEvent(event)
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
@@ -740,14 +754,14 @@ class RoverGUI(QMainWindow):
         camera_layout = QVBoxLayout()
         
 
-        self.camera_label1 = QLabel()
+        self.camera_label1 = ResizableLabel()
         self.camera_label1.setMinimumSize(320, 240)
         self.camera_label1.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         self.camera_label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         
 
-        self.camera_label2 = QLabel()
+        self.camera_label2 = ResizableLabel()
         self.camera_label2.setMinimumSize(320, 240)
         self.camera_label2.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         self.camera_label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
