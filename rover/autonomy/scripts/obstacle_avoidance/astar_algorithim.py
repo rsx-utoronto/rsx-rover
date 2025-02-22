@@ -155,19 +155,15 @@ class OctoMapAStar:
             # Initialize an empty list to store occupied points
             occupied_points = []
 
-            # Iterate through the data byte-by-byte
             for offset, byte in enumerate(data):
-                voxel_data = byte  # Access the raw byte as an integer
-
-                # Check if the voxel is occupied
-                if voxel_data == 1:
-                    # Calculate the 3D coordinates of the voxel
-                    x = (offset % 256) * resolution
-                    y = ((offset // 256) % 256) * resolution
-                    z = ((offset // (256 * 256)) % 256) * resolution
-
-                    # Add the voxel's coordinates to the occupied points
-                    occupied_points.append((x, y, z))
+                for bit in range(8):
+                    if (byte >> bit) & 1:  # Check if the bit is set
+                        # Calculate voxel index in 3D grid
+                        voxel_index = offset * 8 + bit
+                        x = (voxel_index % (256 * 256)) % 256
+                        y = (voxel_index % (256 * 256)) // 256
+                        z = voxel_index // (256 * 256)
+                        occupied_points.append((x * resolution, y * resolution, z * resolution))
 
             rospy.loginfo(f"Decoded {len(occupied_points)} occupied points from OctoMap.")
             return occupied_points
@@ -260,7 +256,7 @@ class OctoMapAStar:
         """
         neighbors = []
         x, y = node
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1), (1, 1), (-1, -1)]:  # Check neighboring cells (up, down, left, right)
+        for dx, dy in [(-1, -1), (1, 1), (0, -1), (0, 1), (1, 0), (-1, 0)]:  # Check neighboring cells (up, down, left, right)
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
                 if self.occupancy_grid[nx, ny] !=10000:  
