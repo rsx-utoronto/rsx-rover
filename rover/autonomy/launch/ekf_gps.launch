@@ -11,6 +11,7 @@
         <param name="publish_tf" value="false" />
         <param name="use_mag" value="true" />
         <param name="world_frame" value="enu" />
+        <param name="orientation_stddev" value="0.2" />
         <remap from="imu/mag" to="/zed_node/imu/mag" />
         <remap from="imu/data_raw" to="/imu/enu" />
         <remap from="imu/data" to="/imu/orient" />
@@ -20,6 +21,7 @@
 
         <param name="magnetic_declination_radians" value="-0.177764053"/>
         <!-- for toronto: -10.18513 => -0.177764053 (obtained jan 11, 2025) -->
+        <param name="armlength" value="1.2" />
 
     </node>
 
