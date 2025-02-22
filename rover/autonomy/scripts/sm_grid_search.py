@@ -258,20 +258,49 @@ class GridSearch:
             step += 1  # Increase step size after two edges
         return targets
 
-if __name__ == '__main__':
-    targets = [(9, 0), (9, 2)]  # Define multiple target points
+def main():
+    targets = [(5, -0.8)]  # Define multiple target points
     try:
         rospy.init_node('straight_line_approach_node')
-        approach = StraightLineApproach(1.5, 0.5, targets)
+        approach = StraightLineApproach.StraightLineApproach(1.5, 0.5, targets)
         approach.navigate()
     except rospy.ROSInterruptException:
         pass
 
-    gs = GridSearch(4, 4, 1, x, y)  # define multiple target points here: cartesian
-    target = gs.square_target()
-    print(target)
-    try:
-        StraightLineApproach(1, 0.5, target) #LOOK HERE
-    except rospy.ROSInterruptException:
-        pass
+    # gs = GridSearch(4, 4, 1, 0, 0)  # define multiple target points here: cartesian
+    # targets = gs.square_target() #generates multiple targets 
+    # gs_traversal_object = GS_Traversal(0.6, 0.3, targets)
+    # gs_traversal_object.navigate("AR1") #should be one of aruco, mallet, waterbottle
     
+    pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
+    # frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v
+    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 1.5, 0.3) # FOR ARUCO
+    
+    # aimer = aruco_homing.AimerROS(50, 50, 1450, 10, 50, 1.0, 0.5) # FOR WATER BOTTLE
+    rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+    # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
+    rate = rospy.Rate(10)
+    while not rospy.is_shutdown():
+        twist = Twist()
+        if aimer.linear_v == 0 and aimer.angular_v == 0:
+            print ("at weird", aimer.linear_v, aimer.angular_v)
+            twist.linear.x = 0
+            twist.angular.z = 0
+            pub.publish(twist)
+            return True
+        if aimer.angular_v == 1:
+            twist.angular.z = aimer.max_angular_v
+            twist.linear.x = 0
+        elif aimer.angular_v == -1:
+            twist.angular.z = -aimer.max_angular_v
+            twist.linear.x = 0
+        elif aimer.linear_v == 1:
+            twist.linear.x = aimer.max_linear_v
+            twist.angular.z = 0
+         
+        pub.publish(twist)
+        rate.sleep()
+    
+    
+if __name__ == '__main__':
+    main()
