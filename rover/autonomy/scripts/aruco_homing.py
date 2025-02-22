@@ -145,7 +145,7 @@ def main():
         elif aimer.linear_v == 1:
             twist.linear.x = aimer.max_linear_v
             twist.angular.z = 0
-        
+         
         pub.publish(twist)
         rate.sleep()
 
