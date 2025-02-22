@@ -153,7 +153,7 @@ class OctoMapAStar:
 
             # Initialize an empty list to store occupied points
             occupied_points = []
-
+    
             # Iterate through the data byte-by-byte
             for offset, byte in enumerate(data):
                 voxel_data = byte  # Access the raw byte as an integer
@@ -179,7 +179,7 @@ class OctoMapAStar:
         
         grid_size = (10000, 10000)  # Number of cells in x and y
         resolution = self.grid_resolution       # Grid resolution in meters
-        rover_radius = 0.7 # radius in meters?
+        rover_radius = 0.0 # radius in meters?
         inflation_cells = 0 #int(rover_radius / resolution)
 
         occupancy_grid = np.zeros(grid_size, dtype=np.float32)
@@ -199,7 +199,7 @@ class OctoMapAStar:
                     occupancy_grid[grid_x, grid_y] = 100000 #np.inf
                     for dx in range(-inflation_cells, inflation_cells):
                         # print("THISSSSSSSSS", dx)
-                        for dy in np.arrange(-inflation_cells, inflation_cells):
+                        for dy in range(-inflation_cells, inflation_cells):
                             new_x = grid_x + dx
                             new_y = grid_y + dy               
                         occupancy_grid[new_x, new_y] = 100000  #np.inf  # Mark as occupied
