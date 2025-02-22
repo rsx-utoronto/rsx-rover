@@ -651,9 +651,11 @@ class RoverGUI(QMainWindow):
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
 
+
+        self.setup_control_tab()
         self.setup_split_screen_tab()
         self.setup_lngLat_tab()
-        self.setup_control_tab()
+        
 
 
 
@@ -666,8 +668,36 @@ class RoverGUI(QMainWindow):
             print("split tab") # Show map viewer in split screen tab
 
     def setup_control_tab(self):
+        print("empty so far")
+        
+        # self.controlTab.setLayout(control_tab_layout)
+
+    def setup_lngLat_tab(self):
+        self.lngLatEntry = LngLatEntryBar()
+        self.stateMachineDialog = StateMachineStatus()
+        self.arucoBox = ArucoWidget()
+        
+
+        # Create a group box for the ArucoWidget
+        self.arucoGroupBox = QGroupBox("Aruco Tags")
+        aruco_layout = QVBoxLayout()
+        aruco_layout.addWidget(self.arucoBox)
+        self.arucoGroupBox.setLayout(aruco_layout)
+
+        
+
+        # Main layout for the tab
+        Lnglat_tab_layout = QVBoxLayout()
+        Lnglat_tab_layout.addWidget(self.lngLatEntry)
+        Lnglat_tab_layout.addWidget(self.stateMachineDialog)
+        Lnglat_tab_layout.addWidget(self.arucoGroupBox) 
+        
+
+        self.longlat_tab.setLayout(Lnglat_tab_layout)
+    #used to initialize main tab with splitters
+    def setup_split_screen_tab(self):
         # Controls section
-        controls_group = QGroupBox("Controls")
+        self.controls_group = QGroupBox("Controls")
         controls_layout = QHBoxLayout()
 
         # Joystick
@@ -696,36 +726,12 @@ class RoverGUI(QMainWindow):
         # Add joystick and gear controls side by side
         controls_layout.addWidget(joystick_group)
         controls_layout.addWidget(gear_group)
-        controls_group.setLayout(controls_layout)
+        self.controls_group.setMinimumHeight(100)
+
+        self.controls_group.setLayout(controls_layout)
         # vertical_splitter.addWidget(controls_group)
         control_tab_layout = QVBoxLayout()
-        control_tab_layout.addWidget(controls_group)
-        self.controlTab.setLayout(control_tab_layout)
-
-    def setup_lngLat_tab(self):
-        self.lngLatEntry = LngLatEntryBar()
-        self.stateMachineDialog = StateMachineStatus()
-        self.arucoBox = ArucoWidget()
-        
-
-        # Create a group box for the ArucoWidget
-        self.arucoGroupBox = QGroupBox("Aruco Tags")
-        aruco_layout = QVBoxLayout()
-        aruco_layout.addWidget(self.arucoBox)
-        self.arucoGroupBox.setLayout(aruco_layout)
-
-        
-
-        # Main layout for the tab
-        Lnglat_tab_layout = QVBoxLayout()
-        Lnglat_tab_layout.addWidget(self.lngLatEntry)
-        Lnglat_tab_layout.addWidget(self.stateMachineDialog)
-        Lnglat_tab_layout.addWidget(self.arucoGroupBox) 
-        
-
-        self.longlat_tab.setLayout(Lnglat_tab_layout)
-    #used to initialize main tab with splitters
-    def setup_split_screen_tab(self):
+        control_tab_layout.addWidget(self.controls_group)
         splitter = QSplitter(Qt.Horizontal)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
@@ -793,8 +799,16 @@ class RoverGUI(QMainWindow):
         self.statusTermGroupBox = QGroupBox("Status Messages")
         status_term_layout = QVBoxLayout()
         status_term_layout.addWidget(self.statusTerminal)
+        self.statusTermGroupBox.setMinimumHeight(100)
+
         self.statusTermGroupBox.setLayout(status_term_layout)
-        vertSplitter.addWidget(self.statusTermGroupBox)
+        bottom_layout = QHBoxLayout()
+        bottom_layout.addWidget(self.controls_group)  
+        bottom_layout.addWidget(self.statusTermGroupBox)
+
+        bottom_container = QWidget()
+        bottom_container.setLayout(bottom_layout)
+        vertSplitter.addWidget(bottom_container)
         split_screen_layout = QVBoxLayout()
         # split_screen_layout.addWidget(splitter)
         split_screen_layout.addWidget(vertSplitter)
@@ -812,6 +826,7 @@ class RoverGUI(QMainWindow):
     def change_gear(self, value):
         self.velocity_control.set_gear(value/10+1)
         print(f"Changed to Gear: {value}")
+        self.gear_slider_splitter.setValue(value)
 
     def switch_camera(self, index):
         self.camera_feed.switch_camera(index + 1)
