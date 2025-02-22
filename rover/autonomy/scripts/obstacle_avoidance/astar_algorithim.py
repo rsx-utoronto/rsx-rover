@@ -43,15 +43,16 @@ class OctoMapAStar:
         self.waypoint_topic = rospy.get_param("~waypoint_topic", "/waypoint")
         self.update_rate = rospy.get_param("~update_rate", 100.0)  # Frequency in Hz 
         self.vel_topic = rospy.get_param("~vel_topic", "/cmd_vel")  # Velocity command
-        self.height_min = rospy.get_param("~height_min", 0)  # Min height for obstacles
-        self.height_max = rospy.get_param("~height_max", 100)  # Max height for obstacles
+        self.height_min = rospy.get_param("~height_min", 0.2)  # Min height for obstacles
+        self.height_max = rospy.get_param("~height_max", 15)  # Max height for obstacles
         self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed/point_cloud/cloud_registered")
         self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
         self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
-        self.boundary= ((-1000000, -10000000, -1000000), (1000000, 1000000, 1000000)) 
+        self.boundary= ((-100000, -1000000, -100000), (100000, 100000, 100000)) 
         self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
       
+        
         # Publishers and Subscribers
         self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
         #self.pose_sub = rospy.Subscriber(self.pose_topic, PoseStamped, self.odom_callback)
@@ -153,7 +154,7 @@ class OctoMapAStar:
 
             # Initialize an empty list to store occupied points
             occupied_points = []
-    
+
             # Iterate through the data byte-by-byte
             for offset, byte in enumerate(data):
                 voxel_data = byte  # Access the raw byte as an integer
@@ -176,14 +177,12 @@ class OctoMapAStar:
         converts 3d map into 2d map with height filtering
         Process OctoMap into a 2D occupancy grid based on height values.
         """
-        
-        grid_size = (10000, 10000)  # Number of cells in x and y
-        resolution = self.grid_resolution       # Grid resolution in meters
-        rover_radius = 0.0 # radius in meters?
-        inflation_cells = 0 #int(rover_radius / resolution)
+        grid_size = (200, 200)  # Number of cells in x and y
+        resolution = 0.1        # Grid resolution in meters
+        rover_radius = 0.2
+        inflation_cells = (int) (rover_radius / resolution)
 
         occupancy_grid = np.zeros(grid_size, dtype=np.float32)
-        
         occupied_points = self.decode_octomap(octomap_msg)
 
         for point in occupied_points:
@@ -196,14 +195,14 @@ class OctoMapAStar:
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
                 if 0 <= z <= 50:  # Height threshold -< this should be 0.2<z<1.5!!!
                     #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
-                    occupancy_grid[grid_x, grid_y] = 100000 #np.inf
+                    occupancy_grid[grid_x, grid_y] = 100000
                     for dx in range(-inflation_cells, inflation_cells):
-                        # print("THISSSSSSSSS", dx)
-                        for dy in range(-inflation_cells, inflation_cells):
-                            new_x = grid_x + dx
-                            new_y = grid_y + dy               
-                        occupancy_grid[new_x, new_y] = 100000  #np.inf  # Mark as occupied
-      
+                            # print("THISSSSSSSSS", dx)
+                            for dy in range(-inflation_cells, inflation_cells):
+                                new_x = grid_x + dx
+                                new_y = grid_y + dy               
+                            occupancy_grid[new_x, new_y] = 100000  #np.inf  
+           # rospy.loginfo(f"Grid position: ({grid_x}, {grid_y}) -> Cost: {occupancy_grid[grid_x, grid_y]}")
         return occupancy_grid
 
 ### A* start 
@@ -212,8 +211,8 @@ class OctoMapAStar:
         current_height = self.occupancy_grid[current[0], current[1]]
         neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
         if current_height == -1 or neighbor_height == -1:  
-            return 100000
-        if current_height == 10000 or neighbor_height > 1000: 
+            return 10000 
+        if current_height == 10000 or neighbor_height==10000: 
             return 10000
         return abs(current_height - neighbor_height)
     
@@ -261,17 +260,13 @@ class OctoMapAStar:
         """
         neighbors = []
         x, y = node
-        for dx, dy in [(-1, -1), (1, 1), (0, -1), (0, 1), (1, 0), (-1, 0)]:  # (1,-1), (-1,1),Check neighboring cells (up, down, left, right)
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1), (1, 1), (-1, -1)]:  # Check neighboring cells (up, down, left, right)
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
-                neighbors.append((nx,ny))
-                #if self.occupancy_grid[nx, ny] !=np.inf:  
-                    # if abs(dx) + abs(dy) == 2:  # Diagonal move
-                    #     if self.occupancy_grid[x, ny] >= 100000 and self.occupancy_grid[nx, y] >= 100000:
-                    #         continue  # Block diagonal movement if both adjacent cells are obstacles
-                 #   neighbors.append((nx, ny))
-                #else: 
-                #    print("OBJECT DETECTED")
+                if self.occupancy_grid[nx, ny] !=10000:  
+                    neighbors.append((nx, ny))
+                else: 
+                    print("OBJECT DETECTED")
         return neighbors
     
 ### A* END
