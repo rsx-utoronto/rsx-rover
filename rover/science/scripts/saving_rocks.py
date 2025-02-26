@@ -4,12 +4,12 @@ import serial
 import time
 import rospy
 import cv2
-from sensor_msgs.msg import Image, Bool
+from sensor_msgs.msg import Image
+from std_msgs.msg import Bool
 from cv_bridge import CvBridge
 
 class CameraStoring:
     def __init__(self):
-        self.rate = rospy.Rate(2)  
         self.start = False
         self.cam_data = None
         self.image = None
@@ -34,7 +34,8 @@ class CameraStoring:
             except Exception as e:
                 rospy.logerr(f"error: {e}")
         else:
-            rospy.loginfo("waiting for start command")
+            # rospy.loginfo("waiting for start command")
+            pass
 
     # recieves information on what filter we are on 
     # CONFLICT OF INFORMATION: is science sending ros command for filter change, or is it software 
@@ -46,7 +47,7 @@ class CameraStoring:
 
     def saving(self):
     # we have 1 picture (it is what the camera currently sees)
-        
+        print("saving")
         # not sure how the filter will be taken into account... for now im leaving it as this counter 
         filter = 12
         filter_count = 1
@@ -57,31 +58,37 @@ class CameraStoring:
         site = 1
 
         # NEED TO CREATE ROCK PHOTOS FOLDER IN THIS PATH 
-        base_dir = "/home/rsx-base/rsx-rover/rover/science"
+        base_dir = "/home/rsx-base/rover_ws/src/rsx-rover/rover/science/genie_pics"
         folder_path = os.path.join(base_dir, f"folder_{site}")
 
         # change to whatever port it is 
-        arduino_port = "COM3"
+        arduino_port = "/dev/ttyUSB0"  # CM0Must match the Arduino port
         baud_rate = 9600  # Must match the Arduino baud rate
         
         # creating serial port connection 
         ser = serial.Serial(arduino_port, baud_rate, timeout=1)
         time.sleep(2)  
-
-        while self.start:
-            # create a folder, then store the images in this folder 5 times. then 
+        rate = rospy.Rate(0.2)
+        while self.start and not rospy.is_shutdown():
+            # create a folder, then store the images in this folder 1 time. then 
+            
+            #while 
+            # while loop can end when counter is 12. also dont run when u dont get the S signal from ardiono 
+                        
             for filter in range(filter):
-
                 # create folder within the base_dir for the filter images
-                new_folder_path = os.path.join(folder_path, f"folder_{filter_count}")
-                os.makedirs(new_folder_path)
-                filter_count += 1
+                # new_folder_path = os.path.join(folder_path, f"folder_{filter_count}")
+                new_folder_path = folder_path
+                if not os.path.exists(new_folder_path):
+                    os.makedirs(new_folder_path)
+                
+                
 
 
                 if self.image.all():
                      #cv2.imwrite("~/testing/image_name.jpeg", self.image)
 
-                    img_path = os.path.join(new_folder_path, f"rock_image.jpeg")
+                    img_path = os.path.join(new_folder_path, f"rock_image{filter_count}.jpeg")
                     #os.makedirs(img_path)
 
                     cv2.imwrite(img_path, self.image)
@@ -92,10 +99,18 @@ class CameraStoring:
 
                     pub = rospy.Publisher('need_rocks', Bool, queue_size=10)
 
-
-
                 else:
+                    # if there is no image saved (basically an error)
                     rospy.loginfo("waiting")
+
+                '''while ser.read() != 'S':
+                    rospy.loginfo("waiting for next filter")'''
+                
+                filter_count += 1
+                rate.sleep()
+                self.start = False 
+
+            rate.sleep()
 
         # close serial port connection once we're done looking at the sites 
         ser.close()
