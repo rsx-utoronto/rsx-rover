@@ -573,18 +573,28 @@ class CameraFeed:
         """Decode and update the camera image with the bounding box if available."""
         np_arr = np.frombuffer(data.data, np.uint8)
         cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        if cv_image is None:
+            return  # Avoid processing None images
+
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
-        # Draw bounding box **only on label1 (Zed front camera)**
         if label == self.label1 and self.bbox:
             x1, y1, x2, y2 = self.bbox
-            cv2.rectangle(cv_image, (x1, y1), (x2, y2), (0, 255, 0), 3)  # Green box
+            cv2.rectangle(cv_image, (x1, y1), (x2, y2), (0, 255, 0), 3)
 
         height, width, channel = cv_image.shape
         bytes_per_line = 3 * width
         qimg = QImage(cv_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(qimg)
-        label.setPixmap(pixmap)
+
+        # Move GUI update to main thread
+        def update_label():
+            if label:
+                label.setPixmap(pixmap)
+
+        QMetaObject.invokeMethod(label, "setPixmap", Qt.QueuedConnection, Q_ARG(QPixmap, pixmap))
+
+
 
     def update_active_cameras(self, active_cameras):
         self.active_cameras = active_cameras
@@ -626,6 +636,16 @@ class CameraFeed:
             self.splitter.setStretchFactor(0, 1)
             self.splitter.setStretchFactor(1, 1)
 
+class ResizableLabel(QLabel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setScaledContents(True)  # This allows QLabel to auto-resize the image
+
+    def resizeEvent(self, event):
+        if self.pixmap():
+            self.setPixmap(self.pixmap().scaled(self.width(), self.height(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+        super().resizeEvent(event)
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
@@ -740,14 +760,14 @@ class RoverGUI(QMainWindow):
         camera_layout = QVBoxLayout()
         
 
-        self.camera_label1 = QLabel()
+        self.camera_label1 = ResizableLabel()
         self.camera_label1.setMinimumSize(320, 240)
         self.camera_label1.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         self.camera_label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         
 
-        self.camera_label2 = QLabel()
+        self.camera_label2 = ResizableLabel()
         self.camera_label2.setMinimumSize(320, 240)
         self.camera_label2.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         self.camera_label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
