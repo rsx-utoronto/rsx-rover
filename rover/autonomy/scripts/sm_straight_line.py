@@ -17,14 +17,14 @@ class StraightLineApproach:
         self.x = 0
         self.y = 0
         self.heading = 0
-        self.odom_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
+        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
         self.drive_publisher = rospy.Publisher('drive', Twist, queue_size=10)
 
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.aruco_found = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
-        self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
     
     def pose_callback(self, msg):
         self.x = msg.pose.position.x
@@ -68,7 +68,7 @@ class StraightLineApproach:
     def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISHIT)
         rate = rospy.Rate(50)
         kp = 0.5
-        threshold = 0.1
+        threshold = 0.5
 
         while not rospy.is_shutdown():
             msg = Twist()
@@ -110,7 +110,7 @@ class StraightLineApproach:
             rospy.sleep(1)
 
 if __name__ == '__main__':
-    targets = [(9, 0), (9, 2)]  # Define multiple target points
+    targets = [(9, 2)]  # Define multiple target points
     try:
         rospy.init_node('straight_line_approach_node')
         approach = StraightLineApproach(1.5, 0.5, targets)

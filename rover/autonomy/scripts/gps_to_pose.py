@@ -107,7 +107,7 @@ class GPSToPose:
             distance = functions.getDistanceBetweenGPSCoordinates((orig_lat, orig_long), (lat1, long1))
             theta = functions.getHeadingBetweenGPSCoordinates(orig_lat, orig_long, lat1, long1)
             # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
-            self.x = -distance * sin(theta)
+            self.x = distance * sin(theta)
             self.y = distance * cos(theta)
 
         # now that we have the coordinate and angle quaternion information we can return the pose message
