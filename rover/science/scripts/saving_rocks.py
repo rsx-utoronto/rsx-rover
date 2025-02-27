@@ -25,17 +25,8 @@ class CameraStoring:
 
     # recieves the current camera data 
     def img_callback(self, cam_data : Image):
-        if self.start == True:
-            try:
-                cv_image = self.bridge.imgmsg_to_cv2(cam_data, "8UC1")
-                self.image = cv_image
-                self.saving()
-                
-            except Exception as e:
-                rospy.logerr(f"error: {e}")
-        else:
-            # rospy.loginfo("waiting for start command")
-            pass
+        cv_image = self.bridge.imgmsg_to_cv2(cam_data, "8UC1")
+        self.image = cv_image
 
     # recieves information on what filter we are on 
     # CONFLICT OF INFORMATION: is science sending ros command for filter change, or is it software 
@@ -69,46 +60,50 @@ class CameraStoring:
         ser = serial.Serial(arduino_port, baud_rate, timeout=1)
         time.sleep(2)  
         rate = rospy.Rate(0.2)
-        while self.start and not rospy.is_shutdown():
-            # create a folder, then store the images in this folder 1 time. then 
-            
-            #while 
-            # while loop can end when counter is 12. also dont run when u dont get the S signal from ardiono 
+        while not rospy.is_shutdown():
+            if self.start:
+                # create a folder, then store the images in this folder 1 time. then 
+                
+                #while 
+                # while loop can end when counter is 12. also dont run when u dont get the S signal from ardiono 
+                            
+                while filter_count <= filter and not rospy.is_shutdown():
+                    # create folder within the base_dir for the filter images
+                    # new_folder_path = os.path.join(folder_path, f"folder_{filter_count}")
+                    new_folder_path = folder_path
+                    if not os.path.exists(new_folder_path):
+                        os.makedirs(new_folder_path)
+                    
+                    
+
+
+                    if self.image.all():
+                        #cv2.imwrite("~/testing/image_name.jpeg", self.image)
+
+                        img_path = os.path.join(new_folder_path, f"rock_image{filter_count}.jpeg")
+                        #os.makedirs(img_path)
+
+                        cv2.imwrite(img_path, self.image)
+                        rospy.loginfo(f"image saved")
+
+                        ser.write(b'M')  # Sending character 'M'
+                        rospy.loginfo("Sent signal: M") 
+
+                    else:
+                        # if there is no image saved (basically an error)
+                        rospy.loginfo("waiting")
+                    serial_read = ser.read()
+                    '''while serial_read != b'S':
+                        rospy.loginfo("waiting for next filter")
+                        # serial_read = ser.read()
+                        #time.sleep(1)
+                        serial_read = ser.read()
+                        print("read", serial_read)'''
                         
-            for filter in range(filter):
-                # create folder within the base_dir for the filter images
-                # new_folder_path = os.path.join(folder_path, f"folder_{filter_count}")
-                new_folder_path = folder_path
-                if not os.path.exists(new_folder_path):
-                    os.makedirs(new_folder_path)
-                
-                
-
-
-                if self.image.all():
-                     #cv2.imwrite("~/testing/image_name.jpeg", self.image)
-
-                    img_path = os.path.join(new_folder_path, f"rock_image{filter_count}.jpeg")
-                    #os.makedirs(img_path)
-
-                    cv2.imwrite(img_path, self.image)
-                    rospy.loginfo(f"image saved")
-
-                    ser.write(b'M')  # Sending character 'M'
-                    rospy.loginfo("Sent signal: M") 
-
-                    pub = rospy.Publisher('need_rocks', Bool, queue_size=10)
-
-                else:
-                    # if there is no image saved (basically an error)
-                    rospy.loginfo("waiting")
-
-                '''while ser.read() != 'S':
-                    rospy.loginfo("waiting for next filter")'''
-                
-                filter_count += 1
-                rate.sleep()
-                self.start = False 
+                    
+                    filter_count += 1
+                    rate.sleep()
+                    self.start = False 
 
             rate.sleep()
 
@@ -118,7 +113,7 @@ class CameraStoring:
 if __name__ == '__main__':
     try:
         rospy.init_node('image_saving', anonymous=True)
-        image_saving_node = CameraStoring()  
-        rospy.spin()
+        image_saving_node = CameraStoring() 
+        image_saving_node.saving() 
     except rospy.ROSInterruptException:
         pass
