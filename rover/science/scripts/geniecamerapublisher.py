@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
         if g.camera_found:
             g.publish_ros_topic()
-            g.capture_image("captured_image.jpg")  
+            # g.capture_image("captured_image.jpg")  
         else:
             print("No Genie camera found.")
 
