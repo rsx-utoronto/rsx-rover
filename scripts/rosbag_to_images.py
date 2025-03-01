@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 class RosbagToImages:
+    output_dir = "/rover_ws/src/rsx-rover/scripts/new_images"
     def __init__(self, bag_path, output_dir, image_topic, extract_frequency=1.0, max_images=None):
         """
         Extract images from a rosbag file for YOLO training
@@ -24,7 +25,7 @@ class RosbagToImages:
             max_images (int, optional): Maximum number of images to extract
         """
         self.bag_path = bag_path
-        self.output_dir = output_dir
+        self.output_dir = "/rover_ws/src/rsx-rover/scripts/new_images"
         self.image_topic = image_topic
         self.extract_frequency = extract_frequency
         self.max_images = max_images
