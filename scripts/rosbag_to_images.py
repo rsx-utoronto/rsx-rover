@@ -169,45 +169,160 @@ def record_webcam_to_bag(output_bag, duration=60, device_id=0, topic_name="/webc
     
     return True
 
+def direct_webcam_capture(output_dir="webcam_images", duration=60, device_id=0, capture_freq=1.0, max_images=None):
+    """
+    Directly capture images from webcam and save them to disk without using ROS
+    
+    Args:
+        output_dir (str): Directory to save the captured images
+        duration (int): Recording duration in seconds
+        device_id (int): Webcam device ID
+        capture_freq (float): How many images to capture per second
+        max_images (int, optional): Maximum number of images to capture
+    """
+    # Create output directory if it doesn't exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"Created output directory: {output_dir}")
+    
+    # Open webcam
+    cap = cv2.VideoCapture(device_id)
+    if not cap.isOpened():
+        print(f"Error: Could not open webcam (device ID: {device_id})")
+        return False
+    
+    # Get webcam properties
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    print(f"Webcam settings: {width}x{height} @ {fps}fps")
+    
+    # Calculate time between frames
+    time_interval = 1.0 / capture_freq
+    
+    # Start capturing
+    start_time = time.time()
+    count = 0
+    last_capture_time = None
+    
+    print(f"Capturing images to {output_dir} for {duration} seconds (or until {max_images} images)...")
+    
+    try:
+        while (time.time() - start_time) < duration:
+            # Check if we should capture this frame based on frequency
+            current_time = time.time()
+            if last_capture_time is not None and (current_time - last_capture_time) < time_interval:
+                # Wait a bit to avoid maxing out CPU
+                time.sleep(0.01)
+                continue
+            
+            # Read frame
+            ret, frame = cap.read()
+            if not ret:
+                print("Error: Failed to capture frame")
+                break
+            
+            # Save the image
+            filename = os.path.join(output_dir, f"frame_{count:06d}.jpg")
+            cv2.imwrite(filename, frame)
+            
+            count += 1
+            last_capture_time = current_time
+            
+            if count % 10 == 0:
+                elapsed = time.time() - start_time
+                print(f"Captured {count} images, elapsed time: {elapsed:.1f}s")
+            
+            # Stop if we've reached the maximum number of images
+            if max_images is not None and count >= max_images:
+                break
+                
+    except KeyboardInterrupt:
+        print("Recording stopped by user")
+    
+    finally:
+        # Clean up
+        cap.release()
+        print(f"Capture complete. Saved {count} images to {output_dir}")
+    
+    print("To prepare these images for training:")
+    print(f"1. Update the image_dir in yamlfile_generator.py to: {output_dir}")
+    print("2. Run yamlfile_generator.py to split the data and create YAML config")
+    print("3. Use YoloV8.py or Yolov8_test.py to train the model")
+    
+    return True
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Extract images from rosbag or record webcam to rosbag")
-    subparsers = parser.add_subparsers(dest="command", help="Command to run")
-    
-    # Extract command
-    extract_parser = subparsers.add_parser("extract", help="Extract images from rosbag")
-    extract_parser.add_argument("--bag", required=True, help="Path to the input rosbag file")
-    extract_parser.add_argument("--output", required=True, help="Directory to save extracted images")
-    extract_parser.add_argument("--topic", required=True, help="Image topic to extract frames from")
-    extract_parser.add_argument("--freq", type=float, default=1.0, help="Extraction frequency (frames per second)")
-    extract_parser.add_argument("--max", type=int, help="Maximum number of frames to extract")
-    
-    # Record command
-    record_parser = subparsers.add_parser("record", help="Record webcam to rosbag")
-    record_parser.add_argument("--output", required=True, help="Path to save the output rosbag file")
-    record_parser.add_argument("--duration", type=int, default=60, help="Recording duration in seconds")
-    record_parser.add_argument("--device", type=int, default=0, help="Webcam device ID")
-    record_parser.add_argument("--topic", default="/webcam/image_raw", help="Topic name for recorded images")
-    
-    args = parser.parse_args()
-    
-    if args.command == "extract":
-        extractor = RosbagToImages(
-            args.bag, 
-            args.output, 
-            args.topic, 
-            extract_frequency=args.freq, 
-            max_images=args.max
-        )
-        if extractor.extract_images():
-            extractor.prepare_for_training()
-    
-    elif args.command == "record":
-        record_webcam_to_bag(
-            args.output,
-            duration=args.duration,
-            device_id=args.device,
-            topic_name=args.topic
-        )
-    
+    # Check if any command-line arguments were provided
+    import sys
+    if len(sys.argv) > 1:
+        # If arguments provided, use the argument parser
+        parser = argparse.ArgumentParser(description="Extract images from rosbag or record webcam to rosbag")
+        subparsers = parser.add_subparsers(dest="command", help="Command to run")
+        
+        # Extract command
+        extract_parser = subparsers.add_parser("extract", help="Extract images from rosbag")
+        extract_parser.add_argument("--bag", required=True, help="Path to the input rosbag file")
+        extract_parser.add_argument("--output", required=True, help="Directory to save extracted images")
+        extract_parser.add_argument("--topic", required=True, help="Image topic to extract frames from")
+        extract_parser.add_argument("--freq", type=float, default=1.0, help="Extraction frequency (frames per second)")
+        extract_parser.add_argument("--max", type=int, help="Maximum number of frames to extract")
+        
+        # Record command
+        record_parser = subparsers.add_parser("record", help="Record webcam to rosbag")
+        record_parser.add_argument("--output", required=True, help="Path to save the output rosbag file")
+        record_parser.add_argument("--duration", type=int, default=60, help="Recording duration in seconds")
+        record_parser.add_argument("--device", type=int, default=0, help="Webcam device ID")
+        record_parser.add_argument("--topic", default="/webcam/image_raw", help="Topic name for recorded images")
+        
+        # Direct capture command
+        direct_parser = subparsers.add_parser("direct", help="Directly capture webcam images to disk")
+        direct_parser.add_argument("--output", default="webcam_images", help="Directory to save captured images")
+        direct_parser.add_argument("--duration", type=int, default=60, help="Capture duration in seconds")
+        direct_parser.add_argument("--device", type=int, default=0, help="Webcam device ID")
+        direct_parser.add_argument("--freq", type=float, default=1.0, help="Capture frequency (frames per second)")
+        direct_parser.add_argument("--max", type=int, help="Maximum number of frames to capture")
+        
+        args = parser.parse_args()
+        
+        if args.command == "extract":
+            extractor = RosbagToImages(
+                args.bag, 
+                args.output, 
+                args.topic, 
+                extract_frequency=args.freq, 
+                max_images=args.max
+            )
+            if extractor.extract_images():
+                extractor.prepare_for_training()
+        
+        elif args.command == "record":
+            record_webcam_to_bag(
+                args.output,
+                duration=args.duration,
+                device_id=args.device,
+                topic_name=args.topic
+            )
+        
+        elif args.command == "direct":
+            direct_webcam_capture(
+                output_dir=args.output,
+                duration=args.duration,
+                device_id=args.device,
+                capture_freq=args.freq,
+                max_images=args.max
+            )
+        
+        else:
+            parser.print_help()
     else:
-        parser.print_help() 
+        # If no arguments provided, automatically run the direct capture
+        print("No arguments provided - automatically starting webcam capture")
+        print("Press Ctrl+C to stop capturing")
+        direct_webcam_capture(
+            output_dir="webcam_images",
+            duration=300,  # 5 minutes by default
+            device_id=0,
+            capture_freq=2.0,  # 2 frames per second
+            max_images=500
+        ) 
