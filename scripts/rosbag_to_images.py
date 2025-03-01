@@ -27,16 +27,13 @@ class RosbagToImages:
             max_images (int, optional): Maximum number of images to extract
         """
         self.bag_path = bag_path
-        self.output_dir = output_dir if output_dir else DEFAULT_OUTPUT_DIR
+        self.output_dir = DEFAULT_OUTPUT_DIR
         self.image_topic = image_topic
         self.extract_frequency = extract_frequency
         self.max_images = max_images
         self.bridge = CvBridge()
         
         # Create output directory if it doesn't exist
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
-            print(f'Created output directory: {self.output_dir}')
     
     def extract_images(self):
         """Extract images from the rosbag file and save them directly"""
