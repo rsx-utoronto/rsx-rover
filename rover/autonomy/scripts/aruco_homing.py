@@ -125,9 +125,9 @@ class AimerROS(Aimer):  #updates coords continuously
 def main():
     pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
     # frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v
-    # aimer = AimerROS(640, 360, 1000, 100, 100, 1.8, 0.8) # FOR ARUCO
+    aimer = AimerROS(640, 360, 1000, 100, 100, 1.8, 0.8) # FOR ARUCO
     
-    aimer = AimerROS(640, 360, 1450, 50, 200, 1.0, 0.5) # FOR WATER BOTTLE
+    # aimer = AimerROS(640, 360, 1450, 50, 200, 1.0, 0.5) # FOR WATER BOTTLE
     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
     # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
     rate = rospy.Rate(10)

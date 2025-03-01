@@ -34,9 +34,9 @@ class ARucoTagDetectionNode():
         while (time.time() - t) < 2:
             #print("Passing time") 
             pass
-        
+        self.bridge = CvBridge()
         #self.current_state = StateMsg()
-        
+        self.curr_aruco_detections = {}
         self.detected_aruco_ids = []
         self.aruco_locations = []
         self.detect_thresh = 5
@@ -55,7 +55,7 @@ class ARucoTagDetectionNode():
             print(e)
         else:
             # Do we need to undistort?
-            if self.curr_state == "AR1" or self.curr_state == "AR2" or self.curr_state == "AR3":
+            if self.curr_state == "AR1" or self.curr_state == "AR2" or self.curr_state == "AR3" or True:
                 self.findArucoMarkers(cv_image)
     
     def info_callback(self, info_msg):
