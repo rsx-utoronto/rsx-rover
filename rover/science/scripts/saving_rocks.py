@@ -46,24 +46,27 @@ class CameraStoring:
         image = 5
 
         # im not sure how to update the site yet. might be easier when we know how many sites we have and i can just add the number as a count 
-        site = 1
-
+        site = 2
+        
         # NEED TO CREATE ROCK PHOTOS FOLDER IN THIS PATH 
         base_dir = "/home/rsx-base/rover_ws/src/rsx-rover/rover/science/genie_pics"
+        
         folder_path = os.path.join(base_dir, f"folder_{site}")
 
         # change to whatever port it is 
-        arduino_port = "/dev/ttyUSB0"  # CM0Must match the Arduino port
+        arduino_port = "/dev/ttyUSB1"  # CM0Must match the Arduino port
         baud_rate = 9600  # Must match the Arduino baud rate
         
         # creating serial port connection 
         ser = serial.Serial(arduino_port, baud_rate, timeout=1)
         time.sleep(2)  
+        
         rate = rospy.Rate(0.2)
         while not rospy.is_shutdown():
-            if self.start:
+            
+            if True or self.start:
                 # create a folder, then store the images in this folder 1 time. then 
-                
+                print("hi")
                 #while 
                 # while loop can end when counter is 12. also dont run when u dont get the S signal from ardiono 
                             
