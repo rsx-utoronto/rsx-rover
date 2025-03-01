@@ -37,7 +37,7 @@ class RosbagToImages:
         # Create the main output directory if it doesn't exist
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
-            print(f"Created output directory: {self.output_dir}")
+
             
         # Create related directories for different stages of the training pipeline
         self.training_dir = "/rover_ws/src/rsx-rover/scripts/training_images"
@@ -47,7 +47,7 @@ class RosbagToImages:
         for directory in [self.training_dir, self.validation_dir]:
             if not os.path.exists(directory):
                 os.makedirs(directory)
-                print(f"Created directory: {directory}")
+                rospy.loginfo(f"Created directory: {directory}")
                 
         # Create subdirectories for images and labels
         for parent_dir in [self.training_dir, self.validation_dir]:
@@ -61,18 +61,18 @@ class RosbagToImages:
         
     def extract_images(self):
         """Extract images from the rosbag file and save them directly"""
-        print(f"Opening bag file: {self.bag_path}")
+        rospy.loginfo(f"Opening bag file: {self.bag_path}")
         try:
             bag = rosbag.Bag(self.bag_path, 'r')
         except Exception as e:
-            print(f"Error opening bag file: {e}")
+            rospy.logerr(f"Error opening bag file: {e}")
             return False
         
         # Get information about the bag
         info = bag.get_type_and_topic_info()
         if self.image_topic not in info.topics:
-            print(f"Error: Topic '{self.image_topic}' not found in bag file.")
-            print(f"Available topics: {info.topics.keys()}")
+            rospy.logerr(f"Error: Topic '{self.image_topic}' not found in bag file.")
+            rospy.loginfo(f"Available topics: {info.topics.keys()}")
             bag.close()
             return False
         
@@ -80,7 +80,7 @@ class RosbagToImages:
         time_interval = 1.0 / self.extract_frequency
         
         # Extract images
-        print(f"Extracting images from topic '{self.image_topic}'...")
+        rospy.loginfo(f"Extracting images from topic '{self.image_topic}'...")
         count = 0
         last_extract_time = None
         
@@ -103,26 +103,26 @@ class RosbagToImages:
                 
                 count += 1
                 if count % 10 == 0:
-                    print(f"Extracted {count} images")
+                    rospy.loginfo(f"Extracted {count} images")
                 
                 # Stop if we've reached the maximum number of images
                 if self.max_images is not None and count >= self.max_images:
                     break
                     
             except CvBridgeError as e:
-                print(f"Error saving image: {e}")
+                rospy.logerr(f"Error saving image: {e}")
         
         bag.close()
-        print(f"Extraction complete. Saved {count} images to {self.output_dir}")
+        rospy.loginfo(f"Extraction complete. Saved {count} images to {self.output_dir}")
         return True
 
     def prepare_for_training(self):
         """Prepare extracted images for YOLO training by organizing into directory structure"""
         # This integrates with your existing data preparation workflow
-        print("To prepare these images for training:")
-        print(f"1. Update the image_dir in yamlfile_generator.py to: {self.output_dir}")
-        print("2. Run yamlfile_generator.py to split the data and create YAML config")
-        print("3. Use YoloV8.py or Yolov8_test.py to train the model")
+        rospy.loginfo("To prepare these images for training:")
+        rospy.loginfo(f"1. Update the image_dir in yamlfile_generator.py to: {self.output_dir}")
+        rospy.loginfo("2. Run yamlfile_generator.py to split the data and create YAML config")
+        rospy.loginfo("3. Use YoloV8.py or Yolov8_test.py to train the model")
 
 def record_webcam_to_bag(output_bag, duration=60, device_id=0, topic_name="/webcam/image_raw"):
     """
@@ -140,14 +140,14 @@ def record_webcam_to_bag(output_bag, duration=60, device_id=0, topic_name="/webc
     # Open webcam
     cap = cv2.VideoCapture(device_id)
     if not cap.isOpened():
-        print(f"Error: Could not open webcam (device ID: {device_id})")
+        rospy.logerr(f"Error: Could not open webcam (device ID: {device_id})")
         return False
     
     # Get webcam properties
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
-    print(f"Webcam settings: {width}x{height} @ {fps}fps")
+    rospy.loginfo(f"Webcam settings: {width}x{height} @ {fps}fps")
     
     # Create bag file
     bag = rosbag.Bag(output_bag, 'w')
@@ -157,13 +157,13 @@ def record_webcam_to_bag(output_bag, duration=60, device_id=0, topic_name="/webc
     start_time = time.time()
     frame_count = 0
     
-    print(f"Recording webcam to {output_bag} for {duration} seconds...")
+    rospy.loginfo(f"Recording webcam to {output_bag} for {duration} seconds...")
     
     try:
         while (time.time() - start_time) < duration:
             ret, frame = cap.read()
             if not ret:
-                print("Error: Failed to capture frame")
+                rospy.logerr("Error: Failed to capture frame")
                 break
             
             # Convert frame to ROS message
@@ -177,19 +177,19 @@ def record_webcam_to_bag(output_bag, duration=60, device_id=0, topic_name="/webc
                 
                 frame_count += 1
                 if frame_count % 30 == 0:
-                    print(f"Recorded {frame_count} frames, elapsed time: {time.time() - start_time:.1f}s")
+                    rospy.loginfo(f"Recorded {frame_count} frames, elapsed time: {time.time() - start_time:.1f}s")
                     
             except CvBridgeError as e:
-                print(f"Error converting frame: {e}")
+                rospy.logerr(f"Error converting frame: {e}")
     
     except KeyboardInterrupt:
-        print("Recording stopped by user")
+        rospy.logwarn("Recording stopped by user")
     
     finally:
         # Clean up
         bag.close()
         cap.release()
-        print(f"Recording complete. Saved {frame_count} frames to {output_bag}")
+        rospy.loginfo(f"Recording complete. Saved {frame_count} frames to {output_bag}")
     
     return True
 
@@ -211,19 +211,19 @@ def direct_webcam_capture(output_dir=None, duration=60, device_id=0, capture_fre
     # Create output directory if it doesn't exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-        print(f"Created output directory: {output_dir}")
+        rospy.loginfo(f"Created output directory: {output_dir}")
     
     # Open webcam
     cap = cv2.VideoCapture(device_id)
     if not cap.isOpened():
-        print(f"Error: Could not open webcam (device ID: {device_id})")
+        rospy.logerr(f"Error: Could not open webcam (device ID: {device_id})")
         return False
     
     # Get webcam properties
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
-    print(f"Webcam settings: {width}x{height} @ {fps}fps")
+    rospy.loginfo(f"Webcam settings: {width}x{height} @ {fps}fps")
     
     # Calculate time between frames
     time_interval = 1.0 / capture_freq
@@ -233,7 +233,7 @@ def direct_webcam_capture(output_dir=None, duration=60, device_id=0, capture_fre
     count = 0
     last_capture_time = None
     
-    print(f"Capturing images to {output_dir} for {duration} seconds (or until {max_images} images)...")
+    rospy.loginfo(f"Capturing images to {output_dir} for {duration} seconds (or until {max_images} images)...")
     
     try:
         while (time.time() - start_time) < duration:
@@ -247,7 +247,7 @@ def direct_webcam_capture(output_dir=None, duration=60, device_id=0, capture_fre
             # Read frame
             ret, frame = cap.read()
             if not ret:
-                print("Error: Failed to capture frame")
+                rospy.logerr("Error: Failed to capture frame")
                 break
             
             # Save the image
@@ -259,28 +259,31 @@ def direct_webcam_capture(output_dir=None, duration=60, device_id=0, capture_fre
             
             if count % 10 == 0:
                 elapsed = time.time() - start_time
-                print(f"Captured {count} images, elapsed time: {elapsed:.1f}s")
+                rospy.loginfo(f"Captured {count} images, elapsed time: {elapsed:.1f}s")
             
             # Stop if we've reached the maximum number of images
             if max_images is not None and count >= max_images:
                 break
                 
     except KeyboardInterrupt:
-        print("Recording stopped by user")
+        rospy.logwarn("Recording stopped by user")
     
     finally:
         # Clean up
         cap.release()
-        print(f"Capture complete. Saved {count} images to {output_dir}")
+        rospy.loginfo(f"Capture complete. Saved {count} images to {output_dir}")
     
-    print("To prepare these images for training:")
-    print(f"1. Update the image_dir in yamlfile_generator.py to: {output_dir}")
-    print("2. Run yamlfile_generator.py to split the data and create YAML config")
-    print("3. Use YoloV8.py or Yolov8_test.py to train the model")
+    rospy.loginfo("To prepare these images for training:")
+    rospy.loginfo(f"1. Update the image_dir in yamlfile_generator.py to: {output_dir}")
+    rospy.loginfo("2. Run yamlfile_generator.py to split the data and create YAML config")
+    rospy.loginfo("3. Use YoloV8.py or Yolov8_test.py to train the model")
     
     return True
 
 if __name__ == "__main__":
+    # Initialize ROS node for logging
+    rospy.init_node('rosbag_image_processor', anonymous=True)
+    
     # Check if any command-line arguments were provided
     import sys
     if len(sys.argv) > 1:
@@ -342,11 +345,12 @@ if __name__ == "__main__":
             )
         
         else:
+            rospy.logwarn("Invalid command. Please specify a valid command.")
             parser.print_help()
     else:
         # If no arguments provided, automatically run the direct capture
-        print("No arguments provided - automatically starting webcam capture")
-        print("Press Ctrl+C to stop capturing")
+        rospy.loginfo("No arguments provided - automatically starting webcam capture")
+        rospy.loginfo("Press Ctrl+C to stop capturing")
         direct_webcam_capture(
             output_dir=DEFAULT_OUTPUT_DIR,  # Use the default output directory
             duration=300,  # 5 minutes by default
