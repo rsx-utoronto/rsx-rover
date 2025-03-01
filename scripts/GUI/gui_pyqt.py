@@ -685,6 +685,7 @@ class RoverGUI(QMainWindow):
         self.setup_control_tab()
         self.setup_split_screen_tab()
         self.setup_lngLat_tab()
+        self.setup_cams_tab()
         
 
 
@@ -696,6 +697,48 @@ class RoverGUI(QMainWindow):
             print("map tab")  
         elif index == 2:  # Split Screen Tab
             print("split tab") # Show map viewer in split screen tab
+
+
+    def setup_cams_tab(self):
+        # Add camera feed to the splitter
+        camera_group = QGroupBox("Camera Feed Tabs")
+        camera_layout = QVBoxLayout()
+        
+
+        self.camera_label1_cams_tab = ResizableLabel()
+        self.camera_label1_cams_tab.setMinimumSize(320, 240)
+        self.camera_label1_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label1_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        
+
+        self.camera_label2_cams_tab = ResizableLabel()
+        self.camera_label2_cams_tab.setMinimumSize(320, 240)
+        self.camera_label2_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label2_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # ROS functionality
+        self.camerasplitter_cams_tab = QSplitter(Qt.Horizontal)
+        self.camera_feed_cams_tab = CameraFeed(self.camera_label1_cams_tab, self.camera_label2_cams_tab,self.camerasplitter_cams_tab)
+        self.camerasplitter_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        
+
+        # Use CameraSelect menu-based selector
+        self.camera_selector_cams_tab = CameraSelect()
+        self.camera_selector_cams_tab.cameras_changed.connect(self.camera_feed_cams_tab.update_active_cameras)
+
+        camera_layout.addWidget(self.camera_selector_cams_tab)
+        self.camerasplitter_cams_tab.addWidget(self.camera_label1_cams_tab)
+        self.camerasplitter_cams_tab.addWidget(self.camera_label2_cams_tab)
+        camera_layout.addWidget(self.camerasplitter_cams_tab)
+
+        # camera_layout.addWidget(self.camera_label_splitter)
+        camera_group.setLayout(camera_layout)
+        cam_tab_layout = QVBoxLayout()
+        # split_screen_layout.addWidget(splitter)
+        cam_tab_layout.addWidget(camera_group)
+        # split_screen_layout.addWidget(self.statusTermGroupBox) 
+        self.camsTab.setLayout(cam_tab_layout)
 
     def setup_control_tab(self):
         self.controls_group = QGroupBox("Controls")
@@ -898,8 +941,7 @@ class RoverGUI(QMainWindow):
         print(f"Changed to Gear: {value}")
         self.gear_slider_splitter.setValue(value)
 
-    def switch_camera(self, index):
-        self.camera_feed.switch_camera(index + 1)
+
 
 class CheckableComboBox(QComboBox):
     def __init__(self, title = '', parent=None):
