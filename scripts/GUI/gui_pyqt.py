@@ -350,6 +350,7 @@ class VelocityControl:
 
 #joystick that controlss velocity magnitude and direction
 class Joystick(QWidget):
+    joystickMoved = pyqtSignal(float, float)
     def __init__(self, velocity_control, parent=None):
         super(Joystick, self).__init__(parent)
         self.setMinimumSize(200, 200)
@@ -457,6 +458,13 @@ class Joystick(QWidget):
             self.movingOffset = self._boundJoystick(event.pos())
             self.update()
         self.joystickDirection()
+        self.joystickMoved.emit(self.movingOffset.x(), self.movingOffset.y())
+    def setJoystickPosition(self, x, y):
+        """Update joystick position when receiving sync signal"""
+        self.movingOffset = QPointF(x, y)
+        self.update()
+
+
 
 class Slider(QSlider):
     valueUpdated =pyqtSignal(int)  # Custom signal
@@ -662,11 +670,13 @@ class RoverGUI(QMainWindow):
         self.split_screen_tab = QWidget()
         self.longlat_tab = QWidget()
         self.controlTab = QWidget()
+        self.camsTab = QWidget()
 
         # Add tab to QTabWidget
         self.tabs.addTab(self.split_screen_tab, "Main Gui")
         self.tabs.addTab(self.longlat_tab, "State Machine")
         self.tabs.addTab(self.controlTab, "Controls")
+        self.tabs.addTab(self.camsTab, "Cameras")
 
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
@@ -675,6 +685,7 @@ class RoverGUI(QMainWindow):
         self.setup_control_tab()
         self.setup_split_screen_tab()
         self.setup_lngLat_tab()
+        self.setup_cams_tab()
         
 
 
@@ -687,8 +698,82 @@ class RoverGUI(QMainWindow):
         elif index == 2:  # Split Screen Tab
             print("split tab") # Show map viewer in split screen tab
 
+
+    def setup_cams_tab(self):
+        # Add camera feed to the splitter
+        camera_group = QGroupBox("Camera Feed Tabs")
+        camera_layout = QVBoxLayout()
+        
+
+        self.camera_label1_cams_tab = ResizableLabel()
+        self.camera_label1_cams_tab.setMinimumSize(320, 240)
+        self.camera_label1_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label1_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        
+
+        self.camera_label2_cams_tab = ResizableLabel()
+        self.camera_label2_cams_tab.setMinimumSize(320, 240)
+        self.camera_label2_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label2_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # ROS functionality
+        self.camerasplitter_cams_tab = QSplitter(Qt.Horizontal)
+        self.camera_feed_cams_tab = CameraFeed(self.camera_label1_cams_tab, self.camera_label2_cams_tab,self.camerasplitter_cams_tab)
+        self.camerasplitter_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        
+
+        # Use CameraSelect menu-based selector
+        self.camera_selector_cams_tab = CameraSelect()
+        self.camera_selector_cams_tab.cameras_changed.connect(self.camera_feed_cams_tab.update_active_cameras)
+
+        camera_layout.addWidget(self.camera_selector_cams_tab)
+        self.camerasplitter_cams_tab.addWidget(self.camera_label1_cams_tab)
+        self.camerasplitter_cams_tab.addWidget(self.camera_label2_cams_tab)
+        camera_layout.addWidget(self.camerasplitter_cams_tab)
+
+        # camera_layout.addWidget(self.camera_label_splitter)
+        camera_group.setLayout(camera_layout)
+        cam_tab_layout = QVBoxLayout()
+        # split_screen_layout.addWidget(splitter)
+        cam_tab_layout.addWidget(camera_group)
+        # split_screen_layout.addWidget(self.statusTermGroupBox) 
+        self.camsTab.setLayout(cam_tab_layout)
+
     def setup_control_tab(self):
-        print("empty so far")
+        self.controls_group = QGroupBox("Controls")
+        controls_layout = QHBoxLayout()
+
+        # Joystick (for Controls tab)
+        joystick_group = QGroupBox("Joystick")
+        joystick_layout = QVBoxLayout()
+        self.joystick_control = Joystick(self.velocity_control)
+        self.joystick_control.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        joystick_layout.addWidget(self.joystick_control)
+        joystick_group.setLayout(joystick_layout)
+
+        # Gear slider
+        gear_group = QGroupBox("Gear Control")
+        slider_layout = QVBoxLayout()
+        self.gear_slider_control = Slider(Qt.Horizontal)
+        self.gear_slider_control.setMinimum(0)
+        self.gear_slider_control.setMaximum(100)
+        self.gear_slider_control.setValue(0)
+        slider_layout.addWidget(self.gear_slider_control)
+        gear_group.setLayout(slider_layout)
+
+        # Sync joystick movements between tabs
+        self.joystick_control.joystickMoved.connect(self.sync_joysticks)
+
+        # Add to layout
+        controls_layout.addWidget(joystick_group)
+        controls_layout.addWidget(gear_group)
+        self.controls_group.setLayout(controls_layout)
+
+        control_tab_layout = QVBoxLayout()
+        control_tab_layout.addWidget(self.controls_group)
+        self.controlTab.setLayout(control_tab_layout)
+
         
         # self.controlTab.setLayout(control_tab_layout)
 
@@ -714,6 +799,12 @@ class RoverGUI(QMainWindow):
         
 
         self.longlat_tab.setLayout(Lnglat_tab_layout)
+    def sync_joysticks(self, x, y):
+        """Sync joystick movement between tabs"""
+        self.joystick_splitter.setJoystickPosition(x, y)
+        self.joystick_control.setJoystickPosition(x, y)
+        # add more joystick instances here to sync
+
     #used to initialize main tab with splitters
     def setup_split_screen_tab(self):
         # Controls section
@@ -726,6 +817,8 @@ class RoverGUI(QMainWindow):
         joystick_layout = QVBoxLayout()
         joystick_layout.addWidget(self.joystick_splitter)
         joystick_group.setLayout(joystick_layout)
+        self.joystick_splitter.joystickMoved.connect(self.sync_joysticks)
+
 
         # Gear slider
         gear_group = QGroupBox("Gear Control")
@@ -848,8 +941,7 @@ class RoverGUI(QMainWindow):
         print(f"Changed to Gear: {value}")
         self.gear_slider_splitter.setValue(value)
 
-    def switch_camera(self, index):
-        self.camera_feed.switch_camera(index + 1)
+
 
 class CheckableComboBox(QComboBox):
     def __init__(self, title = '', parent=None):
