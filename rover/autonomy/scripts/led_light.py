@@ -4,11 +4,13 @@
 #import rospy
 #from rover.msg import StateMsg
 #from std_msgs.msg import String
+import time
 import serial
 import subprocess 
+from std_msgs.msg import String
+import rospy
 
 #Make a subscriber in here instead of the State Machine file
-
 
 #For Windows
 def windows_get_led_port(led_name):
@@ -65,25 +67,43 @@ def linux_get_led_port(led_name):
     return led_device
 
 def state_callback(msg):
+  #seried_port = linux_get_led_port(led_name)
+  #seried_port = windows_get_led_port(led_name)
+  serial_port = "/dev/ttyUSB0" #Find out the seriel_port
+  baud_rate = 9600
+  ser = serial.Serial(serial_port, baud_rate, timeout=1)
+
   mode = msg.data
   print(mode)
   #global res
   #mode = msg.rover_mode stm32
-  if mode == 'blue':
-    res = 'm' 
-  elif mode == 'red': 
-    res = 'a'
-  else:
-    res = 'g' #How to get it to flash??
-  print(res)
-  #seried_port = get_led_port(led_name)
-  serial_port = "/dev/ttyUSB0" #Find out the seriel_port
-  baud_rate = 9600
-  ser = serial.Serial(serial_port, baud_rate, timeout=1)
-  ser.open()
-  ser.write(res.encode()) #Figure out the communication method
-  ser.close() 
+  if mode == 'mission done':
+    res = 'green\n' #How to get it to flash??
+    for i in range(3):
+      print(res)
+      ser.open()
+      ser.write(res.encode()) #Figure out the communication method
+      ser.close()
+      time.sleep(0.3) 
+      ser.open()   
+      ser.write(bytes([0])) #should reset the LED
+      ser.flush() # Ensure it's sent before closing
+      ser.close()
+      time.sleep(0.3)
+    
+  elif mode == 'auto': 
+    res = 'red\n'
+    print(res)
+    ser.open()
+    ser.write(res.encode()) #Figure out the communication method
+    ser.close() 
+  #else:
+  #  res = 'blue\n' 
 
+def main():
+   rospy.init_node('led_listener', anonymous=True)
+   led_subscriber = rospy.Subscriber("led_light", String, state_callback)
+   rospy.spin()
 
 
 #Is this part needed?
@@ -93,4 +113,6 @@ def state_callback(msg):
 #rospy.spin()
 
 if __name__ == "__main__":
-   get_led_port("COM3")
+   #linux_get_led_port("COM3")
+   main()
+
