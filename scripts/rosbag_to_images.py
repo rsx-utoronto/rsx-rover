@@ -33,7 +33,7 @@ class RosbagToImages:
         # Create output directory if it doesn't exist
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-            print(f"Created output directory: {output_dir}")
+            print(f'Created output directory: {output_dir}')
     
     def extract_images(self):
         """Extract images from the rosbag file and save them directly"""
