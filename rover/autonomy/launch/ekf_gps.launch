@@ -1,0 +1,134 @@
+<launch>
+    <rosparam param="use_sim_time"> true </rosparam>
+
+    <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_base_to_gps" args="-0.2 -0.355 0.18 0 0 0 1 base_link gps 100"/>
+    <!-- x y z yaw pitch roll frame_id child_frame_id period_in_ms  -->
+
+    <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />  
+    <node pkg="rover" type="gps_to_pose.py" name="gps_to_pose" output="screen" />
+
+    <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" >
+        <param name="publish_tf" value="false" />
+        <param name="use_mag" value="true" />
+        <param name="world_frame" value="enu" />
+        <remap from="imu/mag" to="/zed_node/imu/mag" />
+        <remap from="imu/data_raw" to="/imu/enu" />
+        <remap from="imu/data" to="/imu/orient" />
+    </node>
+
+    <node pkg="rover" type="heading_filter.py" name="heading_filter" output="screen">
+
+        <param name="magnetic_declination_radians" value="-0.177764053"/>
+        <!-- for toronto: -10.18513 => -0.177764053 (obtained jan 11, 2025) -->
+
+    </node>
+
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_local_node" output="screen">
+        <param name="frequency" value="30." />  
+        <param name="sensor_timeout" value="0.2" />  
+        <param name="two_d_mode" value="false" />
+        <param name="print_diagnostics" value="true" />
+        <param name="publish_tf" value="true" />
+        <param name="odom_frame" value="odom" />
+        <param name="base_link_frame" value="base_link" />
+        <param name="world_frame" value="odom" />
+        <remap from="odometry/filtered" to="/odom/ekf" />
+        <param name="imu0" value="/imu/orient" />
+        <param name="imu0_differential" value="false"/>
+        <param name="imu0_relative" value="false"/>
+        <param name="imu0_queue_size" value="10" />
+        <param name="imu0_remove_gravitational_acceleration" value="true" />
+        <rosparam param="imu0_config">[  false, false, false, 
+                                        true, true, true,
+                                        false, false, false, 
+                                        true, true, true,
+                                        true, true, true]</rosparam>
+        <param name="odom0" value="/rtabmap/odom" />
+        <param name="odom0_differential" value="false"/>
+        <param name="odom0_relative" value="false"/>
+        <param name="odom0_queue_size" value="10" />
+        <rosparam param="odom0_config">[ true, true, true, 
+                                        false, false, false,
+                                        false, false, false,
+                                        false, false, false,
+                                        false, false, false]</rosparam>
+        <!-- <param name="twist0" value="ublox/fix_velocity" />
+        <param name="twist0_differential" value="false"/>
+        <param name="twist0_relative" value="false"/>
+        <param name="twist0_queue_size" value="10" />
+        <rosparam param="twist0_config">[ false, false, false, 
+                                        false, false, false,
+                                        true, true, true, 
+                                        false, false, false,
+                                        false, false, false]</rosparam> -->
+    </node>
+
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_global_node" output="screen">
+        <param name="frequency" value="2" />  
+        <param name="sensor_timeout" value="2" />  
+        <param name="two_d_mode" value="false" />
+        <param name="print_diagnostics" value="true" />
+        <param name="publish_tf" value="true" />
+        <param name="odom_frame" value="odom" />
+        <param name="base_link_frame" value="base_link" />
+        <param name="world_frame" value="map" />
+        <remap from="odometry/filtered" to="/map/ekf" />
+        <param name="imu0" value="/imu/orient" />
+        <param name="imu0_differential" value="false"/>
+        <param name="imu0_relative" value="false"/>
+        <param name="imu0_queue_size" value="10" />
+        <param name="imu0_remove_gravitational_acceleration" value="true" />
+        <rosparam param="imu0_config">[  false, false, false, 
+                                        true, true, true,
+                                        false, false, false, 
+                                        true, true, true,
+                                        true, true, true]</rosparam>
+        <param name="odom0" value="/rtabmap/odom" />
+        <param name="odom0_differential" value="false"/>
+        <param name="odom0_relative" value="false"/>
+        <param name="odom0_queue_size" value="10" />
+        <rosparam param="odom0_config">[ true, true, true, 
+                                        false, false, false,
+                                        false, false, false,
+                                        false, false, false,
+                                        false, false, false]</rosparam>
+        <param name="odom1" value="/navsat/gps" />
+        <param name="odom1_differential" value="false"/>
+        <param name="odom1_relative" value="false"/>
+        <param name="odom1_queue_size" value="10" />
+        <rosparam param="odom1_config">[ true, true, true, 
+                                        false, false, false,
+                                        false, false, false,
+                                        false, false, false,
+                                        false, false, false]</rosparam>
+        <!-- <param name="twist0" value="ublox/fix_velocity" />
+        <param name="twist0_differential" value="false"/>
+        <param name="twist0_relative" value="false"/>
+        <param name="twist0_queue_size" value="10" />
+        <rosparam param="twist0_config">[ false, false, false, 
+                                        false, false, false,
+                                        true, true, true, 
+                                        false, false, false,
+                                        false, false, false]</rosparam> -->
+    </node>
+
+    <node pkg="robot_localization" type="navsat_transform_node" name="navsat_transform_node" respawn="true">
+
+        <param name="frequency" value="2" />
+
+        <param name="magnetic_declination_radians" value="-0.177764053" />
+        <!-- for toronto: -10.18513 => -0.177764053 (obtained jan 11, 2025) -->
+
+        <param name="yaw_offset" value="0"/>
+        <param name="wait_for_datum" value="true" />
+        <rosparam param="datum">[43.660517, -79.396553, 0.0, map, base_link]</rosparam> 
+        <!-- [lat, lon, heading, world frame, base link] -->
+
+        <remap from="/imu/data" to="/fused_heading" />
+        <remap from="/gps/fix" to="/calian_gnss/gps" />
+        <remap from="/odometry/filtered" to="/map/ekf" />
+        <remap from="/odometry/gps" to="/navsat/gps" />
+
+    </node>
+
+</launch>

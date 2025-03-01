@@ -7,6 +7,7 @@
         /zed_node/depth/depth_registered
         /zed_node/depth/depth_registered/camera_info
         /zed_node/rgb/image_rect_color
+        /zed_node/rgb/image_rect_color/compressed
         /zed_node/rgb/camera_info
         /zed_node/imu/data
         /zed_node/imu/mag
@@ -21,6 +22,7 @@
         /camera/infra1/image_rect_raw
         /camera/color/camera_info
         /camera/color/image_raw
+        /camera/color/image_raw/compressed
         /camera/depth/color/points
         /camera/gyro/imu_info
         /camera/pointcloud/parameter_updates

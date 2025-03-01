@@ -5,6 +5,7 @@ import rospy
 from sensor_msgs.msg import Imu
 import tf
 import rosbag
+from geometry_msgs.msg import PoseStamped
 
 class IMUQuatToRPY:
     def __init__(self):
@@ -28,12 +29,27 @@ class IMUQuatToRPY:
         
         print("Euler angles: ", euler[2])
 
+class QuatToRPY:
+    def __init__(self):
+        self.imu_sub = rospy.Subscriber('pose', PoseStamped, self.callback)
+        # self.imu_pub = rospy.Publisher('/imu_2d', Imu, queue_size=10)
+        self.prev_time = rospy.Time.now()
+
+    def callback(self, msg):
+
+        orientation = msg.pose.orientation
+
+        euler = tf.transformations.euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
+        # convert euler angles to degrees
+        euler = [x * 180 / 3.14159265359 for x in euler]
+        
+        print("Euler angles: ", euler[2])
 
 if __name__ == '__main__':
-    rospy.init_node('odom_imu_3d_to_2d')
+    rospy.init_node('quat_to_rpy')
     try:
         # odom_2d = Odom2D()
-        imu_2d = IMUQuatToRPY()
+        rpy = QuatToRPY()
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
