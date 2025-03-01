@@ -92,7 +92,7 @@ class RosbagToImages:
                 cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
                 
                 # Save the image with minimal processing
-                filename = os.path.join(self.output_dir, f"frame_{count:06d}.jpg")
+                filename = os.path.join(self.output_dir, "frame_" + str(count).zfill(6) + ".jpg")
                 cv2.imwrite(filename, cv_image)
                 
                 count += 1
@@ -222,7 +222,7 @@ def direct_webcam_capture(output_dir=None, duration=60, device_id=0, capture_fre
                 break
             
             # Save the image
-            filename = os.path.join(output_dir, f"frame_{count:06d}.jpg")
+            filename = os.path.join(output_dir, "frame_" + str(count).zfill(6) + ".jpg")
             cv2.imwrite(filename, frame)
             
             count += 1
@@ -312,4 +312,4 @@ if __name__ == "__main__":
             device_id=0,
             capture_freq=2.0,  # 2 frames per second
             max_images=500
-        ) 
+        )
