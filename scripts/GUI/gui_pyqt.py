@@ -503,27 +503,42 @@ class Slider(QSlider):
 
 #camera feed that displays one camera at a time (use switch_camera)
 # Update the CameraFeed class to handle multiple labels
+class ResizableLabel(QLabel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setScaledContents(False)  # Avoid QLabel forcing image scaling
+
+    def resizeEvent(self, event):
+        if self.pixmap():
+            self.setPixmap(self.pixmap().scaled(self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        super().resizeEvent(event)
+
+
 class CameraFeed:
     def __init__(self, label1, label2, splitter):
         self.bridge = CvBridge()
-        self.image_sub1 = None 
-        self.image_sub2 = None 
+        self.image_sub1 = None
+        self.image_sub2 = None
         self.bbox_sub = rospy.Subscriber("aruco_node/bbox", Float64MultiArray, self.bbox_callback)
 
         self.label1 = label1
         self.label2 = label2
+        self.splitter = splitter
+
+        # Set size policies correctly
         self.label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        self.splitter = splitter
+        self.label1.setMinimumSize(300, 200)
+        self.label2.setMinimumSize(300, 200)
         self.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.active_cameras = {"Zed (front) camera": False, "Butt camera": False}
+        self.bbox = None  
 
-        self.bbox = None  # Stores the latest bounding box
-        self.bbox_timer = QTimer()  # Timer to clear bbox if no updates
-        self.bbox_timer.setInterval(1000)  # 1 second timeout
-        self.bbox_timer.timeout.connect(self.clear_bbox)  # Connect timeout to clear function
+        self.bbox_timer = QTimer()
+        self.bbox_timer.setInterval(1000)
+        self.bbox_timer.timeout.connect(self.clear_bbox)
         self.bbox_timer.setSingleShot(True)
 
     def register_subscriber1(self):
@@ -545,36 +560,32 @@ class CameraFeed:
             self.image_sub2 = None
 
     def bbox_callback(self, msg):
-        """Callback to update the bounding box when a new message arrives."""
         if len(msg.data) == 8:
             self.bbox = [int(msg.data[0]), int(msg.data[1]), int(msg.data[2]), int(msg.data[5])]
         else:
-            self.bbox = None  # If the message is empty, remove bbox
+            self.bbox = None  
 
         QMetaObject.invokeMethod(self.bbox_timer, "start", Qt.QueuedConnection)
 
     def clear_bbox(self):
-        """Clear the bounding box when no message is received for 1 second."""
         self.bbox = None
         self.bbox_timer.stop()
         QMetaObject.invokeMethod(self.label1, "update", Qt.QueuedConnection)
 
     def callback1(self, data):
-        """Callback to update the first camera feed (Zed)."""
         if self.active_cameras["Zed (front) camera"]:
             self.update_image(data, self.label1)
 
     def callback2(self, data):
-        """Callback to update the second camera feed."""
         if self.active_cameras["Butt camera"]:
             self.update_image(data, self.label2)
 
     def update_image(self, data, label):
-        """Decode and update the camera image with the bounding box if available."""
+        """Decode and update the camera image with bounding box."""
         np_arr = np.frombuffer(data.data, np.uint8)
         cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         if cv_image is None:
-            return  # Avoid processing None images
+            return  
 
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
@@ -582,18 +593,20 @@ class CameraFeed:
             x1, y1, x2, y2 = self.bbox
             cv2.rectangle(cv_image, (x1, y1), (x2, y2), (0, 255, 0), 3)
 
-        height, width, channel = cv_image.shape
+        height, width, _ = cv_image.shape
         bytes_per_line = 3 * width
         qimg = QImage(cv_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(qimg)
 
-        # Move GUI update to main thread
+        # Ensure the pixmap is resized before setting it to QLabel
+        scaled_pixmap = pixmap.scaled(label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
         def update_label():
-            if label:
-                label.setPixmap(pixmap)
+            if label.pixmap() and label.pixmap().size() == scaled_pixmap.size():
+                return  # Avoid unnecessary updates
+            label.setPixmap(scaled_pixmap)
 
-        QMetaObject.invokeMethod(label, "setPixmap", Qt.QueuedConnection, Q_ARG(QPixmap, pixmap))
-
+        QMetaObject.invokeMethod(label, "setPixmap", Qt.QueuedConnection, Q_ARG(QPixmap, scaled_pixmap))
 
 
     def update_active_cameras(self, active_cameras):
@@ -602,7 +615,6 @@ class CameraFeed:
         self.update_visibility()
 
     def update_subscribers(self):
-        """Update the ROS subscribers based on active cameras."""
         if self.active_cameras["Zed (front) camera"]:
             self.register_subscriber1()
         else:
@@ -614,7 +626,6 @@ class CameraFeed:
             self.unregister_subscriber2()
 
     def update_visibility(self):
-        """Update the visibility of camera labels based on active cameras."""
         active_count = sum(self.active_cameras.values())
         if active_count == 0:
             self.label1.hide()
@@ -630,22 +641,11 @@ class CameraFeed:
                 self.label2.show()
                 self.splitter.setStretchFactor(0, 0)
                 self.splitter.setStretchFactor(1, 1)
-        else:  # Both active
+        else:  
             self.label1.show()
             self.label2.show()
             self.splitter.setStretchFactor(0, 1)
             self.splitter.setStretchFactor(1, 1)
-
-class ResizableLabel(QLabel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.setScaledContents(True)  # This allows QLabel to auto-resize the image
-
-    def resizeEvent(self, event):
-        if self.pixmap():
-            self.setPixmap(self.pixmap().scaled(self.width(), self.height(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
-        super().resizeEvent(event)
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
