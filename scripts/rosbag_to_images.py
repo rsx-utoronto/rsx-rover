@@ -356,5 +356,5 @@ if __name__ == "__main__":
             duration=300,  # 5 minutes by default
             device_id=0,
             capture_freq=2.0,  # 2 frames per second
-            max_images=500
+            max_images = 500
         ) 
