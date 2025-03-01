@@ -26,15 +26,39 @@ class RosbagToImages:
             extract_frequency (float): How many images to extract per second
             max_images (int, optional): Maximum number of images to extract
         """
-        self.bag_path = bag_path
-        self.output_dir = DEFAULT_OUTPUT_DIR
-        self.image_topic = image_topic
-        self.extract_frequency = extract_frequency
-        self.max_images = max_images
+        # Hardcoded values for all parameters
+        self.bag_path = "/rover_ws/src/rsx-rover/data/recordings/mallet_recording.bag"
+        self.output_dir = "/rover_ws/src/rsx-rover/scripts/new_images"
+        self.image_topic = "/zed_node/rgb/image_rect_color"
+        self.extract_frequency = 2.0  # 2 frames per second
+        self.max_images = 300
         self.bridge = CvBridge()
         
-        # Create output directory if it doesn't exist
-    
+        # Create the main output directory if it doesn't exist
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+            print(f"Created output directory: {self.output_dir}")
+            
+        # Create related directories for different stages of the training pipeline
+        self.training_dir = "/rover_ws/src/rsx-rover/scripts/training_images"
+        self.validation_dir = "/rover_ws/src/rsx-rover/scripts/validation_images"
+        
+        # Create these directories if they don't exist
+        for directory in [self.training_dir, self.validation_dir]:
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+                print(f"Created directory: {directory}")
+                
+        # Create subdirectories for images and labels
+        for parent_dir in [self.training_dir, self.validation_dir]:
+            images_dir = os.path.join(parent_dir, "images")
+            labels_dir = os.path.join(parent_dir, "labels")
+            
+            if not os.path.exists(images_dir):
+                os.makedirs(images_dir)
+            if not os.path.exists(labels_dir):
+                os.makedirs(labels_dir)
+        
     def extract_images(self):
         """Extract images from the rosbag file and save them directly"""
         print(f"Opening bag file: {self.bag_path}")
