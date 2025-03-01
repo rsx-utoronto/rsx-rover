@@ -11,9 +11,11 @@ import argparse
 import time
 from pathlib import Path
 
+# Define the default output directory to be used across the script
+DEFAULT_OUTPUT_DIR = "/rover_ws/src/rsx-rover/scripts/new_images"
+
 class RosbagToImages:
-    output_dir = "/rover_ws/src/rsx-rover/scripts/new_images"
-    def __init__(self, bag_path, output_dir, image_topic, extract_frequency=1.0, max_images=None):
+    def __init__(self, bag_path, output_dir=None, image_topic=None, extract_frequency=1.0, max_images=None):
         """
         Extract images from a rosbag file for YOLO training
         
@@ -25,16 +27,16 @@ class RosbagToImages:
             max_images (int, optional): Maximum number of images to extract
         """
         self.bag_path = bag_path
-        self.output_dir = "/rover_ws/src/rsx-rover/scripts/new_images"
+        self.output_dir = output_dir if output_dir else DEFAULT_OUTPUT_DIR
         self.image_topic = image_topic
         self.extract_frequency = extract_frequency
         self.max_images = max_images
         self.bridge = CvBridge()
         
         # Create output directory if it doesn't exist
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-            print(f'Created output directory: {output_dir}')
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+            print(f'Created output directory: {self.output_dir}')
     
     def extract_images(self):
         """Extract images from the rosbag file and save them directly"""
@@ -170,7 +172,7 @@ def record_webcam_to_bag(output_bag, duration=60, device_id=0, topic_name="/webc
     
     return True
 
-def direct_webcam_capture(output_dir="webcam_images", duration=60, device_id=0, capture_freq=1.0, max_images=None):
+def direct_webcam_capture(output_dir=None, duration=60, device_id=0, capture_freq=1.0, max_images=None):
     """
     Directly capture images from webcam and save them to disk without using ROS
     
@@ -181,6 +183,10 @@ def direct_webcam_capture(output_dir="webcam_images", duration=60, device_id=0, 
         capture_freq (float): How many images to capture per second
         max_images (int, optional): Maximum number of images to capture
     """
+    # Use default output directory if none provided
+    if output_dir is None:
+        output_dir = DEFAULT_OUTPUT_DIR
+        
     # Create output directory if it doesn't exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -264,7 +270,7 @@ if __name__ == "__main__":
         # Extract command
         extract_parser = subparsers.add_parser("extract", help="Extract images from rosbag")
         extract_parser.add_argument("--bag", required=True, help="Path to the input rosbag file")
-        extract_parser.add_argument("--output", required=True, help="Directory to save extracted images")
+        extract_parser.add_argument("--output", default=DEFAULT_OUTPUT_DIR, help="Directory to save extracted images")
         extract_parser.add_argument("--topic", required=True, help="Image topic to extract frames from")
         extract_parser.add_argument("--freq", type=float, default=1.0, help="Extraction frequency (frames per second)")
         extract_parser.add_argument("--max", type=int, help="Maximum number of frames to extract")
@@ -278,7 +284,7 @@ if __name__ == "__main__":
         
         # Direct capture command
         direct_parser = subparsers.add_parser("direct", help="Directly capture webcam images to disk")
-        direct_parser.add_argument("--output", default="webcam_images", help="Directory to save captured images")
+        direct_parser.add_argument("--output", default=DEFAULT_OUTPUT_DIR, help="Directory to save captured images")
         direct_parser.add_argument("--duration", type=int, default=60, help="Capture duration in seconds")
         direct_parser.add_argument("--device", type=int, default=0, help="Webcam device ID")
         direct_parser.add_argument("--freq", type=float, default=1.0, help="Capture frequency (frames per second)")
@@ -321,7 +327,7 @@ if __name__ == "__main__":
         print("No arguments provided - automatically starting webcam capture")
         print("Press Ctrl+C to stop capturing")
         direct_webcam_capture(
-            output_dir="webcam_images",
+            output_dir=DEFAULT_OUTPUT_DIR,  # Use the default output directory
             duration=300,  # 5 minutes by default
             device_id=0,
             capture_freq=2.0,  # 2 frames per second
