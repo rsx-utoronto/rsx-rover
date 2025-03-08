@@ -49,8 +49,10 @@ class CameraStoring:
         
         # not sure how the filter will be taken into account... for now im leaving it as this counter 
         filter = 12
-        filter_count = 1
 
+        # RIGHT NOW THE CODE IS RUNNING 12 TIMES JUST ASSUMING THAT THE FILTER IS BEING CHANGED, WE NEED TO CHANGE THIS TO RUN DEPENDING ON THE FILTER CALLBACK, 
+        # NOT JUST THE COUNTER 
+        filter_count = 1
         image = 5
 
         # im not sure how to update the site yet. might be easier when we know how many sites we have and i can just add the number as a count 
@@ -91,6 +93,10 @@ class CameraStoring:
                     rospy.loginfo("Sent signal: M") 
 
                     pub = rospy.Publisher('need_rocks', Bool, queue_size=10)
+                    self.start = False
+
+                    # override the gui command so we are done taking the pics until we gp to a different site  
+                    pub.publish(self.start)
 
 
 
