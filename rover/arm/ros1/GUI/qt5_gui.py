@@ -8,6 +8,7 @@ import os
 import rospy
 from std_msgs.msg import Float32MultiArray
 from math import pi
+import yaml
 
 from gui_camera import ROSVideoSubscriber # Imports video display functionality
 from arm_gui_controller import GuiControllerNode  # Class for sending commands to manipulator
@@ -20,15 +21,25 @@ class RobotControlGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Robot Control Interface")
-        self.setGeometry(0, 0, 800, 600)
-        
+
         screen = QApplication.primaryScreen()  # Get primary screen (default monitor)
+
         screen_size = screen.size()
-        self.setMaximumSize(screen_size.width()*9/10, screen_size.height()*2/3) 
+        self.setGeometry(100, 100, int(screen_size.width()*9/10), int(screen_size.height()*2/3))
+        
+        self.setMaximumSize(int(screen_size.width()*9/10), int(screen_size.height()*2/3)) 
 
         self.setWindowIcon(QIcon("RsxLogo.png"));
 
-        self.camera_topic_name = ["/camera/color/image_king", "/camera/color/image_raw"]
+        # Load the YAML file
+        with open('config.yaml', 'r') as file:
+            config = yaml.safe_load(file)
+
+        self.camera_topics = config['camera_topics']
+        self.camera_topic_name = [camera['topic'] for camera in self.camera_topics]
+        # self.camera_topic_name = ["/camera/color/image_king", "/camera/color/image_raw"]
+
+
         self.initUI()
 
         self.scienceOn = False
@@ -49,8 +60,8 @@ class RobotControlGUI(QWidget):
         #print(camera_width)
         # print(f"Window resized to: {new_size.width()}x{new_size.height()}")
         #self.coord_view_label.resize()
-        self.coord_view_label.setFixedWidth(camera_width)
-        self.coord_view_label.setFixedHeight(camera_width*9/16)
+        self.coord_view_label.setFixedWidth(int(camera_width))
+        self.coord_view_label.setFixedHeight(int(camera_width*9/16))
         super().resizeEvent(event)  # Call parent class method
         
 
@@ -244,7 +255,8 @@ class RobotControlGUI(QWidget):
         view_layout = QVBoxLayout()
 
         self.camera_view_box  = QComboBox()
-        self.camera_view_box .addItems(["Camera View 1", "Camera View 2"])
+        camera_names = [camera['name'] for camera in self.camera_topics]
+        self.camera_view_box .addItems(camera_names)
         view_layout.addWidget(self.camera_view_box )
 
         view_layout.addStretch(1)
