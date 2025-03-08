@@ -5,8 +5,6 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 import os
-import sys
-import select
 
 class ImageSaverNode:
     def __init__(self, output_dir="~/Downloads/captured_images"):
@@ -16,18 +14,15 @@ class ImageSaverNode:
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
-        # Subscribe to ZED topic
+        # ✅ Subscribe to the ZED camera topic
         self.sub = rospy.Subscriber('/zed_node/rgb/image_rect_color', Image, self.callback, queue_size=1)
-        rospy.loginfo("Subscribed to /zed_node/rgb/image_rect_color")
         self.cv_image = None
 
     def callback(self, data):
-        rospy.loginfo("Received image message!")
         try:
             self.cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-            rospy.loginfo("Image converted successfully!")
             cv2.imshow("ZED Image", self.cv_image)
-            cv2.waitKey(1)  # Keep this for display
+            cv2.waitKey(1)
         except CvBridgeError as e:
             rospy.logerr("Error converting image: %s", e)
 
@@ -37,21 +32,20 @@ class ImageSaverNode:
             cv2.imwrite(filename, self.cv_image)
             rospy.loginfo(f"Saved image: {filename}")
             self.image_counter += 1
-        else:
-            rospy.logwarn("No image received yet.")
 
 def main():
     rospy.init_node("image_saver_node", anonymous=True)
     saver = ImageSaverNode()
 
-    rospy.loginfo("Press SPACE to save an image.")
+    print("Press ENTER to save an image. Type 'q' + ENTER to quit.")
 
-    # Use select to detect keypresses (works over SSH)
     while not rospy.is_shutdown():
-        if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-            key = sys.stdin.read(1)
-            if key == ' ':
-                saver.save_image()
+        key = input()
+        if key == 'q':
+            break
+        saver.save_image()
+
+    cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
