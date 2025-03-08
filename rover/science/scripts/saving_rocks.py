@@ -55,8 +55,14 @@ class CameraStoring:
         
         folder_path = os.path.join(base_dir, f"folder_{site}")
 
-        # change to whatever port it is 
-        arduino_port = "/dev/ttyUSB1"  # CM0Must match the Arduino port
+        # automatically finding arduino port 
+        ports = list(serial.tools.list_ports.comports())
+        for p in ports:
+            if "Arduino" in p.description:
+                arduino_port = p.description[0]
+            else:
+                rospy.loginfo("Arduino port not found")        
+
         baud_rate = 9600  # Must match the Arduino baud rate
         
         # creating serial port connection 
