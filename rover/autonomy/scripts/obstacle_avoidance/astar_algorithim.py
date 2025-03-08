@@ -16,6 +16,12 @@ Feb 8 update:
 - next steps: 
     make sure we can see trajectory in RVIZ
     ensure A* is producing right code
+
+
+    new to do: 
+    - print bounding box of rover in rviz
+    - discuss octomap transformations
+    - ensure rover avoids walla!
 """
 import rospy
 import numpy as np
@@ -31,6 +37,7 @@ from std_msgs.msg import Header
 import math
 from std_msgs.msg import Float32MultiArray
 from geometry_msgs.msg import Point, Pose
+from visualization_msgs.msg import Marker
 
 
 
@@ -51,7 +58,10 @@ class OctoMapAStar:
         self.boundary= ((-100000, -1000000, -100000), (100000, 100000, 100000)) 
         self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-      
+
+
+        # Add a marker publisher
+        self.bounding_box_pub = rospy.Publisher("/rover_bounding_box", Marker, queue_size=10)
         
         # Publishers and Subscribers
         self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
@@ -167,6 +177,60 @@ class OctoMapAStar:
 
             rospy.loginfo(f"Decoded {len(occupied_points)} occupied points from OctoMap.")
             return occupied_points
+    def publish_bounding_box(self):
+        marker = Marker()
+        marker.header.frame_id = "map"  # Adjust based on your TF setup
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "rover_bounding_box"
+        marker.id = 0
+        marker.type = Marker.CUBE  # Cube represents the bounding box
+        marker.action = Marker.ADD
+
+        # Define the size of the bounding box (Adjust these values)
+        box_length = 1.0  # X dimension (meters)
+        box_width = 0.8   # Y dimension (meters)
+        box_height = 0.5  # Z dimension (meters)
+
+        # Set the position of the bounding box (Center it around the rover)
+        marker.pose.position.x = self.current_position_x
+        marker.pose.position.y = self.current_position_y
+        marker.pose.position.z = self.current_position_z + box_height / 2  # Center height
+
+        marker.pose.orientation.x = 0.0
+        marker.pose.orientation.y = 0.0
+        marker.pose.orientation.z = 0.0
+        marker.pose.orientation.w = 1.0
+
+        # Set the scale of the box
+        marker.scale.x = box_length
+        marker.scale.y = box_width
+        marker.scale.z = box_height
+
+        # Set the color (RGBA)
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        marker.color.a = 0.5  # Transparency
+
+        # Set lifetime (0 means it persists)
+        marker.lifetime = rospy.Duration(0)
+
+        # Publish the marker
+        self.bounding_box_pub.publish(marker)
+    
+    def odom_callback(self, msg):
+        self.current_position_x = msg.pose.pose.position.x
+        self.current_position_y = msg.pose.pose.position.y
+        self.current_position_z = msg.pose.pose.position.z
+
+        rospy.loginfo("Current position: x=%f, y=%f, z=%f", 
+                    self.current_position_x, 
+                    self.current_position_y, 
+                    self.current_position_z)
+        
+        # Publish the bounding box
+        self.publish_bounding_box()
+
     
     def process_octomap(self, octomap_msg):
         """
@@ -175,9 +239,10 @@ class OctoMapAStar:
         """
         grid_size = (200, 200)  # Number of cells in x and y
         resolution = 0.1        # Grid resolution in meters
-        rover_radius = 0.2
-        inflation_cells = (int) (rover_radius / resolution)
-
+        rover_radius = 0.8
+        saftey_margin=0.1
+        inflation_cells = int ((rover_radius / (resolution))+ saftey_margin)
+        
         occupancy_grid = np.zeros(grid_size, dtype=np.float32)
         occupied_points = self.decode_octomap(octomap_msg)
 
@@ -192,8 +257,11 @@ class OctoMapAStar:
                 if 0 <= z <= 50:  # Height threshold -< this should be 0.2<z<1.5!!!
                     #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
                     occupancy_grid[grid_x, grid_y] = 100000
+                    print("YESSSS", inflation_cells)
                     for dx in range(-inflation_cells, inflation_cells):
                             # print("THISSSSSSSSS", dx)
+                            print("inflation_cells", inflation_cells)
+                            
                             for dy in range(-inflation_cells, inflation_cells):
                                 new_x = grid_x + dx
                                 new_y = grid_y + dy               
@@ -305,20 +373,20 @@ class OctoMapAStar:
     def run(self):
         while not rospy.is_shutdown():
             if self.occupancy_grid is None:
-                print("STOPPED looking for path")
+              #  print("STOPPED looking for path")
                 rospy.logwarn("Waiting for occupancy grid...")
                 self.rate.sleep()
                 continue
            
 
             start =  (int(self.current_position_x), int(self.current_position_y))
-            print("THIS IS START", start)
+           # print("THIS IS START", start)
             goal = (27, 3)  # change this!
 
             rospy.loginfo("Running A* algorithm...")
             path = self.a_star(start, goal)
             if path:
-                print("PATH Found", path)
+               # print("PATH Found", path)
                 rospy.loginfo(f"Path found: {path}")
                 current_pos = start
             
