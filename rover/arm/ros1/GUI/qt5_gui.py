@@ -36,6 +36,8 @@ class RobotControlGUI(QWidget):
         # update the joint display values
         self.joint_display_values = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.set_joint_display)
 
+        self.mode_buttons["Idle"].click()
+
     # Send commands to the controller 
     def button_is_clicked(self,command):
         self.controller.on_press(command)  # Send command to controller

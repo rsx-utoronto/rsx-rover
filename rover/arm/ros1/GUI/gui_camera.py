@@ -1,7 +1,7 @@
 import rospy
 import cv2
-from PyQt6.QtCore import pyqtSignal, QObject
-from PyQt6.QtGui import QImage
+from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5.QtGui import QImage
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 
