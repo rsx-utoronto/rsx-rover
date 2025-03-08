@@ -1,0 +1,5 @@
+camera_topics:
+  - name: "Arm Wrist Camera"
+    topic: "/camera/color/image_raw"
+  - name: "Masts Camera"
+    topic: "/camera/color/image_king"
