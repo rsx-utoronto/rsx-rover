@@ -157,6 +157,9 @@ class OctoMapAStar:
         Decode an OctoMap binary message into a list of occupied points without using struct.
         """
         rospy.loginfo("Decoding OctoMap...")
+        rover_radius=0.2
+        resolution=0.1
+        inflation_cells = int ((rover_radius / (resolution)) )
 
         if octomap_msg.binary:
             data = octomap_msg.data
@@ -174,11 +177,34 @@ class OctoMapAStar:
                         y = (voxel_index % (256 * 256)) // 256
                         z = voxel_index // (256 * 256)
                         occupied_points.append((x * resolution, y * resolution, z * resolution))
+            
+                        x_real = x * resolution
+                        y_real = y * resolution
+                        z_real = z * resolution
+
+                    # Add the main voxel to the list of occupied points
+                        occupied_points.append((x_real, y_real, z_real))
+
+                    # Now apply inflation by adding the surrounding voxels to the list
+                        for dx in range(-inflation_cells, inflation_cells + 1):
+                            for dy in range(-inflation_cells, inflation_cells + 1):
+                                for dz in range(-inflation_cells, inflation_cells + 1):
+                                    # Compute the neighboring voxel positions considering inflation
+                                    new_x = x + dx
+                                    new_y = y + dy
+                                    new_z = z + dz
+
+                                    # Ensure the new voxel is within valid bounds (e.g., within the grid size)
+                                    if 0 <= new_x < 256 and 0 <= new_y < 256 and 0 <= new_z < 256:
+                                        # Convert the neighboring voxel to real-world coordinates and add it to occupied points
+                                        occupied_points.append((new_x * resolution, new_y * resolution, new_z * resolution))
 
             rospy.loginfo(f"Decoded {len(occupied_points)} occupied points from OctoMap.")
             return occupied_points
+        
     def publish_bounding_box(self):
         marker = Marker()
+        inflation_radius = 0.3 
         marker.header.frame_id = "map"  # Adjust based on your TF setup
         marker.header.stamp = rospy.Time.now()
         marker.ns = "rover_bounding_box"
@@ -202,9 +228,9 @@ class OctoMapAStar:
         marker.pose.orientation.w = 1.0
 
         # Set the scale of the box
-        marker.scale.x = box_length
-        marker.scale.y = box_width
-        marker.scale.z = box_height
+        marker.scale.x = inflation_radius#box_length
+        marker.scale.y = inflation_radius#box_width
+        marker.scale.z = 0.1 #box_height
 
         # Set the color (RGBA)
         marker.color.r = 0.0
@@ -217,7 +243,7 @@ class OctoMapAStar:
 
         # Publish the marker
         self.bounding_box_pub.publish(marker)
-    
+
     def odom_callback(self, msg):
         self.current_position_x = msg.pose.pose.position.x
         self.current_position_y = msg.pose.pose.position.y
@@ -231,7 +257,8 @@ class OctoMapAStar:
         # Publish the bounding box
         self.publish_bounding_box()
 
-    
+
+
     def process_octomap(self, octomap_msg):
         """
         converts 3d map into 2d map with height filtering
@@ -239,9 +266,9 @@ class OctoMapAStar:
         """
         grid_size = (200, 200)  # Number of cells in x and y
         resolution = 0.1        # Grid resolution in meters
-        rover_radius = 0.8
-        saftey_margin=0.1
-        inflation_cells = int ((rover_radius / (resolution))+ saftey_margin)
+        rover_radius = 0.0
+        saftey_margin= 0
+        inflation_cells = int ((rover_radius / (resolution)) + saftey_margin)
         
         occupancy_grid = np.zeros(grid_size, dtype=np.float32)
         occupied_points = self.decode_octomap(octomap_msg)
@@ -257,15 +284,16 @@ class OctoMapAStar:
                 if 0 <= z <= 50:  # Height threshold -< this should be 0.2<z<1.5!!!
                     #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
                     occupancy_grid[grid_x, grid_y] = 100000
-                    print("YESSSS", inflation_cells)
+                  
                     for dx in range(-inflation_cells, inflation_cells):
-                            # print("THISSSSSSSSS", dx)
-                            print("inflation_cells", inflation_cells)
-                            
-                            for dy in range(-inflation_cells, inflation_cells):
-                                new_x = grid_x + dx
-                                new_y = grid_y + dy               
-                            occupancy_grid[new_x, new_y] = 100000  #np.inf  
+    
+                            for dy in range(-inflation_cells-1, inflation_cells+1):
+                                # new_x = grid_x + dx 
+                                # new_y = grid_y + dy   
+                                new_x = min(max(grid_x + dx, 0), grid_size[0] - 1)
+                                new_y = min(max(grid_y + dy, 0), grid_size[1] - 1)   
+                                print("inflation_cells", inflation_cells) 
+                                occupancy_grid[new_x, new_y] = 100000  #np.inf  
            # rospy.loginfo(f"Grid position: ({grid_x}, {grid_y}) -> Cost: {occupancy_grid[grid_x, grid_y]}")
         return occupancy_grid
 
