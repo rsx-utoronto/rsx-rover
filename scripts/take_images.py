@@ -16,7 +16,7 @@ class ImageSaverNode:
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
-        # Subscribe to the ZED camera RGB topic
+        # Subscribe to ZED topic
         self.sub = rospy.Subscriber('/zed_node/rgb/image_rect_color', Image, self.callback, queue_size=1)
         rospy.loginfo("Subscribed to /zed_node/rgb/image_rect_color")
         self.cv_image = None
@@ -24,11 +24,10 @@ class ImageSaverNode:
     def callback(self, data):
         rospy.loginfo("Received image message!")
         try:
-            # Convert ZED image to OpenCV format (BGR)
             self.cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
             rospy.loginfo("Image converted successfully!")
             cv2.imshow("ZED Image", self.cv_image)
-            cv2.waitKey(1)
+            cv2.waitKey(1)  # Keep this for display
         except CvBridgeError as e:
             rospy.logerr("Error converting image: %s", e)
 
@@ -45,6 +44,9 @@ def main():
     rospy.init_node("image_saver_node", anonymous=True)
     saver = ImageSaverNode()
 
+    rospy.loginfo("Press SPACE to save an image.")
+
+    # Use select to detect keypresses (works over SSH)
     while not rospy.is_shutdown():
         if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
             key = sys.stdin.read(1)
