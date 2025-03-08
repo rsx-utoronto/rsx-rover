@@ -22,6 +22,15 @@ Feb 8 update:
     - print bounding box of rover in rviz
     - discuss octomap transformations
     - ensure rover avoids walla!
+
+    - for eeveyr way point-> check foot print
+    calulcate g for being on that cell. caluclate total cost. 
+
+    next steps: 
+    - fix foorpring -> make it trun with rover -> *try multiplying it by 10 
+    - make footprint local to rover
+    - use foot print in A*!
+    - try outputing the map ur mkaing
 """
 import rospy
 import numpy as np
@@ -82,6 +91,9 @@ class OctoMapAStar:
         self.current_position_x=0
         self.current_position_y=0 
         self.current_position_z=0
+        self.current_orientation_x=0
+        self.current_orientation_y=0
+        self.current_orientation_z=0
     
     def pointcloud_callback(self, msg):
             """
@@ -118,6 +130,14 @@ class OctoMapAStar:
         Callback to receive odometry or localization data.
         """
         # Extract robot's position from the Odometry message
+
+        self.current_orientation = msg.pose.pose.orientation
+        self.current_orientation_x =  msg.pose.pose.orientation.x
+        self.current_orientation_y =  msg.pose.pose.orientation.y
+        self.current_orientation_z =  msg.pose.pose.orientation.z
+        self.current_orientation_w =  msg.pose.pose.orientation.w
+
+
         self.current_position = msg.pose.pose.position
         self.current_position_x = msg.pose.pose.position.x
         self.current_position_y = msg.pose.pose.position.y
@@ -127,6 +147,13 @@ class OctoMapAStar:
                     self.current_position.x, 
                     self.current_position.y, 
                     self.current_position.z)
+        
+        rospy.loginfo("Current orientation: x=%f, y=%f, z=%f", 
+                    self.current_orientation.x, 
+                    self.current_orientation.y, 
+                    self.current_orientation.z)
+        
+
     
         
     def publish_octomap(self):
@@ -157,9 +184,9 @@ class OctoMapAStar:
         Decode an OctoMap binary message into a list of occupied points without using struct.
         """
         rospy.loginfo("Decoding OctoMap...")
-        rover_radius=0.2
-        resolution=0.1
-        inflation_cells = int ((rover_radius / (resolution)) )
+        rover_radius= 0.1
+        resolution= 0.1
+        inflation_cells = 0 #int ((rover_radius / (resolution)) )
 
         if octomap_msg.binary:
             data = octomap_msg.data
@@ -167,6 +194,10 @@ class OctoMapAStar:
 
             # Initialize an empty list to store occupied points
             occupied_points = []
+
+# free cell-free cell, #different obstacles # g1, g2, h. g1-> cost to get a point. g2-> cost at that point 
+# because of obstacles. (g1 + g2 of every single cell before it and this one + h for this one + 
+# everysingle cost in the footprint) #use foorprint..
 
             for offset, byte in enumerate(data):
                 for bit in range(8):
@@ -185,19 +216,19 @@ class OctoMapAStar:
                     # Add the main voxel to the list of occupied points
                         occupied_points.append((x_real, y_real, z_real))
 
-                    # Now apply inflation by adding the surrounding voxels to the list
-                        for dx in range(-inflation_cells, inflation_cells + 1):
-                            for dy in range(-inflation_cells, inflation_cells + 1):
-                                for dz in range(-inflation_cells, inflation_cells + 1):
-                                    # Compute the neighboring voxel positions considering inflation
-                                    new_x = x + dx
-                                    new_y = y + dy
-                                    new_z = z + dz
+                    # # Now apply inflation by adding the surrounding voxels to the list
+                    #     for dx in range(-inflation_cells, inflation_cells + 1):
+                    #         for dy in range(-inflation_cells, inflation_cells + 1):
+                    #             for dz in range(-inflation_cells, inflation_cells + 1):
+                    #                 # Compute the neighboring voxel positions considering inflation
+                    #                 new_x = x + dx
+                    #                 new_y = y + dy
+                    #                 new_z = z + dz
 
-                                    # Ensure the new voxel is within valid bounds (e.g., within the grid size)
-                                    if 0 <= new_x < 256 and 0 <= new_y < 256 and 0 <= new_z < 256:
-                                        # Convert the neighboring voxel to real-world coordinates and add it to occupied points
-                                        occupied_points.append((new_x * resolution, new_y * resolution, new_z * resolution))
+                    #                 # Ensure the new voxel is within valid bounds (e.g., within the grid size)
+                    #                 if 0 <= new_x < 256 and 0 <= new_y < 256 and 0 <= new_z < 256:
+                    #                     # Convert the neighboring voxel to real-world coordinates and add it to occupied points
+                    #                     occupied_points.append((new_x * resolution, new_y * resolution, new_z * resolution))
 
             rospy.loginfo(f"Decoded {len(occupied_points)} occupied points from OctoMap.")
             return occupied_points
@@ -221,16 +252,18 @@ class OctoMapAStar:
         marker.pose.position.x = self.current_position_x
         marker.pose.position.y = self.current_position_y
         marker.pose.position.z = self.current_position_z + box_height / 2  # Center height
+        print("ORIENTATION", self.current_orientation_x)
+    
 
-        marker.pose.orientation.x = 0.0
-        marker.pose.orientation.y = 0.0
-        marker.pose.orientation.z = 0.0
+        marker.pose.orientation.x = self.current_orientation_x 
+        marker.pose.orientation.y = self.current_orientation_y
+        marker.pose.orientation.z = self.current_orientation_z
         marker.pose.orientation.w = 1.0
 
         # Set the scale of the box
-        marker.scale.x = inflation_radius#box_length
-        marker.scale.y = inflation_radius#box_width
-        marker.scale.z = 0.1 #box_height
+        marker.scale.x = box_length
+        marker.scale.y = box_width 
+        marker.scale.z = box_height
 
         # Set the color (RGBA)
         marker.color.r = 0.0
@@ -249,15 +282,23 @@ class OctoMapAStar:
         self.current_position_y = msg.pose.pose.position.y
         self.current_position_z = msg.pose.pose.position.z
 
+        self.current_orientation_x= msg.pose.pose.orientation.x
+        self.current_orientation_y=msg.pose.pose.orientation.y
+        self.current_orintatoin_z=msg.pose.pose.orientation.z
+
+
         rospy.loginfo("Current position: x=%f, y=%f, z=%f", 
                     self.current_position_x, 
                     self.current_position_y, 
                     self.current_position_z)
         
+        rospy.loginfo("Current position: x=%f, y=%f, z=%f", 
+                    self.current_orientation_x, 
+                    self.current_orientation_y, 
+                    self.current_orientation_z)
+        
         # Publish the bounding box
         self.publish_bounding_box()
-
-
 
     def process_octomap(self, octomap_msg):
         """
@@ -266,7 +307,7 @@ class OctoMapAStar:
         """
         grid_size = (200, 200)  # Number of cells in x and y
         resolution = 0.1        # Grid resolution in meters
-        rover_radius = 0.0
+        rover_radius = 0
         saftey_margin= 0
         inflation_cells = int ((rover_radius / (resolution)) + saftey_margin)
         
