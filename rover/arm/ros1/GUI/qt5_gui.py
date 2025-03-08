@@ -20,7 +20,12 @@ class RobotControlGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Robot Control Interface")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(0, 0, 800, 600)
+        
+        screen = QApplication.primaryScreen()  # Get primary screen (default monitor)
+        screen_size = screen.size()
+        self.setMaximumSize(screen_size.width()*9/10, screen_size.height()*2/3) 
+
         self.setWindowIcon(QIcon("RsxLogo.png"));
 
         self.camera_topic_name = ["/camera/color/image_king", "/camera/color/image_raw"]
@@ -37,6 +42,17 @@ class RobotControlGUI(QWidget):
         self.joint_display_values = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.set_joint_display)
 
         self.mode_buttons["Idle"].click()
+
+    def resizeEvent(self, event):
+        #new_size = event.size().width()  # Get new window size
+        camera_width = self.power_on.width() + self.power_off.width() + self.move_origin.width()
+        #print(camera_width)
+        # print(f"Window resized to: {new_size.width()}x{new_size.height()}")
+        #self.coord_view_label.resize()
+        self.coord_view_label.setFixedWidth(camera_width)
+        self.coord_view_label.setFixedHeight(camera_width*9/16)
+        super().resizeEvent(event)  # Call parent class method
+        
 
     # Send commands to the controller 
     def button_is_clicked(self,command):
@@ -234,8 +250,9 @@ class RobotControlGUI(QWidget):
         view_layout.addStretch(1)
         
         self.coord_view_label = QLabel("Cameras Goes Here")
-        self.coord_view_label.setFixedHeight(480)
-        self.coord_view_label.setFixedWidth(640)
+        #self.coord_view_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        #self.coord_view_label.setMaximumWidth(480)
+        #self.coord_view_label.setMaximumHeight(270)
         view_layout.addWidget(self.coord_view_label)
 
         # Initialize the ROS video subscriber
@@ -257,7 +274,7 @@ class RobotControlGUI(QWidget):
         self.power_off.clicked.connect(lambda _: self.button_is_clicked("OFF"))         
         self.move_origin = QPushButton("Move to Origin")
         self.move_origin.clicked.connect(lambda _: self.button_is_clicked("Move to Origin"))         
-        
+
         power_group.setStyleSheet('QPushButton {font-size: 20px}')
         self.power_on.setStyleSheet('QPushButton {background-color: #00FF00; color: #000000}')
         self.power_off.setStyleSheet('QPushButton {background-color: #FF0000}')
@@ -367,18 +384,18 @@ class RobotControlGUI(QWidget):
         modes_layout = QGridLayout()
 
         mode_types = ["Idle", "Setup", "Manual", "Inverse Kin", "Dig", "Pick up", "Custom 1", "Custom 2"]
-        mode_buttons = {m: QPushButton(m) for m in mode_types}
+        self.mode_buttons = {m: QPushButton(m) for m in mode_types}
 
-        modes_layout.addWidget(mode_buttons["Idle"], 0, 0)
-        modes_layout.addWidget(mode_buttons["Setup"], 0, 1)
-        modes_layout.addWidget(mode_buttons["Manual"], 1, 0)
-        modes_layout.addWidget(mode_buttons["Inverse Kin"], 1, 1)
-        modes_layout.addWidget(mode_buttons["Dig"], 2, 0)
-        modes_layout.addWidget(mode_buttons["Pick up"], 2, 1)
-        modes_layout.addWidget(mode_buttons["Custom 1"], 3, 0)
-        modes_layout.addWidget(mode_buttons["Custom 2"], 3, 1)
+        modes_layout.addWidget(self.mode_buttons["Idle"], 0, 0)
+        modes_layout.addWidget(self.mode_buttons["Setup"], 0, 1)
+        modes_layout.addWidget(self.mode_buttons["Manual"], 1, 0)
+        modes_layout.addWidget(self.mode_buttons["Inverse Kin"], 1, 1)
+        modes_layout.addWidget(self.mode_buttons["Dig"], 2, 0)
+        modes_layout.addWidget(self.mode_buttons["Pick up"], 2, 1)
+        modes_layout.addWidget(self.mode_buttons["Custom 1"], 3, 0)
+        modes_layout.addWidget(self.mode_buttons["Custom 2"], 3, 1)
 
-        for modes, button in mode_buttons.items():
+        for modes, button in self.mode_buttons.items():
             button.clicked.connect(lambda _, m=modes: self.button_is_clicked(m))
             
         modes_group.setLayout(modes_layout)
