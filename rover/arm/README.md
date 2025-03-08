@@ -159,3 +159,15 @@ arm_keyboard_controller.py file to see what each keyboard button mimics.
 rosrun rover arm_keyboard_controller.py
 roslaunch rover arm_rviz.launch # or use gazebo
 ```
+
+
+# Rover Instructions
+
+**ON AMD**
+```
+rosrun rover manual_control
+```
+**ON BASE**
+```
+roslaunch rover joy.launch
+```

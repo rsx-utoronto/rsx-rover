@@ -51,7 +51,7 @@ class Manual():
         self.error_offsets       = [0, 0, 0, 0, 0, 0, 0]
 
         ## Constant Speed limits, values are chosen by trial and error #TODO Find value for 7th motor
-        self.SPEED_LIMIT         = [-0.01, 0.009, 0.015, 0.075, 0.12, 0.12, 0.3]
+        self.SPEED_LIMIT         = [-0.1, 0.09, 0.15, 0.75, 0.12, 0.12, 0.3]
 
         ## Variable for the status, start at idle
         self.status              = "Idle"
