@@ -281,7 +281,7 @@ class ArmVisualizationNode():
         tempAngles[0] = -tempAngles[0]
         tempAngles[1] = tempAngles[1]
         tempAngles[5] = tempAngles[5]
-
+            
         if self.gazebo_on:
             tempAngles.append(0)
             tempAngles.append(0)
