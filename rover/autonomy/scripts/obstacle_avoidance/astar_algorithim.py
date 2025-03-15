@@ -28,9 +28,15 @@ Feb 8 update:
 
     next steps: 
     - fix foorpring -> make it trun with rover -> *try multiplying it by 10 
+        -> to fix it -> have 4 points for the rover and make lines instead of a box. 
+        -> have the center be 0,0. then have the 4 cornesrs based on that center.
+        -> make the neter, and 4 points actual data suing odometry. 
+        -> 
+
     - make footprint local to rover
     - use foot print in A*!
     - try outputing the map ur mkaing
+
 """
 import rospy
 import numpy as np
@@ -47,6 +53,7 @@ import math
 from std_msgs.msg import Float32MultiArray
 from geometry_msgs.msg import Point, Pose
 from visualization_msgs.msg import Marker
+import tf.transformations as tf
 
 
 
@@ -68,7 +75,7 @@ class OctoMapAStar:
         self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
 
-
+        self.robot_footprint=[]
         # Add a marker publisher
         self.bounding_box_pub = rospy.Publisher("/rover_bounding_box", Marker, queue_size=10)
         
@@ -124,7 +131,30 @@ class OctoMapAStar:
 
             # Publish the OctoMap
             self.publish_octomap()
+    
+    def transform_robot_footprint(self, pose):
+        """
+        Transforms the robot's footprint from its local frame to the global frame.
 
+        :param pose: A tuple (x, y, theta) representing the robot's current pose.
+        :param robot_footprint: A list of (x, y) tuples representing the robot's footprint in local coordinates.
+        :return: A list of transformed (x, y) tuples in global coordinates.
+        """
+        
+        x_pose, y_pose, theta = pose
+        
+        for x_local, y_local in self.robot_foorprint:
+            # Rotate the point
+            x_global = x_local * math.cos(theta) - y_local * math.sin(theta)
+            y_global = x_local * math.sin(theta) + y_local * math.cos(theta)
+
+            # Translate the point
+            x_global += x_pose
+            y_global += y_pose
+
+            self.robot_foorprint.append((x_global, y_global))
+ 
+    
     def odom_callback(self, msg):
         """
         Callback to receive odometry or localization data.
@@ -137,11 +167,29 @@ class OctoMapAStar:
         self.current_orientation_z =  msg.pose.pose.orientation.z
         self.current_orientation_w =  msg.pose.pose.orientation.w
 
-
         self.current_position = msg.pose.pose.position
         self.current_position_x = msg.pose.pose.position.x
         self.current_position_y = msg.pose.pose.position.y
         self.current_position_z = msg.pose.pose.position.z
+        
+      #  theta = get_theta_from_pose(msg.pose.position)
+        
+        (roll, pitch, yaw) = tf.euler_from_quaternion([self.current_orientation_x,
+                                                       self.current_orientation_y,
+                                                       self.current_orientation_z,
+                                                       self.current_orientation_w])
+        
+        
+        # Convert the updated Euler angles back to a quaternion
+        q = tf.quaternion_from_euler(roll, pitch, yaw)
+        print("ROLLLLLL", roll)
+
+        # Update the current orientation
+        self.current_orientation_x = q[0]
+        self.current_orientation_y = q[1]
+        self.current_orientation_z = q[2]
+        self.current_orientation_w = q[3]
+
       
         rospy.loginfo("Current position: x=%f, y=%f, z=%f", 
                     self.current_position.x, 
@@ -154,8 +202,6 @@ class OctoMapAStar:
                     self.current_orientation.z)
         
 
-    
-        
     def publish_octomap(self):
         """
         Publish the generated OctoMap as a ROS message.
@@ -232,7 +278,8 @@ class OctoMapAStar:
 
             rospy.loginfo(f"Decoded {len(occupied_points)} occupied points from OctoMap.")
             return occupied_points
-        
+
+
     def publish_bounding_box(self):
         marker = Marker()
         inflation_radius = 0.3 
@@ -252,13 +299,22 @@ class OctoMapAStar:
         marker.pose.position.x = self.current_position_x
         marker.pose.position.y = self.current_position_y
         marker.pose.position.z = self.current_position_z + box_height / 2  # Center height
-        print("ORIENTATION", self.current_orientation_x)
+        print("ORIENTATION XXX", self.current_orientation_x*100)
     
+        import tf.transformations as tf
 
-        marker.pose.orientation.x = self.current_orientation_x 
-        marker.pose.orientation.y = self.current_orientation_y
-        marker.pose.orientation.z = self.current_orientation_z
-        marker.pose.orientation.w = 1.0
+        roll = self.current_orientation_x  # Assuming this is the roll angle (wrong if it's already a quaternion)
+        pitch = self.current_orientation_y
+        yaw = self.current_orientation_z
+
+        # q = tf.quaternion_from_euler(roll, pitch, yaw) 
+
+        # marker.pose.orientation.x = q[0] #self.current_orientation_x
+        # marker.pose.orientation.y = q[1] #self.current_orientation_y
+        # marker.pose.orientation.z = q[2] #self.current_orientation_z
+        # marker.pose.orientation.w = 1.0
+
+        # marker.pose.orientation.w = 1.0
 
         # Set the scale of the box
         marker.scale.x = box_length
@@ -269,13 +325,45 @@ class OctoMapAStar:
         marker.color.r = 0.0
         marker.color.g = 1.0
         marker.color.b = 0.0
-        marker.color.a = 0.5  # Transparency
+        marker.color.a = 0.5  #Transparency
 
         # Set lifetime (0 means it persists)
         marker.lifetime = rospy.Duration(0)
 
         # Publish the marker
         self.bounding_box_pub.publish(marker)
+    
+    def odom_callback(self, msg):
+        # Extract robot's position from the Odometry message
+        self.current_position_x = msg.pose.pose.position.x
+        self.current_position_y = msg.pose.pose.position.y
+        self.current_position_z = msg.pose.pose.position.z
+
+        # Extract robot's orientation (quaternion) from the Odometry message
+        self.current_orientation_x = msg.pose.pose.orientation.x
+        self.current_orientation_y = msg.pose.pose.orientation.y
+        self.current_orientation_z = msg.pose.pose.orientation.z
+        self.current_orientation_w = msg.pose.pose.orientation.w
+
+        # Convert quaternion to Euler angles to get roll, pitch, and yaw (theta)
+        (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
+            self.current_orientation_x,
+            self.current_orientation_y,
+            self.current_orientation_z,
+            self.current_orientation_w
+        ])
+
+        # Log the current position and orientation
+        rospy.loginfo("Current position: x=%f, y=%f, z=%f", 
+                    self.current_position_x, 
+                    self.current_position_y, 
+                    self.current_position_z)
+        
+        rospy.loginfo("Current orientation (roll, pitch, yaw): roll=%f, pitch=%f, yaw=%f", 
+                    self.roll, self.pitch, self.yaw)
+        
+        # Publish the bounding box
+        self.publish_bounding_box()
 
     def odom_callback(self, msg):
         self.current_position_x = msg.pose.pose.position.x
@@ -285,6 +373,20 @@ class OctoMapAStar:
         self.current_orientation_x= msg.pose.pose.orientation.x
         self.current_orientation_y=msg.pose.pose.orientation.y
         self.current_orintatoin_z=msg.pose.pose.orientation.z
+        #find this 
+
+        # roll = self.current_orientation_x  # Assuming this is the roll angle (wrong if it's already a quaternion)
+        # pitch = self.current_orientation_y
+        # yaw = self.current_orientation_z
+
+        # q = tf.quaternion_from_euler(self.current_orientation_x, self.current_orientation_y, self.current_orientation_z)
+        
+        
+
+        # marker.pose.orientation.x = self.current_orientation_x
+        # marker.pose.orientation.y = self.current_orientation_y
+        # marker.pose.orientation.z = self.current_orientation_z
+        # marker.pose.orientation.w = 1.0
 
 
         rospy.loginfo("Current position: x=%f, y=%f, z=%f", 
@@ -349,6 +451,7 @@ class OctoMapAStar:
             return 10000
         return abs(current_height - neighbor_height)
     
+
     def heuristic(self, node, goal): #h fucntion -> euclidean distance
         return np.linalg.norm(np.array(node) - np.array(goal))
 
