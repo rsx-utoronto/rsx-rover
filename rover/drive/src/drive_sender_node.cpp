@@ -3,7 +3,7 @@
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Bool.h>
-#include <rover/StateMsg.h>
+// #include <rover/StateMsg.h>
 #include <signal.h>
 #include <termios.h>
 #include <stdio.h>
@@ -14,18 +14,6 @@
 #include <message_filters/time_synchronizer.h>
 #include <cmath>
 
-/*
-- R2 to accelerate, L2 to decelarate 
-	- If both, move at that constant speed
-- Triangle to increase gear, square to decrease gear
-- Left joystick to control steering
-	- the y vector is not used
-	- the x vector is used to: 
-		- control steering (more x, more steering)
-		- control lnear speed (more x, less lin speed)
-- Circle to turn completely on spot (linear speed = 0)
-*/
-
 class TeleopRover
 {
 public:
@@ -34,7 +22,7 @@ public:
 	void pubConstSpeed();
 	void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
 	void networkCallback(const std_msgs::Bool::ConstPtr& net_stat);
-	void stateCallback(const rover::StateMsg::ConstPtr& state);
+	// void stateCallback(const rover::StateMsg::ConstPtr& state);
 	void SetVelocity();
 
 	ros::NodeHandle nh;
@@ -42,10 +30,12 @@ public:
 	double MAX_LINEAR_SPEED = 2.5; // 2.5 speed est * 0.65 from rough calibration
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
 	int RATE = 20;
-	double MAX_ACCELERATION = 0.5/RATE; // 0.1 m/s^2
+	double MAX_ACCELERATION = 0.5/RATE; // 0.5 m/s^2
+	double MAX_ANGULAR_ACCELERATION = 0.3/RATE; // 0.3 rad/s^2
 	double lin_vel = 0;
 	double prev_lin_vel = 0;
 	double ang_vel = 0;
+	double prev_ang_vel = 0;
 	// double TIME = 
 	double gear = 0; // set to 0 initially
 	ros::Publisher drive_pub;
@@ -54,7 +44,10 @@ public:
 	ros::Subscriber state_sub;
 	bool network_status = false;
 	geometry_msgs::Twist twist;
-	bool MANUAL_ENABLED = true;
+	// bool MANUAL_ENABLED = true;
+	// The MANUAL variable is so that it doesn't keep sending the zero velocity values to the rover when we are not using the controller
+	// So that it doesn't interfere with autonomy
+	bool MANUAL = false;
 	bool KILL_PRESSED = false;
 	bool gear_pressed = false;
 	bool easy_mode = true;
@@ -70,7 +63,7 @@ TeleopRover::TeleopRover()
 	drive_pub = nh.advertise<geometry_msgs::Twist>("drive", 1);
 	TeleopRover::joy_sub = nh.subscribe("/software/joy", 10, &TeleopRover::joyCallback, this);
 	TeleopRover::net_sub = nh.subscribe("/network_status", 1, &TeleopRover::networkCallback, this);
-	TeleopRover::state_sub = nh.subscribe("/rover_state", 1, &TeleopRover::stateCallback, this);
+	// TeleopRover::state_sub = nh.subscribe("/rover_state", 1, &TeleopRover::stateCallback, this);
 	// network_status = false;
 }
 
@@ -79,6 +72,9 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	buttons = joy->buttons;
 	axes = joy->axes;
 	// ROS_INFO("Joy Callback %f", axes[0]);
+	if (!MANUAL){
+		MANUAL = true;
+	}
 	
 }
 
@@ -86,9 +82,9 @@ void TeleopRover::networkCallback(const std_msgs::Bool::ConstPtr& net_stat){
 	network_status = net_stat->data;
 }
 
-void TeleopRover::stateCallback(const rover::StateMsg::ConstPtr& state_msg){
-	MANUAL_ENABLED = state_msg->MANUAL_ENABLED;
-}
+// void TeleopRover::stateCallback(const rover::StateMsg::ConstPtr& state_msg){
+// 	MANUAL_ENABLED = state_msg->MANUAL_ENABLED;
+// }
 
 void TeleopRover::SetVelocity(){
 	ros::Rate loop_rate(RATE);
@@ -104,7 +100,8 @@ void TeleopRover::SetVelocity(){
 			twist.angular.y = 0;
 			twist.angular.z = 0;
 			drive_pub.publish(twist);
-			prev_lin_vel = 0;	
+			prev_lin_vel = 0;
+			prev_ang_vel = 0;	
 			KILL_PRESSED = true;
 		}
 		else {
@@ -112,7 +109,8 @@ void TeleopRover::SetVelocity(){
 				KILL_PRESSED = false;
 			}
 
-		if (MANUAL_ENABLED && ~KILL_PRESSED){
+		if (~KILL_PRESSED && MANUAL){
+			ROS_INFO("MANUAL MODE");
 			twist.linear.x = 0; 
 			twist.linear.y = 0;
 			twist.linear.z = 0;
@@ -132,7 +130,7 @@ void TeleopRover::SetVelocity(){
 			int S = 3; // SQUARE button
 			int R2_pressed = 7; // On buttons array, confirmation that R2 is pressed
 			int L2_pressed = 6; // On buttons array, confirmation that L2 is pressed
-			// int hor_dpad = 6; // the horizontal d pad button, left is +1 and right is -1
+			int hor_dpad = 6; // the horizontal d pad button, left is +1 and right is -1
 			// ROS_INFO("%f", axes[hor_dpad]);
 
 			if (buttons[L1] !=0 && buttons[R1] != 0 && buttons[T] !=0){
@@ -240,10 +238,11 @@ void TeleopRover::SetVelocity(){
 
 				double acc = 0; // Acceleration value based on how much R2 is pressed
 				double max_allowed_ang_speed = gear * MAX_ANGULAR_SPEED; // Maximum speed allowed for the gear
+				double ang_acc = 0; // Angular acceleration value based on how much Left joystick is moved
 
 				if (gear_pressed)
 				{
-					if (buttons[T] != 1 && buttons[X] != 1)
+					if (buttons[R1] != 1 && buttons[L1] != 1)
 					{
 						gear_pressed = false;
 					}
@@ -251,7 +250,7 @@ void TeleopRover::SetVelocity(){
 				else
 				{
 					// Encoding values for gear selection (range 0 - 1)
-					if (buttons[X] == 1) // decrease
+					if (buttons[L1] == 1 || buttons[X]) // decrease
 					{
 						if (gear >= 0.1) // Change this value to change the gear step
 							gear -= 0.1;
@@ -259,7 +258,7 @@ void TeleopRover::SetVelocity(){
 							gear = 0;
 						gear_pressed = true;
 					}
-					else if (buttons[T] == 1) // increase
+					else if (buttons[R1] == 1 || buttons[T]) // increase
 					{
 						if (gear <= 0.9)
 							gear += 0.1;
@@ -275,18 +274,21 @@ void TeleopRover::SetVelocity(){
 					lin_vel = 0;
 					prev_lin_vel = 0;
 				}
-				else if (buttons[C] == 1)
+				else if (axes[hor_dpad] == -1.0)
 				{
 					// When Circle is pressed, turns on spot with 0 linear speed
 					// Turns the rover in place clockwise with max angular speed for that gear
+					ROS_INFO("Right Dpad");
 					lin_vel = 0;
 					prev_lin_vel = 0;
 					ang_vel = -max_allowed_ang_speed;
+					// ROS_INFO("Ang Vel: %f", ang_vel);
 				}
-				else if (buttons[S] == 1)
+				else if (axes[hor_dpad] == 1.0)
 				{
-					// When X is pressed, turns on spot with 0 linear speed
+					// When Sqaure is pressed, turns on spot with 0 linear speed
 					// Turns the rover in place counter-clockwise with max angular speed for that gear
+					ROS_INFO("Left Dpad");
 					lin_vel = 0;
 					prev_lin_vel = 0;
 					ang_vel = max_allowed_ang_speed;
@@ -390,9 +392,96 @@ void TeleopRover::SetVelocity(){
 					ROS_INFO("No Throttle Pressed %f", lin_vel);
 				}
 				
-				if (buttons[C] != 1 && buttons[S] != 1)
+
+				// ANGULAR VELOCITY SETUP
+				// This is similar to the linear velocity setup
+				if (KILL_PRESSED == true)
 				{
-					ang_vel = max_allowed_ang_speed * turnFactor_x;
+					ang_vel = 0;
+					prev_ang_vel = 0;
+				}
+				else if (axes[hor_dpad] == 0)
+				{
+					ang_acc = turnFactor_x * MAX_ANGULAR_ACCELERATION;
+
+					if (ang_acc > 0)
+						if ((ang_vel + ang_acc) < max_allowed_ang_speed)
+						{
+							ang_vel = prev_ang_vel + ang_acc;
+							prev_ang_vel = ang_vel;
+						}
+						else
+						{
+							if (prev_ang_vel <= max_allowed_ang_speed)
+							{
+								ang_vel = max_allowed_ang_speed;
+								prev_ang_vel = ang_vel;
+							}
+							else
+							{
+								ang_vel = prev_ang_vel - MAX_ANGULAR_ACCELERATION;
+								prev_ang_vel = ang_vel;
+							}
+						}
+					else if (ang_acc < 0)
+						if ((std::fabs(ang_vel + ang_acc)) < max_allowed_ang_speed)
+						{
+							ang_vel = prev_ang_vel + ang_acc;
+							prev_ang_vel = ang_vel;
+						}
+						else
+						{
+							if (std::fabs(prev_ang_vel) <= max_allowed_ang_speed)
+							{
+								ang_vel = -max_allowed_ang_speed;
+								prev_ang_vel = ang_vel;
+							}
+							else
+							{
+								if (ang_vel < 0)
+								{
+									ang_vel = prev_ang_vel + MAX_ANGULAR_ACCELERATION;
+									prev_ang_vel = ang_vel;
+								}
+								else
+								{
+									ang_vel = 0;
+									prev_ang_vel = 0;
+								}
+							}
+						}
+					else
+					{
+						if (prev_ang_vel != 0)
+						{
+							if (ang_vel > 0)
+							{
+								ang_vel = prev_ang_vel - (MAX_ANGULAR_ACCELERATION/2);
+								prev_ang_vel = ang_vel;
+								if (ang_vel < 0)
+								{
+									ang_vel = 0;
+									prev_ang_vel = 0;
+								}
+							}
+							else
+							{
+								ang_vel = ang_vel + (MAX_ANGULAR_ACCELERATION/2);
+								prev_ang_vel = ang_vel;
+								if (ang_vel > 0)
+								{
+									ang_vel = 0;
+									prev_ang_vel = 0;
+								}
+							}
+						}
+						else
+						{
+							ang_vel = 0;
+							prev_ang_vel = 0;
+						}
+					}
+					// ang_vel = max_allowed_ang_speed * turnFactor_x;
 				}
 
 				ROS_INFO("Linear velocity: %f", (lin_vel));
@@ -406,6 +495,10 @@ void TeleopRover::SetVelocity(){
 				ROS_INFO("GEAR %f", gear);
 
 				drive_pub.publish(twist);
+			}
+			if (twist.linear.x == 0 && twist.angular.z == 0){
+				ROS_INFO("Stopped");
+				MANUAL = false;
 			}
 		}
 		ros::spinOnce(); // for some reason, without this line, the code just remains in this loop and doesn't exit which doesn't let the subscriber to get data

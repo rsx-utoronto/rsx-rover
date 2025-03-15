@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-
+"""
+Gives goals to move_base
+"""
 import rospy
 import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal

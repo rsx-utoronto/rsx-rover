@@ -13,17 +13,28 @@ The drive sender node is used to send velocity commands to the `/drive` topic
 
 ## Goal:
 
+**GTA Mode:**
 - R2 to accelerate, L2 to decelarate 
 	- If both, move at that constant speed
     - If none, stop the rover with max decelearation
-- Triangle to increase gear, X to decrease gear
+- R1 to increase gear, L1 to decrease gear
 - Left joystick to control steering
 	- the y vector is not used
 	- the x vector is used to: 
 		- control steering (more x, more steering)
 		- control lnear speed (more x, less lin speed)
-- Circle to turn completely on spot (linear speed = 0) clockwise
-- Square to turn completely on spot (linear speed = 0) counter-clockwise
+        - More x, more angular acceleration
+- Right Dpad to turn completely on spot (linear speed = 0) clockwise
+- Left Dpad to turn completely on spot (linear speed = 0) counter-clockwise
+
+**Easy Mode:**
+- Left joystick for all actions
+- R1 to increase gear
+- L1 to decrease gear
+
+
+- By default, starts with Easy Mode
+- To switch modes, press R1, L1 and Triangle together
 - Reimplement the network status thing so that rover stops moving as soon as we get disconnected from the network
 
 ### Notes:
@@ -39,6 +50,9 @@ The drive sender node is used to send velocity commands to the `/drive` topic
     - **Solved!** Added this in the if statements for positive and negative throttle
 - Another bug: Software control is **SHIT**: When I press R2, it only goes to 0 (instead of -1) and L2 goes to -0.9. The arm controler is fine, R2 and L2 go to -1.
     - I am not hardcoding anything right now but it could be done
+- Bug: When I run autonomoy, it gives jerky movement showing that 0 velocity is regularly published
+    - This is because I set up the manual code to keep on publishing 0s even when there is no input on the controller
+    - Fix: Don't publish anything once the robot has reached 0 velocity until a new command from controller is given
 
 
 
