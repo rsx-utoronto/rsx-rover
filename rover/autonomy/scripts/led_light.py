@@ -11,7 +11,6 @@ from std_msgs.msg import String
 import rospy
 
 #Make a subscriber in here instead of the State Machine file
-
 #For Windows
 def windows_get_led_port(led_name):
     #For linux
@@ -67,8 +66,8 @@ def linux_get_led_port(led_name):
     return led_device
 
 def state_callback(msg):
-  #seried_port = linux_get_led_port(led_name)
-  #seried_port = windows_get_led_port(led_name)
+  #serial_port = linux_get_led_port(led_name)
+  #serial_port = windows_get_led_port(led_name)
   serial_port = "/dev/ttyUSB0" #Find out the seriel_port
   baud_rate = 9600
   ser = serial.Serial(serial_port, baud_rate, timeout=1)
