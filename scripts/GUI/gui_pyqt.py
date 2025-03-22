@@ -71,7 +71,7 @@ class statusTerminal(QWidget):
 
         # Connect signals to the corresponding update methods
         self.update_status_signal.connect(self.update_string_list)
-        rospy.Subscriber('state', String, self.string_callback)
+        rospy.Subscriber('/status', String, self.string_callback)
         self.received_strings = []
     def init_ui(self):
         
