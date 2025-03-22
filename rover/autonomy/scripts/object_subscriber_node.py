@@ -3,11 +3,13 @@
 import rospy
 import cv2
 import time
-import torch
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
-from std_msgs.msg import Float64MultiArray, Bool, String
+from std_msgs.msg import Float64MultiArray, Bool
 import numpy as np
+from ultralytics import YOLO
+import os
+from std_msgs.msg import String
 
 
 # bridge = CvBridge() 
@@ -18,6 +20,16 @@ class ObjectDetectionNode():
         self.image_topic = "/zed_node/rgb/image_rect_color"
         self.info_topic = "/zed_node/rgb/camera_info"
         self.state_topic = "state"
+        self.curr_state = "Start"
+        t = time.time()
+        # while (time.time() - t) < 2:
+        #     #print("Passing time") 
+        #     pass
+        self.bridge = CvBridge()
+
+        print("Object Detection Node Initialized\n\n\n\n")
+
+
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
         self.state_sub = rospy.Subscriber(self.state_topic, String, self.state_callback)
@@ -25,15 +37,17 @@ class ObjectDetectionNode():
         self.waterbottle_pub = rospy.Publisher('waterbottle_detected', Bool, queue_size=1)
         self.bbox_pub = rospy.Publisher('object/bbox', Float64MultiArray, queue_size=10)
         self.vis_pub = rospy.Publisher('vis/object_detections', Image, queue_size=10)
-        self.bridge = CvBridge()
         self.mallet_found = False
         self.waterbottle_found = False
 
         self.K = None
         self.D = None
-        self.model = torch.hub.load('ultralytics/yolov8', 'custom', path='taskModel.pt')  # Load YOLO model
+        script_dir=os.path.dirname(os.path.abspath(__file__))
+        model_path=os.path.join(script_dir, 'best.pt')
+        self.model = YOLO(model_path)  # Load YOLO model
+        
+        #self.model = YOLO('best.pt')  #Load YOLO model
         self.model.conf = 0.5  # Set confidence threshold
-        self.curr_state = None
 
         # Mapping class indices to object names (update as per your model's training labels)
         self.class_map = {0: "mallet", 1: "waterbottle"}  # Adjust indices based on your model's label order

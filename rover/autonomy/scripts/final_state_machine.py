@@ -5,7 +5,7 @@ Code for the state machine
 """
 import rospy
 import object_subscriber_node
-from rover.autonomy.scripts import led_light
+# from rover.autonomy.scripts import led_light
 import smach
 import time
 import math
