@@ -4,14 +4,15 @@ import cv2
 import numpy as np
 import torch 
 from ultralytics import YOLO
-from ultralytics import YOLO
-# Load the model
 import os
 
-#model = model.load("yolov8s.pt")
-script_dir=os.path.dirname(os.path.abspath(__file__))
-model_path=os.path.join(script_dir, 'best.pt')
-model=YOLO(model_path)
+# Define the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Construct the path to your model file
+model_path = os.path.join(script_dir, 'best.pt')
+model = YOLO(model_path)
+
 cap = cv2.VideoCapture(0)
 
 while True:
@@ -25,12 +26,11 @@ while True:
     # Loop through results and draw bounding boxes
     for result in results:
         boxes = result.boxes  # Each box is an object detected
-
         for box in boxes:
             # Extract box coordinates, confidence, and class
-            x1, y1, x2, y2 = map(int, box.xyxy[0])  # Bounding box coordinates
-            conf = box.conf[0]  # Confidence score
-            cls = box.cls[0]    # Class label
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            conf = box.conf[0]
+            cls = box.cls[0]
 
             # Draw bounding box and label on the frame
             label = f"{model.names[int(cls)]}: {conf:.2f}"
@@ -43,7 +43,6 @@ while True:
     # Break the loop if 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
 
 cap.release()
 cv2.destroyAllWindows()
