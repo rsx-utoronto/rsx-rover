@@ -5,11 +5,12 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 import os
+import random
 
 class ImageSaverNode:
     def __init__(self, output_dir="~/Downloads/captured_images"):
         self.bridge = CvBridge()
-        self.image_counter = 0
+        self.image_counter = random.randint(1, 1000000000)
         self.output_dir = os.path.expanduser(output_dir)
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
@@ -31,7 +32,7 @@ class ImageSaverNode:
             filename = os.path.join(self.output_dir, f"frame_{self.image_counter:06d}.jpg")
             cv2.imwrite(filename, self.cv_image)
             rospy.loginfo(f"Saved image: {filename}")
-            self.image_counter += 1
+            self.image_counter = random.randint(1, 1000000000)
 
 def main():
     rospy.init_node("image_saver_node", anonymous=True)
