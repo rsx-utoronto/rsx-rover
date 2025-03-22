@@ -37,7 +37,8 @@ class RobotControlGUI(QWidget):
 
         self.camera_topics = config['camera_topics']
         self.camera_topic_name = [camera['topic'] for camera in self.camera_topics]
-        # self.camera_topic_name = ["/camera/color/image_king", "/camera/color/image_raw"]
+        self.camera_compressed = [camera['compressed'] for camera in self.camera_topics]
+        self.camera_aspect_ratio = eval(config['camera_aspect_ratio'])
 
 
         self.initUI()
@@ -55,13 +56,9 @@ class RobotControlGUI(QWidget):
         self.mode_buttons["Idle"].click()
 
     def resizeEvent(self, event):
-        #new_size = event.size().width()  # Get new window size
         camera_width = self.power_on.width() + self.power_off.width() + self.move_origin.width()
-        #print(camera_width)
-        # print(f"Window resized to: {new_size.width()}x{new_size.height()}")
-        #self.coord_view_label.resize()
         self.coord_view_label.setFixedWidth(int(camera_width))
-        self.coord_view_label.setFixedHeight(int(camera_width*9/16))
+        self.coord_view_label.setFixedHeight(int(camera_width*self.camera_aspect_ratio))
         super().resizeEvent(event)  # Call parent class method
         
 
@@ -179,7 +176,7 @@ class RobotControlGUI(QWidget):
     # Switch camera feeds
     def on_view_selected(self, index):
         self.video_subscriber.sub.unregister()
-        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[index])
+        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[index], self.camera_compressed[index])
         self.video_subscriber.frame_received.connect(self.update_image)
 
     def update_end_effector_coords(self, data):
@@ -263,12 +260,10 @@ class RobotControlGUI(QWidget):
         
         self.coord_view_label = QLabel("Cameras Goes Here")
         #self.coord_view_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        #self.coord_view_label.setMaximumWidth(480)
-        #self.coord_view_label.setMaximumHeight(270)
         view_layout.addWidget(self.coord_view_label)
 
         # Initialize the ROS video subscriber
-        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[0])
+        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[0],self.camera_compressed[0])
         self.video_subscriber.frame_received.connect(self.update_image)
 
         self.camera_view_box.currentIndexChanged.connect(self.on_view_selected)
