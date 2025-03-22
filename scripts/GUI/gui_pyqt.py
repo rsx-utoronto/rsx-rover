@@ -71,7 +71,7 @@ class statusTerminal(QWidget):
 
         # Connect signals to the corresponding update methods
         self.update_status_signal.connect(self.update_string_list)
-        rospy.Subscriber('/status', String, self.string_callback)
+        rospy.Subscriber('/state', String, self.string_callback)
         self.received_strings = []
     def init_ui(self):
         
@@ -266,8 +266,8 @@ class EditableComboBox(QComboBox):
         self.populate_items()
 
     def populate_items(self):
-        coordArray =["GNSS 1","GNSS 2", "AR 1", "AR 2", "AR 3", "OBJ 1", "OBJ 2"]
-        for i in range(7):  # Example: 5 items in dropdown
+        coordArray =["Start", "GNSS 1","GNSS 2", "AR 1", "AR 2", "AR 3", "OBJ 1", "OBJ 2"]
+        for i in range(8):  # Example: 5 items in dropdown
             item_widget = QWidget()
             layout = QHBoxLayout()
 
