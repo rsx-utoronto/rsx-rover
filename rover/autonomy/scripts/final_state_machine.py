@@ -132,7 +132,9 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
             time.sleep(1)
             self.glob_msg.pub_state("Waiting for GPS coordinates")
 
+        print(self.glob_msg.locations)
         cartesian_path = shortest_path('start', self.glob_msg.locations) #Generates the optimal path 
+        print(cartesian_path)
         
         self.glob_msg.pub_state("Changing GPS coordinates to cartesian") 
         cartesian = {}
@@ -181,6 +183,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 print ("in the try")
                 self.glob_msg.pub_state(f"Navigating to {list(path.items())[0][0]}") 
                 target = path[list(path.items())[0][0]]
+                print(target)
                 sla = StraightLineApproach(0.6, 0.3, [target]) 
                 sla.navigate() #navigating to the next mission on our optimal path
             except rospy.ROSInterruptException:
