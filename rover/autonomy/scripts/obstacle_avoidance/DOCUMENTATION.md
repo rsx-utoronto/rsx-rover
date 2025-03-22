@@ -95,6 +95,7 @@ This is like notes of most of my decision making while coding this file, it's no
 ## Future Goals
 
 - Currently only supporting cuboid footprint for robot. Should be generalized to any convex polygon in future. Should also be generalized for 3D shapes.
+- Detect a ditch/ figure out a plan if the rover ends up in one
 - No feasible trajectory found
     - Most probable reason: Rover footprint is in an obstacle
         - Either have a recovery behaviour or override this case somehow (maybe introducing cost for obstacles instead of yes/no)

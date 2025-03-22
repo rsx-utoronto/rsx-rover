@@ -2,8 +2,8 @@ controller_frequency: 10 # Rate in Hz
 
 v_min: -0.5
 v_max: 0.5
-w_min: -0.75
-w_max: 0.75
+w_min: -1.0
+w_max: 1.0
 
 max_accel_lin: 2.0
 max_accel_ang: 2.0
@@ -15,10 +15,10 @@ num_samples_w: 10
 # Cost function weights
 
 w_heading: 1 # Weight for heading to goal
-w_dist: 0.1 # Weight for distance to goal
+w_dist: 1 # Weight for distance to goal
 w_lin: 1 # Weight for linear velocity (keep it as high as possible)
 w_ang: 1 # Weight for angular velocity (keep it average)
-w_obs_height: 10 # Weight for obstacle height
+w_obs_height: 5 # Weight for obstacle height
 
 w_obs: 1 # Weight for obstacle avoidance # NOT USING THIS YET
 
