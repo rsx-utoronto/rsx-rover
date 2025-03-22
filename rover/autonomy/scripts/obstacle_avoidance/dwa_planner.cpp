@@ -252,7 +252,7 @@ void DWAPlanner::plan()
                         double cost = 0.0;
                         cost = compute_cost(traj, v, w);
                         cost += this->dwac.w_obs_height * this->height_cost;
-                        ROS_INFO("Height Cost: %f", dwac.w_obs_height * this->height_cost);
+                        // ROS_INFO("Height Cost: %f", dwac.w_obs_height * this->height_cost);
 
                         if (cost < best_cost)
                         {
@@ -487,7 +487,7 @@ double DWAPlanner::compute_cost(const std::vector<Pose2D> &traj, double v, doubl
     double dx = goal.x - final_pose.x;
     double dy = goal.y - final_pose.y;
     double dist_cost = sqrt(pow(dx, 2) + pow(dy, 2));
-    ROS_INFO("Distance cost: %f", dwac.w_dist * dist_cost);
+    // ROS_INFO("Distance cost: %f", dwac.w_dist * dist_cost);
     
     // 2. Heading Cost
     double heading_cost = std::fabs(std::atan2(dy, dx) - final_pose.theta);
