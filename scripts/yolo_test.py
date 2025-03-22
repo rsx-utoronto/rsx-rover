@@ -4,6 +4,8 @@ import torch
 from ultralytics import YOLO
 import os
 
+# NOTE: Needs to be ran at least once online to cache the MiDaS model
+
 # Initialize MiDaS depth estimator
 midas = torch.hub.load('intel-isl/MiDaS', 'MiDaS_small', trust_repo=True)
 midas.eval()
