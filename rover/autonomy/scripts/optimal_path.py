@@ -9,28 +9,34 @@ def get_loc_name(locations):
     return locName
 
 # Calculate the distance between two points using the Haversine formula
+# def calculate_distance(point1: tuple, point2: tuple) -> float:
+#     lat1, lon1 = point1
+#     lat2, lon2 = point2
+
+#     # Convert latitude and longitude from degrees to radians
+#     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+
+#     # Haversine formula
+#     dlat = lat2 - lat1
+#     dlon = lon2 - lon1
+#     a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+#     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+#     # Radius of Earth in kilometers
+#     r = 6371.0
+#     return r * c
 def calculate_distance(point1: tuple, point2: tuple) -> float:
     lat1, lon1 = point1
     lat2, lon2 = point2
-
-    # Convert latitude and longitude from degrees to radians
-    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-
-    # Haversine formula
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-    # Radius of Earth in kilometers
-    r = 6371.0
-    return r * c
-
+    
+    dist = math.sqrt((point1[0] - point2[0])**2 + (point2[1]-point2[0])**2)
+    return dist 
+    
 # Calculate the weight of traveling to a location
 # 0-1 scale, GNSS -> 1, 1
 # AR --> 0.8 for without obstacles, 0.5 for obstacles
 def calculate_location_weight(current: str, loc: str, locName: list, locations: dict) -> float:
-    difficulty = {"GNSS1": 0.5, "GNSS2": 0.5, "AR1": 0.8, "AR2": 0.8, "AR3": 1,  "OBJ1": 0.8, "OBJ2": 1}
+    difficulty = {"GNSS1": 1, "GNSS2": 1, "AR1": 1, "AR2": 1, "AR3": 1,  "OBJ1": 1, "OBJ2": 1}
 
     distance = calculate_distance(locations[current], locations[loc]) #/2 (for scaling actual locations)
     proximity_weight = sum(calculate_distance(locations[loc], locations[other]) for other in locName if other != loc) #/8.5 (worst case scenario - assuming all the points are on the opposite end)(open for change, for scaling actual locations)
@@ -63,7 +69,7 @@ def find_shortest_path(start: str, locations: dict):
                     nearest = loc
                     min_weight = weight
 
-        if nearest:
+        if nearest != None:
             visited.add(nearest)
             path.append(nearest)
             total_distance += calculate_distance(locations[current], locations[nearest])
@@ -99,8 +105,9 @@ def OPmain(start, locations):
     #print("Shortest path visiting all locations:")
     #print(" -> ".join(path))
     #print(f"Total distance: {total_distance:.2f} km")
+    #plot_locations(path, locations)
     
-    plot_locations(path, locations)
+    path.remove('start')
 
     return path
 

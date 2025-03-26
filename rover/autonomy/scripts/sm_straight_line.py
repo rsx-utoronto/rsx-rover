@@ -2,11 +2,11 @@
 
 import rospy
 from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Bool
 import math
 import ar_detection_node as adn
-import object_subscriber_node as osn
 
 class StraightLineApproach:
     def __init__(self, lin_vel, ang_vel, targets):
@@ -17,15 +17,22 @@ class StraightLineApproach:
         self.x = 0
         self.y = 0
         self.heading = 0
-        self.odom_subscriber = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
         self.drive_publisher = rospy.Publisher('drive', Twist, queue_size=10)
 
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.aruco_found = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
-        self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        
+        # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+    
+    def pose_callback(self, msg):
+        self.x = msg.pose.position.x
+        self.y = msg.pose.position.y
+        self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
+                                            msg.pose.orientation.y, msg.pose.orientation.z)[2]
+
+    
     def odom_callback(self, msg):
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
@@ -61,7 +68,7 @@ class StraightLineApproach:
     def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISHIT)
         rate = rospy.Rate(50)
         kp = 0.5
-        threshold = 0.1
+        threshold = 0.5
 
         while not rospy.is_shutdown():
             msg = Twist()
@@ -71,6 +78,8 @@ class StraightLineApproach:
             target_heading = math.atan2(target_y - self.y, target_x - self.x)
             target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
             angle_diff = target_heading - self.heading
+            print (f"target heading: {target_heading}", f"target_distance: {target_distance}")
+            # print ( f"angle_diff: {angle_diff}")
 
             if angle_diff > math.pi:
                 angle_diff -= 2 * math.pi
@@ -103,7 +112,7 @@ class StraightLineApproach:
             rospy.sleep(1)
 
 if __name__ == '__main__':
-    targets = [(9, 0), (9, 2)]  # Define multiple target points
+    targets = [(9, 2)]  # Define multiple target points
     try:
         rospy.init_node('straight_line_approach_node')
         approach = StraightLineApproach(1.5, 0.5, targets)
