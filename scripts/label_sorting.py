@@ -1,45 +1,50 @@
 import os
 import shutil
 
-# =======================
-# Configurable Variables
-# =======================
-BASE_DIR = "updated_data"       # Folder containing test, train, val
-LABELS_DIR = "Labels"           # Folder containing label files
-IMAGE_FOLDER_NAME = "images"    # Folder name inside each subset that contains images
-OUTPUT_LABELS_SUBDIR = "labels" # Subfolder where label files will be copied
-LABEL_EXTENSION = ".txt"        # Extension for label files (adjust if needed)
+# ====================================
+# Configurable Paths and Variables
+# ====================================
+# ROOT_DIR: the directory where the script is located (adjust if needed)
+ROOT_DIR = "."
+# Folder containing label files (assumed to be in the same root)
+LABELS_DIR = os.path.join(ROOT_DIR, "Labels")
+# List of dataset subsets (directories in the same root as the script)
+SUBSETS = ["test", "train", "val"]
+# Name of the subfolder inside each subset where labels will be copied
+LABELS_SUBDIR = "labels"
+# Expected file extension for label files (adjust as needed)
+LABEL_EXTENSION = ".txt"
 
-# =======================
-# Process each dataset subset
-# =======================
-for subset in ["test", "train", "val"]:
-    # Define the path to the images and the destination for labels
-    images_path = os.path.join(BASE_DIR, subset, IMAGE_FOLDER_NAME)
-    output_labels_path = os.path.join(BASE_DIR, subset, OUTPUT_LABELS_SUBDIR)
+# ====================================
+# Process each subset directory
+# ====================================
+for subset in SUBSETS:
+    subset_dir = os.path.join(ROOT_DIR, subset)
+    # Create the destination labels folder in each subset folder
+    dest_labels_dir = os.path.join(subset_dir, LABELS_SUBDIR)
+    os.makedirs(dest_labels_dir, exist_ok=True)
     
-    # Create the output labels folder if it doesn't exist
-    os.makedirs(output_labels_path, exist_ok=True)
-    
-    # Check if the images folder exists
-    if not os.path.isdir(images_path):
-        print(f"Warning: Images folder '{images_path}' does not exist. Skipping '{subset}'.")
+    # Check if the subset directory exists
+    if not os.path.isdir(subset_dir):
+        print(f"Directory '{subset_dir}' does not exist. Skipping '{subset}'.")
         continue
-    
-    # Loop through each image in the images folder
-    for image_file in os.listdir(images_path):
-        image_file_path = os.path.join(images_path, image_file)
-        if os.path.isfile(image_file_path):
-            # Get the file name without extension (e.g., "image1" from "image1.jpg")
-            base_name, _ = os.path.splitext(image_file)
-            
-            # Construct the expected label file name and path
-            label_file_name = base_name + LABEL_EXTENSION
-            label_source_path = os.path.join(LABELS_DIR, label_file_name)
-            
-            if os.path.isfile(label_source_path):
-                # Copy the label file to the output labels folder
-                shutil.copy(label_source_path, os.path.join(output_labels_path, label_file_name))
-                print(f"Copied label for '{image_file}' to '{output_labels_path}'.")
-            else:
-                print(f"Label file '{label_source_path}' not found for image '{image_file}'.")
+
+    # Loop through each file in the subset directory (ignoring the labels subfolder)
+    for filename in os.listdir(subset_dir):
+        file_path = os.path.join(subset_dir, filename)
+        # Skip directories (like the 'labels' folder we just created)
+        if os.path.isdir(file_path):
+            continue
+        
+        # Extract the base name to construct the label file name
+        base_name, _ = os.path.splitext(filename)
+        label_file_name = base_name + LABEL_EXTENSION
+        label_source_path = os.path.join(LABELS_DIR, label_file_name)
+        
+        # Check if the corresponding label file exists
+        if os.path.isfile(label_source_path):
+            # Copy the label file to the subset's labels folder
+            shutil.copy(label_source_path, os.path.join(dest_labels_dir, label_file_name))
+            print(f"Copied label '{label_file_name}' to '{dest_labels_dir}'.")
+        else:
+            print(f"Label file '{label_source_path}' not found for image '{filename}'.")
