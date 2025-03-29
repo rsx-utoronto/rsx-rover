@@ -14,7 +14,7 @@ bridge = CvBridge()
 
 class ObjectDetectionNode():
     def __init__(self):
-        # ROS topics
+        # ROS topics and subscribers/publishers
         self.image_topic = "/zed_node/rgb/image_rect_color"
         self.info_topic = "/zed_node/rgb/camera_info"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
@@ -33,12 +33,14 @@ class ObjectDetectionNode():
         self.model = YOLO(model_path)
         self.model.conf = 0.5  # Set confidence threshold
 
-        # Mapping class indices to object names (update as per your model's training labels)
+        # Mapping class indices to object names
         self.class_map = {0: "mallet", 1: "waterbottle"}
 
         # Initialize MiDaS depth estimator
         self.midas = torch.hub.load('intel-isl/MiDaS', 'MiDaS_small', trust_repo=True)
         self.midas.eval()
+
+        # Define device before using it anywhere else
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.midas.to(self.device)
 
