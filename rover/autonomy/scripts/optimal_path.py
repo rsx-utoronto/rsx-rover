@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import math
 from collections import deque
 import matplotlib.pyplot as plt
@@ -13,7 +15,7 @@ def get_loc_name(locations):
 #     lat1, lon1 = point1
 #     lat2, lon2 = point2
 
-#     # Convert latitude and longitude from degrees to radians
+#     # Convert latitude and longitude from d/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/optimal_path.pyegrees to radians
 #     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
 
 #     # Haversine formula
@@ -29,7 +31,7 @@ def calculate_distance(point1: tuple, point2: tuple) -> float:
     lat1, lon1 = point1
     lat2, lon2 = point2
     
-    dist = math.sqrt((point1[0] - point2[0])**2 + (point2[1]-point2[0])**2)
+    dist = math.sqrt((point1[0] - point2[0])**2 + (point1[1]-point2[1])**2)
     return dist 
     
 # Calculate the weight of traveling to a location
@@ -74,6 +76,8 @@ def find_shortest_path(start: str, locations: dict):
             path.append(nearest)
             total_distance += calculate_distance(locations[current], locations[nearest])
             current = nearest
+            
+    
 
     return path, total_distance
 
@@ -98,9 +102,10 @@ def plot_locations(path, locations):
 
 def OPmain(start, locations):
     # Start the pathfinding from a specific location of choice based on the dictionary
-
+    
+    
     path, total_distance = find_shortest_path(start, locations)
-    print(path)
+    # print(path)
     
     #print("Shortest path visiting all locations:")
     #print(" -> ".join(path))
@@ -111,4 +116,14 @@ def OPmain(start, locations):
 
     return path
 
-#OPmain()
+# start = "start"
+# loc = {"start": (0, 0), 
+#        "GNSS1": (-1, 2),
+#        "GNSS2": (1000, -20000),
+#        "AR1": (2, -4),
+#        "AR2": (-4, 4),
+#        "AR3": (5,5),
+#        "OBJ1": (-6, 6),
+#        "OBJ2": (7, 7),
+#        }
+# OPmain(start, loc)
