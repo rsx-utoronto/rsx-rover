@@ -36,6 +36,7 @@ Feb 8 update:
     - make footprint local to rover -> done 
     - use foot print in A*! 
     - try outputing the map ur mkaing
+    - 
 
 """
 import rospy
@@ -243,100 +244,6 @@ class OctoMapAStar:
             rospy.loginfo(f"Decoded {len(occupied_points)} occupied points from OctoMap.")
             return occupied_points
 
-    def publish_bounding_box_worksbutcouldbeimproved(self):
-        marker = Marker()
-        marker.header.frame_id = "map"  # Adjust based on your TF setup
-        marker.header.stamp = rospy.Time.now()
-        marker.ns = "rover_bounding_box"
-        marker.id = 0
-        marker.type = Marker.LINE_STRIP  # Use LINE_STRIP to form a box
-        marker.action = Marker.ADD
-
-        # Set color and transparency
-        marker.color.r = 0.0
-        marker.color.g = 1.0
-        marker.color.b = 0.0
-        marker.color.a = 1.0  # Fully visible
-
-        # Set scale (line thickness)
-        marker.scale.x = 0.1  
-
-        # Get the rover's yaw angle (assumes orientation is stored as Euler angles)
-        yaw = self.current_orientation_z  # Assuming this is the yaw in radians
-
-        # Define the unrotated corner positions relative to the rover
-        half_width = 0.5
-        half_length = 0.5
-
-        corners = [
-            (half_length, half_width),   # Right Front
-            (-half_length, half_width),  # Right Back
-            (-half_length, -half_width), # Left Back
-            (half_length, -half_width),  # Left Front
-            (half_length, half_width)    # Closing the box
-        ]
-
-        # Apply 2D rotation transformation
-        rotated_corners = []
-        for cx, cy in corners:
-            x_rot = self.current_position_x + (cx * math.cos(yaw) - cy * math.sin(yaw))
-            y_rot = self.current_position_y + (cx * math.sin(yaw) + cy * math.cos(yaw))
-            rotated_corners.append(Point(x_rot, y_rot, 0))
-
-        marker.points = rotated_corners  # Assign transformed points to marker
-
-        # Publish the marker
-        self.bounding_box_pub.publish(marker)
-    
-    def publish_bounding_box_trying_something_else(self):
-    
-        marker = Marker()
-        marker.header.frame_id = "map"  # Adjust based on your TF setup
-        marker.header.stamp = rospy.Time.now()
-        marker.ns = "rover_bounding_box"
-        marker.id = 0
-        marker.type = Marker.LINE_STRIP  # Use LINE_STRIP to form a box
-        marker.action = Marker.ADD
-
-        # Set color and transparency
-        marker.color.r = 0.0
-        marker.color.g = 1.0
-        marker.color.b = 0.0
-        marker.color.a = 1.0  # Fully visible
-
-        # Set scale (line thickness)
-        marker.scale.x = 0.1  
-
-        # Get the rover's yaw angle (assuming in radians)
-        yaw = self.current_orientation_z  
-
-        # Define the **fixed** corner positions relative to the rover's origin (center)
-        half_width = 0.5
-        half_length = 0.5
-
-        # Define corners relative to the rover's body frame
-        original_corners = [
-            (half_length, half_width),   # Right Front
-            (-half_length, half_width),  # Right Back
-            (-half_length, -half_width), # Left Back
-            (half_length, -half_width),  # Left Front
-            (half_length, half_width)    # Closing the box
-        ]
-
-        # Apply rotation transformation to **original** (fixed) coordinates
-        rotated_corners = []
-        cos_yaw = math.cos(yaw)
-        sin_yaw = math.sin(yaw)
-
-        for cx, cy in original_corners:
-            x_rot = self.current_position_x + (cx * cos_yaw - cy * sin_yaw)
-            y_rot = self.current_position_y + (cx * sin_yaw + cy * cos_yaw)
-            rotated_corners.append(Point(x_rot, y_rot, 0))
-
-        marker.points = rotated_corners  # Assign transformed points to marker
-
-        # Publish the marker
-        self.bounding_box_pub.publish(marker)
     
     def publish_bounding_box(self):
         marker = Marker()
@@ -379,7 +286,7 @@ class OctoMapAStar:
         print(f"cos_theta: {cos_theta}, sin_theta: {sin_theta}")
 
         # Define the **fixed** corner positions relative to the rover's center
-        half_width = 1  # Adjusted from 4 to 0.5
+        half_width = 0.2 # Adjusted from 4 to 0.5
         original_corners = [
             (half_width,  half_width),   # Right Front
             (-half_width, half_width),   # Right Back
@@ -406,120 +313,7 @@ class OctoMapAStar:
         self.bounding_box_pub.publish(marker)
 
 
-    def publish_bounding_box100(self):
-        marker = Marker()
-        marker.header.frame_id = "map"  # Adjust based on your TF setup
-        marker.header.stamp = rospy.Time.now()
-        marker.ns = "rover_bounding_box"
-        marker.id = 0
-        marker.type = Marker.LINE_STRIP  # Use LINE_STRIP to form a box
-        marker.action = Marker.ADD
-
-        # Set color and transparency
-        marker.color.r = 0.0
-        marker.color.g = 1.0
-        marker.color.b = 0.0
-        marker.color.a = 1.0  # Fully visible
-
-        # Set scale (line thickness)
-        marker.scale.x = 0.05  
-           # Ensure rover starts at (0,0) and is aligned with axes
-        if not hasattr(self, "initialized"):
-            self.current_position_x = 0.0
-            self.current_position_y = 0.0
-            self.current_orientation_z = 0.0  # Ensures no initial rotation
-            self.initialized = True  # Set a flag so it only resets once
-
-
-        # Get the rover's yaw angle (assuming in radians)
-        theta = self.current_orientation_z  
-        theta = math.atan2(math.sin(theta), math.cos(theta))
-
-        # Define the **fixed** corner positions relative to the rover's center
-        half_width = 0.5  # Adjusted from 4 to 0.5
-        original_corners = [
-            (half_width,  half_width),   # Right Front
-            (-half_width, half_width),   # Right Back
-            (-half_width, -half_width),  # Left Back
-            (half_width, -half_width),   # Left Front
-            (half_width,  half_width)    # Closing the box
-        ]
-
-        # Apply rotation and translation
-        transformed_corners = []
-        cos_theta = math.cos(theta)
-        sin_theta = math.sin(theta)
-
-        for cx, cy in original_corners:
-            x = cx * cos_theta - cy * sin_theta  # Rotate
-            y = cx * sin_theta + cy * cos_theta  # Rotate
-
-            x += self.current_position_x  # Translate
-            y += self.current_position_y  # Translate
-
-            transformed_corners.append(Point(x, y, 0))
-        
-
-        marker.points = transformed_corners  # Assign transformed points to marker
-
-        # Publish the marker
-        self.bounding_box_pub.publish(marker)
-
-
-    def publish_bounding_box4(self):
-        marker = Marker()
-        marker.header.frame_id = "map"  # Adjust based on your TF setup
-        marker.header.stamp = rospy.Time.now()
-        marker.ns = "rover_bounding_box"
-        marker.id = 0
-        marker.type = Marker.LINE_STRIP  # LINE_STRIP connects the points
-        marker.action = Marker.ADD
-
-        # Set color and transparency
-        marker.color.r = 0.0
-        marker.color.g = 1.0
-        marker.color.b = 0.0
-        marker.color.a = 1.0  # Fully visible
-
-        # Set scale (line thickness)
-        marker.scale.x = 0.05  
-
-        # Get the yaw angle (ensure it's in radians)
-        theta = self.current_orientation_z  # If in degrees, convert: theta = math.radians(self.current_orientation_z)
-
-        # Check initial angle
-        print(f"Yaw (theta) at start: {theta:.2f} radians")
-
-        # Define the **correct** corner positions (aligned with the axes initially)
-        half_width = 0.5  
-        original_corners = [
-            (half_width,  half_width),   # Right Front
-            (-half_width, half_width),   # Right Back
-            (-half_width, -half_width),  # Left Back
-            (half_width, -half_width),   # Left Front
-            (half_width,  half_width)    # Close the box
-        ]
-
-        # Apply rotation and translation
-        transformed_corners = []
-        cos_theta = math.cos(theta)
-        sin_theta = math.sin(theta)
-
-        for cx, cy in original_corners:
-            # Rotate around the rover's center
-            x = (cx * cos_theta - cy * sin_theta)  
-            y = (cx * sin_theta + cy * cos_theta)  
-
-            # Translate to the rover's actual position
-            x += self.current_position_x  
-            y += self.current_position_y  
-
-            transformed_corners.append(Point(x, y, 0))
-
-        marker.points = transformed_corners  # Assign transformed points to marker
-
-        # Publish the marker
-        self.bounding_box_pub.publish(marker)
+    
     def odom_callback(self, msg):
         # Extract robot's position from the Odometry message
         self.current_position_x = msg.pose.pose.position.x
@@ -967,4 +761,215 @@ if __name__ == "__main__":
         
         # Publish the bounding box
         self.publish_bounding_box()
+
+        def publish_bounding_box4(self):
+        marker = Marker()
+        marker.header.frame_id = "map"  # Adjust based on your TF setup
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "rover_bounding_box"
+        marker.id = 0
+        marker.type = Marker.LINE_STRIP  # LINE_STRIP connects the points
+        marker.action = Marker.ADD
+
+        # Set color and transparency
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0  # Fully visible
+
+        # Set scale (line thickness)
+        marker.scale.x = 0.05  
+
+        # Get the yaw angle (ensure it's in radians)
+        theta = self.current_orientation_z  # If in degrees, convert: theta = math.radians(self.current_orientation_z)
+
+        # Check initial angle
+        print(f"Yaw (theta) at start: {theta:.2f} radians")
+
+        # Define the **correct** corner positions (aligned with the axes initially)
+        half_width = 0.5  
+        original_corners = [
+            (half_width,  half_width),   # Right Front
+            (-half_width, half_width),   # Right Back
+            (-half_width, -half_width),  # Left Back
+            (half_width, -half_width),   # Left Front
+            (half_width,  half_width)    # Close the box
+        ]
+
+        # Apply rotation and translation
+        transformed_corners = []
+        cos_theta = math.cos(theta)
+        sin_theta = math.sin(theta)
+
+        for cx, cy in original_corners:
+            # Rotate around the rover's center
+            x = (cx * cos_theta - cy * sin_theta)  
+            y = (cx * sin_theta + cy * cos_theta)  
+
+            # Translate to the rover's actual position
+            x += self.current_position_x  
+            y += self.current_position_y  
+
+            transformed_corners.append(Point(x, y, 0))
+
+        marker.points = transformed_corners  # Assign transformed points to marker
+
+        # Publish the marker
+        self.bounding_box_pub.publish(marker)
+
+
+        def publish_bounding_box_worksbutcouldbeimproved(self):
+        marker = Marker()
+        marker.header.frame_id = "map"  # Adjust based on your TF setup
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "rover_bounding_box"
+        marker.id = 0
+        marker.type = Marker.LINE_STRIP  # Use LINE_STRIP to form a box
+        marker.action = Marker.ADD
+
+        # Set color and transparency
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0  # Fully visible
+
+        # Set scale (line thickness)
+        marker.scale.x = 0.1  
+
+        # Get the rover's yaw angle (assumes orientation is stored as Euler angles)
+        yaw = self.current_orientation_z  # Assuming this is the yaw in radians
+
+        # Define the unrotated corner positions relative to the rover
+        half_width = 0.5
+        half_length = 0.5
+
+        corners = [
+            (half_length, half_width),   # Right Front
+            (-half_length, half_width),  # Right Back
+            (-half_length, -half_width), # Left Back
+            (half_length, -half_width),  # Left Front
+            (half_length, half_width)    # Closing the box
+        ]
+
+        # Apply 2D rotation transformation
+        rotated_corners = []
+        for cx, cy in corners:
+            x_rot = self.current_position_x + (cx * math.cos(yaw) - cy * math.sin(yaw))
+            y_rot = self.current_position_y + (cx * math.sin(yaw) + cy * math.cos(yaw))
+            rotated_corners.append(Point(x_rot, y_rot, 0))
+
+        marker.points = rotated_corners  # Assign transformed points to marker
+
+        # Publish the marker
+        self.bounding_box_pub.publish(marker)
+    
+    def publish_bounding_box_trying_something_else(self):
+    
+        marker = Marker()
+        marker.header.frame_id = "map"  # Adjust based on your TF setup
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "rover_bounding_box"
+        marker.id = 0
+        marker.type = Marker.LINE_STRIP  # Use LINE_STRIP to form a box
+        marker.action = Marker.ADD
+
+        # Set color and transparency
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0  # Fully visible
+
+        # Set scale (line thickness)
+        marker.scale.x = 0.1  
+
+        # Get the rover's yaw angle (assuming in radians)
+        yaw = self.current_orientation_z  
+
+        # Define the **fixed** corner positions relative to the rover's origin (center)
+        half_width = 0.2
+        half_length = 0.2
+
+        # Define corners relative to the rover's body frame
+        original_corners = [
+            (half_length, half_width),   # Right Front
+            (-half_length, half_width),  # Right Back
+            (-half_length, -half_width), # Left Back
+            (half_length, -half_width),  # Left Front
+            (half_length, half_width)    # Closing the box
+        ]
+
+        # Apply rotation transformation to **original** (fixed) coordinates
+        rotated_corners = []
+        cos_yaw = math.cos(yaw)
+        sin_yaw = math.sin(yaw)
+
+        for cx, cy in original_corners:
+            x_rot = self.current_position_x + (cx * cos_yaw - cy * sin_yaw)
+            y_rot = self.current_position_y + (cx * sin_yaw + cy * cos_yaw)
+            rotated_corners.append(Point(x_rot, y_rot, 0))
+
+        marker.points = rotated_corners  # Assign transformed points to marker
+
+        # Publish the marker
+        self.bounding_box_pub.publish(marker)
+
+        def publish_bounding_box100(self):
+        marker = Marker()
+        marker.header.frame_id = "map"  # Adjust based on your TF setup
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "rover_bounding_box"
+        marker.id = 0
+        marker.type = Marker.LINE_STRIP  # Use LINE_STRIP to form a box
+        marker.action = Marker.ADD
+
+        # Set color and transparency
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0  # Fully visible
+
+        # Set scale (line thickness)
+        marker.scale.x = 0.05  
+           # Ensure rover starts at (0,0) and is aligned with axes
+        if not hasattr(self, "initialized"):
+            self.current_position_x = 0.0
+            self.current_position_y = 0.0
+            self.current_orientation_z = 0.0  # Ensures no initial rotation
+            self.initialized = True  # Set a flag so it only resets once
+
+
+        # Get the rover's yaw angle (assuming in radians)
+        theta = self.current_orientation_z  
+        theta = math.atan2(math.sin(theta), math.cos(theta))
+
+        # Define the **fixed** corner positions relative to the rover's center
+        half_width = 0.5  # Adjusted from 4 to 0.5
+        original_corners = [
+            (half_width,  half_width),   # Right Front
+            (-half_width, half_width),   # Right Back
+            (-half_width, -half_width),  # Left Back
+            (half_width, -half_width),   # Left Front
+            (half_width,  half_width)    # Closing the box
+        ]
+
+        # Apply rotation and translation
+        transformed_corners = []
+        cos_theta = math.cos(theta)
+        sin_theta = math.sin(theta)
+
+        for cx, cy in original_corners:
+            x = cx * cos_theta - cy * sin_theta  # Rotate
+            y = cx * sin_theta + cy * cos_theta  # Rotate
+
+            x += self.current_position_x  # Translate
+            y += self.current_position_y  # Translate
+
+            transformed_corners.append(Point(x, y, 0))
+        
+
+        marker.points = transformed_corners  # Assign transformed points to marker
+
+        # Publish the marker
+        self.bounding_box_pub.publish(marker)
+ 
 '''
