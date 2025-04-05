@@ -5,7 +5,7 @@ Code for the state machine
 """
 import rospy
 import object_subscriber_node
-from rover.autonomy.scripts import led_light
+# from rover.autonomy.scripts import led_light
 import smach
 import time
 import math
@@ -132,7 +132,9 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
             time.sleep(1)
             self.glob_msg.pub_state("Waiting for GPS coordinates")
 
-        cartesian_path = shortest_path('start', self.glob_msg.locations) #Generates the optimal path 
+        cartesian_path = self.glob_msg.locations
+        # cartesian_path = shortest_path('start', self.glob_msg.locations) #Generates the optimal path 
+        # print(cartesian_path)
         
         self.glob_msg.pub_state("Changing GPS coordinates to cartesian") 
         cartesian = {}
@@ -145,7 +147,15 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
 
             cartesian[el] = (x,y) 
         
-        self.glob_msg.cartesian = cartesian #assigns the cartesian dict to cartesian to make it a global variable 
+        print("Before CARTESIAN", cartesian)
+        cartesian_dict = {}
+        cartesian_list = shortest_path('start', cartesian) 
+        for cart in cartesian_list:
+            cartesian_dict[cart] = cartesian[cart]
+            
+        print("At CARTESIAN", cartesian_dict)
+        
+        self.glob_msg.cartesian = cartesian_dict #assigns the cartesian dict to cartesian to make it a global variable 
         
         gps_to_pose.GPSToPose(self.glob_msg.locations['start'], (0,0), (1.1, 0)) #creates an instance of GPSToPose to start publishing pose
         
@@ -171,9 +181,9 @@ class LocationSelection(smach.State): #State for determining which mission/state
         self.glob_msg.pub_state("Performing Next Task")
         if userdata.prev_loc == None: #if its the first instance of running the state, initialize the global variables locations_dict, rem_loc_dict
             userdata.locations_dict = self.glob_msg.cartesian.copy() #loc_name, (lat, lon)
-            #print (userdata.locations_dict)
+            print (userdata.locations_dict)
             userdata.rem_loc_dict = userdata.locations_dict.copy()
-            #print (userdata.rem_loc_dict)
+            print (userdata.rem_loc_dict)
         path = userdata.rem_loc_dict
         #print (path)
         if path != {}: 
@@ -181,6 +191,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 print ("in the try")
                 self.glob_msg.pub_state(f"Navigating to {list(path.items())[0][0]}") 
                 target = path[list(path.items())[0][0]]
+                print(target)
                 sla = StraightLineApproach(0.6, 0.3, [target]) 
                 sla.navigate() #navigating to the next mission on our optimal path
             except rospy.ROSInterruptException:

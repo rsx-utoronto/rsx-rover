@@ -78,6 +78,8 @@ class StraightLineApproach:
             target_heading = math.atan2(target_y - self.y, target_x - self.x)
             target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
             angle_diff = target_heading - self.heading
+            print (f"target heading: {target_heading}", f"target_distance: {target_distance}")
+            # print ( f"angle_diff: {angle_diff}")
 
             if angle_diff > math.pi:
                 angle_diff -= 2 * math.pi

@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import math
 from collections import deque
 import matplotlib.pyplot as plt
@@ -9,6 +11,22 @@ def get_loc_name(locations):
     return locName
 
 # Calculate the distance between two points using the Haversine formula
+# def calculate_distance(point1: tuple, point2: tuple) -> float:
+#     lat1, lon1 = point1
+#     lat2, lon2 = point2
+
+#     # Convert latitude and longitude from d/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/optimal_path.pyegrees to radians
+#     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+
+#     # Haversine formula
+#     dlat = lat2 - lat1
+#     dlon = lon2 - lon1
+#     a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+#     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+#     # Radius of Earth in kilometers
+#     r = 6371.0
+#     return r * c
 def calculate_distance(point1: tuple, point2: tuple) -> float:
     lat1, lon1 = point1
     lat2, lon2 = point2
@@ -73,6 +91,8 @@ def find_shortest_path(start: str, locations: dict):
             remaining.pop(nearest)
             total_distance += calculate_distance_cart(locations[current], locations[nearest])
             current = nearest
+            
+    
 
     return path, total_distance
 
@@ -97,9 +117,10 @@ def plot_locations(path, locations):
 
 def OPmain(start, locations):
     # Start the pathfinding from a specific location of choice based on the dictionary
-
+    
+    
     path, total_distance = find_shortest_path(start, locations)
-    print(path)
+    # print(path)
     
     #print("Shortest path visiting all locations:")
     #print(" -> ".join(path))

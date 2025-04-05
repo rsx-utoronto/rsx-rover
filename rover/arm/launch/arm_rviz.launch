@@ -10,7 +10,7 @@
 
    <node name="arm_ik" pkg="rover" type="arm_inverse_kinematics.py" if="$(arg ik_on)" output="screen"/>
    <node name="arm_visualization" pkg="rover" type="arm_viz.py" output="screen"/>
-   <!-- <node name="fake_manual" pkg="rover" type="fake_manual.py" if="$(arg ik_on)" output="screen"/> -->
+   <node name="fake_manual" pkg="rover" type="fake_manual.py" if="$(arg ik_on)" output="screen"/>
    <node unless="$(arg ik_on)" name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui"/>
 
    <!-- <arg name="serial_no"             default=""/>
