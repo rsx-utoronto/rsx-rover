@@ -17,28 +17,25 @@ Feb 8 update:
     make sure we can see trajectory in RVIZ
     ensure A* is producing right code
 
-
-    new to do: 
-    - print bounding box of rover in rviz
-    - discuss octomap transformations
-    - ensure rover avoids walla!
-
-    - for eeveyr way point-> check foot print
+    - for everyr way point-> check foot print
     calulcate g for being on that cell. caluclate total cost. 
 
-    next steps: 
-    - fix foorpring -> make it trun with rover -> *try multiplying it by 10 
-        -> to fix it -> have 4 points for the rover and make lines instead of a box. 
-        -> have the center be 0,0. then have the 4 cornesrs based on that center.
-        -> make the neter, and 4 points actual data suing odometry. 
-        -> 
-
+   Next Steps: 
     - make footprint local to rover -> done 
     - use foot print in A*! 
     - try outputing the map ur mkaing
     Last edit before exam: 
     - had some filing issues. I made the corners global in an array: self.current_corners_array.
     next will use footprint in A*.
+    For A*: 
+    - I made all the 100000 to 1000.
+    - I changed the height_cost function from height_cost_old to Height_cost_new. 
+    this one makes it so that it assigns finite costs depending on the situation.
+    - I also added a new function called: 'is pose_valid' and call it in new get neighbours function.
+    - Added a new transform corner function taht is used in is pose valid. however, check whetehr you 
+    should use local or global variables.
+
+    I MADE BOTH LOCAL AND GLOBAL CORNER ARRAY. 
 
 """
 import rospy
@@ -106,6 +103,7 @@ class OctoMapAStar:
         self.current_orientation_z=0
 
         self.current_corner_array = []
+        self.local_corners= []
 
           
     def pointcloud_callback(self, msg):
@@ -290,6 +288,7 @@ class OctoMapAStar:
 
         # Apply rotation and translation
         transformed_corners = []
+        self.local_corners=original_corners
         for cx, cy in original_corners:
             x = cx * cos_theta - cy * sin_theta  # Rotate
             y = cx * sin_theta + cy * cos_theta  # Rotate
@@ -363,7 +362,7 @@ class OctoMapAStar:
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
                 if 0 <= z <= 50:  # Height threshold -< this should be 0.2<z<1.5!!!
                     #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
-                    occupancy_grid[grid_x, grid_y] = 100000
+                    occupancy_grid[grid_x, grid_y] = 1000 # 100000
                   
                     for dx in range(-inflation_cells, inflation_cells):
     
@@ -373,21 +372,37 @@ class OctoMapAStar:
                                 new_x = min(max(grid_x + dx, 0), grid_size[0] - 1)
                                 new_y = min(max(grid_y + dy, 0), grid_size[1] - 1)   
                                 print("inflation_cells", inflation_cells) 
-                                occupancy_grid[new_x, new_y] = 100000  #np.inf  
+                                occupancy_grid[new_x, new_y] = 1000  #np.inf  
            # rospy.loginfo(f"Grid position: ({grid_x}, {grid_y}) -> Cost: {occupancy_grid[grid_x, grid_y]}")
         return occupancy_grid
 
 ### A* start 
 
-    def height_cost(self, current, neighbor): #this is g function for height
+    def height_cost_old(self, current, neighbor): #this is g function for height
         current_height = self.occupancy_grid[current[0], current[1]]
         neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
         if current_height == -1 or neighbor_height == -1:  
-            return 10000 
-        if current_height == 10000 or neighbor_height==10000: 
-            return 10000
+            return 1000 
+        if current_height == 1000 or neighbor_height==1000: 
+            return 1000
         return abs(current_height - neighbor_height)
     
+    def height_cost(self, current, neighbor):
+        current_height = self.occupancy_grid[current[0], current[1]]
+        neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
+
+        # Default cost when unknown
+        cost = abs(current_height - neighbor_height)
+
+        if current_height <= 0 or neighbor_height <= 0:
+            return 5.0  # traversable but low-quality
+
+        # Increase penalty for "obstacles"
+        if current_height >= 1000 or neighbor_height >= 1000:
+            return 1000  # still finite!
+
+        return cost + 1.0  # base cost + delta
+        
 
     def heuristic(self, node, goal): #h fucntion -> euclidean distance
         return np.linalg.norm(np.array(node) - np.array(goal))
@@ -416,7 +431,7 @@ class OctoMapAStar:
             for neighbor in self.get_neighbors(current):
                 height_cost = self.height_cost(current, neighbor)  # Get height-based cost
                 tentative_g_score = g_score[current] + height_cost  # Add the height cost to the g_score
-                if height_cost != 10000: 
+                if height_cost != 1000: 
                     if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
                         came_from[neighbor] = current
                         g_score[neighbor] = tentative_g_score
@@ -427,7 +442,22 @@ class OctoMapAStar:
         rospy.logwarn("A* failed to find a path")
         return []
     
-    def get_neighbors(self, node):
+    def is_pose_valid(self, pose):
+        """Returns True if all corners of the footprint at this pose are in free space"""
+        for corner in self.transform_corners(pose):
+            x, y = corner
+            grid_x = int((x - self.grid_origin[0]) / self.grid_resolution)
+            grid_y = int((y - self.grid_origin[1]) / self.grid_resolution)
+
+            if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
+                return False  # Out of bounds
+
+            if self.occupancy_grid[grid_x, grid_y] >= 1000:
+                return False  # This corner is in an obstacle
+
+        return True
+    
+    def get_neighbors_old(self, node):
         """
         Get neighboring cells in the grid, avoiding obstacles (e.g., value of 100000).
         """
@@ -436,10 +466,45 @@ class OctoMapAStar:
         for dx, dy in [(-1, -1), (1, 1), (0, -1), (0, 1), (1, 0), (-1, 0)]:  # Check neighboring cells (up, down, left, right)
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
-                if self.occupancy_grid[nx, ny] !=10000:  
+                if self.occupancy_grid[nx, ny] !=1000:  
                     neighbors.append((nx, ny))
                 else: 
                     print("OBJECT DETECTED")
+        return neighbors
+    
+    def transform_corners(self, pose):
+        """
+        Transforms the current bounding box corners to the given (x, y, theta) pose.
+        Returns a list of (x, y) tuples in global space.
+        """
+        x_pose, y_pose, theta = pose
+        cos_theta = math.cos(theta)
+        sin_theta = math.sin(theta)
+
+        transformed = []
+        for pt in self.current_corner_array:
+            local_x = pt.x
+            local_y = pt.y
+
+            x = local_x * cos_theta - local_y * sin_theta + x_pose
+            y = local_x * sin_theta + local_y * cos_theta + y_pose
+
+            transformed.append((x, y))
+        return transformed
+    
+    def get_neighbors(self, node):
+        neighbors = []
+        x, y = node
+
+        for dx, dy in [(-1, -1), (1, 1), (0, -1), (0, 1), (1, 0), (-1, 0)]:
+            nx, ny = x + dx, y + dy
+
+            if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
+                # Check the *footprint* at the new node's position
+                if self.is_pose_valid((nx * self.grid_resolution, ny * self.grid_resolution, 0)):
+                    neighbors.append((nx, ny))
+                else:
+                    pass  # Debug print if you want
         return neighbors
     
 ### A* END
