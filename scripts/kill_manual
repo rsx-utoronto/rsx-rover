@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# This script is used to kill the manual control setup
+
+tmux kill-session -t manual
+rosnode kill /zed_node
