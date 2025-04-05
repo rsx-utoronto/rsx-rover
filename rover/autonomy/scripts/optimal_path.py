@@ -25,15 +25,17 @@ def calculate_distance(point1: tuple, point2: tuple) -> float:
     # Radius of Earth in kilometers
     r = 6371.0
     return r * c
-
+def calculate_distance_cart(point1: tuple, point2: tuple) -> float:
+    dist = math.sqrt((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2)
+    return dist
 # Calculate the weight of traveling to a location
 # 0-1 scale, GNSS -> 1, 1
 # AR --> 0.8 for without obstacles, 0.5 for obstacles
-def calculate_location_weight(current: str, loc: str, locName: list, locations: dict) -> float:
-    difficulty = {"GNSS1": 0.5, "GNSS2": 0.5, "AR1": 0.8, "AR2": 0.8, "AR3": 1,  "OBJ1": 0.8, "OBJ2": 1}
+def calculate_location_weight(current: str, loc: str, locName: list, locations: dict, visited: set) -> float: #init: {"GNSS1": 0.5, "GNSS2": 0.5, "AR1": 0.8, "AR2": 0.8, "AR3": 1,  "OBJ1": 0.8, "OBJ2": 1}
+    difficulty = {"GNSS1": 1, "GNSS2": 1, "AR1": 1, "AR2": 1, "AR3": 1,  "OBJ1": 1, "OBJ2": 1}
 
-    distance = calculate_distance(locations[current], locations[loc]) #/2 (for scaling actual locations)
-    proximity_weight = sum(calculate_distance(locations[loc], locations[other]) for other in locName if other != loc) #/8.5 (worst case scenario - assuming all the points are on the opposite end)(open for change, for scaling actual locations)
+    distance = calculate_distance_cart(locations[current], locations[loc]) #/2 (for scaling actual locations)
+    proximity_weight = sum(calculate_distance_cart(locations[loc], locations[other]) for other in locName if other != loc and other not in visited) #/8.5 (worst case scenario - assuming all the points are on the opposite end)(open for change, for scaling actual locations)
     
     # Use the correct key for difficulty
     
@@ -48,7 +50,8 @@ def find_shortest_path(start: str, locations: dict):
     total_distance = 0
     
     #initialize locName list
-    locName = get_loc_name(locations)
+    locName = list(locations.keys())
+    remaining = locations.copy()
 
     # Checking to see if rover traveled to all locations
     while len(visited) < len(locName):
@@ -58,15 +61,17 @@ def find_shortest_path(start: str, locations: dict):
         for loc in locName:
             if loc not in visited:
                 # Calculate the weight for traveling to this location
-                weight = calculate_location_weight(current, loc, locName, locations)
+                weight = calculate_location_weight(current, loc, locName, locations, visited)
                 if weight < min_weight:
                     nearest = loc
                     min_weight = weight
 
-        if nearest:
+        if nearest != None:
+            print(f"Weight for {nearest} is {min_weight}")
             visited.add(nearest)
             path.append(nearest)
-            total_distance += calculate_distance(locations[current], locations[nearest])
+            remaining.pop(nearest)
+            total_distance += calculate_distance_cart(locations[current], locations[nearest])
             current = nearest
 
     return path, total_distance
@@ -99,10 +104,23 @@ def OPmain(start, locations):
     #print("Shortest path visiting all locations:")
     #print(" -> ".join(path))
     #print(f"Total distance: {total_distance:.2f} km")
-    #plot_locations(path, locations)
+    plot_locations(path, locations)
     
     path.remove('start')
 
     return path
 
 #OPmain()
+
+if __name__ == "__main__":
+    locations = {
+    "start": (43.66124, -79.39581), # Toronto
+    "GNSS1": (43.66156, -79.3958),   # Statue of Liberty
+    "GNSS2": (43.66131, -79.39503),     # Eiffel Tower
+    "AR1": (43.66181, -79.39459),    # Sydney Opera House
+    "AR2": (43.66135, -79.39437),     # Great Wall of China (Mutianyu)
+    "AR3": (43.66193, -79.39594),    # Christ the Redeemer
+    "OBJ1": (43.66227, -79.39504),     # Taj Mahal
+    "OBJ2": (43.66182, -79.39531)    # Colosseum
+    }
+    OPmain("start", locations)
