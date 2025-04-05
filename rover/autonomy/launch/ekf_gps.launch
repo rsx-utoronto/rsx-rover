@@ -1,7 +1,9 @@
 <launch>
     <rosparam param="use_sim_time"> true </rosparam>
 
-    <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_base_to_gps" args="-0.2 -0.355 0.18 0 0 0 1 base_link gps 100"/>
+    <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_base_to_gps" args="-0.2 -0.355 0.18 0 0 0 1 base_link gps 100">
+        <!-- <remap from="tf" to="tf_ekf"/> -->
+    </node>
     <!-- x y z yaw pitch roll frame_id child_frame_id period_in_ms  -->
 
     <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />  
