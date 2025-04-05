@@ -225,6 +225,8 @@ class RobotControlGUI(QWidget):
 
         for direction, button in self.arrow_buttons.items():
             button.clicked.connect(lambda _, d=direction: self.button_is_clicked(d))
+            # Allow each button to be held down and continuously input
+            button.setAutoRepeat(True)
             
         coord_layout.addWidget(self.arrow_buttons["Up"], 1, 1)
         coord_layout.addWidget(self.arrow_buttons["Down"], 3, 1)
@@ -343,6 +345,10 @@ class RobotControlGUI(QWidget):
             # Connect buttons to functions
             inc_button.clicked.connect(lambda _, idx=i: self.update_joint_value(idx, 1))
             dec_button.clicked.connect(lambda _, idx=i: self.update_joint_value(idx, -1))
+
+            # Allow each button to be held and continuously move joint
+            inc_button.setAutoRepeat(True)
+            dec_button.setAutoRepeat(True)
 
             # Store the joint displays
             self.joint_displays.append(joint_display)
