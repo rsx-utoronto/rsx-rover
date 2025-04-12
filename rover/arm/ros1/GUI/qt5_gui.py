@@ -25,34 +25,39 @@ class RobotControlGUI(QWidget):
         screen = QApplication.primaryScreen()  # Get primary screen (default monitor)
 
         screen_size = screen.size()
+
+        # Set the window size and maximum size to 90% of the screen width and 2/3 of the screen height
         self.setGeometry(100, 100, int(screen_size.width()*9/10), int(screen_size.height()*2/3))
-        
         self.setMaximumSize(int(screen_size.width()*9/10), int(screen_size.height()*2/3)) 
 
+        # The icon for the GUI!
         self.setWindowIcon(QIcon("RsxLogo.png"));
 
         # Load the YAML file
         with open('config.yaml', 'r') as file:
             config = yaml.safe_load(file)
 
+        # Load the camera topics from the YAML file
         self.camera_topics = config['camera_topics']
         self.camera_topic_name = [camera['topic'] for camera in self.camera_topics]
         self.camera_compressed = [camera['compressed'] for camera in self.camera_topics]
         self.camera_aspect_ratio = eval(config['camera_aspect_ratio'])
 
-
+        # Initialize all of the buttons, labels, and other widgets
         self.initUI()
 
+        # If science mode is on, bottom 3 joints and gripper 
         self.scienceOn = False
 
         self.controller = GuiControllerNode()  # Initialize controller
         
-        # look at function at line 150 & 835
+        # Get the arm effector positions
         self.end_effector_coords = rospy.Subscriber("arm_end_effector_pos", Float32MultiArray, self.update_end_effector_coords) 
 
-        # update the joint display values
+        # Update the joint display values
         self.joint_display_values = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.set_joint_display)
 
+        # The default mode when you start the GUI is Idle
         self.mode_buttons["Idle"].click()
 
     def resizeEvent(self, event):
@@ -91,6 +96,9 @@ class RobotControlGUI(QWidget):
             for button in self.joint_buttons:
                 button.setEnabled(False)
         
+        # Currently toggles between manual and science mode whenever you press any of the module buttons
+        # Intended use is to eventually move ot a certain position with each module.
+        # Since no additional information was given, this is the current implementation.
         if command in ["Module 1", "Module 2", "Module 3", "Module 4"]:
             # gray out only 4 - 6 in forward kinematics
             self.scienceOn = not self.scienceOn
@@ -171,7 +179,7 @@ class RobotControlGUI(QWidget):
         # Update the QLabel with the latest frame
         pixmap = QPixmap.fromImage(qt_image)
         self.coord_view_label.setPixmap(pixmap)
-        self.coord_view_label.setScaledContents(True)  # Optional: scales the image to fit the label size
+        self.coord_view_label.setScaledContents(True)  # scales the image to fit the label size
 
     # Switch camera feeds
     def on_view_selected(self, index):
@@ -423,19 +431,7 @@ class RobotControlGUI(QWidget):
         main_layout.addWidget(view_group, stretch=3)
         main_layout.addWidget(joints_group)
         main_layout.addWidget(coords_group)
-
-        # Bottom Buttons
-        # bottom_layout = QHBoxLayout()
-        # self.move_home = QPushButton("Move to Home")
-        # self.move_home.clicked.connect(lambda _: self.button_is_clicked("Move to Home"))         
-        # self.move_origin = QPushButton("Move to Origin")
-        # self.move_origin.clicked.connect(lambda _: self.button_is_clicked("Move to Origin"))         
-        # self.freemove = QPushButton("Freemove")
-        # self.freemove.clicked.connect(lambda _: self.button_is_clicked("Freemove"))         
-
-        # bottom_layout.addWidget(self.move_home)
-        # bottom_layout.addWidget(self.move_origin)
-        # bottom_layout.addWidget(self.freemove)
+        
 
         # Main Vertical Layout
         main_vertical_layout = QVBoxLayout(self)
