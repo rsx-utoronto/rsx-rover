@@ -2,28 +2,40 @@ import rospy
 import cv2
 from PyQt5.QtCore import pyqtSignal, QObject
 from PyQt5.QtGui import QImage
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge
+import numpy as np
 
 class ROSVideoSubscriber(QObject):
     frame_received = pyqtSignal(QImage)
 
-    def __init__(self, topic_name):
+    def __init__(self, topic_name, compressed=False):
         super().__init__()
         self.bridge = CvBridge()
-        self.sub = rospy.Subscriber(topic_name, Image, self.callback)
+        self.compressed = compressed
+        msg_type = CompressedImage if compressed else Image
+        self.sub = rospy.Subscriber(topic_name, msg_type, self.callback)
 
     def callback(self, msg):
-        # Convert the ROS Image message to a CV2 image
-        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        
-        # Convert the CV2 image to RGB format for PyQt
-        rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-        
-        # Convert the image to a format suitable for PyQt (QImage)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-        
-        # Emit the converted QImage to update the GUI
-        self.frame_received.emit(qt_image)
+        try:
+            if self.compressed:
+                # Handle compressed images
+                np_arr = np.frombuffer(msg.data, np.uint8)
+                cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            else:
+                # Handle uncompressed images
+                cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+            
+            # Convert the CV2 image to RGB format for PyQt
+            rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+            
+            # Convert the image to a format suitable for PyQt (QImage)
+            h, w, ch = rgb_image.shape
+            bytes_per_line = ch * w
+            qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+            
+            # Emit the converted QImage to update the GUI
+            self.frame_received.emit(qt_image)
+
+        except Exception as e:
+            rospy.logerr(f"Error processing image: {e}")
