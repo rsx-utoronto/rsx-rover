@@ -178,7 +178,9 @@ class RobotControlGUI(QWidget):
         self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[index], self.camera_compressed[index])
         self.video_subscriber.frame_received.connect(self.update_image)
 
+    # Update the end effector coordinate section
     def update_end_effector_coords(self, data):
+        # Get the data from the right rostopic
         x = data.data[3]
         y = data.data[4]
         z = data.data[5]
@@ -186,6 +188,7 @@ class RobotControlGUI(QWidget):
         ry = data.data[1]
         rz = data.data[2]
 
+        # Actually change the text within the GUI
         self.x_coord.setText(f"X: {x:.2f} mm")
         self.y_coord.setText(f"Y: {y:.2f} mm")
         self.z_coord.setText(f"Z: {z:.2f} mm")
