@@ -108,11 +108,11 @@ class GuiControllerNode():
 
         # Only joint 5 (the slow moving one) is published 100 times
         # (TEMPORARY FIX) 
-        if (command == "joint4plus" or command == "joint4minus"):    
-            for i in range(100):    
-              self.inputPublisher.publish(GuiToController)
-        else:
-            self.inputPublisher.publish(GuiToController)
+        #if (command == "joint4plus" or command == "joint4minus"):    
+            #for i in range(100):    
+                #self.inputPublisher.publish(GuiToController)
+        #else:
+        self.inputPublisher.publish(GuiToController)
 
     def on_release(self):
         keyboardToController = ArmInputs()
