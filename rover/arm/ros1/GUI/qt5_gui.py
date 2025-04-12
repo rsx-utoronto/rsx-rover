@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-from PyQt5.QtWidgets import QApplication, QSizePolicy, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QComboBox, QSlider, QGridLayout, QGroupBox, QSpinBox
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QComboBox, QSlider, QGridLayout, QGroupBox, QSpinBox
 from PyQt5.QtGui import QPixmap, QIcon, QImage
 from PyQt5.QtCore import Qt
 import sys
@@ -179,19 +179,6 @@ class RobotControlGUI(QWidget):
         self.video_subscriber.frame_received.connect(self.update_image)
 
     def update_end_effector_coords(self, data):
-        # # have to import ik_library.py
-        # deg2rad(data.data)
-
-        # dh_table = createDHTable([-data.data[0], data.data[1] + pi/2, -data.data[2], data.data[3], data.data[5], -data.data[4]])
-        # print('random')
-
-        # # see the calculateRotationAngles for how the transformation matrix looks
-        # transformation_matrix = calculateTransformToLink(dh_table, 6)
-        # print(transformation_matrix)
-
-        # # returns [rx, ry, rz]
-        # rotation_angles = calculateRotationAngles(transformation_matrix)
-
         x = data.data[3]
         y = data.data[4]
         z = data.data[5]
@@ -206,16 +193,16 @@ class RobotControlGUI(QWidget):
         self.ry_coord.setText(f"Ry: {ry:.2f}°")
         self.rz_coord.setText(f"Rz: {rz:.2f}°")
 
-        # return [x, y, z] + rotation_angles
-
     # Update the publishing rate multiplier
     def update_publish_multiplier(self, increment):
+        # Set the frequency multiplier and make sure it doesn't go to 0
         self.frequencyMultiplier += increment 
         self.frequencyMultiplier = max(self.frequencyMultiplier, 0.1)
         # TODO: add maximum value
+        # Change the text box within the GUI
         self.freq_display.setText(str(round(self.frequencyMultiplier, 1)))
 
-        # Actually change the frequencies for the required buttons
+        # Actually change the frequencies for the required buttons (joints, then IK)
         for button in self.joint_buttons:
             button.setAutoRepeatInterval(int(100/self.frequencyMultiplier))
         
@@ -407,6 +394,7 @@ class RobotControlGUI(QWidget):
 
         coords_group.setLayout(coords_layout)
 
+        # Create the box in the GUI for each of the arm's modes
         modes_group = QGroupBox("Modes")
         modes_layout = QGridLayout()
 
@@ -422,21 +410,20 @@ class RobotControlGUI(QWidget):
         modes_layout.addWidget(self.mode_buttons["Custom 1"], 3, 0)
         modes_layout.addWidget(self.mode_buttons["Custom 2"], 3, 1)
 
+        # Add callback to each of the modes
         for modes, button in self.mode_buttons.items():
             button.clicked.connect(lambda _, m=modes: self.button_is_clicked(m))
             
         modes_group.setLayout(modes_layout)
 
-        # Movement rate section
+        # Movement rate box
         frequency_group = QGroupBox("Movement rate")
-
-        #frequency_group.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        #frequency_group.setMinimumSize(0, 0)
 
         joint_pub_freq = QHBoxLayout()
 
         self.frequencyButtons= {}
 
+        # Add one of the buttons to change the frequency, as well as callback function
         self.frequencyButtons["Manualminus"] = QPushButton("-")
         self.frequencyButtons["Manualminus"].clicked.connect(lambda: self.update_publish_multiplier(-0.1))
 
@@ -448,15 +435,18 @@ class RobotControlGUI(QWidget):
         self.freq_display.setFixedHeight(30)
         self.freq_display.setAlignment(Qt.AlignmentFlag.AlignCenter)  
 
+        # Add one of the buttons to change the frequency, as well as callback function
         self.frequencyButtons["Manualplus"] = QPushButton("+")
         self.frequencyButtons["Manualplus"].clicked.connect(lambda: self.update_publish_multiplier(0.1))
 
+        # Add widgets to layout
         joint_pub_freq.addWidget(self.frequencyButtons["Manualminus"])
         joint_pub_freq.addWidget(self.freq_display)
         joint_pub_freq.addWidget(self.frequencyButtons["Manualplus"])
 
         frequency_group.setLayout(joint_pub_freq)
 
+        # Try to make the buttons take up the minimum size possible
         frequency_group.adjustSize()
 
         # Add all the stuff to the right side layout
@@ -470,19 +460,6 @@ class RobotControlGUI(QWidget):
         main_layout.addWidget(view_group, stretch=3)
         main_layout.addWidget(joints_group)
         main_layout.addWidget(coords_group)
-
-        # Bottom Buttons
-        # bottom_layout = QHBoxLayout()
-        # self.move_home = QPushButton("Move to Home")
-        # self.move_home.clicked.connect(lambda _: self.button_is_clicked("Move to Home"))         
-        # self.move_origin = QPushButton("Move to Origin")
-        # self.move_origin.clicked.connect(lambda _: self.button_is_clicked("Move to Origin"))         
-        # self.freemove = QPushButton("Freemove")
-        # self.freemove.clicked.connect(lambda _: self.button_is_clicked("Freemove"))         
-
-        # bottom_layout.addWidget(self.move_home)
-        # bottom_layout.addWidget(self.move_origin)
-        # bottom_layout.addWidget(self.freemove)
 
         # Main Vertical Layout
         main_vertical_layout = QVBoxLayout(self)
