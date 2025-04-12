@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QComboBox, QSlider, QGridLayout, QGroupBox, QSpinBox
+from PyQt5.QtWidgets import QApplication, QSizePolicy, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QComboBox, QSlider, QGridLayout, QGroupBox, QSpinBox
 from PyQt5.QtGui import QPixmap, QIcon, QImage
 from PyQt5.QtCore import Qt
 import sys
@@ -29,7 +29,7 @@ class RobotControlGUI(QWidget):
         
         self.setMaximumSize(int(screen_size.width()*9/10), int(screen_size.height()*2/3)) 
 
-        self.setWindowIcon(QIcon("RsxLogo.png"));
+        self.setWindowIcon(QIcon("RsxLogo.png"))
 
         # Load the YAML file
         with open('config.yaml', 'r') as file:
@@ -39,7 +39,6 @@ class RobotControlGUI(QWidget):
         self.camera_topic_name = [camera['topic'] for camera in self.camera_topics]
         self.camera_compressed = [camera['compressed'] for camera in self.camera_topics]
         self.camera_aspect_ratio = eval(config['camera_aspect_ratio'])
-
 
         self.initUI()
 
@@ -209,6 +208,21 @@ class RobotControlGUI(QWidget):
 
         # return [x, y, z] + rotation_angles
 
+    # Update the publishing rate multiplier
+    def update_publish_multiplier(self, increment):
+        self.frequencyMultiplier += increment 
+        self.frequencyMultiplier = max(self.frequencyMultiplier, 0.1)
+        # TODO: add maximum value
+        self.freq_display.setText(str(round(self.frequencyMultiplier, 1)))
+
+        # Actually change the frequencies for the required buttons
+        for button in self.joint_buttons:
+            button.setAutoRepeatInterval(int(100/self.frequencyMultiplier))
+        
+        for direction, button in self.arrow_buttons.items():
+            button.setAutoRepeatInterval(int(100/self.frequencyMultiplier))
+
+    
     # Main GUI code
     def initUI(self):
         # Main Layout
@@ -246,7 +260,7 @@ class RobotControlGUI(QWidget):
         # Grip Control
         coord_layout.addWidget(self.arrow_buttons["Open Grip"], 5, 2)
         coord_layout.addWidget(self.arrow_buttons["Close Grip"], 6, 2)
-        
+
         coordinates_group.setLayout(coord_layout)
 
         # 3D View Section
@@ -255,8 +269,8 @@ class RobotControlGUI(QWidget):
 
         self.camera_view_box  = QComboBox()
         camera_names = [camera['name'] for camera in self.camera_topics]
-        self.camera_view_box .addItems(camera_names)
-        view_layout.addWidget(self.camera_view_box )
+        self.camera_view_box.addItems(camera_names)
+        view_layout.addWidget(self.camera_view_box)
 
         view_layout.addStretch(1)
         
@@ -413,10 +427,43 @@ class RobotControlGUI(QWidget):
             
         modes_group.setLayout(modes_layout)
 
+        # Movement rate section
+        frequency_group = QGroupBox("Movement rate")
+
+        #frequency_group.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        #frequency_group.setMinimumSize(0, 0)
+
+        joint_pub_freq = QHBoxLayout()
+
+        self.frequencyButtons= {}
+
+        self.frequencyButtons["Manualminus"] = QPushButton("-")
+        self.frequencyButtons["Manualminus"].clicked.connect(lambda: self.update_publish_multiplier(-0.1))
+
+        # Label to display the rate
+        self.frequencyMultiplier = 1 
+        self.freq_display = QLabel("1")
+        self.freq_display.setStyleSheet("border: 1px solid black; padding: 5px;")
+        self.freq_display.setFixedWidth(50)
+        self.freq_display.setFixedHeight(30)
+        self.freq_display.setAlignment(Qt.AlignmentFlag.AlignCenter)  
+
+        self.frequencyButtons["Manualplus"] = QPushButton("+")
+        self.frequencyButtons["Manualplus"].clicked.connect(lambda: self.update_publish_multiplier(0.1))
+
+        joint_pub_freq.addWidget(self.frequencyButtons["Manualminus"])
+        joint_pub_freq.addWidget(self.freq_display)
+        joint_pub_freq.addWidget(self.frequencyButtons["Manualplus"])
+
+        frequency_group.setLayout(joint_pub_freq)
+
+        frequency_group.adjustSize()
+
+        # Add all the stuff to the right side layout
         coords_layout.addWidget(modes_group)
         coords_layout.addWidget(science_modules)
+        coords_layout.addWidget(frequency_group)
         coords_group.setLayout(coords_layout)
-
 
         # Adding sections to the main layout
         main_layout.addWidget(coordinates_group)
