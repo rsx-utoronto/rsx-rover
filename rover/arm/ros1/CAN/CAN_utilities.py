@@ -308,7 +308,7 @@ def generate_data_packet(data_list : list) -> list:
     # Assuming the last two angles specify the angle of the differential system,
     # convert those two values to the required angles for motors 5 and 6
     # wrist_motor1, wrist_motor2, gripper_correction = calc_differential(data_list[-3], data_list[-2])
-    wrist_motor1, wrist_motor2 = calc_differential(data_list[-2], data_list[-1])
+    wrist_motor1, wrist_motor2 = calc_differential(data_list[-3], data_list[-2])
     
     # Sparkmax Data list
     spark_data = []
