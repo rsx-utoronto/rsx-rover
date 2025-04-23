@@ -11,7 +11,7 @@ class GuiControllerNode():
     def __init__(self) -> None:
         rospy.init_node("arm_gui_controller")
 
-        self.speedMultiplier = 6900
+        self.speedMultiplier = 1
 
         self.inputPublisher = rospy.Publisher("arm_inputs", ArmInputs, queue_size=10)
         self.statePublisher = rospy.Publisher("arm_state", String, queue_size=10)
@@ -56,9 +56,9 @@ class GuiControllerNode():
             # Rx
             if command == "Rx" or command == "joint4plus":
                 for i in range(100):
-                    GuiToController.l1 = 1 * 127#int(self.speedMultiplier)#/100)
+                    GuiToController.l1 = 1 #* 127#int(self.speedMultiplier)#/100)
             elif command == "-Rx" or command == "joint4minus":
-                GuiToController.r1 = 1 * 127#int(self.speedMultiplier)#/100)
+                GuiToController.r1 = 1 #* 127#int(self.speedMultiplier)#/100)
             
             # right vertical joystick emulation
             if command == "Ry" or command == "joint3plus":
@@ -95,10 +95,10 @@ class GuiControllerNode():
             # emulate d-pad as arrow keys
             if command == "Manual":
                 self.statePublisher.publish("Manual")
-                self.speedMultiplier = 6900
+                self.speedMultiplier = 1#6900
             if command == "Inverse Kin":
                 self.statePublisher.publish("IK")
-                self.speedMultiplier = 69
+                self.speedMultiplier = 1#69
             if command == "Setup":
                 self.statePublisher.publish("Setup")
             if command == "Idle":
@@ -108,11 +108,11 @@ class GuiControllerNode():
 
         # Only joint 5 (the slow moving one) is published 100 times
         # (TEMPORARY FIX) 
-        if (command == "joint4plus" or command == "joint4minus"):    
-            for i in range(100):    
-              self.inputPublisher.publish(GuiToController)
-        else:
-            self.inputPublisher.publish(GuiToController)
+        #if (command == "joint4plus" or command == "joint4minus"):    
+            #for i in range(100):    
+                #self.inputPublisher.publish(GuiToController)
+        #else:
+        self.inputPublisher.publish(GuiToController)
 
     def on_release(self):
         keyboardToController = ArmInputs()

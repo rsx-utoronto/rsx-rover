@@ -13,8 +13,31 @@ class SciArm(Arm):
         super().__init__(numJoints, dhTable, offsets)
         self.modes = ["Forward", "Cyl"]
         # self.cylTarget = [0, 161+67, 80+348+110, 0] # [theta, r, z, alpha]
+
+
         self.cylTarget = [0, 0, 0, 0] # [theta, r, z, alpha]
 
+    def move_to_position(self, position_name):
+        # Move the arm to a specific position
+        if position_name in self.sampling_positions:
+            self.cylTarget = self.sampling_positions[position_name]
+            return self.inverseKinematics()
+        return False
+
+    def execute_sampling_sequence(self):
+        # Move to collection position
+        if not self.move_to_position("collect"):
+            return False
+        
+        # Move to intermediate position
+        if not self.move_to_position("intermediate"):
+            return False
+        # Move to deposit position
+        if not self.move_to_position("deposit"):
+            return False
+        
+        return True 
+            
     def setTarget(self, goalPos):
         self.cylTarget = goalPos
 

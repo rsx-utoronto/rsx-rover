@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-
+from math import pi, atan2, sin, cos, sqrt, acos
 from arm_science_ik import SciArm
 from queue import Queue
 from std_msgs.msg import Float32MultiArray, String
@@ -35,6 +35,42 @@ class ArmSciNode():
         rospy.Subscriber("arm_state", String, self.onArmStateUpdate)
         rospy.Subscriber("arm_inputs", ArmInputs, self.onJoystickUpdate)
         rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.onCurrPosUpdate)
+
+
+    def handle_sampling_sequence(self):
+        if self.armState != "IK":
+            rospy.logwarn("Arm must be in IK mode for sampling sequence")
+            return
+
+        self.arm.setMode("Cyl")
+        success, message = self.arm.execute_sampling_sequence()
+
+        if success:
+            rospy.loginfo(message)
+        else: 
+            rospy.logerr(message)
+
+    def handle_custom_sampling(self):
+
+        # Define custom checkpoints for your specific task
+        checkpoints = [
+            # [theta, r, z, alpha]
+            [0, 300, 200, 0],        # Move to ready position
+            [0, 400, 0, -pi/2],      # Approach sample
+            [0, 400, -50, -pi/2],    # Collect sample
+            [0, 300, 200, -pi/4],    # Lift sample
+            [pi/2, 300, 300, 0],     # Rotate to deposit
+            [pi/2, 400, 200, -pi/4]  # Deposit sample
+        ]
+        
+        # Execute the sequence with slower speed for precision
+        success, message = self.arm.execute_custom_sequence(checkpoints, speed_factor=0.5)
+        
+        if success:
+            rospy.loginfo(message)
+        else:
+            rospy.logerr(message)
+        
 
     def getJoystickButtonStatus(self, tempButton:list) -> dict: # setting up the buttons
         ''' Gets the Status of the Pressed Buttons on Joystick
@@ -122,6 +158,10 @@ class ArmSciNode():
             
             if not self.joyInputQueue.empty():
                 [buttonPressed, joystickStatus] = self.joyInputQueue.get()
+
+                                # Add new button combination for sampling sequence
+                if buttonPressed["L1"] and buttonPressed["R1"]:
+                    self.handle_sampling_sequence()
 
                 if buttonPressed["TRIANGLE"]:
                     self.arm.iterateMode()
