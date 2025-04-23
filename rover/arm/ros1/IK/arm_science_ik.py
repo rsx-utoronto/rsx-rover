@@ -9,8 +9,8 @@ class KinematicsMode():
         self.targetUpdateCallback = targetUpdateCallback
 
 class SciArm(Arm):
-    def __init__(self, numJoints:int, dhTable):
-        super().__init__(numJoints, dhTable)
+    def __init__(self, numJoints:int, dhTable, offsets):
+        super().__init__(numJoints, dhTable, offsets)
         self.modes = ["Forward", "Cyl"]
         # self.cylTarget = [0, 161+67, 80+348+110, 0] # [theta, r, z, alpha]
         self.cylTarget = [0, 0, 0, 0] # [theta, r, z, alpha]

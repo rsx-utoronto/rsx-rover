@@ -3,7 +3,7 @@ from math import sin, cos, atan2, sqrt
 from copy import deepcopy
 
 class Arm():
-    def __init__(self, numJoints:int, dhTable):
+    def __init__(self, numJoints:int, dhTable, offsets):
         ''' Object That represents a robot arm config with common functions
 
         Parameters
@@ -23,6 +23,11 @@ class Arm():
             print("The number of joints in the DH table is less than the value specified!")
             raise TypeError
         self.dhTable = np.array(dhTable) # pass [d, Theta, r, alpha]
+
+        if len(offsets) != numJoints:
+            print("The number of joints in the offsets list is less than the value specified!")
+            raise TypeError
+        self.offsets = offsets
 
         self.target = [0]*6 # [x, y, z, roll , pitch, yaw]
         self.modes = ["Forward"]
@@ -94,6 +99,13 @@ class Arm():
 
     def getGoalAngles(self):
         return deepcopy(self.goalAngles)
+
+    def getOffsetGoalAngles(self):
+        angles = self.getGoalAngles()
+        offsetAngles = [0]*self.numJoints
+        for i in range(len(angles)): 
+            offsetAngles[i] = angles[i] + self.offsets[i]
+        return deepcopy(offsetAngles) 
 
     def calculateRotationAngles(transformationMatrix):
         ''' Returns the roll, pitch, and yaw angles of a transformation matrix
