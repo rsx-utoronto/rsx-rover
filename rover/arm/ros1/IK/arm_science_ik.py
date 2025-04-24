@@ -106,14 +106,14 @@ class SciArm(Arm):
 
         r_2 = r2*cos(theta2)
         z_2 = r2*sin(theta2) + d1
-        # print('r_2:', r_2, 'z_2:', z_2)
+        print('r_2:', r_2, 'z_2:', z_2)
         h4 = sqrt((r-r_2)**2 + (z-z_2)**2)
         # print(f'{h4} = sqrt(({r}-{r_2})**2 + ({z}-{z_2}**2))')
         cosTheta4Numerator = h4**2 - r3**2 - link4Hyp**2
         cosTheta4 = cosTheta4Numerator/(2*r3*link4Hyp)
         theta4 = atan2(sqrt(1 - cosTheta4**2), cosTheta4)
 
-        self.goalAngles = [theta1, theta2, theta3, theta4]
+        self.goalAngles = [theta1, theta2, theta3, -theta4]
         return True
 
 
