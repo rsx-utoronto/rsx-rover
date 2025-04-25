@@ -18,6 +18,11 @@ class ArmSciNode():
                    [0,    0, 195, 0],
                    [0,    0, 67, 0],
                    [92,   0, 0, 0]]
+        offsets = [0,
+                    -atan2(112.99, 348.08), 
+                    atan2(161, 110.7) + atan2(112.99, 348.08),
+                    (atan2(92, 67) + atan2(110.75, 161)),
+                    0]
 
         self.BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SHARE", "OPTIONS", "PLAY_STATION", "L3", 
                              "R3", "UP", "DOWN", "LEFT", "RIGHT"]
@@ -25,7 +30,7 @@ class ArmSciNode():
                                "R2": False, "SHARE": False, "OPTIONS": False, "PLAY_STATION": False, "L3": False, "R3": False,"UP": False, 
                                "DOWN": False, "LEFT": False, "RIGHT": False} 
 
-        self.arm = SciArm(5, dhTable)
+        self.arm = SciArm(5, dhTable, offsets)
 
         rospy.init_node("arm_sci")
         self.rate = rospy.Rate(30)
@@ -163,19 +168,17 @@ class ArmSciNode():
                 if buttonPressed["L1"] and buttonPressed["R1"]:
                     self.handle_sampling_sequence()
 
-                if buttonPressed["TRIANGLE"]:
+                if buttonPressed["TRIANGLE"] == 2:
                     self.arm.iterateMode()
                     print(self.arm.curMode)
 
                 if self.armState == "IK" and self.arm.getCurMode() == "Cyl":
                     self.arm.controlTarget(buttonPressed, joystickStatus)
                     status = self.arm.inverseKinematics()
-                    goalAngles = rad2deg(self.arm.getGoalAngles())
+                    goalAngles = rad2deg(self.arm.getOffsetGoalAngles())
                     rospy.loginfo(status)
-                    # rospy.loginfo(self.arm.cylTarget)
-
-                    goalAngles.append(0) # end effector
-
+                    rospy.loginfo(self.arm.cylTarget)
+                    rospy.loginfo(goalAngles)
                     goalTopicData = Float32MultiArray()
                     goalTopicData.data = goalAngles
                     self.goalPub.publish(goalTopicData)

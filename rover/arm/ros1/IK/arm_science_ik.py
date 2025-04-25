@@ -12,10 +12,7 @@ class SciArm(Arm):
     def __init__(self, numJoints:int, dhTable, offsets):
         super().__init__(numJoints, dhTable, offsets)
         self.modes = ["Forward", "Cyl"]
-        # self.cylTarget = [0, 161+67, 80+348+110, 0] # [theta, r, z, alpha]
-
-
-        self.cylTarget = [0, 0, 0, 0] # [theta, r, z, alpha]
+        self.cylTarget = [0, 550, 10.3, 0.941354, 0] # [theta, r, z, alpha, EE]
 
     def move_to_position(self, position_name):
         # Move the arm to a specific position
@@ -44,13 +41,18 @@ class SciArm(Arm):
     def controlTarget(self, isButtonPressed, joystickStatus):
         if self.curMode == "Cyl":
             self.cylTarget[0] += joystickStatus["L-Right"]*self.CONTROL_SPEED # theta
-            self.cylTarget[1] += joystickStatus["L-Down"]*self.CONTROL_SPEED
+            self.cylTarget[1] += joystickStatus["L-Down"]*self.CONTROL_SPEED*500
             self.cylTarget[3] += joystickStatus["R-Down"]*self.CONTROL_SPEED
 
             if isButtonPressed["R2"]:
                 self.cylTarget[2] += self.CONTROL_SPEED*500
             if isButtonPressed["L2"]:
                 self.cylTarget[2] -= self.CONTROL_SPEED*500
+            if isButtonPressed["X"]:
+                self.cylTarget[4] += self.CONTROL_SPEED*500
+            if isButtonPressed["SQUARE"]:
+                self.cylTarget[4] -= self.CONTROL_SPEED*500
+
 
     def forwardKinematics(self):
         super().forwardKinematics()
@@ -87,8 +89,8 @@ class SciArm(Arm):
 
         r_w = r - link4Hyp*cos(alpha)
         s = z  + link4Hyp*sin(alpha)
-        print(f'{r_w} = {r} - {link4Hyp*cos(alpha)}')
-        print(f'{s} = {z} + {link4Hyp*sin(alpha)}')
+        # print(f'{r_w} = {r} - {link4Hyp*cos(alpha)}')
+        # print(f'{s} = {z} + {link4Hyp*sin(alpha)}')
 
         # r_w = r
         # s = z
@@ -99,21 +101,21 @@ class SciArm(Arm):
         if abs(cosTheta3) > 1:
             return False 
 
-        theta3 = atan2(sqrt(1 - cosTheta3**2), cosTheta3) 
+        theta3 = atan2(-sqrt(1 - cosTheta3**2), cosTheta3) 
 
         innerAngle = atan2(r3*sin(theta3), r2 + r3*cos(theta3))
         theta2 = atan2(s - d1, r_w) - innerAngle
 
         r_2 = r2*cos(theta2)
         z_2 = r2*sin(theta2) + d1
-        print('r_2:', r_2, 'z_2:', z_2)
+        # print('r_2:', r_2, 'z_2:', z_2)
         h4 = sqrt((r-r_2)**2 + (z-z_2)**2)
         # print(f'{h4} = sqrt(({r}-{r_2})**2 + ({z}-{z_2}**2))')
         cosTheta4Numerator = h4**2 - r3**2 - link4Hyp**2
         cosTheta4 = cosTheta4Numerator/(2*r3*link4Hyp)
-        theta4 = atan2(sqrt(1 - cosTheta4**2), cosTheta4)
+        theta4 = -atan2(sqrt(1 - cosTheta4**2), cosTheta4)
 
-        self.goalAngles = [theta1, theta2, theta3, -theta4]
+        self.goalAngles = [theta1, theta2, theta3, theta4, self.cylTarget[4]]
         return True
 
 

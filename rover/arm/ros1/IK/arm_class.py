@@ -94,6 +94,9 @@ class Arm():
     def controlTarget(self, isButtonPressed, joystickStatus):
         pass
 
+    def controlEndEffector(self, goalPos):
+        pass
+
     def setCurAngles(self, angles:np.ndarray):
         self.curAngles = angles
 

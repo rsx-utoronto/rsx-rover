@@ -14,11 +14,10 @@ offsets = [0,
            0]
 
 arm = SciArm(5, dhTable, offsets)
-arm.setTarget([0 , 550, -12.3, 0.941354])
+arm.setTarget([0 , 550, 10.3, 0.941354, 5])
 status = arm.inverseKinematics()
 print(status)
 goalAngles = arm.getGoalAngles()
-goalAngles.append(0)
 print(arm.getOffsetGoalAngles())
 print(goalAngles, type(goalAngles), "\n")
 
@@ -34,4 +33,4 @@ print(forwardKin)
 arm.setCurAngles([0, 0, 0, 0, 0])
 arm.forwardKinematics()
 forwardKin = np.round(arm.calculateTransformToLink(5), 2)
-print(forwardKin)
+# print(forwardKin)
