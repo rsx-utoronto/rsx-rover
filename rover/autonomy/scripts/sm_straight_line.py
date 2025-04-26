@@ -19,7 +19,7 @@ class StraightLineApproach:
         self.heading = 0
         self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        self.drive_publisher = rospy.Publisher('drive', Twist, queue_size=10)
+        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
 
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
@@ -68,7 +68,7 @@ class StraightLineApproach:
     def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISHIT)
         rate = rospy.Rate(50)
         kp = 0.5
-        threshold = 0.5
+        threshold = 0.2
 
         while not rospy.is_shutdown():
             msg = Twist()
@@ -77,14 +77,17 @@ class StraightLineApproach:
 
             target_heading = math.atan2(target_y - self.y, target_x - self.x)
             target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
+            print("Target Heading:", math.degrees(target_heading), "Cur Heading:", math.degrees(self.heading))
             angle_diff = target_heading - self.heading
-            print (f"target heading: {target_heading}", f"target_distance: {target_distance}")
+            
             # print ( f"angle_diff: {angle_diff}")
 
             if angle_diff > math.pi:
                 angle_diff -= 2 * math.pi
             elif angle_diff < -math.pi:
                 angle_diff += 2 * math.pi
+                
+            # print (f"diff in heading: {angle_diff}", f"target_distance: {target_distance}")
 
             if target_distance < threshold:
                 msg.linear.x = 0

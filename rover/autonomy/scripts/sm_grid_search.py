@@ -13,7 +13,7 @@ import sm_straight_line as StraightLineApproach
 
 
 class GS_Traversal:
-    def __init__(self, lin_vel, ang_vel, targets):
+    def __init__(self, lin_vel, ang_vel, targets, state):
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
         self.targets = targets
@@ -21,13 +21,14 @@ class GS_Traversal:
         self.x = 0
         self.y = 0
         self.heading = 0
+        self.state = state
 
         # modified code: add dictionary to manage detection flags for multiple objects
-        self.found_objects = {
-            "aruco_detected": False,
-            "mallet_detected": False,
-            "waterbottle_detected": False,
-        }
+        self.found_objects = {"AR1":False, 
+                   "AR2":False,
+                   "AR3":False,
+                   "OBJ1":False,
+                   "OBJ2":False}
         
         # self.odom_subscriber = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
@@ -37,7 +38,7 @@ class GS_Traversal:
         #new additions
         self.aruco_found = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
         self.mallet_found = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
-        self.waterbottle_found = rospy.Subscriber('waterbottle_detected', callback=self.waterbottle_detection_callback)
+        self.waterbottle_found = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
 
         # self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         
@@ -77,15 +78,15 @@ class GS_Traversal:
     
     def aruco_detection_callback(self, data):
         self.aruco_found = data.data
-        self.found_objects["aruco_detected"] = True
+        self.found_objects[self.state] = True
     
     def mallet_detection_callback(self, data):
         self.mallet_found = data.data
-        self.found_objects["mallet_detected"] = True
+        self.found_objects[self.state] = True
 
     def waterbottle_detection_callback(self, data):
         self.waterbottle_found = data.data
-        self.found_objects["waterbottle_detected"] = True
+        self.found_objects[self.state] = True
 
     def move_to_target(self, target_x, target_y, state): #navigate needs to take in a state value as well (FINISHIT)
         rate = rospy.Rate(50)
@@ -168,16 +169,17 @@ class GS_Traversal:
             self.drive_publisher.publish(msg)
             rate.sleep()
 
-    def navigate(self, state="Location Selection"): #navigate needs to take in a state value as well, default value is Location Selection
+    def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
+        
         for target_x, target_y in self.targets:
-            if self.found_objects[state]: #should be one of aruco, mallet, waterbottle
-                print(f"Object detected during navigation: {state}")
+            if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
+                print(f"Object detected during navigation: {self.state}")
                 return True
-            self.move_to_target(target_x, target_y) #changed from navigate_to_target
+            self.move_to_target(target_x, target_y, self.state) #changed from navigate_to_target
 
             rospy.sleep(1)
 
-        if self.found_objects[state]:
+        if self.found_objects[self.state]:
             return True
         return False #Signalling that grid search has been done
 

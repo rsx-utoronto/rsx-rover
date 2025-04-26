@@ -130,7 +130,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
 
         rospy.Subscriber("/long_lat_goal_array", Float32MultiArray, self.glob_msg.coord_callback) #Subcribes to the gui location publisher
         while (self.glob_msg.locations is None and rospy.is_shutdown() == False): #Waits for all GPS locations to be received
-            time.sleep(1)
+            time.sleep(10)
             self.glob_msg.pub_state("Waiting for GPS coordinates")
 
         cartesian_path = self.glob_msg.locations
@@ -143,10 +143,11 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
             distance = functions.getDistanceBetweenGPSCoordinates((self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1]), (self.glob_msg.locations[el][0], self.glob_msg.locations[el][1]))
             theta = functions.getHeadingBetweenGPSCoordinates(self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1], self.glob_msg.locations[el][0], self.glob_msg.locations[el][1])
             # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
-            x = -distance * math.sin(theta)
+            x = distance * math.sin(theta)
             y = distance * math.cos(theta)
 
             cartesian[el] = (x,y) 
+            self.glob_msg.pub_state(str(cartesian[el]))
         
         print("Before CARTESIAN", cartesian)
         cartesian_dict = {}
@@ -191,13 +192,14 @@ class LocationSelection(smach.State): #State for determining which mission/state
             try:
                 print ("in the try")
                 self.glob_msg.pub_state(f"Navigating to {list(path.items())[0][0]}") 
+                self.glob_msg.pub_state(f"Navigating to {self.glob_msg.cartesian[list(path.items())[0][0]]}") 
                 target = path[list(path.items())[0][0]]
                 print(target)
-                sla = StraightLineApproach(0.6, 0.3, [target]) 
+                sla = StraightLineApproach(1.8, 0.6, [target]) 
                 sla.navigate() #navigating to the next mission on our optimal path
             except rospy.ROSInterruptException:
                 pass
-            return path[0]
+            return list(path.items())[0][0]
         else: #all mission have been done
             return "Tasks Ended"  
 
@@ -293,12 +295,12 @@ class AR1(smach.State): #State for AR1
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs = sm_grid_search.GridSearch(10, 10, 1, userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
             targets = gs.square_target() #Generates multiple points for grid search
-            gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets) #Starts grid search traversal
+            gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets, "AR1") #Starts grid search traversal
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback) #Subscribes to aruco found to determine whether its found or not
-            aruco_found = self.aruco_found
-            ar_in_correct_loc = gs_traversal_object.navigate("AR1") #publishing messages?
+            self.glob_msg.pub_state("Starting A1 grid search")
+            ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
             
-            if aruco_found:
+            if self.aruco_found:
                 self.glob_msg.pub_state("Grid Search did find AR1") #Will publish the messages afterwards but there are topics to publish when detected 
                 if ar_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to AR1") 
@@ -347,12 +349,11 @@ class AR2(smach.State):
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs = sm_grid_search.GridSearch(10, 10, 1, userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
             targets = gs.square_target() #generates multiple targets 
-            gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets)
+            gs_traversal_object = sm_grid_search.GS_Traversal(1.5, 0.6, targets, "AR2")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
-            aruco_found = self.aruco_found
-            ar_in_correct_loc = gs_traversal_object.navigate("AR2") #publishing messages?
+            ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
             
-            if aruco_found:
+            if self.aruco_found:
                 self.glob_msg.pub_state("Grid Search did find AR2") #Will publish the messages afterwards but there are topics to publish when detected 
                 if ar_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to AR2") 
@@ -400,12 +401,11 @@ class AR3(smach.State):
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs = sm_grid_search.GridSearch(10, 10, 1, userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
             targets = gs.square_target() #generates multiple targets 
-            gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets)
+            gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets, "AR3")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
-            aruco_found = self.aruco_found
-            ar_in_correct_loc = gs_traversal_object.navigate("AR3") #publishing messages?
+            ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
             
-            if aruco_found:
+            if self.aruco_found:
                 self.glob_msg.pub_state("Grid Search did find AR3") #Will publish the messages afterwards but there are topics to publish when detected 
                 if ar_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to AR3") 
@@ -456,17 +456,16 @@ class OBJ1(smach.State): #mallet
             # rospy.init_node('object1_detector', anonymous=True) 
             gs = sm_grid_search.GridSearch(5, 5, 3, userdata.rem_loc_dict["OBJ1"][0], userdata.rem_loc_dict["OBJ1"][1])  # define multiple target points here: cartesian
             targets = gs.square_target()
-            gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets)
+            gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets, "OBJ1")
             rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
-            mallet_detected = self.waterbottle_found
-            waterbottle_detected = self.waterbottle_found
-            obj1_in_correct_loc = gs_traversal_object.navigate("OBJ1") #publishing messages?
 
-            if mallet_detected or waterbottle_detected:
-                if mallet_detected:
+            obj1_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+
+            if self.mallet_detected or self.waterbottle_detected:
+                if self.mallet_detected:
                     self.glob_msg.pub_state("Grid Search did find Mallet")
-                elif waterbottle_detected:
+                elif self.waterbottle_detected:
                     self.glob_msg.pub_state("Grid Search did find Waterbottle")
                 if obj1_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to Object1") 
@@ -515,17 +514,16 @@ class OBJ2(smach.State): #waterbottle
             # rospy.init_node('object1_detector', anonymous=True) 
             gs = sm_grid_search.GridSearch(5, 5, 3, userdata.rem_loc_dict["OBJ2"][0], userdata.rem_loc_dict["OBJ2"][1])  # define multiple target points here: cartesian
             targets = gs.square_target()
-            gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets)
+            gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets, "OBJ2")
             rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
-            mallet_detected = self.mallet_found
-            waterbottle_detected = self.waterbottle_found
-            obj1_in_correct_loc = gs_traversal_object.navigate("OBJ2") #publishing messages?
 
-            if mallet_detected or waterbottle_detected:
-                if mallet_detected:
+            obj1_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+
+            if self.mallet_detected or self.waterbottle_detected:
+                if self.mallet_detected:
                     self.glob_msg.pub_state("Grid Search did find Mallet")
-                elif waterbottle_detected:
+                elif self.waterbottle_detected:
                     self.glob_msg.pub_state("Grid Search did find Waterbottle")
                 if obj1_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to Object1") 
