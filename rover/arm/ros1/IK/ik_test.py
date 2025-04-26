@@ -13,8 +13,10 @@ offsets = [0,
            (atan2(92, 67) + atan2(110.75, 161)),
            0]
 
-arm = SciArm(5, dhTable, offsets)
-arm.setTarget([0 , 550, 10.3, 0.941354, 5])
+angleOrientation = [1, 1, 1, 1, 1]
+
+arm = SciArm(5, dhTable, offsets, angleOrientation)
+arm.setTarget([0 , 629, -12.3, 0.941354, 5])
 status = arm.inverseKinematics()
 print(status)
 goalAngles = arm.getGoalAngles()
@@ -27,8 +29,10 @@ print(goalAngles, type(goalAngles), "\n")
 goalAngles[3] = goalAngles[3] + 0.941354
 arm.setCurAngles(goalAngles)
 arm.forwardKinematics()
-forwardKin = np.round(arm.calculateTransformToLink(5), 2)
+forwardKin = np.round(arm.calculateTransformToLink(3), 2)
 print(forwardKin)
+print(arm.calculateRotationAngles(forwardKin))
+print(arm.cylTarget)
 # print(np.round(arm.getDHTable(), 2))
 arm.setCurAngles([0, 0, 0, 0, 0])
 arm.forwardKinematics()

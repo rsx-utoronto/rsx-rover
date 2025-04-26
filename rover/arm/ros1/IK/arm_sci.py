@@ -23,6 +23,7 @@ class ArmSciNode():
                     atan2(161, 110.7) + atan2(112.99, 348.08),
                     (atan2(92, 67) + atan2(110.75, 161)),
                     0]
+        angleOrientation = [1, 1, 1, 1, 1]
 
         self.BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SHARE", "OPTIONS", "PLAY_STATION", "L3", 
                              "R3", "UP", "DOWN", "LEFT", "RIGHT"]
@@ -30,7 +31,7 @@ class ArmSciNode():
                                "R2": False, "SHARE": False, "OPTIONS": False, "PLAY_STATION": False, "L3": False, "R3": False,"UP": False, 
                                "DOWN": False, "LEFT": False, "RIGHT": False} 
 
-        self.arm = SciArm(5, dhTable, offsets)
+        self.arm = SciArm(5, dhTable, offsets, angleOrientation)
 
         rospy.init_node("arm_sci")
         self.rate = rospy.Rate(30)
@@ -176,15 +177,20 @@ class ArmSciNode():
                     self.arm.controlTarget(buttonPressed, joystickStatus)
                     status = self.arm.inverseKinematics()
                     goalAngles = rad2deg(self.arm.getOffsetGoalAngles())
-                    rospy.loginfo(status)
-                    rospy.loginfo(self.arm.cylTarget)
-                    rospy.loginfo(goalAngles)
+
+                    goalTopicData = Float32MultiArray()
+                    goalTopicData.data = goalAngles
+                    self.goalPub.publish(goalTopicData)
+                elif self.armState == "IK" and self.arm.getCurMode() == "Forward":
+                    self.arm.activeForwardKinematics(buttonPressed, joystickStatus)
+                    goalAngles = rad2deg(self.arm.getOffsetGoalAngles())
+
                     goalTopicData = Float32MultiArray()
                     goalTopicData.data = goalAngles
                     self.goalPub.publish(goalTopicData)
             
             if self.armState != "IK":
-                self.arm.forwardKinematics()
+                self.arm.passiveForwardKinematics()
 
             # rospy.loginfo(self.arm.cylTarget)
             self.rate.sleep()

@@ -1,6 +1,7 @@
 import numpy as np
-from math import pi, atan2, sin, cos, sqrt, acos
+from math import pi, atan2, sin, cos, sqrt, acos, asin
 from arm_class import Arm
+from copy import deepcopy
 
 class KinematicsMode():
     def __init__(self, name, kinCalcCallback, targetUpdateCallback):
@@ -9,10 +10,11 @@ class KinematicsMode():
         self.targetUpdateCallback = targetUpdateCallback
 
 class SciArm(Arm):
-    def __init__(self, numJoints:int, dhTable, offsets):
-        super().__init__(numJoints, dhTable, offsets)
+    def __init__(self, numJoints:int, dhTable, offsets, angleOrientation):
+        super().__init__(numJoints, dhTable, offsets, angleOrientation)
         self.modes = ["Forward", "Cyl"]
         self.cylTarget = [0, 550, 10.3, 0.941354, 0] # [theta, r, z, alpha, EE]
+        self.prevTarget = [0, 550, 10.3, 0.941354, 0] # [theta, r, z, alpha, EE]
 
     def move_to_position(self, position_name):
         # Move the arm to a specific position
@@ -41,7 +43,7 @@ class SciArm(Arm):
     def controlTarget(self, isButtonPressed, joystickStatus):
         if self.curMode == "Cyl":
             self.cylTarget[0] += joystickStatus["L-Right"]*self.CONTROL_SPEED # theta
-            self.cylTarget[1] += joystickStatus["L-Down"]*self.CONTROL_SPEED*500
+            self.cylTarget[1] -= joystickStatus["L-Down"]*self.CONTROL_SPEED*500
             self.cylTarget[3] += joystickStatus["R-Down"]*self.CONTROL_SPEED
 
             if isButtonPressed["R2"]:
@@ -53,9 +55,44 @@ class SciArm(Arm):
             if isButtonPressed["SQUARE"]:
                 self.cylTarget[4] -= self.CONTROL_SPEED*500
 
-
     def forwardKinematics(self):
-        super().forwardKinematics()
+        r4 = self.dhTable[3][2]
+        d5 = self.dhTable[4][0]
+        link4Hyp = sqrt(r4**2 + d5**2)
+        self.cylTarget[0] = self.goalAngles[0]
+
+        forwardKin = self.calculateTransformToLink(5)
+        print(forwardKin)
+        x = forwardKin[0, 3]
+        y = forwardKin[1, 3]
+        z = forwardKin[2, 3]
+        self.cylTarget[2] = z
+        self.cylTarget[1] = sqrt(x**2 + y**2)
+        s = self.calculateTransformToLink(3)[2, 3]
+        self.cylTarget[3] = asin((s - z)/link4Hyp)
+        print(self.cylTarget)
+
+    def activeForwardKinematics(self, isButtonPressed, joystickStatus):
+        self.goalAngles[0] += joystickStatus["L-Right"]*self.CONTROL_SPEED # theta
+        self.goalAngles[1] -= joystickStatus["L-Down"]*self.CONTROL_SPEED
+        self.goalAngles[2] += joystickStatus["R-Down"]*self.CONTROL_SPEED
+
+        if isButtonPressed["R2"]:
+            self.goalAngles[3] += self.CONTROL_SPEED
+        if isButtonPressed["L2"]:
+            self.goalAngles[3] -= self.CONTROL_SPEED
+
+        if isButtonPressed["X"]:
+            self.goalAngles[4] += self.CONTROL_SPEED
+        if isButtonPressed["SQUARE"]:
+            self.goalAngles[4] -= self.CONTROL_SPEED
+
+        # self.forwardKinematics() 
+
+    def passiveForwardKinematics(self):
+        # self.goalAngles = deepcopy(self.curAngles)
+        # self.forwardKinematics()
+        pass
 
     def inverseKinematics(self) -> bool:
         ''' Inverse
@@ -99,6 +136,8 @@ class SciArm(Arm):
         # print(f'cosTheta3Numerator = {r_w**2} + {(s - d1)**2} - {r2**2} - {r3**2}')
         cosTheta3 = cosTheta3Numerator/(2*r2*r3)
         if abs(cosTheta3) > 1:
+            self.cylTarget = deepcopy(self.prevTarget)
+            self.goalAngles = self.prevGoalAngles
             return False 
 
         theta3 = atan2(-sqrt(1 - cosTheta3**2), cosTheta3) 
@@ -115,6 +154,8 @@ class SciArm(Arm):
         cosTheta4 = cosTheta4Numerator/(2*r3*link4Hyp)
         theta4 = -atan2(sqrt(1 - cosTheta4**2), cosTheta4)
 
+        self.prevTarget = deepcopy(self.cylTarget)
+        self.prevGoalAngles = self.getGoalAngles() 
         self.goalAngles = [theta1, theta2, theta3, theta4, self.cylTarget[4]]
         return True
 

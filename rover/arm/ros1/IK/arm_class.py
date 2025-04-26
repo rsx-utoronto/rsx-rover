@@ -3,7 +3,7 @@ from math import sin, cos, atan2, sqrt
 from copy import deepcopy
 
 class Arm():
-    def __init__(self, numJoints:int, dhTable, offsets):
+    def __init__(self, numJoints:int, dhTable, offsets, angleOrientation):
         ''' Object That represents a robot arm config with common functions
 
         Parameters
@@ -18,6 +18,7 @@ class Arm():
         self.numJoints:int = numJoints
         self.curAngles = [0]*numJoints
         self.goalAngles = [0]*numJoints 
+        self.prevGoalAngles = [0]*numJoints
 
         if len(dhTable) != numJoints:
             print("The number of joints in the DH table is less than the value specified!")
@@ -29,7 +30,13 @@ class Arm():
             raise TypeError
         self.offsets = offsets
 
+        if len(angleOrientation) != numJoints:
+            print("The number of joints in the offsets list is less than the value specified!")
+            raise TypeError
+        self.angleOrientation = angleOrientation
+
         self.target = [0]*6 # [x, y, z, roll , pitch, yaw]
+        self.prevTarget = [0]*6 # [x, y, z, roll , pitch, yaw]
         self.modes = ["Forward"]
         self.curMode = self.modes[0] # makes this a data structure function callback
         self.numModes = len(self.modes)
@@ -110,7 +117,7 @@ class Arm():
             offsetAngles[i] = angles[i] + self.offsets[i]
         return deepcopy(offsetAngles) 
 
-    def calculateRotationAngles(transformationMatrix):
+    def calculateRotationAngles(self, transformationMatrix):
         ''' Returns the roll, pitch, and yaw angles of a transformation matrix
 
         The function will also work with a rotation matrix since it is embeded within 
@@ -202,6 +209,8 @@ class Arm():
             the multiplied matrix
         '''
         dhTable = self.getDHTable() 
+        # dhTable[3, 1] += atan2(92,67) 
+        # print(dhTable)
         transformToLink = np.eye(4)
 
         for i in range(0, linkNumber):
@@ -214,6 +223,12 @@ class Arm():
         self.goalAngles = self.curAngles
         # self.updateDHTable(self.curAngles)
         # print(self.goalAngles)
+
+    def activeForwardKinematics(self):
+        pass
+
+    def passiveForwardKinematics(self):
+        pass
 
     def inverseKinematics(self, dhTable, target):
         ''' Defined in each arm class
