@@ -6,6 +6,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Imu
 import math
+import time
 
 class HeadingFilter:
     def __init__(self):
@@ -13,14 +14,19 @@ class HeadingFilter:
         self.imu_sub = rospy.Subscriber('/imu/orient', Imu, self.imu_callback)
         self.heading_pub = rospy.Publisher('/fused_heading', Imu, queue_size=1)
         self.orientation = Quaternion()
+        self.orientation_covariance = [0] * 9
         self.imu = Imu()
         self.gnss_fix = False
         self.accuracy_2d = 1000000
-        self.accuracy_3d = 1000000
+        # self.accuracy_3d = 1000000
         self.mag_declination = rospy.get_param('~magnetic_declination_radians')
+        self.armlength = rospy.get_param('~armlength')
     
     def gnss_callback(self, data):
         self.orientation.set_heading_to_quaternion(self.orientation.quaternion_to_heading(data.pose.orientation) + self.mag_declination)
+        self.orientation_covariance[0] = 1000000
+        self.orientation_covariance[4] = 1000000
+        self.orientation_covariance[8] = (math.atan2(self.accuracy_2d, self.armlength)) ** 2
         self.accuracy_2d = data.pose.position.z
         # print('received gnss heading:', data.heading, data.valid_fix)
 
@@ -30,11 +36,12 @@ class HeadingFilter:
 
     def publish_heading(self):
         # if self.gnss_fix: 
-        if self.accuracy_2d < 1:
+        if self.accuracy_2d < self.armlength:
             self.imu.orientation.x = self.orientation.x
             self.imu.orientation.y = self.orientation.y
             self.imu.orientation.z = self.orientation.z
             self.imu.orientation.w = self.orientation.w
+            self.imu.orientation_covariance = self.orientation_covariance
         self.heading_pub.publish(self.imu)
 
 class Quaternion:
@@ -69,9 +76,10 @@ class Quaternion:
     
 if __name__ == '__main__':
     rospy.init_node('heading_filter')
-    rate = rospy.Rate(10)
+    # rate = rospy.Rate(10)
     heading_filter = HeadingFilter()
     while not rospy.is_shutdown():
         heading_filter.publish_heading()
-        rate.sleep()
-        # print('published heading:', heading_filter.imu.orientation)
+        time.sleep(0.1)
+        # rospy.loginfo('published heading:', heading_filter.imu.orientation)
+        # rate.sleep()
