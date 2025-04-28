@@ -156,7 +156,7 @@ def runNewDesiredJointState(jointPublisherData, angles):
     newJointState = JointState()
     newJointState.header = Header()
     newJointState.header.stamp = rospy.Time.now()
-    newJointState.name = ["Joint_1", "Joint_2", "Joint_3", "Joint_4", "Joint_5", "Joint_6"]
+    newJointState.name = ["joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6", "finger_joint_1", "finger_joint_2", "camera_joint"]
     # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
     newJointState.position = angles
     jointPublisherData.publish(newJointState)  # send data to be published
@@ -172,8 +172,9 @@ def runNewRealJointState(jointPublisherData, angles):
     newJointState = JointState()
     newJointState.header = Header()
     newJointState.header.stamp = rospy.Time.now()
-    newJointState.name = ["Real_Joint_1", "Real_Joint_2", "Real_Joint_3", "Real_Joint_4", "Real_Joint_5", 
-                          "Real_Joint_6", "Real_Joint_7", "Real_Joint_8", "Real_Joint_9"]
+    newJointState.name = ["real_joint_1", "real_joint_2", "real_joint_3", "real_joint_4", 
+                          "real_joint_5", "real_joint_6", "real_finger_joint_1", "real_finger_joint_2", 
+                          "real_camera_joint"]
     # Angles in radians [Joint_1, Joint_2, ....], re-run this script and change the values to see it work.
     newJointState.position = angles
     jointPublisherData.publish(newJointState)  # send data to be published
@@ -221,8 +222,8 @@ class ArmVisualizationNode():
     def __init__(self):
         rospy.init_node("arm_viz")
 
-        self.liveArmAngles = [0, 0, 0, 0, 0, 0]
-        self.savedCanAngles = [0, 0, 0, 0, 0, 0]
+        self.liveArmAngles = [0, 0, 0, 0, 0, 0, 0]
+        self.savedCanAngles = [0, 0, 0, 0, 0, 0, 0]
 
         self.curMode = "Idle"
         self.gazebo_on =  rospy.get_param("/gazebo_on")
@@ -280,13 +281,15 @@ class ArmVisualizationNode():
         tempAngles[0] = -tempAngles[0]
         tempAngles[1] = tempAngles[1]
         tempAngles[5] = tempAngles[5]
-
+            
         if self.gazebo_on:
             tempAngles.append(0)
             tempAngles.append(0)
             tempAngles.append(0)
             moveInGazebo(self.gazeboPublisher, tempAngles)
         else:
+            tempAngles.append(tempAngles[6])
+            tempAngles.append(0)
             runNewDesiredJointState(self.jointPublisher, tempAngles)
 
     def displayArmLivePos(self, data):
@@ -315,6 +318,9 @@ class ArmVisualizationNode():
             tempAngles = list(subtract(array(tempList), array(self.savedCanAngles)))
 
             self.liveArmAngles = deepcopy(tempAngles)
+
+            tempAngles.append(tempAngles[6])
+            tempAngles.append(0)
 
             runNewRealJointState(self.jointPublisher, tempAngles)
 if __name__ == "__main__":  # if used rosrun on this script then ...

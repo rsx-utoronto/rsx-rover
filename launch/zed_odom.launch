@@ -3,7 +3,7 @@
     <!-- When camera is on science module -->
     <!-- <node pkg="tf" type="static_transform_publisher" name="zed_broadcaster" args="0.63 -0.23 0.82 0 0 0 base_link zed2_base_link 100" /> -->
     <!-- When camera is on front of rover -->
-    <node pkg="tf" type="static_transform_publisher" name="zed_broadcaster" args="0.5 0.0 0.25 0 0 0 base_link zed2_base_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="zed_broadcaster" args="0.33 0.0 0.0 0 0 0 base_link zed2_base_link 100" />
     
     <include file="$(find zed_wrapper)/launch/zed_no_tf.launch"/>
 

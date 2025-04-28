@@ -100,9 +100,15 @@ def main():
 		(39.495907, -79.850414),
 		(39.518943, -79.813609),
 	]
+	# (43.6601930, -79.3965910),
+	# 	(43.6627688, -79.3944725)
+	front_campus = [
+		(43.658313, -79.398170),
+		(43.662854, -79.394138)
+	]
 
 	locations = [
-		neo_mars
+		front_campus
 	]
 
 	internet_map_servers = [MapServers.ARCGIS_World_Imagery]
