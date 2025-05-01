@@ -326,7 +326,31 @@ class LngLatEntryBar(QWidget):
         for item in data:
             print(item)  # Prints each row's values
 
+class LngLatEntryFromFile(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
+        self.array = Float32MultiArray()
+        layout = QVBoxLayout(self)
 
+        self.submit_button = QPushButton("Get Data From File")
+        self.submit_button.clicked.connect(self.collect_data)
+        layout.addWidget(self.submit_button)
+        self.setLayout(layout)
+
+    def collect_data(self):
+        # Read data from the file
+        file_path = Path(__file__).parent.parent.parent.resolve() / "long_lat_goal.csv"
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+
+        # Process each line and publish
+        data = []
+        for line in lines:
+            data.append(list(map(float, line.strip().split(',')[1:3])))
+        self.array.data = data
+        self.longLat_pub.publish(self.array)
+        print("Published Data:", data)
 
 
 class VelocityControl:
@@ -779,6 +803,7 @@ class RoverGUI(QMainWindow):
 
     def setup_lngLat_tab(self):
         self.lngLatEntry = LngLatEntryBar()
+        self.lngLatFile = LngLatEntryFromFile()
         self.stateMachineDialog = StateMachineStatus()
         self.arucoBox = ArucoWidget()
         
@@ -794,6 +819,7 @@ class RoverGUI(QMainWindow):
         # Main layout for the tab
         Lnglat_tab_layout = QVBoxLayout()
         Lnglat_tab_layout.addWidget(self.lngLatEntry)
+        Lnglat_tab_layout.addWidget(self.lngLatFile)
         Lnglat_tab_layout.addWidget(self.stateMachineDialog)
         Lnglat_tab_layout.addWidget(self.arucoGroupBox) 
         
