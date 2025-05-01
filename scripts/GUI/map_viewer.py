@@ -84,22 +84,46 @@ class MapViewer(QWidget):
 		# 	"iconSize": [26, 25],
 		# 	"iconAnchor": [10, 12]
 		# })
+
+		# path = str(Path(__file__).parent.resolve() / "icons/map_icon_start.png")
+		# # print(path)
+		# icon = L.icon(
+		# {
+		# 	'iconUrl': path,
+		# 	'iconSize': [26, 25],
+		# 	'iconAnchor': [10, 12]
+		# })
+
 		self.robot = L.marker(robot_startup_location, {
 			'rotationAngle': 0,
 			'rotationOrigin': '10px 12px'
+			# 'icon': icon
 		})
+		self.robot.bindPopup("Robot")
 		# self.robot.setIcon(self.robot_icon)
 		self.robot.addTo(self.map)
 		self.goal_points = [None] * 8
 
 		coordArray = ["Start", "GNSS 1","GNSS 2", "AR 1", "AR 2", "AR 3", "OBJ 1", "OBJ 2"]
 		for i in range(8):
+			if coordArray[i] == "Start":
+				path = str(Path(__file__).parent.resolve() / "icons/map_icon_start.png")
+			elif coordArray[i] == "GNSS 1" or coordArray[i] == "GNSS 2":
+				path = str(Path(__file__).parent.resolve() / "icons/map_icon_GNSS.png")
+			elif coordArray[i] == "AR 1" or coordArray[i] == "AR 2" or coordArray[i] == "AR 3":
+				path = str(Path(__file__).parent.resolve() / "icons/map_icon_AR.png")		
+			elif coordArray[i] == "OBJ 1" or coordArray[i] == "OBJ 2":
+				path = str(Path(__file__).parent.resolve() / "icons/map_icon_OBJ.png")
+				
 			self.goal_points[i] = L.marker(robot_startup_location, {
 				'rotationAngle': 0,
 				'rotationOrigin': '10px 12px',
 				'title': coordArray[i]
+				# 'icon': icon
 			})
 			self.goal_points[i].addTo(self.map)
+			self.map.runJavaScript('var markerIcon = L.icon({"iconUrl": "' + path + '"});', 0)
+			self.map.runJavaScript(f'{self.goal_points[i].jsName}.setIcon(markerIcon);', 0)
 
 
 		# initialize robot line
