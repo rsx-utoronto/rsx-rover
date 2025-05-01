@@ -347,7 +347,9 @@ class LngLatEntryFromFile(QWidget):
         # Process each line and publish
         data = []
         for line in lines:
-            data.append(list(map(float, line.strip().split(',')[1:3])))
+            t = list(map(float, line.strip().split(',')[1:3]))
+            for i in t:
+                data.append(i)
         self.array.data = data
         self.longLat_pub.publish(self.array)
         print("Published Data:", data)
