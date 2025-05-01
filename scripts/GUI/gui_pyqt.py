@@ -302,7 +302,7 @@ class EditableComboBox(QComboBox):
         return data
 
 class LngLatEntryBar(QWidget):
-    def __init__(self):
+    def __init__(self, map_overlay):
         super().__init__()
         self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
         self.array = Float32MultiArray()
@@ -314,9 +314,13 @@ class LngLatEntryBar(QWidget):
         # Add button to collect data
         self.submit_button = QPushButton("Get Data")
         self.submit_button.clicked.connect(self.collect_data)
+        self.submit_button.clicked.connect(self.plot_points)
         layout.addWidget(self.submit_button)
 
         self.setLayout(layout)
+        self.viewer = map_overlay
+
+        self.viewer.viewer.add_point_layer('gps_points', 'green', 'green', 'yellow')
 
     def collect_data(self):
         data = self.combo.get_all_data()
@@ -326,8 +330,24 @@ class LngLatEntryBar(QWidget):
         for item in data:
             print(item)  # Prints each row's values
 
+    def plot_points(self):
+        data = self.combo.get_all_data()
+        print("Collected Data:")
+        
+        # Create MapPoint objects from the data (pairs of lat, lng values)
+        for i in range(0, len(data), 2):
+            if i + 1 < len(data):  # Ensure we have both lat and lng and they're not zero
+                lat = data[i]
+                lng = data[i+1]
+                # Create a MapPoint with a radius of 5 and a name based on index
+                point_name = f"Point {i//2 + 1}"
+                print(f"{point_name}: {lat}, {lng}")
+                self.viewer.viewer.goal_points[i//2].setLatLng([lat, lng])
+
+        
+
 class LngLatEntryFromFile(QWidget):
-    def __init__(self):
+    def __init__(self, map_overlay):
         super().__init__()
         self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
         self.array = Float32MultiArray()
@@ -335,8 +355,13 @@ class LngLatEntryFromFile(QWidget):
 
         self.submit_button = QPushButton("Get Data From File")
         self.submit_button.clicked.connect(self.collect_data)
+        self.submit_button.clicked.connect(self.plot_points)
         layout.addWidget(self.submit_button)
         self.setLayout(layout)
+
+        self.viewer = map_overlay
+
+        self.viewer.viewer.add_point_layer('gps_points', 'green', 'green', 'yellow')
 
     def collect_data(self):
         # Read data from the file
@@ -354,6 +379,22 @@ class LngLatEntryFromFile(QWidget):
         self.longLat_pub.publish(self.array)
         print("Published Data:", data)
 
+    def plot_points(self):
+        data = self.array.data
+        print("Plotting points from file data")
+        
+        # Create MapPoint objects from the data (pairs of lat, lng values)
+        # map_points = []
+        for i in range(0, len(data), 2):
+            if i + 1 < len(data):  # Ensure we have both lat and lng and they're not zero
+                lat = data[i]
+                lng = data[i+1]
+                # Create a MapPoint with a radius of 5 and a name based on index
+                point_name = f"Point {i//2 + 1}"
+                # map_points.append((lat, lng, 5, point_name))
+                print(f"{point_name}: {lat}, {lng}")
+                self.viewer.viewer.goal_points[i//2].setLatLng([lat, lng])
+           
 
 class VelocityControl:
     def __init__(self):
@@ -804,8 +845,8 @@ class RoverGUI(QMainWindow):
         # self.controlTab.setLayout(control_tab_layout)
 
     def setup_lngLat_tab(self):
-        self.lngLatEntry = LngLatEntryBar()
-        self.lngLatFile = LngLatEntryFromFile()
+        self.lngLatEntry = LngLatEntryBar(self.map_overlay_splitter)
+        self.lngLatFile = LngLatEntryFromFile(self.map_overlay_splitter)
         self.stateMachineDialog = StateMachineStatus()
         self.arucoBox = ArucoWidget()
         

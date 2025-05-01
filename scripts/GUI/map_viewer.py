@@ -90,6 +90,17 @@ class MapViewer(QWidget):
 		})
 		# self.robot.setIcon(self.robot_icon)
 		self.robot.addTo(self.map)
+		self.goal_points = [None] * 8
+
+		coordArray = ["Start", "GNSS 1","GNSS 2", "AR 1", "AR 2", "AR 3", "OBJ 1", "OBJ 2"]
+		for i in range(8):
+			self.goal_points[i] = L.marker(robot_startup_location, {
+				'rotationAngle': 0,
+				'rotationOrigin': '10px 12px',
+				'title': coordArray[i]
+			})
+			self.goal_points[i].addTo(self.map)
+
 
 		# initialize robot line
 		self.last_moved_robot_position = None
