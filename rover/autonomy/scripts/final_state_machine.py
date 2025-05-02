@@ -347,7 +347,7 @@ class AR2(smach.State):
 
             # rospy.init_node('aruco_tag1_detector', anonymous=True)
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
-            gs = sm_grid_search.GridSearch(10, 10, 1, userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
+            gs = sm_grid_search.GridSearch(10, 10, 2, userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
             targets = gs.square_target() #generates multiple targets 
             gs_traversal_object = sm_grid_search.GS_Traversal(1.5, 0.6, targets, "AR2")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
@@ -399,7 +399,7 @@ class AR3(smach.State):
 
             # rospy.init_node('aruco_tag1_detector', anonymous=True)
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
-            gs = sm_grid_search.GridSearch(10, 10, 1, userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
+            gs = sm_grid_search.GridSearch(10, 10, 2, userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
             targets = gs.square_target() #generates multiple targets 
             gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets, "AR3")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
@@ -454,7 +454,7 @@ class OBJ1(smach.State): #mallet
             self.glob_msg.pub_state_name("OBJ1")
 
             # rospy.init_node('object1_detector', anonymous=True) 
-            gs = sm_grid_search.GridSearch(5, 5, 3, userdata.rem_loc_dict["OBJ1"][0], userdata.rem_loc_dict["OBJ1"][1])  # define multiple target points here: cartesian
+            gs = sm_grid_search.GridSearch(20, 20, 1, userdata.rem_loc_dict["OBJ1"][0], userdata.rem_loc_dict["OBJ1"][1])  # define multiple target points here: cartesian
             targets = gs.square_target()
             gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets, "OBJ1")
             rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
@@ -512,7 +512,7 @@ class OBJ2(smach.State): #waterbottle
             self.glob_msg.pub_state_name("OBJ2")
 
             # rospy.init_node('object1_detector', anonymous=True) 
-            gs = sm_grid_search.GridSearch(5, 5, 3, userdata.rem_loc_dict["OBJ2"][0], userdata.rem_loc_dict["OBJ2"][1])  # define multiple target points here: cartesian
+            gs = sm_grid_search.GridSearch(20, 20, 1, userdata.rem_loc_dict["OBJ2"][0], userdata.rem_loc_dict["OBJ2"][1])  # define multiple target points here: cartesian
             targets = gs.square_target()
             gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets, "OBJ2")
             rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
