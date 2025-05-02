@@ -21,6 +21,7 @@ import sm_grid_search
 import ar_detection_node
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Odometry
 
 
 #Example locations
@@ -74,9 +75,11 @@ class GLOB_MSGS:
         self.state_publisher = rospy.Publisher("state", String, queue_size=10) #ask about que size
         self.led_publisher = rospy.Publisher("led_light", String, queue_size = 10)
         self.sub = rospy.Subscriber("pose", PoseStamped, self.pose_callback)
+        self.odom_sub = rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) #Subscribes to the pose topic
         self.gui_loc = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray, self.coord_callback) 
         self.locations = None
         self.cartesian = None
+        self.odom_zero = None
         self.ar_detection_node = ar_detection_node.ARucoTagDetectionNode() #Initializes the AR detection node
         self.object_detector_node = object_subscriber_node.ObjectDetectionNode() #Initializes the Object detection node
         self.led_light = led_light.LedLight() #Initializes class for led light
@@ -87,6 +90,21 @@ class GLOB_MSGS:
 
     def get_pose(self):
         return self.pose
+    
+    def odom_callback(self, data): #Callback function for the odometry subscriber
+        self.odom = data
+        if self.odom_zero is None:
+            self.odom_zero = data.pose.pose.position
+        
+        relative_x = data.pose.pose.position.x - self.odom_zero.x
+        relative_y = data.pose.pose.position.y - self.odom_zero.y
+        relative_z = data.pose.pose.position.z - self.odom_zero.z
+
+        self.current_position = (relative_x, relative_y, relative_z)
+            
+    
+    def get_odom(self):
+        return self.current_position
 
     def coord_callback(self, data): 
         location_data = data 
@@ -159,7 +177,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         
         self.glob_msg.cartesian = cartesian_dict #assigns the cartesian dict to cartesian to make it a global variable 
         
-        gps_to_pose.GPSToPose(self.glob_msg.locations['start'], (0,0), (1.1, 0)) #creates an instance of GPSToPose to start publishing pose
+        #gps_to_pose.GPSToPose(self.glob_msg.locations['start'], (0,0), (1.1, 0)) #creates an instance of GPSToPose to start publishing pose
         
     
     def execute(self, userdata): 
