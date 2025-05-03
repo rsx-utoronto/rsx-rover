@@ -177,7 +177,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         
         self.glob_msg.cartesian = cartesian_dict #assigns the cartesian dict to cartesian to make it a global variable 
         
-        #gps_to_pose.GPSToPose(self.glob_msg.locations['start'], (0,0), (1.1, 0)) #creates an instance of GPSToPose to start publishing pose
+        gps_to_pose.GPSToPose(self.glob_msg.locations['start'], (0,0), (1.1, 0)) #creates an instance of GPSToPose to start publishing pose
         
     
     def execute(self, userdata): 
@@ -319,6 +319,7 @@ class AR1(smach.State): #State for AR1
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
             
             if self.aruco_found:
+                print("in state machine: aruco found")
                 self.glob_msg.pub_state("Grid Search did find AR1") #Will publish the messages afterwards but there are topics to publish when detected 
                 if ar_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to AR1") 
@@ -407,7 +408,7 @@ class AR3(smach.State):
         self.glob_msg.pub_state("Performing AR3 Search")
 
         current_location_data = self.glob_msg.get_pose()
-        current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["AR2"][0])**2 + 
+        current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["AR3"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["AR3"][1])**2)**(1/2)
 
         if current_distance < 5:

@@ -108,6 +108,7 @@ class GS_Traversal:
                    "OBJ2":obj}
         # print("In move to target")
         while not rospy.is_shutdown():
+            print("in grid search: mapping state", mapping[state])
             msg = Twist()
             # print("state", state)
             # print("mapping state", mapping[state])
@@ -145,6 +146,7 @@ class GS_Traversal:
                 # print("angular velocity", msg.angular.z)
 
             else: #if mapping[state] is True --> if the object is found
+                print("mapping state is true!")
                 # call homing
                 # should publish that it is found
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
