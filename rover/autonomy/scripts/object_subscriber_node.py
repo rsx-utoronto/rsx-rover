@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 import rospy
 import cv2
 import time
@@ -12,10 +11,7 @@ import os
 from std_msgs.msg import String
 
 
-# bridge = CvBridge() 
-
 class ObjectDetectionNode():
-
     def __init__(self):
         self.image_topic = "/zed_node/rgb/image_rect_color"
         self.info_topic = "/zed_node/rgb/camera_info"
@@ -39,7 +35,7 @@ class ObjectDetectionNode():
         self.vis_pub = rospy.Publisher('vis/object_detections', Image, queue_size=10)
         self.mallet_found = False
         self.waterbottle_found = False
-
+    
         self.K = None
         self.D = None
         script_dir=os.path.dirname(os.path.abspath(__file__))
@@ -69,41 +65,43 @@ class ObjectDetectionNode():
         self.curr_state = state.data
 
     def detect_objects(self, img):
+        if self.model==None: 
+            print("Model is NULL")
+            
         results = self.model(img)  # Run YOLO detection
-        detections = results.xyxy[0].cpu().numpy()  # Get detections in xyxy format
-
-        for *bbox, conf, cls in detections:
-            cls = int(cls)  # Convert class to integer
-            if cls not in self.class_map:
-                continue  # Skip unrecognized classes
-
-            obj_name = self.class_map[cls]
-            x1, y1, x2, y2 = map(int, bbox)
-            width, height = x2 - x1, y2 - y1
-            area = width * height
-
-            # Publish bounding box
-            bbox_data = Float64MultiArray(data=[x1, y1, x2, y2, area, cls])
-            self.bbox_pub.publish(bbox_data)
-
-            # Draw bounding box and label on image
-            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            label = f"{obj_name} {conf:.2f}"
-            cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-            # Mark objects as found
-            if obj_name == "mallet":
-                self.mallet_found = True
-            elif obj_name == "waterbottle":
-                self.waterbottle_found = True
-
-        # Publish detection status
-        self.mallet_pub.publish(Bool(data=self.mallet_found))
-        self.waterbottle_pub.publish(Bool(data=self.waterbottle_found))
-
-        # Publish visualized image
-        img_msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
-        self.vis_pub.publish(img_msg)
+        for result in results:
+            detections = result.boxes  # This contains the bounding boxes, scores, and class predictions
+            mallet_found = False
+            waterbottle_found = False
+            for box in detections:
+                # Extract bbox coordinates, confidence, and class
+                x1, y1, x2, y2 = map(int, box.xyxy[0])  # Bounding box coordinates
+                conf = box.conf[0]  # Confidence score
+                cls = int(box.cls[0])  # Class index
+                if cls not in self.class_map:
+                    continue  # Skip unrecognized classes
+                obj_name = self.class_map[cls]
+                width, height = x2 - x1, y2 - y1
+                area = width * height
+                # Publish bounding box
+                bbox_data = Float64MultiArray(data=[x1, y1, x2, y1, x1, y2, x2, y2])
+                self.bbox_pub.publish(bbox_data)
+                # Draw bounding box and label on image
+                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                label = f"{obj_name} {conf:.2f}"
+                cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                # Mark objects as found
+                if obj_name == "mallet":
+                    mallet_found = True
+                elif obj_name == "waterbottle":
+                    waterbottle_found = True
+            # Publish detection status
+            self.mallet_pub.publish(Bool(data=mallet_found))
+            self.waterbottle_pub.publish(Bool(data=waterbottle_found))
+            # Publish visualized image
+            img_msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
+            self.vis_pub.publish(img_msg)
+            
 
 
 def main():
