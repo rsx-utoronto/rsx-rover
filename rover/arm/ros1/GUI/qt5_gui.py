@@ -155,10 +155,10 @@ class RobotControlGUI(QWidget):
             (3,-1):"joint3minus",
             (4,1):"joint4plus",
             (4,-1):"joint4minus",
-            (5,1):"joint5plus", # actually joint 6
-            (5,-1):"joint5minus", # actually joint 6
-            (6,-1):"joint6plus",  # actually joint 5
-            (6,1):"joint6minus" # actually joint 5
+            (5,1):"joint5plus",
+            (5,-1):"joint5minus",
+            (6,1):"joint6plus",
+            (6,-1):"joint6minus"
         }
         self.button_is_clicked(command_translator[(joint_index,increment)])
         
