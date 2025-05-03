@@ -153,12 +153,12 @@ class RobotControlGUI(QWidget):
             (2,-1):"joint2minus",
             (3,1):"joint3plus",
             (3,-1):"joint3minus",
-            (4,1):"joint4plus",
-            (4,-1):"joint4minus",
-            (5,1):"joint5plus",
-            (5,-1):"joint5minus",
-            (6,1):"joint6plus",
-            (6,-1):"joint6minus"
+            (4,1):"joint4plus",  # now joint 5
+            (4,-1):"joint4minus",# now joint 5
+            (5,1):"joint5plus",  # now joint 4
+            (5,-1):"joint5minus", # now joint 4
+            (6,1):"joint6plus",   
+            (6,-1):"joint6minus"  
         }
         self.button_is_clicked(command_translator[(joint_index,increment)])
         
@@ -170,7 +170,12 @@ class RobotControlGUI(QWidget):
         """
         # Updates each of the joint values in the GUI
         for joint in range(6):
-            self.joint_displays[joint].setText(str(round(data.data[joint], 1)))
+            if (joint == 4):
+                self.joint_displays[joint].setText(str(round(data.data[5], 1)))
+            elif (joint == 5):
+                self.joint_displays[joint].setText(str(round(data.data[4], 1)))
+            else:
+                self.joint_displays[joint].setText(str(round(data.data[joint], 1)))
 
     # Receive camera feed
     def update_image(self, qt_image):
@@ -356,8 +361,15 @@ class RobotControlGUI(QWidget):
             self.joint_buttons.append(dec_button)
 
             # Connect buttons to functions
-            inc_button.clicked.connect(lambda _, idx=i: self.update_joint_value(idx, 1))
-            dec_button.clicked.connect(lambda _, idx=i: self.update_joint_value(idx, -1))
+            if (i == 5):
+                inc_button.clicked.connect(lambda _, idx=i: self.update_joint_value(4, 1))
+                dec_button.clicked.connect(lambda _, idx=i: self.update_joint_value(4, -1))
+            elif (i == 4):
+                inc_button.clicked.connect(lambda _, idx=i: self.update_joint_value(5, -1))
+                dec_button.clicked.connect(lambda _, idx=i: self.update_joint_value(5, 1))
+            else:
+                inc_button.clicked.connect(lambda _, idx=i: self.update_joint_value(idx, 1))
+                dec_button.clicked.connect(lambda _, idx=i: self.update_joint_value(idx, -1))
 
             # Allow each button to be held and continuously move joint
             inc_button.setAutoRepeat(True)
