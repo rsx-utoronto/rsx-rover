@@ -42,7 +42,7 @@ class Arm():
         self.numModes = len(self.modes)
         self.CONTROL_SPEED = 0.01 
     
-    def updateDHTable(self):
+    def updateDHTable(self, newAngles):
         ''' Updates to the DH Table to have the current joint angles
         
         Update the theta values of the DH table. Will only succesfully run if the
@@ -54,10 +54,9 @@ class Arm():
             list of angles for each joint
 
         '''
-        self.dhTable[:, 1] = self.curAngles
+        self.dhTable[:, 1] = newAngles 
 
     def getDHTable(self):
-        self.updateDHTable()
         return self.dhTable
 
     def iterateMode(self):
@@ -116,6 +115,18 @@ class Arm():
         for i in range(len(angles)): 
             offsetAngles[i] = angles[i] + self.offsets[i]
         return deepcopy(offsetAngles) 
+
+    def removeOffsets(self, angles):
+        correctedAngles = [0]*self.numJoints
+        for i in range(len(angles)):
+            correctedAngles[i] = angles[i] - self.offsets[i]
+        return deepcopy(correctedAngles)
+
+    def correctAngleDirection(self, angles):
+        correctedDirection = [0]*self.numJoints
+        for i in range(len(angles)):
+            correctedDirection[i] = angles[i]*self.angleOrientation[i]
+        return deepcopy(correctedDirection)
 
     def calculateRotationAngles(self, transformationMatrix):
         ''' Returns the roll, pitch, and yaw angles of a transformation matrix

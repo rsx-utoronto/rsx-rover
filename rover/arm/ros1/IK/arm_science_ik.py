@@ -36,6 +36,12 @@ class SciArm(Arm):
             return False
         
         return True 
+
+    def getDHTable(self):
+        adjustedAngles = deepcopy(self.goalAngles)
+        adjustedAngles[3] += atan2(92, 67)
+        self.updateDHTable(adjustedAngles)
+        return super().getDHTable()
             
     def setTarget(self, goalPos):
         self.cylTarget = goalPos
@@ -62,7 +68,7 @@ class SciArm(Arm):
         self.cylTarget[0] = self.goalAngles[0]
 
         forwardKin = self.calculateTransformToLink(5)
-        print(forwardKin)
+        # print(forwardKin)
         x = forwardKin[0, 3]
         y = forwardKin[1, 3]
         z = forwardKin[2, 3]
@@ -70,7 +76,6 @@ class SciArm(Arm):
         self.cylTarget[1] = sqrt(x**2 + y**2)
         s = self.calculateTransformToLink(3)[2, 3]
         self.cylTarget[3] = asin((s - z)/link4Hyp)
-        print(self.cylTarget)
 
     def activeForwardKinematics(self, isButtonPressed, joystickStatus):
         self.goalAngles[0] += joystickStatus["L-Right"]*self.CONTROL_SPEED # theta
@@ -87,7 +92,7 @@ class SciArm(Arm):
         if isButtonPressed["SQUARE"]:
             self.goalAngles[4] -= self.CONTROL_SPEED
 
-        # self.forwardKinematics() 
+        self.forwardKinematics() 
 
     def passiveForwardKinematics(self):
         # self.goalAngles = deepcopy(self.curAngles)

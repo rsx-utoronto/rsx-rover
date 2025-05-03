@@ -13,10 +13,10 @@ class ArmSciNode():
         self.armState = "Idle"
         self.joyInputQueue = Queue()
         self.curAngleQueue = Queue()
-        dhTable = [[79.7, 0, 0, 0],
+        dhTable = [[79.7, 0, 0, pi/2],
                    [0,    0, 367, 0],
                    [0,    0, 195, 0],
-                   [0,    0, 67, 0],
+                   [0,    0, 67, pi/2],
                    [92,   0, 0, 0]]
         offsets = [0,
                     -atan2(112.99, 348.08), 
@@ -32,6 +32,7 @@ class ArmSciNode():
                                "DOWN": False, "LEFT": False, "RIGHT": False} 
 
         self.arm = SciArm(5, dhTable, offsets, angleOrientation)
+        self.sparkMaxOfssets = [0]*len(angleOrientation)
 
         rospy.init_node("arm_sci")
         self.rate = rospy.Rate(30)
@@ -76,7 +77,6 @@ class ArmSciNode():
             rospy.loginfo(message)
         else:
             rospy.logerr(message)
-        
 
     def getJoystickButtonStatus(self, tempButton:list) -> dict: # setting up the buttons
         ''' Gets the Status of the Pressed Buttons on Joystick
@@ -111,6 +111,15 @@ class ArmSciNode():
             buttons[self.BUTTON_NAMES[i]] = button
             
         return buttons
+
+    def removeSparkMaxOffsets(self):
+        pass
+
+    def addSparkMaxOffsets(self):
+        pass
+
+    def storeSparkMaxOffsets(self):
+        pass
 
     # ROS Topic Subscriptions
     def onCurrPosUpdate(self, data:Float32MultiArray):
@@ -171,23 +180,31 @@ class ArmSciNode():
 
                 if buttonPressed["TRIANGLE"] == 2:
                     self.arm.iterateMode()
-                    print(self.arm.curMode)
+                    print(f'------ {self.arm.curMode} ------')
 
                 if self.armState == "IK" and self.arm.getCurMode() == "Cyl":
+                    print(f'Target Enter: {self.arm.cylTarget}')
                     self.arm.controlTarget(buttonPressed, joystickStatus)
+                    print(f'Target Controlled: {self.arm.cylTarget}')
                     status = self.arm.inverseKinematics()
                     goalAngles = rad2deg(self.arm.getOffsetGoalAngles())
+                    print(f'Target After Angles: {self.arm.cylTarget}')
 
                     goalTopicData = Float32MultiArray()
                     goalTopicData.data = goalAngles
                     self.goalPub.publish(goalTopicData)
                 elif self.armState == "IK" and self.arm.getCurMode() == "Forward":
                     self.arm.activeForwardKinematics(buttonPressed, joystickStatus)
+                    # angles offsets?
                     goalAngles = rad2deg(self.arm.getOffsetGoalAngles())
+                    print(f'Forward Target: {self.arm.cylTarget}')
 
                     goalTopicData = Float32MultiArray()
                     goalTopicData.data = goalAngles
                     self.goalPub.publish(goalTopicData)
+                
+                # print(f'Target: {self.arm.cylTarget}')
+                # print(f'Goal Angles: {self.arm.getGoalAngles()}')
             
             if self.armState != "IK":
                 self.arm.passiveForwardKinematics()
