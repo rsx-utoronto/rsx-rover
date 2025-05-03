@@ -112,13 +112,7 @@ class ArmSciNode():
             
         return buttons
 
-    def removeSparkMaxOffsets(self):
-        pass
-
-    def addSparkMaxOffsets(self):
-        pass
-
-    def storeSparkMaxOffsets(self):
+    def publishAngles(self, anglesToPub):
         pass
 
     # ROS Topic Subscriptions
@@ -183,12 +177,9 @@ class ArmSciNode():
                     print(f'------ {self.arm.curMode} ------')
 
                 if self.armState == "IK" and self.arm.getCurMode() == "Cyl":
-                    print(f'Target Enter: {self.arm.cylTarget}')
                     self.arm.controlTarget(buttonPressed, joystickStatus)
-                    print(f'Target Controlled: {self.arm.cylTarget}')
                     status = self.arm.inverseKinematics()
                     goalAngles = rad2deg(self.arm.getOffsetGoalAngles())
-                    print(f'Target After Angles: {self.arm.cylTarget}')
 
                     goalTopicData = Float32MultiArray()
                     goalTopicData.data = goalAngles
@@ -197,17 +188,14 @@ class ArmSciNode():
                     self.arm.activeForwardKinematics(buttonPressed, joystickStatus)
                     # angles offsets?
                     goalAngles = rad2deg(self.arm.getOffsetGoalAngles())
-                    print(f'Forward Target: {self.arm.cylTarget}')
 
                     goalTopicData = Float32MultiArray()
                     goalTopicData.data = goalAngles
                     self.goalPub.publish(goalTopicData)
-                
-                # print(f'Target: {self.arm.cylTarget}')
-                # print(f'Goal Angles: {self.arm.getGoalAngles()}')
             
             if self.armState != "IK":
-                self.arm.passiveForwardKinematics()
+                # self.arm.passiveForwardKinematics()
+                pass
 
             # rospy.loginfo(self.arm.cylTarget)
             self.rate.sleep()

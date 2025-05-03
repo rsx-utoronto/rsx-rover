@@ -15,6 +15,7 @@ class SciArm(Arm):
         self.modes = ["Forward", "Cyl"]
         self.cylTarget = [0, 550, 10.3, 0.941354, 0] # [theta, r, z, alpha, EE]
         self.prevTarget = [0, 550, 10.3, 0.941354, 0] # [theta, r, z, alpha, EE]
+        self.sparkMaxOffsets = [0]*self.numJoints
 
     def move_to_position(self, position_name):
         # Move the arm to a specific position
@@ -61,6 +62,29 @@ class SciArm(Arm):
             if isButtonPressed["SQUARE"]:
                 self.cylTarget[4] -= self.CONTROL_SPEED*500
 
+    def removeSparkMaxOffsets(self, angles):
+        offsetAngles = deepcopy(angles)
+        if len(angles) != self.numJoints:
+            return angles
+        for i in range(self.numJoints):
+            offsetAngles[i] -= self.sparkMaxOffsets[i]
+        return offsetAngles
+
+    def addSparkMaxOffsets(self, angles):
+        offsetAngles = deepcopy(angles)
+        if len(angles) != self.numJoints:
+            return angles
+        for i in range(self.numJoints):
+            offsetAngles[i] += self.sparkMaxOffsets[i]
+        return offsetAngles
+
+    def storeSparkMaxOffsets(self, sparkMaxAngles):
+        if len(sparkMaxAngles) != self.numJoints:
+            return False
+        self.sparkMaxOffsets = sparkMaxAngles
+        self.goalAngles = self.removeSparkMaxOffsets(self.goalAngles)
+        return True
+
     def forwardKinematics(self):
         r4 = self.dhTable[3][2]
         d5 = self.dhTable[4][0]
@@ -95,9 +119,8 @@ class SciArm(Arm):
         self.forwardKinematics() 
 
     def passiveForwardKinematics(self):
-        # self.goalAngles = deepcopy(self.curAngles)
-        # self.forwardKinematics()
-        pass
+        self.goalAngles = deepcopy(self.curAngles)
+        self.forwardKinematics()
 
     def inverseKinematics(self) -> bool:
         ''' Inverse
