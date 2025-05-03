@@ -22,6 +22,10 @@ class GS_Traversal:
         self.y = 0
         self.heading = 0
         self.state = state
+        
+        self.aruco_found = False
+        self.mallet_found = False
+        self.waterbottle_found = False
 
         # modified code: add dictionary to manage detection flags for multiple objects
         self.found_objects = {"AR1":False, 
@@ -36,9 +40,9 @@ class GS_Traversal:
         self.drive_publisher = rospy.Publisher('drive', Twist, queue_size=10)
 
         #new additions
-        self.aruco_found = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
-        self.mallet_found = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
-        self.waterbottle_found = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
+        self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
+        self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
+        self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
 
         # self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         
@@ -102,9 +106,11 @@ class GS_Traversal:
                    "AR3":self.aruco_found,
                    "OBJ1":obj,
                    "OBJ2":obj}
-
+        # print("In move to target")
         while not rospy.is_shutdown():
             msg = Twist()
+            # print("state", state)
+            # print("mapping state", mapping[state])
             if mapping[state] is False: #while not detected
                 # normal operations
                 if target_x is None or target_y is None or self.x is None or self.y is None:
@@ -112,6 +118,7 @@ class GS_Traversal:
 
                 target_heading = math.atan2(target_y - self.y, target_x - self.x)
                 target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
+                # print("Target Heading:", math.degrees(target_heading), "Cur Heading:", math.degrees(self.heading))
                 angle_diff = target_heading - self.heading
 
                 if angle_diff > math.pi:
@@ -134,6 +141,8 @@ class GS_Traversal:
                     msg.angular.z = angle_diff * kp
                     if abs(msg.angular.z) < 0.3:
                         msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
+                        
+                # print("angular velocity", msg.angular.z)
 
             else: #if mapping[state] is True --> if the object is found
                 # call homing
@@ -165,7 +174,7 @@ class GS_Traversal:
                     rate.sleep()
 
                 break
-
+            # print("publishing grid search velocity")
             self.drive_publisher.publish(msg)
             rate.sleep()
 
@@ -175,6 +184,8 @@ class GS_Traversal:
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
                 print(f"Object detected during navigation: {self.state}")
                 return True
+            
+            print("Going to target", target_x, target_y)
             self.move_to_target(target_x, target_y, self.state) #changed from navigate_to_target
 
             rospy.sleep(1)
@@ -261,7 +272,7 @@ class GridSearch:
         return targets
 
 def main():
-    targets = [(5, -0.8)]  # Define multiple target points
+    targets = [(2, 0)]  # Define multiple target points
     try:
         rospy.init_node('straight_line_approach_node')
         approach = StraightLineApproach.StraightLineApproach(1.5, 0.5, targets)
@@ -269,10 +280,10 @@ def main():
     except rospy.ROSInterruptException:
         pass
 
-    # gs = GridSearch(4, 4, 1, 0, 0)  # define multiple target points here: cartesian
-    # targets = gs.square_target() #generates multiple targets 
-    # gs_traversal_object = GS_Traversal(0.6, 0.3, targets)
-    # gs_traversal_object.navigate("AR1") #should be one of aruco, mallet, waterbottle
+    gs = GridSearch(10, 10, 1, 0, 0)  # define multiple target points here: cartesian
+    targets = gs.square_target() #generates multiple targets 
+    gs_traversal_object = GS_Traversal(0.6, 0.3, targets, "AR1")
+    gs_traversal_object.navigate() #should be one of aruco, mallet, waterbottle
     
     pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
     # frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v

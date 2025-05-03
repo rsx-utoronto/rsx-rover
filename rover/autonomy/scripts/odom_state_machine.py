@@ -87,11 +87,13 @@ class GLOB_MSGS:
         self.pose_pub = rospy.Publisher("pose", PoseStamped, queue_size=10)
         self.ar_detection_node = ar_detection_node.ARucoTagDetectionNode() #Initializes the AR detection node
         self.object_detector_node = object_subscriber_node.ObjectDetectionNode() #Initializes the Object detection node
-        self.led_light = led_light.LedLight() #Initializes class for led light
+        #self.led_light = led_light.LedLight() #Initializes class for led light
         
     def pose_callback(self, msg):
         self.pose = msg
-        print(self.pose.header.stamp.secs, "in pose_callback")
+        
+        # CHANGE
+        # print(self.pose.header.stamp.secs, "in pose_callback")
 
     def get_pose(self):
         return self.pose
@@ -114,9 +116,10 @@ class GLOB_MSGS:
         pose_msg.pose.position.y = relative_y
         pose_msg.pose.position.z = relative_z
         pose_msg.pose.orientation = data.pose.pose.orientation  # reuse orientation
-
         self.pose_pub.publish(pose_msg)
-        self.pub_state("Converted to PoseStamped: x=%.2f, y=%.2f", relative_x, relative_y)
+
+        # state = str("Converted to PoseStamped: x=%.2f, y=%.2f", relative_x, relative_y)
+        # self.pub_state(state)
 
     def get_odom(self):
         return self.current_position
@@ -327,7 +330,7 @@ class AR1(smach.State): #State for AR1
 
             # rospy.init_node('aruco_tag1_detector', anonymous=True)
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
-            gs = sm_grid_search.GridSearch(10, 10, 1, userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
+            gs = sm_grid_search.GridSearch(10, 10, 2, userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
             targets = gs.square_target() #Generates multiple points for grid search
             gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets, "AR1") #Starts grid search traversal
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback) #Subscribes to aruco found to determine whether its found or not
@@ -383,7 +386,7 @@ class AR2(smach.State):
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs = sm_grid_search.GridSearch(10, 10, 2, userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
             targets = gs.square_target() #generates multiple targets 
-            gs_traversal_object = sm_grid_search.GS_Traversal(1.5, 0.6, targets, "AR2")
+            gs_traversal_object = sm_grid_search.GS_Traversal(0.6, 0.3, targets, "AR2")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
             

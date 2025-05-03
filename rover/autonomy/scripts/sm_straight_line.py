@@ -20,11 +20,18 @@ class StraightLineApproach:
         self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
         self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.aruco_found = False
 
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        self.aruco_found = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
+        self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
         # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+
+        #new additions
+        # self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
+        # self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
+        # self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
+
     
     def pose_callback(self, msg):
         self.x = msg.pose.position.x
