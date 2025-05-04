@@ -179,10 +179,11 @@ class GS_Traversal:
                 # should publish that it is found
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
-                aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 0.5, 0.5) # change constants
                 if state == "AR1" or state == "AR2" or state == "AR3":
+                    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 1.8, 0.8) # FOR ARUCO
                     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
                 elif state == "OBJ1" or state == "OBJ2":
+                    aimer = aruco_homing.AimerROS(640, 360, 1450, 50, 200, 1.0, 0.5) # FOR WATER BOTTLE
                     rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
                 rate = rospy.Rate(10) #this code needs to be adjusted
                 for i in range(50):
