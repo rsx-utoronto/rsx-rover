@@ -40,6 +40,7 @@ class ArmSciNode():
         self.rate = rospy.Rate(30)
 
         self.goalPub = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
+        self.vizPub = rospy.Publisher("arm_viz_pos", Float32MultiArray, queue_size=10)
 
         rospy.Subscriber("arm_state", String, self.onArmStateUpdate)
         rospy.Subscriber("arm_inputs", ArmInputs, self.onJoystickUpdate)
@@ -114,6 +115,9 @@ class ArmSciNode():
             
         return buttons
 
+    def publishVizAngles(self, ):
+        vizAngles = Float32MultiArray()
+
     def publishAngles(self, anglesToPub):
         goalTopicData = Float32MultiArray()
         offsetAngles = self.arm.addSparkMaxOffsets(anglesToPub) 
@@ -184,7 +188,7 @@ class ArmSciNode():
                 if buttonPressed["TRIANGLE"] == 2:
                     self.arm.iterateMode()
                     print(f'------ {self.arm.curMode} ------')
-                if buttonPressed["SQUARE"]:
+                if buttonPressed["SQUARE"] == 2:
                     self.arm.storeSparkMaxOffsets(self.arm.curAngles)
 
                 if self.armState == "IK" and self.arm.getCurMode() == "Cyl":
