@@ -595,6 +595,9 @@ class CameraFeed:
         self.bridge = CvBridge()
         self.image_sub1 = None
         self.image_sub2 = None
+        self.state_sub = rospy.Subscriber("state", String, self.state_callback)
+
+        self.obj_bbox = rospy.Subscriber("object/bbox", Float64MultiArray, self.bbox_callback)
         self.bbox_sub = rospy.Subscriber("aruco_node/bbox", Float64MultiArray, self.bbox_callback)
 
         self.label1 = label1
@@ -633,6 +636,8 @@ class CameraFeed:
         if self.image_sub2:
             self.image_sub2.unregister()
             self.image_sub2 = None
+    def state_callback(self, msg):
+        self.state = msg.data
 
     def bbox_callback(self, msg):
         if len(msg.data) == 8:
