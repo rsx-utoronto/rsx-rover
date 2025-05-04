@@ -14,8 +14,8 @@ class SciArm(Arm):
         super().__init__(numJoints, dhTable, offsets, angleOrientation)
         self.modes = ["Forward", "Cyl"]
         self.goalAngles = startingAngles
-        self.cylTarget = [0, 208.65, 722.49, -1.2569, 0] # [theta, r, z, alpha, EE]
-        self.prevTarget = [0, 208.65, 722.49, -1.2569, 0] # [theta, r, z, alpha, EE]
+        self.cylTarget = [0, 208.65, 722.49, 0, 0] # [theta, r, z, alpha, EE]
+        self.prevTarget = [0, 208.65, 722.49, 0, 0] # [theta, r, z, alpha, EE]
         self.sparkMaxOffsets = [0]*self.numJoints
 
     def move_to_position(self, position_name):

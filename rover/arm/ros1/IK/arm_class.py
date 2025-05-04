@@ -40,7 +40,7 @@ class Arm():
         self.modes = ["Forward"]
         self.curMode = self.modes[0] # makes this a data structure function callback
         self.numModes = len(self.modes)
-        self.CONTROL_SPEED = 0.01 
+        self.CONTROL_SPEED = 0.001 
     
     def updateDHTable(self, newAngles):
         ''' Updates to the DH Table to have the current joint angles

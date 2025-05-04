@@ -25,7 +25,7 @@ class ArmSciNode():
                     0]
         angleOrientation = [1, 1, 1, 1, 1]
         startingAngles = [0, pi-atan2(348.08, 112.99), 
-                           (-pi/2)+atan2(112.99, 348.08), 0, 0]
+                           (-pi/2)+atan2(112.99, 348.08), -pi/2, 0]
 
         self.BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SHARE", "OPTIONS", "PLAY_STATION", "L3", 
                              "R3", "UP", "DOWN", "LEFT", "RIGHT"]
@@ -117,7 +117,7 @@ class ArmSciNode():
 
     def publishVizAngles(self, anglesToViz):
         vizAngles = Float32MultiArray()
-        vizAngles.data = anglesToViz
+        vizAngles.data = rad2deg(anglesToViz)
         self.vizPub.publish(vizAngles)
 
     def publishAngles(self, anglesToPub):
