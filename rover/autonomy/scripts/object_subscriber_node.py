@@ -68,8 +68,10 @@ class ObjectDetectionNode():
         if self.model==None: 
             print("Model is NULL")
             
-        results = self.model(img)  # Run YOLO detection
+        results = self.model(img, verbose=False)  # Run YOLO detection
+        # print("Object detection detect_objects")
         for result in results:
+            # print("actual results", results)
             detections = result.boxes  # This contains the bounding boxes, scores, and class predictions
             mallet_found = False
             waterbottle_found = False

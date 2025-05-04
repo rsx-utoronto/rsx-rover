@@ -76,7 +76,7 @@ class ARucoTagDetectionNode():
     # https://circ.cstag.ca/2022/rules/#autonomy-guidelines:~:text=All%20ArUco%20markers%20will%20be%20from%20the%204x4_50%20dictionary.%20They%20range%20from%20marker%200%20to%2049.
 
     def findArucoMarkers(self, img, markerSize=4, totalMarkers=100, draw=True):
-        print("Finding Aruco Markers")
+        print("ar_detection_node: Finding Aruco Markers")
         imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         key = getattr(aruco, 'DICT_' + str(markerSize) + 'X' + str(markerSize) + "_" + str(totalMarkers))
         arucoDict = aruco.getPredefinedDictionary(key)
@@ -86,7 +86,7 @@ class ARucoTagDetectionNode():
         # bboxs, ids, rejected = aruco.detectMarkers(imgGray,arucoDict,parameters=arucoParam)
         # print("bbox", bboxs)
         if ids is not None:
-            print("AR detected!")
+            print("ar_detection_node: AR detected!")
             print(ids)
             for i, id in enumerate(ids):
                 id = id[0]
@@ -101,7 +101,7 @@ class ARucoTagDetectionNode():
 
 
             best_detection = ids[0][0]
-            rospy.loginfo(f"An AR tag was detected with the ID {best_detection}")
+            rospy.loginfo(f"ar_detection_node: An AR tag was detected with the ID {best_detection}")
             #self.scanned_state_smg.AR_SCANNED = True
             bboxs = bboxs[0]
             
@@ -119,7 +119,7 @@ class ARucoTagDetectionNode():
                     self.bbox_pub.publish(data)
                     
                     # first two numbers are top left corner, second two are bottom right corner
-                    print("here are the coords from jack's code", self.array[0], self.array[1], self.array[6], self.array[7])
+                    print("ar_detection_node: here are the coords from jack's code", self.array[0], self.array[1], self.array[6], self.array[7])
                     print((self.array[6]-self.array[0])*(self.array[7]-self.array[1]))
                     
                     font = cv2.FONT_HERSHEY_SIMPLEX

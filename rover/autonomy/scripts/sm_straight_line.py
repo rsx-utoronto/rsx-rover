@@ -75,7 +75,8 @@ class StraightLineApproach:
     def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISHIT)
         rate = rospy.Rate(50)
         kp = 0.5
-        threshold = 0.2
+        threshold = 0.5
+        angle_threshold = 0.2
 
         while not rospy.is_shutdown():
             msg = Twist()
@@ -103,7 +104,7 @@ class StraightLineApproach:
                 print(f"Reached target: ({target_x}, {target_y})")
                 break
 
-            if abs(angle_diff) <= threshold:
+            if abs(angle_diff) <= angle_threshold:
                 msg.linear.x = self.lin_vel
                 msg.angular.z = 0
             else:
