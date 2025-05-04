@@ -58,9 +58,9 @@ class SciArm(Arm):
                 self.cylTarget[2] += self.CONTROL_SPEED*500
             if isButtonPressed["L2"]:
                 self.cylTarget[2] -= self.CONTROL_SPEED*500
-            if isButtonPressed["X"]:
+            if isButtonPressed["R1"]:
                 self.cylTarget[4] += self.CONTROL_SPEED*500
-            if isButtonPressed["SQUARE"]:
+            if isButtonPressed["L1"]:
                 self.cylTarget[4] -= self.CONTROL_SPEED*500
 
     def removeSparkMaxOffsets(self, angles):
@@ -112,11 +112,10 @@ class SciArm(Arm):
         if isButtonPressed["L2"]:
             self.goalAngles[3] -= self.CONTROL_SPEED
 
-        if isButtonPressed["X"]:
+        if isButtonPressed["R1"]:
             self.goalAngles[4] += self.CONTROL_SPEED
-        if isButtonPressed["SQUARE"]:
+        if isButtonPressed["L1"]:
             self.goalAngles[4] -= self.CONTROL_SPEED
-
         self.forwardKinematics() 
 
     def passiveForwardKinematics(self):
