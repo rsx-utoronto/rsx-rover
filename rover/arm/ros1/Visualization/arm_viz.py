@@ -252,8 +252,8 @@ class ArmVisualizationNode():
             self.jointPublisher = startJointPublisher()
 
         rospy.Subscriber("arm_state", String, self.updateState)
-        rospy.Subscriber("arm_goal_pos", Float32MultiArray, self.displayArmGoalPos)
-        rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.displayArmLivePos)
+        rospy.Subscriber("arm_viz_pos", Float32MultiArray, self.displayArmGoalPos)
+        # rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.displayArmLivePos)
     
     def updateState(self, data):
         ''' Callbac function for the /arm_state topic
