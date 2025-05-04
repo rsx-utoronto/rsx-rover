@@ -10,11 +10,12 @@ class KinematicsMode():
         self.targetUpdateCallback = targetUpdateCallback
 
 class SciArm(Arm):
-    def __init__(self, numJoints:int, dhTable, offsets, angleOrientation):
+    def __init__(self, numJoints:int, dhTable, offsets, angleOrientation, startingAngles):
         super().__init__(numJoints, dhTable, offsets, angleOrientation)
         self.modes = ["Forward", "Cyl"]
-        self.cylTarget = [0, 550, 10.3, 0.941354, 0] # [theta, r, z, alpha, EE]
-        self.prevTarget = [0, 550, 10.3, 0.941354, 0] # [theta, r, z, alpha, EE]
+        self.goalAngles = startingAngles
+        self.cylTarget = [0, 208.65, 722.49, -1.2569, 0] # [theta, r, z, alpha, EE]
+        self.prevTarget = [0, 208.65, 722.49, -1.2569, 0] # [theta, r, z, alpha, EE]
         self.sparkMaxOffsets = [0]*self.numJoints
 
     def move_to_position(self, position_name):
@@ -180,6 +181,10 @@ class SciArm(Arm):
         # print(f'{h4} = sqrt(({r}-{r_2})**2 + ({z}-{z_2}**2))')
         cosTheta4Numerator = h4**2 - r3**2 - link4Hyp**2
         cosTheta4 = cosTheta4Numerator/(2*r3*link4Hyp)
+        if (1-cosTheta4**2) < 0:
+            self.cylTarget = deepcopy(self.prevTarget)
+            self.goalAngles = self.prevGoalAngles
+            return False
         theta4 = -atan2(sqrt(1 - cosTheta4**2), cosTheta4)
 
         self.prevTarget = deepcopy(self.cylTarget)

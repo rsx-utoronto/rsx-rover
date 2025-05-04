@@ -11,19 +11,21 @@ from rover.msg import ArmInputs
 class ArmSciNode():
     def __init__(self):
         self.armState = "Idle"
-        self.joyInputQueue = Queue()
-        self.curAngleQueue = Queue()
+        self.joyInputQueue = Queue(maxsize=5)
+        self.curAngleQueue = Queue(maxsize=5)
         dhTable = [[79.7, 0, 0, pi/2],
                    [0,    0, 367, 0],
                    [0,    0, 195, 0],
                    [0,    0, 67, pi/2],
                    [92,   0, 0, 0]]
         offsets = [0,
-                    -atan2(112.99, 348.08), 
+                    (-pi/2)-atan2(112.99, 348.08), 
                     atan2(161, 110.7) + atan2(112.99, 348.08),
                     (atan2(92, 67) + atan2(110.75, 161)),
                     0]
         angleOrientation = [1, 1, 1, 1, 1]
+        startingAngles = [0, pi-atan2(348.08, 112.99), 
+                           (-pi/2)+atan2(112.99, 348.08), 0, 0]
 
         self.BUTTON_NAMES = ["X", "CIRCLE", "TRIANGLE", "SQUARE", "L1", "R1", "L2", "R2", "SHARE", "OPTIONS", "PLAY_STATION", "L3", 
                              "R3", "UP", "DOWN", "LEFT", "RIGHT"]
@@ -31,7 +33,7 @@ class ArmSciNode():
                                "R2": False, "SHARE": False, "OPTIONS": False, "PLAY_STATION": False, "L3": False, "R3": False,"UP": False, 
                                "DOWN": False, "LEFT": False, "RIGHT": False} 
 
-        self.arm = SciArm(5, dhTable, offsets, angleOrientation)
+        self.arm = SciArm(5, dhTable, offsets, angleOrientation, startingAngles)
         self.sparkMaxOfssets = [0]*len(angleOrientation)
 
         rospy.init_node("arm_sci")
@@ -113,12 +115,18 @@ class ArmSciNode():
         return buttons
 
     def publishAngles(self, anglesToPub):
-        pass
+        goalTopicData = Float32MultiArray()
+        offsetAngles = self.arm.addSparkMaxOffsets(anglesToPub) 
+        # goalTopicData.data = [offsetAngles[0], offsetAngles[1], offsetAngles[2],
+        #                       offsetAngles[3], offsetAngles[4], 0, 0] 
+        goalTopicData.data = offsetAngles
+        self.goalPub.publish(goalTopicData)
 
     # ROS Topic Subscriptions
     def onCurrPosUpdate(self, data:Float32MultiArray):
         # don't forgoet to
-        self.curAngleQueue.put(deg2rad(data.data))
+        offsetsRemovedAngles = self.arm.removeSparkMaxOffsets(data.data)
+        self.curAngleQueue.put(deg2rad(offsetsRemovedAngles))
 
     def onArmStateUpdate(self, data):
         self.armState = data.data
@@ -156,6 +164,7 @@ class ArmSciNode():
         pass
 
     def main(self):
+        print(f'------ {self.arm.curMode} ------')
         while not rospy.is_shutdown():
             # deal with controller input queue 
             # do IK
@@ -175,23 +184,20 @@ class ArmSciNode():
                 if buttonPressed["TRIANGLE"] == 2:
                     self.arm.iterateMode()
                     print(f'------ {self.arm.curMode} ------')
+                if buttonPressed["SQUARE"]:
+                    self.arm.storeSparkMaxOffsets(self.arm.curAngles)
 
                 if self.armState == "IK" and self.arm.getCurMode() == "Cyl":
                     self.arm.controlTarget(buttonPressed, joystickStatus)
                     status = self.arm.inverseKinematics()
                     goalAngles = rad2deg(self.arm.getOffsetGoalAngles())
-
-                    goalTopicData = Float32MultiArray()
-                    goalTopicData.data = goalAngles
-                    self.goalPub.publish(goalTopicData)
+                    self.publishAngles(goalAngles)
                 elif self.armState == "IK" and self.arm.getCurMode() == "Forward":
                     self.arm.activeForwardKinematics(buttonPressed, joystickStatus)
                     # angles offsets?
                     goalAngles = rad2deg(self.arm.getOffsetGoalAngles())
+                    self.publishAngles(goalAngles)
 
-                    goalTopicData = Float32MultiArray()
-                    goalTopicData.data = goalAngles
-                    self.goalPub.publish(goalTopicData)
             
             if self.armState != "IK":
                 # self.arm.passiveForwardKinematics()
