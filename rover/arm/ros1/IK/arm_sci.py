@@ -115,22 +115,27 @@ class ArmSciNode():
             
         return buttons
 
-    def publishVizAngles(self, ):
+    def publishVizAngles(self, anglesToViz):
         vizAngles = Float32MultiArray()
+        vizAngles.data = anglesToViz
+        self.vizPub.publish(vizAngles)
 
     def publishAngles(self, anglesToPub):
         goalTopicData = Float32MultiArray()
-        offsetAngles = self.arm.addSparkMaxOffsets(anglesToPub) 
-        # goalTopicData.data = [offsetAngles[0], offsetAngles[1], offsetAngles[2],
-        #                       offsetAngles[3], offsetAngles[4], 0, 0] 
-        goalTopicData.data = offsetAngles
+        offsetAngles = rad2deg(self.arm.addSparkMaxOffsets(anglesToPub))
+        goalTopicData.data = [offsetAngles[0], offsetAngles[1], offsetAngles[2],
+                              0, 0, offsetAngles[3], offsetAngles[4]] 
+        self.publishVizAngles(anglesToPub)
         self.goalPub.publish(goalTopicData)
 
     # ROS Topic Subscriptions
     def onCurrPosUpdate(self, data:Float32MultiArray):
         # don't forgoet to
-        offsetsRemovedAngles = self.arm.removeSparkMaxOffsets(data.data)
-        self.curAngleQueue.put(deg2rad(offsetsRemovedAngles))
+        rawCurAngles = data.data
+        correctedOrientation = [rawCurAngles[0], rawCurAngles[1], rawCurAngles[2],
+                                rawCurAngles[3], rawCurAngles[4]]
+        offsetsRemovedAngles = self.arm.removeSparkMaxOffsets(deg2rad(correctedOrientation))
+        self.curAngleQueue.put(offsetsRemovedAngles)
 
     def onArmStateUpdate(self, data):
         self.armState = data.data
@@ -149,7 +154,7 @@ class ArmSciNode():
         global curArmAngles
         global newTargetValues
 
-        buttonsPressed = [0, 0, data.triangle, 0, data.l1, data.r1, data.l2, data.r2, data.share, data.options, 0, 0, 0, 0, 0, 0, 0]
+        buttonsPressed = [data.x, data.o, data.triangle, data.square, data.l1, data.r1, data.l2, data.r2, data.share, data.options, 0, 0, 0, 0, 0, 0, 0]
         # isButtonPressed = {"X": data.x, "CIRCLE": data.o, "TRIANGLE": data.triagle, 
         #                         "SQUARE": 0, "L1": data.l1, "R1": data.r1, "L2": data.l2, 
         #                         "R2": data.r2, "SHARE": data.share, "OPTIONS": data.options, 
@@ -182,26 +187,31 @@ class ArmSciNode():
                 [buttonPressed, joystickStatus] = self.joyInputQueue.get()
 
                                 # Add new button combination for sampling sequence
-                if buttonPressed["L1"] and buttonPressed["R1"]:
-                    self.handle_sampling_sequence()
+                # if buttonPressed["L1"] and buttonPressed["R1"]:
+                #     self.handle_sampling_sequence()
 
                 if buttonPressed["TRIANGLE"] == 2:
                     self.arm.iterateMode()
                     print(f'------ {self.arm.curMode} ------')
-                if buttonPressed["SQUARE"] == 2:
+                if buttonPressed["CIRCLE"] == 2:
+                    # self.arm.storeSparkMaxOffsets(self.arm.curAngles)
                     self.arm.storeSparkMaxOffsets(self.arm.curAngles)
+                    print('------ Homed------')
+                    print(self.arm.sparkMaxOffsets)
 
                 if self.armState == "IK" and self.arm.getCurMode() == "Cyl":
                     self.arm.controlTarget(buttonPressed, joystickStatus)
                     status = self.arm.inverseKinematics()
-                    goalAngles = rad2deg(self.arm.getOffsetGoalAngles())
+                    goalAngles = self.arm.getOffsetGoalAngles()
                     self.publishAngles(goalAngles)
                 elif self.armState == "IK" and self.arm.getCurMode() == "Forward":
                     self.arm.activeForwardKinematics(buttonPressed, joystickStatus)
                     # angles offsets?
-                    goalAngles = rad2deg(self.arm.getOffsetGoalAngles())
+                    goalAngles = self.arm.getOffsetGoalAngles()
                     self.publishAngles(goalAngles)
 
+                print(self.arm.getOffsetGoalAngles())
+                # print(buttonPressed)
             
             if self.armState != "IK":
                 # self.arm.passiveForwardKinematics()
