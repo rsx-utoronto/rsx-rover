@@ -23,6 +23,15 @@ from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 
+import yaml
+
+with open("sm_config.yaml", "r") as f:
+    sm_config = yaml.safe_load(f)
+
+RUN_STATES_DEFAULT = ["GNSS1", "AR1", "OBJ2", "OBJ1", "AR2", "AR3", "GNSS2"] 
+RUN_STATES = sm_config.get("RUN_STATES", RUN_STATES_DEFAULT)
+
+#When it completes a task it publishes the message "Goal point reached: <Task Name>" to gui_status
 
 #Example locations
 #locations = {
@@ -158,14 +167,15 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         self.glob_msg.pub_state("Changing GPS coordinates to cartesian") 
         cartesian = {}
         for el in cartesian_path: #For each location, it transforms the GPS coordinates to Cartesian coordinates
-            distance = functions.getDistanceBetweenGPSCoordinates((self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1]), (self.glob_msg.locations[el][0], self.glob_msg.locations[el][1]))
-            theta = functions.getHeadingBetweenGPSCoordinates(self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1], self.glob_msg.locations[el][0], self.glob_msg.locations[el][1])
-            # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
-            x = distance * math.sin(theta)
-            y = distance * math.cos(theta)
+            if el in RUN_STATES or el == "start":
+                distance = functions.getDistanceBetweenGPSCoordinates((self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1]), (self.glob_msg.locations[el][0], self.glob_msg.locations[el][1]))
+                theta = functions.getHeadingBetweenGPSCoordinates(self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1], self.glob_msg.locations[el][0], self.glob_msg.locations[el][1])
+                # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
+                x = distance * math.sin(theta)
+                y = distance * math.cos(theta)
 
-            cartesian[el] = (x,y) 
-            self.glob_msg.pub_state(str(cartesian[el]))
+                cartesian[el] = (x,y) 
+                self.glob_msg.pub_state(str(cartesian[el]))
         
         print("Before CARTESIAN", cartesian)
         cartesian_dict = {}
@@ -177,8 +187,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         
         self.glob_msg.cartesian = cartesian_dict #assigns the cartesian dict to cartesian to make it a global variable 
         
-        gps_to_pose.GPSToPose(self.glob_msg.locations['start'], (0,0), (1.1, 0)) #creates an instance of GPSToPose to start publishing pose
-        
+        gps_to_pose.GPSToPose(self.glob_msg.locations['start'], tuple(sm_config.get("origin_pose", [0.0,0.0])), tuple(sm_config.get("heading_vector", [1.0, 0.0]))) #creates an instance of GPSToPose to start publishing pose
     
     def execute(self, userdata): 
         self.glob_msg.pub_led_light("auto")
@@ -189,7 +198,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         
 class LocationSelection(smach.State): #State for determining which mission/state to go to and traversing there
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["GNSS1", "GNSS2", "AR1", "AR2", "AR3", "OBJ1", "OBJ2", "Tasks Ended"],
+        smach.State.__init__(self, outcomes = RUN_STATES + ["Tasks Ended"],
                              input_keys = ["rem_loc_dict", "locations_dict", 'prev_loc', 'start_location'],
                              output_keys = ["prev_loc", "locations_dict", "rem_loc_dict", "start_location"])
         self.glob_msg = None
@@ -213,7 +222,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 self.glob_msg.pub_state(f"Navigating to {self.glob_msg.cartesian[list(path.items())[0][0]]}") 
                 target = path[list(path.items())[0][0]]
                 print(target)
-                sla = StraightLineApproach(2.5, 0.6, [target]) 
+                sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                 sla.navigate() #navigating to the next mission on our optimal path
             except rospy.ROSInterruptException:
                 pass
@@ -239,7 +248,8 @@ class GNSS1(smach.State): #State for GNSS1
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["GNSS1"][1])**2)**(1/2) #Comparing how far we are from the target location
         
         if current_distance < 2: #Determining whether we are in the correct location
-            self.glob_msg.pub_state("GNSS 1 reached, successful cruise")
+            self.glob_msg.pub_state("GNSS1 reached, successful cruise")
+            self.glob_msg.pub_state("Goal Point Reached: GNSS1")
             self.glob_msg.pub_led_light("mission done")
             rospy.sleep(3)
             self.glob_msg.pub_led_light("auto")
@@ -272,7 +282,8 @@ class GNSS2(smach.State): #State for GNSS1
 
         
         if current_distance < 2:  #Determining whether we are in the correct location
-            self.glob_msg.pub_state("GNSS 2 reached, successful cruise")
+            self.glob_msg.pub_state("GNSS2 reached, successful cruise")
+            self.glob_msg.pub_state("Goal Point Reached: GNSS2")
             self.glob_msg.pub_led_light("mission done")
             rospy.sleep(3)
             self.glob_msg.pub_led_light("auto")
@@ -315,9 +326,9 @@ class AR1(smach.State): #State for AR1
 
             # rospy.init_node('aruco_tag1_detector', anonymous=True)
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
-            gs = sm_grid_search.GridSearch(12, 12, 2, userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
+            gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
             targets = gs.square_target() #Generates multiple points for grid search
-            gs_traversal_object = sm_grid_search.GS_Traversal(1, 0.3, targets, "AR1") #Starts grid search traversal
+            gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR1") #Starts grid search traversal
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback) #Subscribes to aruco found to determine whether its found or not
             self.glob_msg.pub_state("Starting A1 grid search")
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
@@ -327,6 +338,7 @@ class AR1(smach.State): #State for AR1
                 self.glob_msg.pub_state("Grid Search did find AR1") #Will publish the messages afterwards but there are topics to publish when detected 
                 if ar_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to AR1") 
+                    self.glob_msg.pub_state("Goal Point Reached: AR1")
                     self.glob_msg.pub_led_light("mission done")
                     rospy.sleep(3)
                     self.glob_msg.pub_led_light("auto")
@@ -372,9 +384,9 @@ class AR2(smach.State):
 
             # rospy.init_node('aruco_tag1_detector', anonymous=True)
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
-            gs = sm_grid_search.GridSearch(12, 12, 2, userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
+            gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
             targets = gs.square_target() #generates multiple targets 
-            gs_traversal_object = sm_grid_search.GS_Traversal(1, 0.3, targets, "AR2")
+            gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
             
@@ -382,6 +394,7 @@ class AR2(smach.State):
                 self.glob_msg.pub_state("Grid Search did find AR2") #Will publish the messages afterwards but there are topics to publish when detected 
                 if ar_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to AR2") 
+                    self.glob_msg.pub_state("Goal Point Reached: AR2")
                     self.glob_msg.pub_led_light("mission done")
                     rospy.sleep(3)
                     self.glob_msg.pub_led_light("auto")
@@ -426,9 +439,9 @@ class AR3(smach.State):
 
             # rospy.init_node('aruco_tag1_detector', anonymous=True)
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
-            gs = sm_grid_search.GridSearch(12, 12, 2, userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
+            gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
             targets = gs.square_target() #generates multiple targets 
-            gs_traversal_object = sm_grid_search.GS_Traversal(1, 0.3, targets, "AR3")
+            gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR3")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
             
@@ -436,6 +449,7 @@ class AR3(smach.State):
                 self.glob_msg.pub_state("Grid Search did find AR3") #Will publish the messages afterwards but there are topics to publish when detected 
                 if ar_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to AR3") 
+                    self.glob_msg.pub_state("Goal Point Reached: AR3")
                     self.glob_msg.pub_led_light("mission done")
                     rospy.sleep(3)
                     self.glob_msg.pub_led_light("auto")
@@ -483,9 +497,9 @@ class OBJ1(smach.State): #mallet
             self.glob_msg.pub_state_name("OBJ1")
 
             # rospy.init_node('object1_detector', anonymous=True) 
-            gs = sm_grid_search.GridSearch(20, 20, 2, userdata.rem_loc_dict["OBJ1"][0], userdata.rem_loc_dict["OBJ1"][1])  # define multiple target points here: cartesian
+            gs = sm_grid_search.GridSearch(sm_config.get("OBJ_grid_search_w"), sm_config.get("OBJ_grid_search_h"), sm_config.get("OBJ_grid_search_tol"), userdata.rem_loc_dict["OBJ1"][0], userdata.rem_loc_dict["OBJ1"][1])  # define multiple target points here: cartesian
             targets = gs.square_target()
-            gs_traversal_object = sm_grid_search.GS_Traversal(1, 0.3, targets, "OBJ1")
+            gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ1")
             rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
 
@@ -498,6 +512,7 @@ class OBJ1(smach.State): #mallet
                     self.glob_msg.pub_state("Grid Search did find Waterbottle")
                 if obj1_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to Object1") 
+                    self.glob_msg.pub_state("Goal Point Reached: OBJ1")
                     self.glob_msg.pub_led_light("mission done")
                     rospy.sleep(3)
                     self.glob_msg.pub_led_light("auto")
@@ -530,7 +545,7 @@ class OBJ2(smach.State): #waterbottle
     def waterbottle_callback(self, msg):
         self.waterbottle_found = msg.data
     
-    def execute(self, userdata):
+    def execute(self, userdata): 
         self.glob_msg.pub_state("Performing OBject2 Search")
         current_location_data = self.glob_msg.get_pose()
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["OBJ2"][0])**2 + 
@@ -542,9 +557,9 @@ class OBJ2(smach.State): #waterbottle
             self.glob_msg.pub_state_name("OBJ2")
 
             # rospy.init_node('object1_detector', anonymous=True) 
-            gs = sm_grid_search.GridSearch(20, 20, 2, userdata.rem_loc_dict["OBJ2"][0], userdata.rem_loc_dict["OBJ2"][1])  # define multiple target points here: cartesian
+            gs = sm_grid_search.GridSearch(sm_config.get("OBJ_grid_search_w"), sm_config.get("OBJ_grid_search_h"), sm_config.get("OBJ_grid_search_tol"), userdata.rem_loc_dict["OBJ2"][0], userdata.rem_loc_dict["OBJ2"][1])  # define multiple target points here: cartesian
             targets = gs.square_target()
-            gs_traversal_object = sm_grid_search.GS_Traversal(1, 0.3, targets, "OBJ2")
+            gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ2")
             rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
 
@@ -557,6 +572,7 @@ class OBJ2(smach.State): #waterbottle
                     self.glob_msg.pub_state("Grid Search did find Waterbottle")
                 if obj1_in_correct_loc:
                     self.glob_msg.pub_state("Close enough to Object1") 
+                    self.glob_msg.pub_state("Goal Point Reached: OBJ2")
                     self.glob_msg.pub_led_light("mission done")
                     rospy.sleep(3)
                     self.glob_msg.pub_led_light("auto")
@@ -576,7 +592,7 @@ class ABORT(smach.State):  # Abort State --> In case of failure what should it d
     def __init__(self):
         smach.State.__init__(
             self,
-            outcomes=["Abort Complete", "Abort Failed"],
+            outcomes=["Location Selection"],
             input_keys=["prev_loc", "start_location"],
         )
         self.glob_msg = None
@@ -599,9 +615,8 @@ class ABORT(smach.State):  # Abort State --> In case of failure what should it d
 
         try:
             # Perform straight-line traversal back to the determined location
-            sla = StraightLineApproach(0.6, 0.3, return_location)
+            sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), return_location)
             sla.navigate()
-
             # Check final distance to the target location
             current_pose = self.glob_msg.get_pose()
             distance = math.sqrt(
@@ -633,13 +648,11 @@ class TasksEnded(smach.State):
     def execute(self, userdata):
         self.glob_msg.pub("All tasks finished yeeeyy!!!")
 
-
 def main():
     rospy.init_node('RSX_Rover')
     #gui_status = rospy.Publisher('gui_status', String, queue_size=10) #where should be used?
     
     sm = smach.StateMachine(outcomes=["Tasks Ended"])
-
     glob_msg = GLOB_MSGS()
     init = InitializeAutonomousNavigation()
     locselect = LocationSelection()
@@ -651,7 +664,7 @@ def main():
     obj1 = OBJ1()
     obj2 = OBJ2()
     tasks_ended = TasksEnded()
-    #abort = ABORT() 
+    abort = ABORT() 
 
     init.set_msg(glob_msg)
     locselect.set_msg(glob_msg)
@@ -663,7 +676,7 @@ def main():
     obj1.set_msg(glob_msg)
     obj2.set_msg(glob_msg)
     tasks_ended.set_msg(glob_msg)
-    #abort.set_msg(glob_msg)
+    abort.set_msg(glob_msg)
 
     with sm:
         smach.StateMachine.add(
@@ -684,13 +697,7 @@ def main():
                 "Location Selection",
                 locselect,
                 transitions={
-                    "GNSS1": "GNSS1",
-                    "GNSS2": "GNSS2",
-                    "AR1": "AR1",
-                    "AR2": "AR2",
-                    "AR3": "AR3",
-                    "OBJ1": "OBJ1",
-                    "OBJ2": "OBJ2",
+                    state: state for state in RUN_STATES #changed this to only include states in RUN_STATES
                 },
                 remapping={
                     "rem_loc_dict": "rem_loc_dict",
@@ -700,107 +707,118 @@ def main():
                 }
             )
             
-            smach.StateMachine.add(
-                "GNSS1",
-                gnss1,
-                transitions={"Location Selection": "Location Selection"},
-                remapping={
-                    "rem_loc_dict": "rem_loc_dict",
-                    "prev_loc": "prev_loc"  # Output the last completed location
-                }
-            )
+            if "GNSS1" in RUN_STATES:
+                smach.StateMachine.add(
+                    "GNSS1",
+                    gnss1,
+                    transitions={"Location Selection": "Location Selection"},
+                    remapping={
+                        "rem_loc_dict": "rem_loc_dict",
+                        "prev_loc": "prev_loc"  # Output the last completed location
+                    }
+                )
             
-            smach.StateMachine.add(
-                "GNSS2",
-                gnss2,
-                transitions={"Location Selection": "Location Selection"},
-                remapping={
-                    "rem_loc_dict": "rem_loc_dict",
-                    "prev_loc": "prev_loc"
-                    
-                }
-            )
+            if "GNSS2" in RUN_STATES:
+                smach.StateMachine.add(
+                    "GNSS2",
+                    gnss2,
+                    transitions={"Location Selection": "Location Selection"},
+                    remapping={
+                        "rem_loc_dict": "rem_loc_dict",
+                        "prev_loc": "prev_loc"
+                        
+                    }
+                )
             
-            smach.StateMachine.add(
-                "AR1",
-                ar1,
-                transitions={"Location Selection": "Location Selection"},
-                remapping={
-                    "rem_loc_dict": "rem_loc_dict",
-                    "prev_loc": "prev_loc"
+            if "AR1" in RUN_STATES:
+                smach.StateMachine.add(
+                    "AR1",
+                    ar1,
+                    transitions={"Location Selection": "Location Selection"},
+                    remapping={
+                        "rem_loc_dict": "rem_loc_dict",
+                        "prev_loc": "prev_loc"
 
-                }
-            )
+                    }
+                )
             
-            smach.StateMachine.add(
-                "AR2",
-                ar2,
-                transitions={"Location Selection": "Location Selection"},
-                remapping={
-                    "rem_loc_dict": "rem_loc_dict",
-                    "prev_loc": "prev_loc"
-                    
-                }
-            )
+            if "AR2" in RUN_STATES:
+                smach.StateMachine.add(
+                    "AR2",
+                    ar2,
+                    transitions={"Location Selection": "Location Selection"},
+                    remapping={
+                        "rem_loc_dict": "rem_loc_dict",
+                        "prev_loc": "prev_loc"
+                        
+                    }
+                )
             
-            smach.StateMachine.add(
-                "AR3",
-                ar3,
-                transitions={"Location Selection": "Location Selection"},
-                remapping={
-                    "rem_loc_dict": "rem_loc_dict",
-                    "prev_loc": "prev_loc"
+            if "AR3" in RUN_STATES:
+                smach.StateMachine.add(
+                    "AR3",
+                    ar3,
+                    transitions={"Location Selection": "Location Selection"},
+                    remapping={
+                        "rem_loc_dict": "rem_loc_dict",
+                        "prev_loc": "prev_loc"
 
-                }
-            )
+                    }
+                )
+            
+            if "OBJ1" in RUN_STATES:
+                smach.StateMachine.add(
+                    "OBJ1",
+                    obj1,
+                    transitions={"Location Selection": "Location Selection"},
+                    remapping={
+                        "rem_loc_dict": "rem_loc_dict",
+                        "prev_loc": "prev_loc"
+                        
+                    }
+                )
+            
+            if "OBJ2" in RUN_STATES:
+                smach.StateMachine.add(
+                    "OBJ2",
+                    obj2,
+                    transitions={"Location Selection": "Location Selection"},
+                    remapping={
+                        "rem_loc_dict": "rem_loc_dict",
+                        "prev_loc": "prev_loc"
+                    }
+                )
             
             smach.StateMachine.add(
-                "OBJ1",
-                obj1,
-                transitions={"Location Selection": "Location Selection"},
-                remapping={
-                    "rem_loc_dict": "rem_loc_dict",
-                    "prev_loc": "prev_loc"
-                    
+                "Abort",
+                abort,
+                transitions={
+                    "Abort Complete": "Location Selection",
+                    "Abort Failed": "Tasks Ended", #What should do in this case?
+                },
+                remapping= {
+                    "prev_loc": "prev_loc",  # Use the previous location for abort
+                    "start_location" : "start_location"
                 }
             )
-            
-            smach.StateMachine.add(
-                "OBJ2",
-                obj2,
-                transitions={"Location Selection": "Location Selection"},
-                remapping={
-                    "rem_loc_dict": "rem_loc_dict",
-                    "prev_loc": "prev_loc"
-                }
-            )
-            
-            #smach.StateMachine.add(
-            #    "Abort",
-            #    abort,
-            #    transitions={
-            #        "Abort Complete": "Location Selection",
-            #        "Abort Failed": "Tasks Ended", #What should do in this case?
-            #    },
-            #    remapping= {
-            #        "prev_loc": "prev_loc",  # Use the previous location for abort
-            #        "start_location" : "start_location"
-            #    }
-            #)
-            
+        
+        #don't check, always add this!    
         smach.StateMachine.add(
             "Tasks Execute",
             sm_tasks_execute,
             transitions={"Tasks Ended": "Tasks Ended"}
         )
         
+        #dont check, always add!
         smach.StateMachine.add(
             "Task Ended",
             tasks_ended
         )
         
 
-    outcome = sm.execute()
+    sm.execute()
+    
+    
 
 
 #Press initialize on GUI -- asks for the task locations and the current location automatically, then performs initialization
