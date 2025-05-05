@@ -73,6 +73,7 @@ class statusTerminal(QWidget):
         self.update_status_signal.connect(self.update_string_list)
         rospy.Subscriber('gui_status', String, self.string_callback)
         self.received_strings = []
+        self.strlength = -1
     def init_ui(self):
         
         # Create a scrollable box for received strings
@@ -95,8 +96,11 @@ class statusTerminal(QWidget):
 
     def update_string_list(self, new_string):
         self.received_strings.append(new_string)
+        cursor_pos = self.string_list.textCursor().position()
         self.string_list.setPlainText("\n".join(self.received_strings))
-        self.string_list.moveCursor(QTextCursor.End)
+        if cursor_pos < self.strlength - self.received_strings[-1].__len__():
+            self.string_list.moveCursor(QTextCursor.End)
+        self.strlength += len(new_string) + 1
 
 class ArucoWidget(QWidget):
     # Define signals to communicate with the main thread
