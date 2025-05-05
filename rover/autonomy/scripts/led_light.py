@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 #import rospy
@@ -93,6 +92,7 @@ class LedLight():
                 if line.strip():  # If the line is not empty
                     line_parsed = line.split(' ')
                     led_port = line_parsed[0]
+                    print("Found LED port:", led_port)
                     break  # Stop after getting the first device path
 
         return led_port #led_device
@@ -124,14 +124,26 @@ class LedLight():
       elif mode == 'auto': 
         res = 'red\n'
         print(res)
-        board.write(bytes(res, 'utf-8'))
+        x = board.write(bytes(res, 'utf-8'))
       else:
         res = 'blue\n' 
         print(res)
-        board.write(bytes(res, 'utf-8'))
+        x = board.write(bytes(res, 'utf-8'))
+      print(x)
+        
 
 # spin() simply keeps python from exiting until this node is stopped
 #rospy.spin()
 
 #if __name__ == "__main__":
 #   main()
+
+if __name__ == "__main__":
+    # Initialize the ROS node
+    rospy.init_node('led_listener', anonymous=True)
+    try:
+        led = LedLight()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass
+    
