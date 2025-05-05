@@ -15,16 +15,7 @@ SUBSETS = ["test", "train", "val"]
 # Name of the subfolder inside each subset where labels will be copied
 LABELS_SUBDIR = "labels"
 # Expected file extension for label files (adjust as needed)
-ROOT_DIR = "."  # Directory where the script is located
-LABELS_DIR = os.path.join(ROOT_DIR, "Labels")  # Folder containing label files
-SUBSETS = ["test", "train", "val"]  # Dataset subsets
-IMAGES_SUBDIR = "images"  # Folder name inside each subset where images are stored
-LABELS_SUBDIR = "labels"  # Destination subfolder for copied label files
-LABEL_EXTENSION = ".txt"  # Expected extension for label files
-
-# Debug: Print the current working directory
-print("Current working directory:", os.getcwd())
-
+LABEL_EXTENSION = ".txt"
 
 # ====================================
 # Process each subset directory
