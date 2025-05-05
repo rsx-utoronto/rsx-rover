@@ -186,7 +186,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         print("At CARTESIAN", cartesian_dict)
         
         self.glob_msg.cartesian = cartesian_dict #assigns the cartesian dict to cartesian to make it a global variable 
-        self.userdata.start_location
+        self.userdata.start_location = self.glob_msg.cartesian["start"]
         
         gps_to_pose.GPSToPose(self.glob_msg.locations['start'], tuple(sm_config.get("origin_pose", [0.0,0.0])), tuple(sm_config.get("heading_vector", [1.0, 0.0]))) #creates an instance of GPSToPose to start publishing pose
     
