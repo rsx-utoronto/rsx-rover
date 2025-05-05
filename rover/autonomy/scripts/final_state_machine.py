@@ -5,7 +5,7 @@ Code for the state machine
 """
 import rospy
 import object_subscriber_node
-import led_light
+# import led_light
 import smach
 import time
 import math
@@ -82,7 +82,7 @@ class GLOB_MSGS:
         self.odom_zero = None
         self.ar_detection_node = ar_detection_node.ARucoTagDetectionNode() #Initializes the AR detection node
         self.object_detector_node = object_subscriber_node.ObjectDetectionNode() #Initializes the Object detection node
-        self.led_light = led_light.LedLight() #Initializes class for led light
+        # self.led_light = led_light.LedLight() #Initializes class for led light
         
     def pose_callback(self, msg):
         self.pose = msg
