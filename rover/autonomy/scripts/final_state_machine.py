@@ -86,8 +86,8 @@ class GLOB_MSGS:
         self.sub = rospy.Subscriber("pose", PoseStamped, self.pose_callback)
         self.odom_sub = rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) #Subscribes to the pose topic
         self.gui_loc = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray, self.coord_callback) 
-        self.abort_sub=rospy.Subscriber("abort_check", Bool, self.abort_callback)
-        self.abort_check=False
+        self.abort_sub = rospy.Subscriber("abort_check", Bool, self.abort_callback)
+        self.abort_check = False
         self.locations = None
         self.cartesian = None
         self.odom_zero = None
@@ -100,7 +100,7 @@ class GLOB_MSGS:
         # print(self.pose.header.stamp.secs, "in pose_callback")
 
     def abort_callback(self,msg):
-        self.abort_check=msg.data
+        self.abort_check = msg.data
     
     def get_abort_check(self):
         return self.abort_check
@@ -232,10 +232,14 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 print(target)
                 sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                 sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
+                if self.glob_msg.abort_check:
+                    userdata.aborted_state = "Location Selection"
+                    return "ABORT"
             except rospy.ROSInterruptException:
                 self.glob_msg.pub_state(f"ROS Interrupt Exception during Location Selection")
-                userdata.aborted_state = "Location Selection"
-                return "ABORT"
+                if self.glob_msg.abort_check is True:
+                    userdata.aborted_state = "Location Selection"
+                    return "ABORT"
             return list(path.items())[0][0]
         else: #all mission have been done
             return "Tasks Ended"  
@@ -366,6 +370,11 @@ class AR1(smach.State): #State for AR1
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback) #Subscribes to aruco found to determine whether its found or not
             self.glob_msg.pub_state("Starting A1 grid search")
             ar_in_correct_loc = gs_traversal_object.navigate() #Should check for abort in GS file
+            if self.glob_msg.abort_check is True:
+                    self.glob_msg.pub_state("Aborting for state AR1")
+                    userdata.aborted_state = "AR1"
+                    self.glob_msg.pub_state_name("")
+                    return "ABORT"
             
             if self.aruco_found:
                 print("in state machine: aruco found")
@@ -436,6 +445,12 @@ class AR2(smach.State):
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+            if self.glob_msg.abort_check is True:
+                    self.glob_msg.pub_state("Aborting for state AR2")
+                    userdata.aborted_state = "AR2"
+                    self.glob_msg.pub_state_name("")
+                    return "ABORT"
+            
             
             if self.aruco_found:
                 self.glob_msg.pub_state("Grid Search did find AR2") #Will publish the messages afterwards but there are topics to publish when detected 
@@ -445,8 +460,7 @@ class AR2(smach.State):
                     self.glob_msg.pub_led_light("mission done")
                     rospy.sleep(3)
                     self.glob_msg.pub_led_light("auto")
-                    
-
+                
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR2")
                 if self.glob_msg.abort_check is True:
@@ -504,6 +518,11 @@ class AR3(smach.State):
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR3")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+            if self.glob_msg.abort_check is True:
+                    self.glob_msg.pub_state("Aborting for state AR3")
+                    userdata.aborted_state = "AR3"
+                    self.glob_msg.pub_state_name("")
+                    return "ABORT"
             
             if self.aruco_found:
                 self.glob_msg.pub_state("Grid Search did find AR3") #Will publish the messages afterwards but there are topics to publish when detected 
@@ -578,6 +597,11 @@ class OBJ1(smach.State): #mallet
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
 
             obj1_in_correct_loc = gs_traversal_object.navigate() #should check for abort in the GS file
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state OBJ1")
+                userdata.aborted_state = "OBJ1"
+                self.glob_msg.pub_state_name("")
+                return "ABORT"     
 
             if self.mallet_found or self.waterbottle_found:
                 if self.mallet_found:
@@ -602,6 +626,11 @@ class OBJ1(smach.State): #mallet
             self.glob_msg.pub_state_name("")
         else:
             self.glob_msg.pub_state("Did not reach Object1 GNSS")
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state OBJ1")
+                userdata.aborted_state = "OBJ1"
+                self.glob_msg.pub_state_name("")
+                return "ABORT"  
         userdata.prev_loc = "OBJ1"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
         return "Location Selection"
@@ -629,6 +658,11 @@ class OBJ2(smach.State): #waterbottle
         current_location_data = self.glob_msg.get_pose()
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["OBJ2"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["OBJ2"][1])**2)**(1/2)
+        
+        if self.glob_msg.abort_check is True:
+            self.glob_msg.pub_state("Aborting for state OBJ2")
+            userdata.aborted_state = "OBJ2"
+            return "ABORT"
 
         if current_distance < 5:
             # print("Successful cruise")
@@ -643,6 +677,11 @@ class OBJ2(smach.State): #waterbottle
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
 
             obj1_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state OBJ2")
+                userdata.aborted_state = "OBJ2"
+                self.glob_msg.pub_state_name("")
+                return "ABORT"     
 
             if self.mallet_found or self.waterbottle_found:
                 if self.mallet_found:
@@ -658,10 +697,21 @@ class OBJ2(smach.State): #waterbottle
 
                 else:
                     self.glob_msg.pub_state("Grid Search did not find Object1")
+                    if self.glob_msg.abort_check is True:
+                        self.glob_msg.pub_state("Aborting for state OBJ2")
+                        userdata.aborted_state = "OBJ2"
+                        self.glob_msg.pub_state_name("")
+                        return "ABORT"    
+                    
             
             self.glob_msg.pub_state_name("")
         else:
-            self.glob_msg.pub_state("Did not reach Object2 GNSS")
+            self.glob_msg.pub_state("Did not reach OBJ2 GNSS")
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state OBJ2")
+                userdata.aborted_state = "OBJ2"
+                self.glob_msg.pub_state_name("")
+                return "ABORT"  
         userdata.prev_loc = "OBJ2"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
         return "Location Selection"
@@ -674,7 +724,7 @@ class ABORT(smach.State):  # Assuming it won't be called before we try to go to 
         smach.State.__init__(
             self,
             outcomes=["Location Selection"],
-            input_keys=["prev_loc", "start_location"],
+            input_keys=["prev_loc", "start_location", "aborted_state"],
         )
         self.glob_msg = None
 
@@ -691,6 +741,7 @@ class ABORT(smach.State):  # Assuming it won't be called before we try to go to 
             return_location = userdata.locations_dict[userdata.prev_loc]
 
         self.glob_msg.pub_state(f"Aborting to location: {return_location} to {userdata.prev_loc}")
+        userdata.prev_loc_dict.pop(userdata.aborted_state)
 
         try:
             # Perform straight-line traversal back to the determined location
