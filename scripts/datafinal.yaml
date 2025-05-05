@@ -1,12 +1,12 @@
-train: images/train
-val: images/val
-test: images/test
+train: /home/rsx-base/rover_ws/src/sorted_comp_data/train
+val: /home/rsx-base/rover_ws/src/sorted_comp_data/val
+test: /home/rsx-base/rover_ws/src/sorted_comp_data/test
 
 # Number of classes
 nc: 2  # Adjust based on your dataset
 
 # Class names
 names: 
-    0: waterbottle
-    1: mallet
+    0: mallet
+    1: waterbottle
 # Replace with your class names
