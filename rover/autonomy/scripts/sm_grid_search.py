@@ -41,9 +41,9 @@ class GS_Traversal:
                    "OBJ2":False}
         
         # self.odom_subscriber = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
+        self.pose_subscriber = rospy.Subscriber(sm_config.get("pose_param_grid_search"), PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        self.drive_publisher = rospy.Publisher('drive', Twist, queue_size=10)
+        self.drive_publisher = rospy.Publisher(sm_config.get("drive_param_grid_search"), Twist, queue_size=10)
 
         #new additions
         self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)

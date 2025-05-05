@@ -8,6 +8,11 @@ from std_msgs.msg import Float64MultiArray, Bool
 import math
 import ar_detection_node as adn
 
+import yaml
+
+with open("sm_config.yaml", "r") as f:
+    sm_config = yaml.safe_load(f)
+
 class StraightLineApproach:
     def __init__(self, lin_vel, ang_vel, targets):
         self.lin_vel = lin_vel
@@ -18,9 +23,9 @@ class StraightLineApproach:
         self.x = 0
         self.y = 0
         self.heading = 0
-        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
+        self.pose_subscriber = rospy.Subscriber(sm_config.get("pose_param_straight_line"), PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.drive_publisher = rospy.Publisher(sm_config.get("drive_param_straight_line"), Twist, queue_size=10)
         self.aruco_found = False
         self.abort_sub = rospy.Subscriber("abort_check", Bool, self.abort_callback)
         #new additions
