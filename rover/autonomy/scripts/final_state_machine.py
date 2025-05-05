@@ -86,6 +86,8 @@ class GLOB_MSGS:
         self.sub = rospy.Subscriber("pose", PoseStamped, self.pose_callback)
         self.odom_sub = rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) #Subscribes to the pose topic
         self.gui_loc = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray, self.coord_callback) 
+        self.abort_sub = rospy.Subscriber("abort_check", Bool, self.abort_callback)
+        self.abort_check = False
         self.locations = None
         self.cartesian = None
         self.odom_zero = None
@@ -97,6 +99,12 @@ class GLOB_MSGS:
         self.pose = msg
         # print(self.pose.header.stamp.secs, "in pose_callback")
 
+    def abort_callback(self,msg):
+        self.abort_check = msg.data
+    
+    def get_abort_check(self):
+        return self.abort_check
+        
     def get_pose(self):
         return self.pose
     
@@ -199,9 +207,9 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         
 class LocationSelection(smach.State): #State for determining which mission/state to go to and traversing there
     def __init__(self):
-        smach.State.__init__(self, outcomes = RUN_STATES + ["Tasks Ended"],
+        smach.State.__init__(self, outcomes = RUN_STATES + ["Tasks Ended", "ABORT"],
                              input_keys = ["rem_loc_dict", "locations_dict", 'prev_loc', 'start_location'],
-                             output_keys = ["prev_loc", "locations_dict", "rem_loc_dict", "start_location"])
+                             output_keys = ["prev_loc", "locations_dict", "rem_loc_dict", "start_location", "aborted_state"])
         self.glob_msg = None
         
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -215,7 +223,6 @@ class LocationSelection(smach.State): #State for determining which mission/state
             userdata.rem_loc_dict = userdata.locations_dict.copy()
             print (userdata.rem_loc_dict)
         path = userdata.rem_loc_dict
-        #print (path)
         if path != {}: 
             try:
                 print ("in the try")
@@ -224,18 +231,24 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 target = path[list(path.items())[0][0]]
                 print(target)
                 sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
-                sla.navigate() #navigating to the next mission on our optimal path
+                sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
+                if self.glob_msg.abort_check:
+                    userdata.aborted_state = "Location Selection"
+                    return "ABORT"
             except rospy.ROSInterruptException:
-                pass
+                self.glob_msg.pub_state(f"ROS Interrupt Exception during Location Selection")
+                if self.glob_msg.abort_check is True:
+                    userdata.aborted_state = "Location Selection"
+                    return "ABORT"
             return list(path.items())[0][0]
         else: #all mission have been done
             return "Tasks Ended"  
 
 class GNSS1(smach.State): #State for GNSS1
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"],
+        smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
-                            output_keys = ["prev_loc"])
+                            output_keys = ["prev_loc", "aborted_state"])
         self.glob_msg = None
         
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -248,6 +261,11 @@ class GNSS1(smach.State): #State for GNSS1
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["GNSS1"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["GNSS1"][1])**2)**(1/2) #Comparing how far we are from the target location
         
+        if self.glob_msg.abort_check is True:
+            self.glob_msg.pub_state("Aborting for state GNSS1")
+            userdata.aborted_state = "GNSS1"
+            return "ABORT"
+        
         if current_distance < 2: #Determining whether we are in the correct location
             self.glob_msg.pub_state("GNSS1 reached, successful cruise")
             self.glob_msg.pub_state("Goal Point Reached: GNSS1")
@@ -256,6 +274,11 @@ class GNSS1(smach.State): #State for GNSS1
             self.glob_msg.pub_led_light("auto")
             
         else:
+            self.glob_msg.pub_state("Failed to reach GNSS1 location")
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state GNSS1")
+                userdata.aborted_state = "GNSS1"
+                return "ABORT"
             pass
             
         userdata.prev_loc = "GNSS1"
@@ -266,9 +289,9 @@ class GNSS1(smach.State): #State for GNSS1
         
 class GNSS2(smach.State): #State for GNSS1
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"],
+        smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
-                            output_keys = ["prev_loc"])
+                            output_keys = ["prev_loc", "aborted_state"])
         self.glob_msg = None
         
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -281,6 +304,10 @@ class GNSS2(smach.State): #State for GNSS1
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["GNSS2"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["GNSS2"][1])**2)**(1/2) #Comparing how far we are from the target location
 
+        if self.glob_msg.abort_check is True:
+            self.glob_msg.pub_state("Aborting for state GNSS2")
+            userdata.aborted_state = "GNSS2"
+            return "ABORT"
         
         if current_distance < 2:  #Determining whether we are in the correct location
             self.glob_msg.pub_state("GNSS2 reached, successful cruise")
@@ -290,6 +317,11 @@ class GNSS2(smach.State): #State for GNSS1
             self.glob_msg.pub_led_light("auto")
             
         else:
+            self.glob_msg.pub_state("Failed to reach GNSS2 location")
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state GNSS2")
+                userdata.aborted_state = "GNSS2"
+                return "ABORT"
             pass
         #else:
         #print("Failed cruise")
@@ -300,9 +332,9 @@ class GNSS2(smach.State): #State for GNSS1
 
 class AR1(smach.State): #State for AR1
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"],
+        smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
-                            output_keys = ["prev_loc"])
+                            output_keys = ["prev_loc", "aborted_state"])
         self.glob_msg = None
         self.aruco_found = False
         
@@ -319,6 +351,11 @@ class AR1(smach.State): #State for AR1
 
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["AR1"][0])**2 +  #Comparing how far we are from the target location
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["AR1"][1])**2)**(1/2)
+        
+        if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state AR1")
+                userdata.aborted_state = "AR1"
+                return "ABORT"
 
         if current_distance < 5:
             # print("Successful cruise")
@@ -332,7 +369,12 @@ class AR1(smach.State): #State for AR1
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR1") #Starts grid search traversal
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback) #Subscribes to aruco found to determine whether its found or not
             self.glob_msg.pub_state("Starting A1 grid search")
-            ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+            ar_in_correct_loc = gs_traversal_object.navigate() #Should check for abort in GS file
+            if self.glob_msg.abort_check is True:
+                    self.glob_msg.pub_state("Aborting for state AR1")
+                    userdata.aborted_state = "AR1"
+                    self.glob_msg.pub_state_name("")
+                    return "ABORT"
             
             if self.aruco_found:
                 print("in state machine: aruco found")
@@ -347,11 +389,19 @@ class AR1(smach.State): #State for AR1
 
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR1")
+                if self.glob_msg.abort_check is True:
+                    self.glob_msg.pub_state("Aborting for state AR1")
+                    userdata.aborted_state = "AR1"
+                    self.glob_msg.pub_state_name("")
+                    return "ABORT"
             
             self.glob_msg.pub_state_name("")
         else:
             self.glob_msg.pub_state("Did not reach AR1 GNSS")
-            # print("Failed to reach the location")
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state AR1")
+                userdata.aborted_state = "AR1"
+                return "ABORT"
         userdata.prev_loc = "AR1"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
         return "Location Selection"
@@ -359,9 +409,9 @@ class AR1(smach.State): #State for AR1
 
 class AR2(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"],
+        smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
-                            output_keys = ["prev_loc"])
+                            output_keys = ["prev_loc", "aborted_state"])
         self.glob_msg = None
         self.aruco_found = False 
         
@@ -377,6 +427,11 @@ class AR2(smach.State):
         current_location_data = self.glob_msg.get_pose()
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["AR2"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["AR2"][1])**2)**(1/2)
+        
+        if self.glob_msg.abort_check is True:
+            self.glob_msg.pub_state("Aborting for state AR2")
+            userdata.aborted_state = "AR2"
+            return "ABORT"
 
         if current_distance < 5:
             # print("Successful cruise")
@@ -390,6 +445,12 @@ class AR2(smach.State):
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+            if self.glob_msg.abort_check is True:
+                    self.glob_msg.pub_state("Aborting for state AR2")
+                    userdata.aborted_state = "AR2"
+                    self.glob_msg.pub_state_name("")
+                    return "ABORT"
+            
             
             if self.aruco_found:
                 self.glob_msg.pub_state("Grid Search did find AR2") #Will publish the messages afterwards but there are topics to publish when detected 
@@ -399,24 +460,31 @@ class AR2(smach.State):
                     self.glob_msg.pub_led_light("mission done")
                     rospy.sleep(3)
                     self.glob_msg.pub_led_light("auto")
-                    
-
+                
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR2")
+                if self.glob_msg.abort_check is True:
+                    self.glob_msg.pub_state("Aborting for state AR2")
+                    userdata.aborted_state = "AR2"
+                    self.glob_msg.pub_state_name("")
+                    return "ABORT"
             
             self.glob_msg.pub_state_name("")
         else:
             self.glob_msg.pub_state("Did not reach AR2 GNSS")
-            # print("Failed to reach the location")
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state AR2")
+                userdata.aborted_state = "AR2"
+                return "ABORT"
         userdata.prev_loc = "AR2"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
         return "Location Selection"
 
 class AR3(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"],
+        smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
-                            output_keys = ["prev_loc"])
+                            output_keys = ["prev_loc", "aborted_state"])
         self.glob_msg = None
         self.aruco_found = False
         
@@ -432,6 +500,11 @@ class AR3(smach.State):
         current_location_data = self.glob_msg.get_pose()
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["AR3"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["AR3"][1])**2)**(1/2)
+        
+        if self.glob_msg.abort_check is True:
+            self.glob_msg.pub_state("Aborting for state AR3")
+            userdata.aborted_state = "AR3"
+            return "ABORT"
 
         if current_distance < 5:
             # print("Successful cruise")
@@ -445,6 +518,11 @@ class AR3(smach.State):
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR3")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+            if self.glob_msg.abort_check is True:
+                    self.glob_msg.pub_state("Aborting for state AR3")
+                    userdata.aborted_state = "AR3"
+                    self.glob_msg.pub_state_name("")
+                    return "ABORT"
             
             if self.aruco_found:
                 self.glob_msg.pub_state("Grid Search did find AR3") #Will publish the messages afterwards but there are topics to publish when detected 
@@ -458,10 +536,19 @@ class AR3(smach.State):
 
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR3")
+                if self.glob_msg.abort_check is True:
+                    self.glob_msg.pub_state("Aborting for state AR3")
+                    userdata.aborted_state = "AR3"
+                    self.glob_msg.pub_state_name("")
+                    return "ABORT"                
             
             self.glob_msg.pub_state_name("")
         else:
             self.glob_msg.pub_state("Did not reach AR3 GNSS")
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state AR3")
+                userdata.aborted_state = "AR3"
+                return "ABORT"
             # print("Failed to reach the location")
         userdata.prev_loc = "AR3"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
@@ -469,9 +556,9 @@ class AR3(smach.State):
 
 class OBJ1(smach.State): #mallet
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"],
+        smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
-                            output_keys = ["prev_loc"])
+                            output_keys = ["prev_loc", "aborted_state"])
         self.glob_msg = None
         self.mallet_found = False
         self.waterbottle_found = False
@@ -491,6 +578,11 @@ class OBJ1(smach.State): #mallet
         current_location_data = self.glob_msg.get_pose()
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["OBJ1"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["OBJ1"][1])**2)**(1/2)
+        
+        if self.glob_msg.abort_check is True:
+            self.glob_msg.pub_state("Aborting for state OBJ1")
+            userdata.aborted_state = "OBJ1"
+            return "ABORT"
 
         if current_distance < 5:
             # print("Successful cruise")
@@ -504,7 +596,12 @@ class OBJ1(smach.State): #mallet
             rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
 
-            obj1_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+            obj1_in_correct_loc = gs_traversal_object.navigate() #should check for abort in the GS file
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state OBJ1")
+                userdata.aborted_state = "OBJ1"
+                self.glob_msg.pub_state_name("")
+                return "ABORT"     
 
             if self.mallet_found or self.waterbottle_found:
                 if self.mallet_found:
@@ -512,27 +609,37 @@ class OBJ1(smach.State): #mallet
                 elif self.waterbottle_found:
                     self.glob_msg.pub_state("Grid Search did find Waterbottle")
                 if obj1_in_correct_loc:
-                    self.glob_msg.pub_state("Close enough to Object1") 
+                    self.glob_msg.pub_state("Close enough to OBJ1") 
                     self.glob_msg.pub_state("Goal Point Reached: OBJ1")
                     self.glob_msg.pub_led_light("mission done")
                     rospy.sleep(3)
                     self.glob_msg.pub_led_light("auto")
 
                 else:
-                    self.glob_msg.pub_state("Grid Search did not find Object1")
+                    self.glob_msg.pub_state("Grid Search did not find OBJ1")
+                    if self.glob_msg.abort_check is True:
+                        self.glob_msg.pub_state("Aborting for state OBJ1")
+                        userdata.aborted_state = "OBJ1"
+                        self.glob_msg.pub_state_name("")
+                        return "ABORT"       
             
             self.glob_msg.pub_state_name("")
         else:
             self.glob_msg.pub_state("Did not reach Object1 GNSS")
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state OBJ1")
+                userdata.aborted_state = "OBJ1"
+                self.glob_msg.pub_state_name("")
+                return "ABORT"  
         userdata.prev_loc = "OBJ1"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
         return "Location Selection"
     
 class OBJ2(smach.State): #waterbottle
     def __init__(self):
-        smach.State.__init__(self, outcomes = ["Location Selection"],
+        smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
-                            output_keys = ["prev_loc"])
+                            output_keys = ["prev_loc", "aborted_state"])
         self.glob_msg = None
         self.mallet_found = False
         self.waterbottle_found = False
@@ -551,6 +658,11 @@ class OBJ2(smach.State): #waterbottle
         current_location_data = self.glob_msg.get_pose()
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["OBJ2"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["OBJ2"][1])**2)**(1/2)
+        
+        if self.glob_msg.abort_check is True:
+            self.glob_msg.pub_state("Aborting for state OBJ2")
+            userdata.aborted_state = "OBJ2"
+            return "ABORT"
 
         if current_distance < 5:
             # print("Successful cruise")
@@ -565,6 +677,11 @@ class OBJ2(smach.State): #waterbottle
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
 
             obj1_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state OBJ2")
+                userdata.aborted_state = "OBJ2"
+                self.glob_msg.pub_state_name("")
+                return "ABORT"     
 
             if self.mallet_found or self.waterbottle_found:
                 if self.mallet_found:
@@ -580,21 +697,34 @@ class OBJ2(smach.State): #waterbottle
 
                 else:
                     self.glob_msg.pub_state("Grid Search did not find Object1")
+                    if self.glob_msg.abort_check is True:
+                        self.glob_msg.pub_state("Aborting for state OBJ2")
+                        userdata.aborted_state = "OBJ2"
+                        self.glob_msg.pub_state_name("")
+                        return "ABORT"    
+                    
             
             self.glob_msg.pub_state_name("")
         else:
-            self.glob_msg.pub_state("Did not reach Object2 GNSS")
+            self.glob_msg.pub_state("Did not reach OBJ2 GNSS")
+            if self.glob_msg.abort_check is True:
+                self.glob_msg.pub_state("Aborting for state OBJ2")
+                userdata.aborted_state = "OBJ2"
+                self.glob_msg.pub_state_name("")
+                return "ABORT"  
         userdata.prev_loc = "OBJ2"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
         return "Location Selection"
     
     
-class ABORT(smach.State):  # Abort State --> In case of failure what should it do? When should it be called?
+class ABORT(smach.State):  # Assuming it won't be called before we try to go to a task 
+                           # (more specifically before the init state is called for the first time),
+                           # what should we do in case of failure (unlikely)?
     def __init__(self):
         smach.State.__init__(
             self,
             outcomes=["Location Selection"],
-            input_keys=["prev_loc", "start_location"],
+            input_keys=["prev_loc", "start_location", "aborted_state"],
         )
         self.glob_msg = None
 
@@ -603,16 +733,15 @@ class ABORT(smach.State):  # Abort State --> In case of failure what should it d
 
     def execute(self, userdata):
         # Determine the location to return to
-        if userdata.prev_loc is None:
+        if userdata.prev_loc == "start":
             self.glob_msg.pub_state("No previous location available; returning to start location.")
             return_location = userdata.start_location
-        elif len(userdata.prev_loc) == 1 and userdata.prev_loc[0] == "start":
-            self.glob_msg.pub_state("Aborting back to start location as it's the first task.")
-            return_location = userdata.start_location
         else:
-            return_location = userdata.prev_loc
+            self.glob_msg.pub_state("Aborting back to the previous finished task location")
+            return_location = userdata.locations_dict[userdata.prev_loc]
 
-        self.glob_msg.pub_state(f"Aborting to location: {return_location}")
+        self.glob_msg.pub_state(f"Aborting to location: {return_location} to {userdata.prev_loc}")
+        userdata.prev_loc_dict.pop(userdata.aborted_state)
 
         try:
             # Perform straight-line traversal back to the determined location
@@ -626,11 +755,10 @@ class ABORT(smach.State):  # Abort State --> In case of failure what should it d
             )
 
             if distance < 2.0:  # Threshold for successful navigation
-                self.glob_msg.pub_state("Successfully returned to the abort location.")
-                rospy.Subscriber("led_light", String, led_light.state_callback) #How to get it to flash?
+                self.glob_msg.pub_state("Successfully returned to the prev task location.")
                 return "Location Selection"
             else:
-                self.glob_msg.pub_state("Failed to reach the abort location within threshold.")
+                self.glob_msg.pub_state("Failed to reach the prev task location within threshold.")
                 return "Location Selection"
 
         except rospy.ROSInterruptException as e:
@@ -692,20 +820,22 @@ def main():
         sm_tasks_execute.userdata.locations_dict = {}
         sm_tasks_execute.userdata.start_location = None
         sm_tasks_execute.userdata.rem_loc_dict = {}
-        sm_tasks_execute.userdata.prev_loc = None  # Initialize with no previous location
+        sm_tasks_execute.userdata.prev_loc = "start"  # Initialize with the start location
+        sm_tasks_execute.userdata.aborted_state = None
 
         with sm_tasks_execute:
             smach.StateMachine.add(
                 "Location Selection",
                 locselect,
                 transitions={
-                    state: state for state in RUN_STATES #changed this to only include states in RUN_STATES
+                    state: state for state in (RUN_STATES + ["ABORT"]) #changed this to only include states in RUN_STATES
                 },
                 remapping={
                     "rem_loc_dict": "rem_loc_dict",
                     "locations_dict": "locations_dict",
                     "prev_loc": "prev_loc",  # Add remapping for prev_loc
-                    "start_location" : "start_location"
+                    "start_location" : "start_location",
+                    "aborted_state" : "aborted_state"
                 }
             )
             
@@ -713,10 +843,12 @@ def main():
                 smach.StateMachine.add(
                     "GNSS1",
                     gnss1,
-                    transitions={"Location Selection": "Location Selection"},
+                    transitions={"Location Selection": "Location Selection", 
+                                 "ABORT": "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"  # Output the last completed location
+                        "prev_loc": "prev_loc",  # Output the last completed location
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
@@ -724,11 +856,12 @@ def main():
                 smach.StateMachine.add(
                     "GNSS2",
                     gnss2,
-                    transitions={"Location Selection": "Location Selection"},
+                    transitions={"Location Selection": "Location Selection",
+                                 "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
-                        
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
@@ -736,11 +869,12 @@ def main():
                 smach.StateMachine.add(
                     "AR1",
                     ar1,
-                    transitions={"Location Selection": "Location Selection"},
+                    transitions={"Location Selection": "Location Selection",
+                                 "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
-
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
@@ -748,11 +882,12 @@ def main():
                 smach.StateMachine.add(
                     "AR2",
                     ar2,
-                    transitions={"Location Selection": "Location Selection"},
+                    transitions={"Location Selection": "Location Selection",
+                                 "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
-                        
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state" 
                     }
                 )
             
@@ -760,11 +895,12 @@ def main():
                 smach.StateMachine.add(
                     "AR3",
                     ar3,
-                    transitions={"Location Selection": "Location Selection"},
+                    transitions={"Location Selection": "Location Selection",
+                                 "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
-
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
@@ -772,11 +908,12 @@ def main():
                 smach.StateMachine.add(
                     "OBJ1",
                     obj1,
-                    transitions={"Location Selection": "Location Selection"},
+                    transitions={"Location Selection": "Location Selection",
+                                 "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
-                        
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
@@ -784,19 +921,20 @@ def main():
                 smach.StateMachine.add(
                     "OBJ2",
                     obj2,
-                    transitions={"Location Selection": "Location Selection"},
+                    transitions={"Location Selection": "Location Selection",
+                                 "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
             smach.StateMachine.add(
-                "Abort",
+                "ABORT",
                 abort,
                 transitions={
-                    "Abort Complete": "Location Selection",
-                    "Abort Failed": "Tasks Ended", #What should do in this case?
+                    "Location Selection": "Location Selection" #What should do in the case where abort fails?
                 },
                 remapping= {
                     "prev_loc": "prev_loc",  # Use the previous location for abort

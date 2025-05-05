@@ -14,6 +14,7 @@ class StraightLineApproach:
         self.ang_vel = ang_vel
         self.targets = targets
         self.found = False
+        self.abort_check = False
         self.x = 0
         self.y = 0
         self.heading = 0
@@ -21,7 +22,7 @@ class StraightLineApproach:
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
         self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
         self.aruco_found = False
-
+        self.abort_sub = rospy.Subscriber("abort_check", Bool, self.abort_callback)
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
@@ -39,7 +40,9 @@ class StraightLineApproach:
         self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
                                             msg.pose.orientation.y, msg.pose.orientation.z)[2]
 
-    
+    def abort_callback(self,msg):
+        self.abort_check = msg.data
+        
     def odom_callback(self, msg):
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
@@ -78,7 +81,7 @@ class StraightLineApproach:
         threshold = 0.5
         angle_threshold = 0.2
 
-        while not rospy.is_shutdown():
+        while (not rospy.is_shutdown()) and (self.abort_check is False):
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
@@ -120,6 +123,8 @@ class StraightLineApproach:
         for target_x, target_y in self.targets:
             print(f"Moving towards target: ({target_x}, {target_y})")
             self.move_to_target(target_x, target_y)
+            if self.abort_check:
+                break
             rospy.sleep(1)
 
 if __name__ == '__main__':
