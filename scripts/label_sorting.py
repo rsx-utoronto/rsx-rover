@@ -1,9 +1,20 @@
+#!/usr/bin/python3
+
 import os
 import shutil
 
 # ====================================
 # Configurable Paths and Variables
 # ====================================
+# ROOT_DIR: the directory where the script is located (adjust if needed)
+ROOT_DIR = "."
+# Folder containing label files (assumed to be in the same root)
+LABELS_DIR = os.path.join(ROOT_DIR, "Labels")
+# List of dataset subsets (directories in the same root as the script)
+SUBSETS = ["test", "train", "val"]
+# Name of the subfolder inside each subset where labels will be copied
+LABELS_SUBDIR = "labels"
+# Expected file extension for label files (adjust as needed)
 ROOT_DIR = "."  # Directory where the script is located
 LABELS_DIR = os.path.join(ROOT_DIR, "Labels")  # Folder containing label files
 SUBSETS = ["test", "train", "val"]  # Dataset subsets
@@ -14,6 +25,10 @@ LABEL_EXTENSION = ".txt"  # Expected extension for label files
 # Debug: Print the current working directory
 print("Current working directory:", os.getcwd())
 
+
+# ====================================
+# Process each subset directory
+# ====================================
 for subset in SUBSETS:
     subset_dir = os.path.join(ROOT_DIR, subset)
     images_dir = os.path.join(subset_dir, IMAGES_SUBDIR)
