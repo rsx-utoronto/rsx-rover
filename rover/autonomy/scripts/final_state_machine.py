@@ -24,9 +24,13 @@ from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 
 import yaml
+import os
 
-with open("sm_config.yaml", "r") as f:
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+
+with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
+
 
 RUN_STATES_DEFAULT = ["GNSS1", "AR1", "OBJ2", "OBJ1", "AR2", "AR3", "GNSS2"] 
 RUN_STATES = sm_config.get("RUN_STATES", RUN_STATES_DEFAULT)

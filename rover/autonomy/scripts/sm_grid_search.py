@@ -12,8 +12,11 @@ import ar_detection_node as ar_detect
 import sm_straight_line as StraightLineApproach
 
 import yaml
+import os
 
-with open("sm_config.yaml", "r") as f:
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+
+with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
     
 class GS_Traversal:

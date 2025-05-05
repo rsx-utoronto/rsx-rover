@@ -9,10 +9,13 @@ import math
 import ar_detection_node as adn
 
 import yaml
+import os
 
-with open("sm_config.yaml", "r") as f:
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+
+with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
-
+    
 class StraightLineApproach:
     def __init__(self, lin_vel, ang_vel, targets):
         self.lin_vel = lin_vel
