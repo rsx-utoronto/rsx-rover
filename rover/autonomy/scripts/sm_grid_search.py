@@ -11,13 +11,18 @@ import aruco_homing as aruco_homing
 import ar_detection_node as ar_detect
 import sm_straight_line as StraightLineApproach
 
+import yaml
 
+with open("sm_config.yaml", "r") as f:
+    sm_config = yaml.safe_load(f)
+    
 class GS_Traversal:
     def __init__(self, lin_vel, ang_vel, targets, state):
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
         self.targets = targets
         self.found = False #Do we need?
+        self.abort_check = False
         self.x = 0
         self.y = 0
         self.heading = 0
@@ -44,6 +49,7 @@ class GS_Traversal:
         self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
         self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
         self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
+        self.abort_sub = rospy.Subscriber("abort_check", Bool, self.abort_callback)
 
         # self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         
@@ -57,6 +63,9 @@ class GS_Traversal:
         self.y = msg.pose.pose.position.y
         self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
                                             msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
+    
+    def abort_callback(self,msg):
+        self.abort_check = msg.data
 
     def target_callback(self, msg):
         self.target_x = msg.data[0]
@@ -128,7 +137,7 @@ class GS_Traversal:
         
         
         # print("In move to target")
-        while not rospy.is_shutdown():
+        while (not rospy.is_shutdown()) and (self.abort_check is False):
             obj = self.mallet_found or self.waterbottle_found
             mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
@@ -180,15 +189,15 @@ class GS_Traversal:
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
                 if state == "AR1" or state == "AR2" or state == "AR3":
-                    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 1.8, 0.8) # FOR ARUCO
+                    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
                 elif state == "OBJ1" or state == "OBJ2":
-                    aimer = aruco_homing.AimerROS(640, 360, 1450, 50, 200, 1.0, 0.5) # FOR WATER BOTTLE
+                    aimer = aruco_homing.AimerROS(640, 360, 1450, 50, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
                     rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
                 rate = rospy.Rate(10) #this code needs to be adjusted
                 for i in range(50):
                     rate.sleep()
-                while not rospy.is_shutdown():
+                while (not rospy.is_shutdown()) and (self.abort_check is False):
                     twist = Twist()
                     if aimer.linear_v == 0 and aimer.angular_v == 0:
                         print ("at weird", aimer.linear_v, aimer.angular_v)
@@ -223,6 +232,8 @@ class GS_Traversal:
             
             print("Going to target", target_x, target_y)
             self.move_to_target(target_x, target_y, self.state) #changed from navigate_to_target
+            if self.abort_check:
+                break
 
             rospy.sleep(1)
 
