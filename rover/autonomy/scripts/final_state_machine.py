@@ -411,7 +411,7 @@ class AR2(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
-                            output_keys = ["prev_loc"])
+                            output_keys = ["prev_loc", "aborted_state"])
         self.glob_msg = None
         self.aruco_found = False 
         
@@ -484,7 +484,7 @@ class AR3(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
-                            output_keys = ["prev_loc"])
+                            output_keys = ["prev_loc", "aborted_state"])
         self.glob_msg = None
         self.aruco_found = False
         
@@ -558,7 +558,7 @@ class OBJ1(smach.State): #mallet
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
-                            output_keys = ["prev_loc"])
+                            output_keys = ["prev_loc", "aborted_state"])
         self.glob_msg = None
         self.mallet_found = False
         self.waterbottle_found = False
@@ -639,7 +639,7 @@ class OBJ2(smach.State): #waterbottle
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
-                            output_keys = ["prev_loc"])
+                            output_keys = ["prev_loc", "aborted_state"])
         self.glob_msg = None
         self.mallet_found = False
         self.waterbottle_found = False
@@ -834,7 +834,8 @@ def main():
                     "rem_loc_dict": "rem_loc_dict",
                     "locations_dict": "locations_dict",
                     "prev_loc": "prev_loc",  # Add remapping for prev_loc
-                    "start_location" : "start_location"
+                    "start_location" : "start_location",
+                    "aborted_state" : "aborted_state"
                 }
             )
             
@@ -846,7 +847,8 @@ def main():
                                  "ABORT": "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"  # Output the last completed location
+                        "prev_loc": "prev_loc",  # Output the last completed location
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
@@ -858,8 +860,8 @@ def main():
                                  "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
-                        
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
@@ -871,8 +873,8 @@ def main():
                                  "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
-
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
@@ -884,8 +886,8 @@ def main():
                                  "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
-                        
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state" 
                     }
                 )
             
@@ -897,8 +899,8 @@ def main():
                                  "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
-
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
@@ -910,8 +912,8 @@ def main():
                                  "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
-                        
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
@@ -923,7 +925,8 @@ def main():
                                  "ABORT" : "ABORT"},
                     remapping={
                         "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc"
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
                     }
                 )
             
