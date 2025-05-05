@@ -8,20 +8,26 @@ from std_msgs.msg import Float64MultiArray, Bool
 import math
 import ar_detection_node as adn
 
+import yaml
+
+with open("sm_config.yaml", "r") as f:
+    sm_config = yaml.safe_load(f)
+
 class StraightLineApproach:
     def __init__(self, lin_vel, ang_vel, targets):
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
         self.targets = targets
         self.found = False
+        self.abort_check = False
         self.x = 0
         self.y = 0
         self.heading = 0
-        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
+        self.pose_subscriber = rospy.Subscriber(sm_config.get("pose_param_straight_line"), PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.drive_publisher = rospy.Publisher(sm_config.get("drive_param_straight_line"), Twist, queue_size=10)
         self.aruco_found = False
-
+        self.abort_sub = rospy.Subscriber("abort_check", Bool, self.abort_callback)
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
@@ -39,7 +45,9 @@ class StraightLineApproach:
         self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
                                             msg.pose.orientation.y, msg.pose.orientation.z)[2]
 
-    
+    def abort_callback(self,msg):
+        self.abort_check = msg.data
+        
     def odom_callback(self, msg):
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
@@ -75,9 +83,10 @@ class StraightLineApproach:
     def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISHIT)
         rate = rospy.Rate(50)
         kp = 0.5
-        threshold = 0.2
+        threshold = 0.5
+        angle_threshold = 0.2
 
-        while not rospy.is_shutdown():
+        while (not rospy.is_shutdown()) and (self.abort_check is False):
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
@@ -103,7 +112,7 @@ class StraightLineApproach:
                 print(f"Reached target: ({target_x}, {target_y})")
                 break
 
-            if abs(angle_diff) <= threshold:
+            if abs(angle_diff) <= angle_threshold:
                 msg.linear.x = self.lin_vel
                 msg.angular.z = 0
             else:
@@ -119,6 +128,8 @@ class StraightLineApproach:
         for target_x, target_y in self.targets:
             print(f"Moving towards target: ({target_x}, {target_y})")
             self.move_to_target(target_x, target_y)
+            if self.abort_check:
+                break
             rospy.sleep(1)
 
 if __name__ == '__main__':

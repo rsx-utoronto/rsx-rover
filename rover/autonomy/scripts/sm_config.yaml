@@ -1,0 +1,61 @@
+# final_state_machine file params
+RUN_STATES:
+  - GNSS1
+  - AR1
+  - OBJ2
+  - OBJ1
+  - AR2
+  - AR3
+  - GNSS2
+
+origin_pose: [0.0, 0.0]
+heading_vector: [1.1, 0.0]
+
+straight_line_approach_lin_vel: 0 # 2.7
+straight_line_approach_ang_vel: 0 #0.3
+
+AR_grid_search_w: 12
+AR_grid_search_h: 12
+AR_grid_search_tol: 2
+
+OBJ_grid_search_w: 20
+OBJ_grid_search_h: 20
+OBJ_grid_search_tol: 2
+
+GS_Traversal_lin_vel: 1
+GS_Traversal_ang_vel: 0.3
+
+run_in_order : False #false means we find shortest path, true means it takes in the same order as states_run_in_order
+
+States_run_in_order:
+  - GNSS1
+  - AR1
+  - OBJ2
+  - OBJ1
+  - AR2
+  - AR3
+  - GNSS2
+
+# optimal_path_file params
+difficulty: # priority rank!
+  GNSS1: 1
+  GNSS2: 1
+  AR1: 1
+  AR2: 1
+  AR3: 1
+  OBJ1: 1
+  OBJ2: 1
+
+# sm_grid_search params
+Aruco_homing_lin_vel: 0 #1.8
+Aruco_homing_ang_vel: 0 #0.8
+
+Obj_homing_lin_vel: 0 #1
+Obj_homing_ang_vel: 0 #0.5
+
+drive_param_grid_search: aa #'drive'
+pose_param_grid_search: '/pose'
+
+# sm_straight_line params
+drive_param_straight_line: aa #'/drive'
+pose_param_straight_line: '/pose'
