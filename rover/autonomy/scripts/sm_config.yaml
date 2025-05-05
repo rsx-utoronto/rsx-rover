@@ -25,6 +25,17 @@ OBJ_grid_search_tol: 2
 GS_Traversal_lin_vel: 1
 GS_Traversal_ang_vel: 0.3
 
+run_in_order : False #false means we find shortest path, true means it takes in the same order as states_run_in_order
+
+States_run_in_order:
+  - GNSS1
+  - AR1
+  - OBJ2
+  - OBJ1
+  - AR2
+  - AR3
+  - GNSS2
+
 # optimal_path_file params
 difficulty: # priority rank!
   GNSS1: 1

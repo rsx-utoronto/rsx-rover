@@ -186,8 +186,14 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
                 self.glob_msg.pub_state(str(cartesian[el]))
         
         print("Before CARTESIAN", cartesian)
+        
         cartesian_dict = {}
-        cartesian_list = shortest_path('start', cartesian) 
+        
+        if sm_config.get("run_in_order"):
+            cartesian_list = sm_config.get("States_run_in_order")
+        else: 
+            cartesian_list = shortest_path('start', cartesian) 
+    
         for cart in cartesian_list:
             cartesian_dict[cart] = cartesian[cart]
             
