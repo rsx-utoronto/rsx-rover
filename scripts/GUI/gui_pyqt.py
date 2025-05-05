@@ -71,7 +71,7 @@ class statusTerminal(QWidget):
 
         # Connect signals to the corresponding update methods
         self.update_status_signal.connect(self.update_string_list)
-        rospy.Subscriber('gui_status', String, self.string_callback)
+        # rospy.Subscriber('gui_status', String, self.string_callback)
         self.received_strings = []
         self.strlength = -1
     def init_ui(self):
@@ -96,8 +96,10 @@ class statusTerminal(QWidget):
 
     def update_string_list(self, new_string):
         self.received_strings.append(new_string)
+        cursor = self.string_list.textCursor()
         cursor_pos = self.string_list.textCursor().position()
-        self.string_list.setPlainText("\n".join(self.received_strings))
+        # self.string_list.setPlainText("\n".join(self.received_strings))
+        self.string_list.append(new_string)
         if cursor_pos < self.strlength - self.received_strings[-1].__len__():
             self.string_list.moveCursor(QTextCursor.End)
         self.strlength += len(new_string) + 1
@@ -741,6 +743,8 @@ class RoverGUI(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
         self.velocity_control = VelocityControl()
+        self.gui_status_sub = rospy.Subscriber('gui_status', String, self.string_callback)
+        self.reached_state = None
 
         # Create tab
         self.split_screen_tab = QWidget()
@@ -764,6 +768,27 @@ class RoverGUI(QMainWindow):
         self.setup_cams_tab()
         
 
+    def string_callback(self, msg):
+        self.statusTerminal.string_callback(msg)
+        msg_list = msg.data.split(" ")
+        goal_reached_msg = ["Goal", "Point", "Reached:"]
+        reached = True
+        for i in range(len(goal_reached_msg)):
+            try:
+                if msg_list[i] != goal_reached_msg[i]:
+                    reached = False
+                    break
+            except IndexError:
+                reached = False
+                break
+        if reached:
+            self.reached_state = msg_list[3]
+        else:
+            self.reached_state = None
+        if self.reached_state is not None:
+            self.setStyleSheet("background-color: #adebb2")
+        else:
+            self.setStyleSheet("background-color: #FFFFFF")
 
 
         
