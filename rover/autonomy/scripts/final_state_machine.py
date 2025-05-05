@@ -30,6 +30,7 @@ with open("sm_config.yaml", "r") as f:
 
 RUN_STATES_DEFAULT = ["GNSS1", "AR1", "OBJ2", "OBJ1", "AR2", "AR3", "GNSS2"] 
 RUN_STATES = sm_config.get("RUN_STATES", RUN_STATES_DEFAULT)
+print("run states from yaml", RUN_STATES)
 
 #When it completes a task it publishes the message "Goal point reached: <Task Name>" to gui_status
 
@@ -243,7 +244,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     return "ABORT"
             except rospy.ROSInterruptException:
                 self.glob_msg.pub_state(f"ROS Interrupt Exception during Location Selection")
-                if self.glob_msg.abort_check is True:
+                if self.glob_msg.abort_check:
                     userdata.aborted_state = "Location Selection"
                     return "ABORT"
             return list(path.items())[0][0]
@@ -267,7 +268,7 @@ class GNSS1(smach.State): #State for GNSS1
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["GNSS1"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["GNSS1"][1])**2)**(1/2) #Comparing how far we are from the target location
         
-        if self.glob_msg.abort_check is True:
+        if self.glob_msg.abort_check:
             self.glob_msg.pub_state("Aborting for state GNSS1")
             userdata.aborted_state = "GNSS1"
             return "ABORT"
@@ -281,7 +282,7 @@ class GNSS1(smach.State): #State for GNSS1
             
         else:
             self.glob_msg.pub_state("Failed to reach GNSS1 location")
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state GNSS1")
                 userdata.aborted_state = "GNSS1"
                 return "ABORT"
@@ -310,7 +311,7 @@ class GNSS2(smach.State): #State for GNSS1
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["GNSS2"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["GNSS2"][1])**2)**(1/2) #Comparing how far we are from the target location
 
-        if self.glob_msg.abort_check is True:
+        if self.glob_msg.abort_check:
             self.glob_msg.pub_state("Aborting for state GNSS2")
             userdata.aborted_state = "GNSS2"
             return "ABORT"
@@ -324,7 +325,7 @@ class GNSS2(smach.State): #State for GNSS1
             
         else:
             self.glob_msg.pub_state("Failed to reach GNSS2 location")
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state GNSS2")
                 userdata.aborted_state = "GNSS2"
                 return "ABORT"
@@ -358,7 +359,7 @@ class AR1(smach.State): #State for AR1
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["AR1"][0])**2 +  #Comparing how far we are from the target location
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["AR1"][1])**2)**(1/2)
         
-        if self.glob_msg.abort_check is True:
+        if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state AR1")
                 userdata.aborted_state = "AR1"
                 return "ABORT"
@@ -376,7 +377,7 @@ class AR1(smach.State): #State for AR1
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback) #Subscribes to aruco found to determine whether its found or not
             self.glob_msg.pub_state("Starting A1 grid search")
             ar_in_correct_loc = gs_traversal_object.navigate() #Should check for abort in GS file
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                     self.glob_msg.pub_state("Aborting for state AR1")
                     userdata.aborted_state = "AR1"
                     self.glob_msg.pub_state_name("")
@@ -395,7 +396,7 @@ class AR1(smach.State): #State for AR1
 
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR1")
-                if self.glob_msg.abort_check is True:
+                if self.glob_msg.abort_check:
                     self.glob_msg.pub_state("Aborting for state AR1")
                     userdata.aborted_state = "AR1"
                     self.glob_msg.pub_state_name("")
@@ -404,7 +405,7 @@ class AR1(smach.State): #State for AR1
             self.glob_msg.pub_state_name("")
         else:
             self.glob_msg.pub_state("Did not reach AR1 GNSS")
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state AR1")
                 userdata.aborted_state = "AR1"
                 return "ABORT"
@@ -434,7 +435,7 @@ class AR2(smach.State):
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["AR2"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["AR2"][1])**2)**(1/2)
         
-        if self.glob_msg.abort_check is True:
+        if self.glob_msg.abort_check:
             self.glob_msg.pub_state("Aborting for state AR2")
             userdata.aborted_state = "AR2"
             return "ABORT"
@@ -451,7 +452,7 @@ class AR2(smach.State):
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                     self.glob_msg.pub_state("Aborting for state AR2")
                     userdata.aborted_state = "AR2"
                     self.glob_msg.pub_state_name("")
@@ -469,7 +470,7 @@ class AR2(smach.State):
                 
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR2")
-                if self.glob_msg.abort_check is True:
+                if self.glob_msg.abort_check:
                     self.glob_msg.pub_state("Aborting for state AR2")
                     userdata.aborted_state = "AR2"
                     self.glob_msg.pub_state_name("")
@@ -478,7 +479,7 @@ class AR2(smach.State):
             self.glob_msg.pub_state_name("")
         else:
             self.glob_msg.pub_state("Did not reach AR2 GNSS")
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state AR2")
                 userdata.aborted_state = "AR2"
                 return "ABORT"
@@ -507,7 +508,7 @@ class AR3(smach.State):
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["AR3"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["AR3"][1])**2)**(1/2)
         
-        if self.glob_msg.abort_check is True:
+        if self.glob_msg.abort_check:
             self.glob_msg.pub_state("Aborting for state AR3")
             userdata.aborted_state = "AR3"
             return "ABORT"
@@ -524,7 +525,7 @@ class AR3(smach.State):
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR3")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                     self.glob_msg.pub_state("Aborting for state AR3")
                     userdata.aborted_state = "AR3"
                     self.glob_msg.pub_state_name("")
@@ -542,7 +543,7 @@ class AR3(smach.State):
 
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR3")
-                if self.glob_msg.abort_check is True:
+                if self.glob_msg.abort_check:
                     self.glob_msg.pub_state("Aborting for state AR3")
                     userdata.aborted_state = "AR3"
                     self.glob_msg.pub_state_name("")
@@ -551,7 +552,7 @@ class AR3(smach.State):
             self.glob_msg.pub_state_name("")
         else:
             self.glob_msg.pub_state("Did not reach AR3 GNSS")
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state AR3")
                 userdata.aborted_state = "AR3"
                 return "ABORT"
@@ -585,7 +586,7 @@ class OBJ1(smach.State): #mallet
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["OBJ1"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["OBJ1"][1])**2)**(1/2)
         
-        if self.glob_msg.abort_check is True:
+        if self.glob_msg.abort_check:
             self.glob_msg.pub_state("Aborting for state OBJ1")
             userdata.aborted_state = "OBJ1"
             return "ABORT"
@@ -603,7 +604,7 @@ class OBJ1(smach.State): #mallet
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
 
             obj1_in_correct_loc = gs_traversal_object.navigate() #should check for abort in the GS file
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state OBJ1")
                 userdata.aborted_state = "OBJ1"
                 self.glob_msg.pub_state_name("")
@@ -623,7 +624,7 @@ class OBJ1(smach.State): #mallet
 
                 else:
                     self.glob_msg.pub_state("Grid Search did not find OBJ1")
-                    if self.glob_msg.abort_check is True:
+                    if self.glob_msg.abort_check:
                         self.glob_msg.pub_state("Aborting for state OBJ1")
                         userdata.aborted_state = "OBJ1"
                         self.glob_msg.pub_state_name("")
@@ -632,7 +633,7 @@ class OBJ1(smach.State): #mallet
             self.glob_msg.pub_state_name("")
         else:
             self.glob_msg.pub_state("Did not reach Object1 GNSS")
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state OBJ1")
                 userdata.aborted_state = "OBJ1"
                 self.glob_msg.pub_state_name("")
@@ -665,7 +666,7 @@ class OBJ2(smach.State): #waterbottle
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["OBJ2"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["OBJ2"][1])**2)**(1/2)
         
-        if self.glob_msg.abort_check is True:
+        if self.glob_msg.abort_check:
             self.glob_msg.pub_state("Aborting for state OBJ2")
             userdata.aborted_state = "OBJ2"
             return "ABORT"
@@ -683,7 +684,7 @@ class OBJ2(smach.State): #waterbottle
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
 
             obj1_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state OBJ2")
                 userdata.aborted_state = "OBJ2"
                 self.glob_msg.pub_state_name("")
@@ -703,7 +704,7 @@ class OBJ2(smach.State): #waterbottle
 
                 else:
                     self.glob_msg.pub_state("Grid Search did not find Object1")
-                    if self.glob_msg.abort_check is True:
+                    if self.glob_msg.abort_check:
                         self.glob_msg.pub_state("Aborting for state OBJ2")
                         userdata.aborted_state = "OBJ2"
                         self.glob_msg.pub_state_name("")
@@ -713,7 +714,7 @@ class OBJ2(smach.State): #waterbottle
             self.glob_msg.pub_state_name("")
         else:
             self.glob_msg.pub_state("Did not reach OBJ2 GNSS")
-            if self.glob_msg.abort_check is True:
+            if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state OBJ2")
                 userdata.aborted_state = "OBJ2"
                 self.glob_msg.pub_state_name("")
