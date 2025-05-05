@@ -16,5 +16,8 @@
     <!-- Launch the State Machine -->
     <!--node pkg="rover" type="final_state_machine.py" name="rover_state_machine" output="screen"/-->
 
+    <!-- ZED check -->
 
+    <node pkg="rover" type="check_zed.py" name="check_zed" output="screen" />
+    
 </launch>

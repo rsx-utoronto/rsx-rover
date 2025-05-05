@@ -15,7 +15,6 @@ class CheckZed:
         self.timer.start()
 
     def callback(self, msg):
-        print ("In callback")
         self.timer.cancel()
         self.timer = threading.Timer(5, self.timeout)
         self.timer.start()
