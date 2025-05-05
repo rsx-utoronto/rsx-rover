@@ -744,6 +744,9 @@ class RoverGUI(QMainWindow):
         self.setCentralWidget(self.tabs)
         self.velocity_control = VelocityControl()
         self.gui_status_sub = rospy.Subscriber('gui_status', String, self.string_callback)
+        self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
+        self.manual_abort_pub = rospy.Publisher('/manual_abort_check', Bool, queue_size=5)
+        self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
         self.reached_state = None
 
         # Create tab
@@ -787,8 +790,10 @@ class RoverGUI(QMainWindow):
             self.reached_state = None
         if self.reached_state is not None:
             self.setStyleSheet("background-color: #adebb2")
+            self.status_label.setText(f"Goal Reached: {self.reached_state}")
         else:
             self.setStyleSheet("background-color: #FFFFFF")
+            self.status_label.setText("")
 
 
         
@@ -948,6 +953,35 @@ class RoverGUI(QMainWindow):
         # vertical_splitter.addWidget(controls_group)
         control_tab_layout = QVBoxLayout()
         control_tab_layout.addWidget(self.controls_group)
+
+        # Create the new section to appear above camera
+        status_group = QGroupBox("Status")
+        status_layout = QHBoxLayout()  # Changed from QVBoxLayout to QHBoxLayout
+        status_group.setMaximumHeight(100)  # Set maximum height
+        
+        # Add widgets to the new section
+        self.status_label = QLabel("")
+        self.status_label.setStyleSheet("font-size: 64px")  
+        next_button = QPushButton("Next Task")
+        manual_abort_button = QPushButton("Manual Abort")
+        auto_abort_button = QPushButton("Auto Abort")
+        
+        # Make buttons smaller to match the reduced section height
+        button_style = "padding: 4px; min-height: 20px;"
+        next_button.setStyleSheet(button_style)
+        next_button.clicked.connect(self.pub_next_state)
+        manual_abort_button.setStyleSheet(button_style)
+        manual_abort_button.clicked.connect(self.pub_manual_abort)
+        auto_abort_button.setStyleSheet(button_style)
+        auto_abort_button.clicked.connect(self.pub_auto_abort)
+        
+        # Add widgets to layout horizontally
+        status_layout.addWidget(self.status_label)
+        status_layout.addWidget(next_button)
+        status_layout.addWidget(manual_abort_button)
+        status_layout.addWidget(auto_abort_button)
+        status_group.setLayout(status_layout)
+
         splitter = QSplitter(Qt.Horizontal)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
@@ -1001,9 +1035,14 @@ class RoverGUI(QMainWindow):
         map_layout.addWidget(self.map_overlay_splitter)
         map_group.setLayout(map_layout)
 
-        # Add widgets to the splitter
-        splitter.addWidget(camera_group)
-        splitter.addWidget(map_group)
+        # Create a vertical splitter for the left side
+        left_side_splitter = QSplitter(Qt.Vertical)
+        left_side_splitter.addWidget(status_group)
+        left_side_splitter.addWidget(camera_group)
+
+        # Create the horizontal splitter for the main layout
+        splitter.addWidget(left_side_splitter)  # Left side has new section stacked above camera
+        splitter.addWidget(map_group)           # Right side has map
         
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
@@ -1044,6 +1083,14 @@ class RoverGUI(QMainWindow):
         print(f"Changed to Gear: {value}")
         self.gear_slider_splitter.setValue(value)
 
+    def pub_next_state(self):
+        self.next_state_pub.publish(True)
+
+    def pub_manual_abort(self):
+        self.manual_abort_pub.publish(True)
+
+    def pub_auto_abort(self):
+        self.auto_abort_pub.publish(True)
 
 
 class CheckableComboBox(QComboBox):
