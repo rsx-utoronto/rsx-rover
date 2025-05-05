@@ -146,7 +146,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         smach.State.__init__(self, 
                              outcomes = ["Tasks Execute"],
                              input_keys = ["cartesian"],
-                             output_keys = ["cartesian"])
+                             output_keys = ["cartesian", "start_location"])
         self.glob_msg = None
         
     def set_msg(self, glob_msg: GLOB_MSGS):
