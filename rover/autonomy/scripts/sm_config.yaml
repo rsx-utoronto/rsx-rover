@@ -26,7 +26,7 @@ GS_Traversal_lin_vel: 1
 GS_Traversal_ang_vel: 0.3
 
 # optimal_path_file params
-difficulty: #priority rank!
+difficulty: # priority rank!
   GNSS1: 1
   GNSS2: 1
   AR1: 1
