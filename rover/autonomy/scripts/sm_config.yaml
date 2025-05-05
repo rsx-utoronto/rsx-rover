@@ -1,3 +1,4 @@
+# final_state_machine file params
 RUN_STATES:
   - GNSS1
   - AR1
@@ -6,15 +7,6 @@ RUN_STATES:
   - AR2
   - AR3
   - GNSS2
-
-difficulty: #priotity listing
-  GNSS1: 1
-  GNSS2: 1
-  AR1: 1
-  AR2: 1
-  AR3: 1
-  OBJ1: 1
-  OBJ2: 1
 
 origin_pose: [0.0, 0.0]
 heading_vector: [1.1, 0.0]
@@ -32,3 +24,20 @@ OBJ_grid_search_tol: 2
 
 GS_Traversal_lin_vel: 1
 GS_Traversal_ang_vel: 0.3
+
+# optimal_path_file params
+difficulty: #priority rank!
+  GNSS1: 1
+  GNSS2: 1
+  AR1: 1
+  AR2: 1
+  AR3: 1
+  OBJ1: 1
+  OBJ2: 1
+
+# sm_grid_search params
+Aruco_homing_lin_vel: 1.8
+Aruco_homing_ang_vel: 0.8
+
+Obj_homing_lin_vel: 1
+Obj_homing_ang_vel: 0.5

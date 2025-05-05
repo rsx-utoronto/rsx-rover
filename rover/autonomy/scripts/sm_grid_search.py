@@ -11,7 +11,11 @@ import aruco_homing as aruco_homing
 import ar_detection_node as ar_detect
 import sm_straight_line as StraightLineApproach
 
+import yaml
 
+with open("sm_config.yaml", "r") as f:
+    sm_config = yaml.safe_load(f)
+    
 class GS_Traversal:
     def __init__(self, lin_vel, ang_vel, targets, state):
         self.lin_vel = lin_vel
@@ -180,10 +184,10 @@ class GS_Traversal:
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
                 if state == "AR1" or state == "AR2" or state == "AR3":
-                    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 1.8, 0.8) # FOR ARUCO
+                    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
                 elif state == "OBJ1" or state == "OBJ2":
-                    aimer = aruco_homing.AimerROS(640, 360, 1450, 50, 200, 1.0, 0.5) # FOR WATER BOTTLE
+                    aimer = aruco_homing.AimerROS(640, 360, 1450, 50, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
                     rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
                 rate = rospy.Rate(10) #this code needs to be adjusted
                 for i in range(50):

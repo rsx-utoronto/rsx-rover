@@ -186,6 +186,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         print("At CARTESIAN", cartesian_dict)
         
         self.glob_msg.cartesian = cartesian_dict #assigns the cartesian dict to cartesian to make it a global variable 
+        self.userdata.start_location
         
         gps_to_pose.GPSToPose(self.glob_msg.locations['start'], tuple(sm_config.get("origin_pose", [0.0,0.0])), tuple(sm_config.get("heading_vector", [1.0, 0.0]))) #creates an instance of GPSToPose to start publishing pose
     
@@ -602,7 +603,7 @@ class ABORT(smach.State):  # Abort State --> In case of failure what should it d
 
     def execute(self, userdata):
         # Determine the location to return to
-        if not userdata.prev_loc:
+        if userdata.prev_loc is None:
             self.glob_msg.pub_state("No previous location available; returning to start location.")
             return_location = userdata.start_location
         elif len(userdata.prev_loc) == 1 and userdata.prev_loc[0] == "start":
@@ -682,13 +683,14 @@ def main():
         smach.StateMachine.add(
             "Initialize Autonomous Navigation",
             init,
-            transitions={"Tasks Execute": "Tasks Execute"}
+            transitions={"Tasks Execute" : "Tasks Execute"},
+            remapping={"start_location" : "start_location"}
         )
         
         # Define the tasks execution sub-state machine
         sm_tasks_execute = smach.StateMachine(outcomes=["Tasks Ended"])
         sm_tasks_execute.userdata.locations_dict = {}
-        #sm_tasks_execute.userdata.start_location = sm_tasks_execute.userdata.locations_dict.pop("start")
+        sm_tasks_execute.userdata.start_location = None
         sm_tasks_execute.userdata.rem_loc_dict = {}
         sm_tasks_execute.userdata.prev_loc = None  # Initialize with no previous location
 
@@ -798,7 +800,7 @@ def main():
                 },
                 remapping= {
                     "prev_loc": "prev_loc",  # Use the previous location for abort
-                    "start_location" : "start_location"
+                    "start_location" : "start_location",
                 }
             )
         
