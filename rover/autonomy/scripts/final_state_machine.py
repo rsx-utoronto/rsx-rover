@@ -91,7 +91,7 @@ class GLOB_MSGS:
         self.sub = rospy.Subscriber("pose", PoseStamped, self.pose_callback)
         self.odom_sub = rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) #Subscribes to the pose topic
         self.gui_loc = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray, self.coord_callback) 
-        self.abort_sub = rospy.Subscriber("abort_check", Bool, self.abort_callback)
+        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
         self.abort_check = False
         self.locations = None
         self.cartesian = None
@@ -158,7 +158,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
     def __init__(self):
         smach.State.__init__(self, 
                              outcomes = ["Tasks Execute"],
-                             input_keys = ["cartesian"],
+                             input_keys = ["cartesian", "start_location"],
                              output_keys = ["cartesian", "start_location"])
         self.glob_msg = None
         
@@ -166,7 +166,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         self.glob_msg = glob_msg
     
 
-    def initialize(self): #main init function
+    def initialize(self, userdata): #main init function
 
         rospy.Subscriber("/long_lat_goal_array", Float32MultiArray, self.glob_msg.coord_callback) #Subcribes to the gui location publisher
         while (self.glob_msg.locations is None and rospy.is_shutdown() == False): #Waits for all GPS locations to be received
@@ -180,7 +180,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         self.glob_msg.pub_state("Changing GPS coordinates to cartesian") 
         cartesian = {}
         for el in cartesian_path: #For each location, it transforms the GPS coordinates to Cartesian coordinates
-            if el in RUN_STATES or el == "start":
+            if (el in RUN_STATES) or (el == "start"):
                 distance = functions.getDistanceBetweenGPSCoordinates((self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1]), (self.glob_msg.locations[el][0], self.glob_msg.locations[el][1]))
                 theta = functions.getHeadingBetweenGPSCoordinates(self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1], self.glob_msg.locations[el][0], self.glob_msg.locations[el][1])
                 # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
@@ -205,14 +205,13 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         print("At CARTESIAN", cartesian_dict)
         
         self.glob_msg.cartesian = cartesian_dict #assigns the cartesian dict to cartesian to make it a global variable 
-        self.userdata.start_location = self.glob_msg.cartesian["start"]
         
         gps_to_pose.GPSToPose(self.glob_msg.locations['start'], tuple(sm_config.get("origin_pose", [0.0,0.0])), tuple(sm_config.get("heading_vector", [1.0, 0.0]))) #creates an instance of GPSToPose to start publishing pose
     
     def execute(self, userdata): 
         self.glob_msg.pub_led_light("auto")
         self.glob_msg.pub_state("Initializing Autonomous Navigation")
-        self.initialize()
+        self.initialize(userdata)
         return "Tasks Execute"
 
         
@@ -227,16 +226,21 @@ class LocationSelection(smach.State): #State for determining which mission/state
         self.glob_msg = glob_msg
   
     def execute(self, userdata):
+        print("start execture loc selec")
         self.glob_msg.pub_state("Performing Next Task")
-        if userdata.prev_loc == None: #if its the first instance of running the state, initialize the global variables locations_dict, rem_loc_dict
+        if userdata.prev_loc == "start": #if its the first instance of running the state, initialize the global variables locations_dict, rem_loc_dict
+            print("user_data is none")
             userdata.locations_dict = self.glob_msg.cartesian.copy() #loc_name, (lat, lon)
-            print (userdata.locations_dict)
+            print ("THIS IS THE CARTESIAN DICT", userdata.locations_dict)
             userdata.rem_loc_dict = userdata.locations_dict.copy()
             print (userdata.rem_loc_dict)
+            userdata.start_location = (0, 0)
+            
         path = userdata.rem_loc_dict
         if path != {}: 
+            
             try:
-                print ("in the try")
+                self.glob_msg.pub_state(f"Locations remaining: {userdata.start_location}")
                 self.glob_msg.pub_state(f"Navigating to {list(path.items())[0][0]}") 
                 self.glob_msg.pub_state(f"Navigating to {self.glob_msg.cartesian[list(path.items())[0][0]]}") 
                 target = path[list(path.items())[0][0]]
@@ -253,6 +257,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     return "ABORT"
             return list(path.items())[0][0]
         else: #all mission have been done
+            print("going to tasks ended", path)
             return "Tasks Ended"  
 
 class GNSS1(smach.State): #State for GNSS1
@@ -735,7 +740,8 @@ class ABORT(smach.State):  # Assuming it won't be called before we try to go to 
         smach.State.__init__(
             self,
             outcomes=["Location Selection"],
-            input_keys=["prev_loc", "start_location", "aborted_state"],
+            input_keys=["prev_loc", "start_location", "aborted_state", "rem_loc_dict"],
+            output_keys=["rem_loc_dict"]
         )
         self.glob_msg = None
 
@@ -746,17 +752,19 @@ class ABORT(smach.State):  # Assuming it won't be called before we try to go to 
         # Determine the location to return to
         if userdata.prev_loc == "start":
             self.glob_msg.pub_state("No previous location available; returning to start location.")
-            return_location = userdata.start_location
-        else:
+            return_location = (0,0)
+            self.glob_msg.pub_state(f"Returning to start location {return_location}")
+        else: 
             self.glob_msg.pub_state("Aborting back to the previous finished task location")
             return_location = userdata.locations_dict[userdata.prev_loc]
-
+        self.glob_msg.abort_check = False
         self.glob_msg.pub_state(f"Aborting to location: {return_location} to {userdata.prev_loc}")
-        userdata.prev_loc_dict.pop(userdata.aborted_state)
+        if userdata.aborted_state != "Location Selection":
+            userdata.rem_loc_dict.pop(userdata.aborted_state)
 
         try:
             # Perform straight-line traversal back to the determined location
-            sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), return_location)
+            sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [return_location])
             sla.navigate()
             # Check final distance to the target location
             current_pose = self.glob_msg.get_pose()
@@ -791,7 +799,6 @@ class TasksEnded(smach.State):
 def main():
     rospy.init_node('RSX_Rover')
     #gui_status = rospy.Publisher('gui_status', String, queue_size=10) #where should be used?
-    
     sm = smach.StateMachine(outcomes=["Tasks Ended"])
     glob_msg = GLOB_MSGS()
     init = InitializeAutonomousNavigation()
@@ -839,7 +846,7 @@ def main():
                 "Location Selection",
                 locselect,
                 transitions={
-                    state: state for state in (RUN_STATES + ["ABORT"]) #changed this to only include states in RUN_STATES
+                    state: state for state in (RUN_STATES + ["ABORT", "Tasks Ended"]) #changed this to only include states in RUN_STATES
                 },
                 remapping={
                     "rem_loc_dict": "rem_loc_dict",
@@ -950,6 +957,8 @@ def main():
                 remapping= {
                     "prev_loc": "prev_loc",  # Use the previous location for abort
                     "start_location" : "start_location",
+                    "rem_loc_dict": "rem_loc_dict",
+                    "aborted_state" : "aborted_state"
                 }
             )
         
