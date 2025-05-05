@@ -26,8 +26,8 @@ class HeadingFilter:
         self.orientation.set_heading_to_quaternion(self.orientation.quaternion_to_heading(data.pose.orientation) + self.mag_declination)
         self.orientation_covariance[0] = 1000000
         self.orientation_covariance[4] = 1000000
-        self.orientation_covariance[8] = (math.atan2(self.accuracy_2d, self.armlength)) ** 2
         self.accuracy_2d = data.pose.position.z
+        self.orientation_covariance[8] = (math.atan2(self.accuracy_2d, self.armlength)) ** 2
         # print('received gnss heading:', data.heading, data.valid_fix)
 
     def imu_callback(self, data):

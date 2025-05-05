@@ -8,6 +8,7 @@
 
     <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />  
     <node pkg="rover" type="gps_to_pose.py" name="gps_to_pose" output="screen" />
+    <node pkg="rover" type="ekf_odom_to_pose.py" name="ekf_odom_to_pose" output="screen" />
 
     <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" >
         <param name="publish_tf" value="false" />
@@ -23,7 +24,7 @@
 
         <param name="magnetic_declination_radians" value="-0.177764053"/>
         <!-- for toronto: -10.18513 => -0.177764053 (obtained jan 11, 2025) -->
-        <param name="armlength" value="1.2" />
+        <param name="armlength" value="1.5" />
 
     </node>
 
