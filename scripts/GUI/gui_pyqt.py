@@ -86,17 +86,34 @@ class statusTerminal(QWidget):
             padding: 5px; 
         """)
 
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.clicked.connect(self.clear_text)
+        self.clear_button.setStyleSheet("""
+            background-color: #FF5252;
+            color: white;
+            border: 2px solid black;
+            border-radius: 10px;
+            padding: 10px;
+        """)
+
         # Layout
         layout = QVBoxLayout()
+        layout.addWidget(self.clear_button)
         layout.addWidget(self.string_list)
         self.setLayout(layout)
+
+    def clear_text(self):
+        self.string_list.clear()
+        self.received_strings = []
+        self.strlength = -1
+        self.string_list.setPlainText("")
+        self.string_list.moveCursor(QTextCursor.Start)
     
     def string_callback(self, msg):
         self.update_status_signal.emit(msg.data.strip())  
 
     def update_string_list(self, new_string):
         self.received_strings.append(new_string)
-        cursor = self.string_list.textCursor()
         cursor_pos = self.string_list.textCursor().position()
         # self.string_list.setPlainText("\n".join(self.received_strings))
         self.string_list.append(new_string)
