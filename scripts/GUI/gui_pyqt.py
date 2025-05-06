@@ -205,6 +205,88 @@ class ArucoWidget(QWidget):
         self.string_list.setPlainText("\n".join(self.received_strings))
         self.string_list.moveCursor(QTextCursor.End)
 
+class ObjectWidget(QWidget):
+    # Define signals to communicate with the main thread
+    update_mallet_signal = pyqtSignal(bool)
+    update_bottle_signal = pyqtSignal(bool)
+
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+        # Connect signals to the corresponding update methods
+        self.update_mallet_signal.connect(self.update_mallet)
+        self.update_bottle_signal.connect(self.update_bottle)
+
+        # Initialize ROS subscribers
+        rospy.Subscriber('mallet_detected', Bool, self.mallet_callback)
+        rospy.Subscriber('waterbottle_detected', Bool, self.bottle_callback)
+
+        self.received_strings = []
+
+    def init_ui(self):
+        # Create a label
+        self.label = QLabel("Object not found", self)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black;  
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label.setFont(QFont("Arial", 16, QFont.Bold))
+
+        # Create a scrollable box for received strings
+        self.string_list = QTextEdit(self)
+        self.string_list.setReadOnly(True)
+        self.string_list.setStyleSheet("""
+            background-color: #FFFFFF; 
+            color: black; 
+            border: 2px solid black;  
+            padding: 5px; 
+        """)
+
+        # Layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.label)
+        layout.addWidget(self.string_list)
+        self.setLayout(layout)
+
+    def mallet_callback(self, msg):
+        # Emit signal to update the label in the main thread
+        self.update_mallet_signal.emit(msg.data)
+
+    def bottle_callback(self, msg):
+        # Emit signal to update the list in the main thread
+        self.update_bottle_signal.emit(msg.data.strip())
+
+    def update_mallet(self, found):
+        # Update the label in the main thread
+        if found:
+            self.label.setText("Aruco Found")
+            self.label.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label.setText("Aruco not found")
+            self.label.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
+
+    def update_bottle(self, new_string):
+        # Append the string to the list in the main thread
+        self.received_strings.append(new_string)
+        self.string_list.setPlainText("\n".join(self.received_strings))
+        self.string_list.moveCursor(QTextCursor.End)
 
 class StateMachineStatus(QWidget):
     # Define signal to update the label
