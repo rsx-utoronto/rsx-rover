@@ -54,7 +54,8 @@ class mapOverlay(QWidget):
         if self.centreOnRover == True:
             self.viewer.center_on_gps( gps_point) 
 
-
+    def clear_map(self):
+        self.viewer.clear_lines()
 
 
 #object type for direction of rover
@@ -762,7 +763,7 @@ class RoverGUI(QMainWindow):
         self.velocity_control = VelocityControl()
         self.gui_status_sub = rospy.Subscriber('gui_status', String, self.string_callback)
         self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
-        self.manual_abort_pub = rospy.Publisher('/manual_abort_check', Bool, queue_size=5)
+        # self.manual_abort_pub = rospy.Publisher('/manual_abort_check', Bool, queue_size=5)
         self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
         self.reached_state = None
 
@@ -979,23 +980,28 @@ class RoverGUI(QMainWindow):
         # Add widgets to the new section
         self.status_label = QLabel("")
         self.status_label.setStyleSheet("font-size: 64px")  
+        # self.next_state_input = QLineEdit()
+        # self.next_state_input.setPlaceholderText("Enter next state")
+        # self.next_state_input.setStyleSheet("font-size: 16px")
+        # self.next_state_input.setFixedWidth(150)  # Adjust width as needed
         next_button = QPushButton("Next Task")
-        manual_abort_button = QPushButton("Manual Abort")
+        # manual_abort_button = QPushButton("Manual Abort")
         auto_abort_button = QPushButton("Auto Abort")
         
         # Make buttons smaller to match the reduced section height
         button_style = "padding: 4px; min-height: 20px;"
         next_button.setStyleSheet(button_style)
         next_button.clicked.connect(self.pub_next_state)
-        manual_abort_button.setStyleSheet(button_style)
-        manual_abort_button.clicked.connect(self.pub_manual_abort)
+        # manual_abort_button.setStyleSheet(button_style)
+        # manual_abort_button.clicked.connect(self.pub_manual_abort)
         auto_abort_button.setStyleSheet(button_style)
         auto_abort_button.clicked.connect(self.pub_auto_abort)
         
         # Add widgets to layout horizontally
         status_layout.addWidget(self.status_label)
+        # status_layout.addWidget(self.next_state_input)  # Add input field before button
         status_layout.addWidget(next_button)
-        status_layout.addWidget(manual_abort_button)
+        # status_layout.addWidget(manual_abort_button)
         status_layout.addWidget(auto_abort_button)
         status_group.setLayout(status_layout)
 
@@ -1048,7 +1054,22 @@ class RoverGUI(QMainWindow):
         self.checkbox_setting_splitter.stateChanged.connect(
             lambda state: self.on_checkbox_state_changed(state, self.map_overlay_splitter)
         )
-        map_layout.addWidget(self.checkbox_setting_splitter)
+        self.clear_map_button = QPushButton("Clear Map")
+        self.clear_map_button.setStyleSheet(button_style)
+        self.clear_map_button.clicked.connect(self.map_overlay_splitter.clear_map)
+
+        # Create horizontal layout for checkbox and clear button
+        checkbox_layout = QHBoxLayout()
+        checkbox_layout.addWidget(self.checkbox_setting_splitter)
+        checkbox_layout.addStretch(1)  # This pushes the checkbox left and button right
+        checkbox_layout.addWidget(self.clear_map_button)
+        
+        # Create a container widget for the checkbox layout
+        checkbox_container = QWidget()
+        checkbox_container.setLayout(checkbox_layout)
+        
+        # Add the container to the map layout instead of individual widgets
+        map_layout.addWidget(checkbox_container)
         map_layout.addWidget(self.map_overlay_splitter)
         map_group.setLayout(map_layout)
 

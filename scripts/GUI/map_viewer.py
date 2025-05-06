@@ -252,6 +252,27 @@ class MapViewer(QWidget):
 		# angle is in degrees (0 - 360). 0 is right
 		self.robot.setRotationAngle((angle) % 360)
 
+	def clear_lines(self):
+		# Clear all layer lines
+		for layer, points in self.map_points.items():
+			self.points_line[layer].setLatLngs([])
+			self.points_layer[layer].clearLayers()
+		
+		# Clear robot path line
+		self.robot_line.setLatLngs([])
+		
+		# Get current robot position
+		current_pos = None
+		if self.last_moved_robot_position:
+			current_pos = [self.last_moved_robot_position[0], self.last_moved_robot_position[1]]
+		
+		# Reset the last drawn position to current position
+		# This ensures new lines start from current position
+		self.last_drawn_robot_position = current_pos
+		
+		# Force update the map to clear all visible lines
+		self.map.runJavaScript(f'{self.robot_line.jsName}.redraw();', 0)
+
 def _bindTooltip(layer: pyqtlet2.leaflet.layer.Layer, content: str, options=None):
 	js = '{layerName}.bindTooltip("{content}"'.format(
 			layerName=layer._layerName, content=content)
