@@ -30,7 +30,7 @@ class StraightLineApproach:
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
         self.drive_publisher = rospy.Publisher(sm_config.get("drive_param_straight_line"), Twist, queue_size=10)
         self.aruco_found = False
-        self.abort_sub = rospy.Subscriber("abort_check", Bool, self.abort_callback)
+        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
@@ -96,7 +96,7 @@ class StraightLineApproach:
 
             target_heading = math.atan2(target_y - self.y, target_x - self.x)
             target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
-            print("Target Heading:", math.degrees(target_heading), "Cur Heading:", math.degrees(self.heading))
+           # print("Target Heading:", math.degrees(target_heading), "Cur Heading:", math.degrees(self.heading))
             angle_diff = target_heading - self.heading
             
             # print ( f"angle_diff: {angle_diff}")

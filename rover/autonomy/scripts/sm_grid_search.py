@@ -52,7 +52,7 @@ class GS_Traversal:
         self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
         self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
         self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
-        self.abort_sub = rospy.Subscriber("abort_check", Bool, self.abort_callback)
+        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
 
         # self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         
