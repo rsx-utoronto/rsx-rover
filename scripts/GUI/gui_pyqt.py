@@ -152,7 +152,7 @@ class ArucoWidget(QWidget):
             border-radius: 10px; 
             padding: 10px; 
         """)
-        self.label.setFont(QFont("Arial", 16, QFont.Bold))
+        self.label.setFont(QFont("Arial", 72, QFont.Bold))
 
         # Create a scrollable box for received strings
         self.string_list = QTextEdit(self)
@@ -205,7 +205,77 @@ class ArucoWidget(QWidget):
         self.string_list.setPlainText("\n".join(self.received_strings))
         self.string_list.moveCursor(QTextCursor.End)
 
-class ObjectWidget(QWidget):
+class ArucoBar(QWidget):
+    # Define signals to communicate with the main thread
+    update_label_signal = pyqtSignal(bool)
+    update_list_signal = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+        # Connect signals to the corresponding update methods
+        self.update_label_signal.connect(self.update_label)
+        self.update_list_signal.connect(self.update_string_list)
+
+        # Initialize ROS subscribers
+        rospy.Subscriber('aruco_found', Bool, self.bool_callback)
+        rospy.Subscriber('aruco_name', String, self.string_callback)
+
+        self.received_string = ""
+
+    def init_ui(self):
+        # Create a label
+        self.label = QLabel("Aruco not found", self)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black;  
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label.setFont(QFont("Arial", 72, QFont.Bold))
+
+        # Layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.label)
+        self.setLayout(layout)
+
+    def bool_callback(self, msg):
+        # Emit signal to update the label in the main thread
+        self.update_label_signal.emit(msg.data)
+
+    def string_callback(self, msg):
+        # Emit signal to update the list in the main thread
+        self.update_list_signal.emit(msg.data.strip())
+
+    def update_label(self, found):
+        # Update the label in the main thread
+        if found:
+            self.label.setText("Aruco Found: " + self.received_string)
+            self.label.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label.setText("Aruco not found")
+            self.label.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
+
+    def update_string_list(self, new_string):
+        # Append the string to the list in the main thread
+        self.received_string = new_string
+
+class ObjectBar(QWidget):
     # Define signals to communicate with the main thread
     update_mallet_signal = pyqtSignal(bool)
     update_bottle_signal = pyqtSignal(bool)
@@ -226,31 +296,33 @@ class ObjectWidget(QWidget):
 
     def init_ui(self):
         # Create a label
-        self.label = QLabel("Object not found", self)
-        self.label.setAlignment(Qt.AlignCenter)
-        self.label.setStyleSheet("""
+        self.label_mallet = QLabel("Mallet not found", self)
+        self.label_mallet.setAlignment(Qt.AlignCenter)
+        self.label_mallet.setStyleSheet("""
             background-color: #808080; 
             color: white;  
             border: 2px solid black;  
             border-radius: 10px; 
             padding: 10px; 
         """)
-        self.label.setFont(QFont("Arial", 16, QFont.Bold))
+        self.label_mallet.setFont(QFont("Arial", 72, QFont.Bold))
 
         # Create a scrollable box for received strings
-        self.string_list = QTextEdit(self)
-        self.string_list.setReadOnly(True)
-        self.string_list.setStyleSheet("""
-            background-color: #FFFFFF; 
-            color: black; 
+        self.label_bottle = QLabel("Waterbottle not found", self)
+        self.label_bottle.setAlignment(Qt.AlignCenter)
+        self.label_bottle.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
             border: 2px solid black;  
-            padding: 5px; 
+            border-radius: 10px; 
+            padding: 10px; 
         """)
+        self.label_bottle.setFont(QFont("Arial", 72, QFont.Bold))
 
         # Layout
-        layout = QVBoxLayout()
-        layout.addWidget(self.label)
-        layout.addWidget(self.string_list)
+        layout = QHBoxLayout()
+        layout.addWidget(self.label_mallet)
+        layout.addWidget(self.label_bottle)
         self.setLayout(layout)
 
     def mallet_callback(self, msg):
@@ -259,13 +331,13 @@ class ObjectWidget(QWidget):
 
     def bottle_callback(self, msg):
         # Emit signal to update the list in the main thread
-        self.update_bottle_signal.emit(msg.data.strip())
+        self.update_bottle_signal.emit(msg.data)
 
     def update_mallet(self, found):
         # Update the label in the main thread
         if found:
-            self.label.setText("Aruco Found")
-            self.label.setStyleSheet("""
+            self.label_mallet.setText("Mallet Found")
+            self.label_mallet.setStyleSheet("""
                 background-color: #4CAF50; 
                 color: white;   
                 border: 2px solid black; 
@@ -273,8 +345,8 @@ class ObjectWidget(QWidget):
                 padding: 10px; 
             """)
         else:
-            self.label.setText("Aruco not found")
-            self.label.setStyleSheet("""
+            self.label_mallet.setText("Mallet not found")
+            self.label_mallet.setStyleSheet("""
                 background-color: #FF5252; 
                 color: white;  
                 border: 2px solid black;  
@@ -282,11 +354,25 @@ class ObjectWidget(QWidget):
                 padding: 10px;  
             """)
 
-    def update_bottle(self, new_string):
-        # Append the string to the list in the main thread
-        self.received_strings.append(new_string)
-        self.string_list.setPlainText("\n".join(self.received_strings))
-        self.string_list.moveCursor(QTextCursor.End)
+    def update_bottle(self, found):
+        if found:
+            self.label_bottle.setText("Waterbottle Found")
+            self.label_bottle.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label_bottle.setText("Waterbottle not found")
+            self.label_bottle.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
 
 class StateMachineStatus(QWidget):
     # Define signal to update the label
@@ -1090,6 +1176,20 @@ class RoverGUI(QMainWindow):
         splitter = QSplitter(Qt.Horizontal)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
+          # Create the detection section with ArucoBar and ObjectBar side by side
+        detection_group = QGroupBox("Detection")
+        detection_layout = QHBoxLayout()
+        detection_group.setMaximumHeight(150)  # Increase from 120 to 150
+        
+        # Create components
+        self.aruco_bar = ArucoBar()
+        self.object_bar = ObjectBar()
+        
+        # Add components to horizontal layout
+        detection_layout.addWidget(self.aruco_bar)
+        detection_layout.addWidget(self.object_bar)
+        detection_group.setLayout(detection_layout)
+
         # Add camera feed to the splitter
         camera_group = QGroupBox("Camera Feed")
         camera_layout = QVBoxLayout()
@@ -1158,6 +1258,7 @@ class RoverGUI(QMainWindow):
         # Create a vertical splitter for the left side
         left_side_splitter = QSplitter(Qt.Vertical)
         left_side_splitter.addWidget(status_group)
+        left_side_splitter.addWidget(detection_group)
         left_side_splitter.addWidget(camera_group)
 
         # Create the horizontal splitter for the main layout

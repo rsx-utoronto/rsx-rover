@@ -107,8 +107,14 @@ def main():
 		(43.662854, -79.394138)
 	]
 
+	woodbine_beach = [
+		(43.6688771, -79.3165272),
+		(43.6598290, -79.2778141)
+	]
+
 	locations = [
-		front_campus
+		# front_campus
+		woodbine_beach
 	]
 
 	internet_map_servers = [MapServers.ARCGIS_World_Imagery]
