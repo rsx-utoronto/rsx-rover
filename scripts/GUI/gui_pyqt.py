@@ -54,7 +54,8 @@ class mapOverlay(QWidget):
         if self.centreOnRover == True:
             self.viewer.center_on_gps( gps_point) 
 
-
+    def clear_map(self):
+        self.viewer.clear_lines()
 
 
 #object type for direction of rover
@@ -71,8 +72,9 @@ class statusTerminal(QWidget):
 
         # Connect signals to the corresponding update methods
         self.update_status_signal.connect(self.update_string_list)
-        rospy.Subscriber('gui_status', String, self.string_callback)
+        # rospy.Subscriber('gui_status', String, self.string_callback)
         self.received_strings = []
+        self.strlength = -1
     def init_ui(self):
         
         # Create a scrollable box for received strings
@@ -85,18 +87,40 @@ class statusTerminal(QWidget):
             padding: 5px; 
         """)
 
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.clicked.connect(self.clear_text)
+        self.clear_button.setStyleSheet("""
+            background-color: #FF5252;
+            color: white;
+            border: 2px solid black;
+            border-radius: 10px;
+            padding: 10px;
+        """)
+
         # Layout
         layout = QVBoxLayout()
+        layout.addWidget(self.clear_button)
         layout.addWidget(self.string_list)
         self.setLayout(layout)
+
+    def clear_text(self):
+        self.string_list.clear()
+        self.received_strings = []
+        self.strlength = -1
+        self.string_list.setPlainText("")
+        self.string_list.moveCursor(QTextCursor.Start)
     
     def string_callback(self, msg):
         self.update_status_signal.emit(msg.data.strip())  
 
     def update_string_list(self, new_string):
         self.received_strings.append(new_string)
-        self.string_list.setPlainText("\n".join(self.received_strings))
-        self.string_list.moveCursor(QTextCursor.End)
+        cursor_pos = self.string_list.textCursor().position()
+        # self.string_list.setPlainText("\n".join(self.received_strings))
+        self.string_list.append(new_string)
+        if cursor_pos < self.strlength - self.received_strings[-1].__len__():
+            self.string_list.moveCursor(QTextCursor.End)
+        self.strlength += len(new_string) + 1
 
 class ArucoWidget(QWidget):
     # Define signals to communicate with the main thread
@@ -128,7 +152,7 @@ class ArucoWidget(QWidget):
             border-radius: 10px; 
             padding: 10px; 
         """)
-        self.label.setFont(QFont("Arial", 16, QFont.Bold))
+        self.label.setFont(QFont("Arial", 72, QFont.Bold))
 
         # Create a scrollable box for received strings
         self.string_list = QTextEdit(self)
@@ -181,6 +205,174 @@ class ArucoWidget(QWidget):
         self.string_list.setPlainText("\n".join(self.received_strings))
         self.string_list.moveCursor(QTextCursor.End)
 
+class ArucoBar(QWidget):
+    # Define signals to communicate with the main thread
+    update_label_signal = pyqtSignal(bool)
+    update_list_signal = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+        # Connect signals to the corresponding update methods
+        self.update_label_signal.connect(self.update_label)
+        self.update_list_signal.connect(self.update_string_list)
+
+        # Initialize ROS subscribers
+        rospy.Subscriber('aruco_found', Bool, self.bool_callback)
+        rospy.Subscriber('aruco_name', String, self.string_callback)
+
+        self.received_string = ""
+
+    def init_ui(self):
+        # Create a label
+        self.label = QLabel("Aruco not found", self)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black;  
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label.setFont(QFont("Arial", 72, QFont.Bold))
+
+        # Layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.label)
+        self.setLayout(layout)
+
+    def bool_callback(self, msg):
+        # Emit signal to update the label in the main thread
+        self.update_label_signal.emit(msg.data)
+
+    def string_callback(self, msg):
+        # Emit signal to update the list in the main thread
+        self.update_list_signal.emit(msg.data.strip())
+
+    def update_label(self, found):
+        # Update the label in the main thread
+        if found:
+            self.label.setText("Aruco Found: " + self.received_string)
+            self.label.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label.setText("Aruco not found")
+            self.label.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
+
+    def update_string_list(self, new_string):
+        # Append the string to the list in the main thread
+        self.received_string = new_string
+
+class ObjectBar(QWidget):
+    # Define signals to communicate with the main thread
+    update_mallet_signal = pyqtSignal(bool)
+    update_bottle_signal = pyqtSignal(bool)
+
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+        # Connect signals to the corresponding update methods
+        self.update_mallet_signal.connect(self.update_mallet)
+        self.update_bottle_signal.connect(self.update_bottle)
+
+        # Initialize ROS subscribers
+        rospy.Subscriber('mallet_detected', Bool, self.mallet_callback)
+        rospy.Subscriber('waterbottle_detected', Bool, self.bottle_callback)
+
+        self.received_strings = []
+
+    def init_ui(self):
+        # Create a label
+        self.label_mallet = QLabel("Mallet not found", self)
+        self.label_mallet.setAlignment(Qt.AlignCenter)
+        self.label_mallet.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black;  
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label_mallet.setFont(QFont("Arial", 72, QFont.Bold))
+
+        # Create a scrollable box for received strings
+        self.label_bottle = QLabel("Waterbottle not found", self)
+        self.label_bottle.setAlignment(Qt.AlignCenter)
+        self.label_bottle.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black;  
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label_bottle.setFont(QFont("Arial", 72, QFont.Bold))
+
+        # Layout
+        layout = QHBoxLayout()
+        layout.addWidget(self.label_mallet)
+        layout.addWidget(self.label_bottle)
+        self.setLayout(layout)
+
+    def mallet_callback(self, msg):
+        # Emit signal to update the label in the main thread
+        self.update_mallet_signal.emit(msg.data)
+
+    def bottle_callback(self, msg):
+        # Emit signal to update the list in the main thread
+        self.update_bottle_signal.emit(msg.data)
+
+    def update_mallet(self, found):
+        # Update the label in the main thread
+        if found:
+            self.label_mallet.setText("Mallet Found")
+            self.label_mallet.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label_mallet.setText("Mallet not found")
+            self.label_mallet.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
+
+    def update_bottle(self, found):
+        if found:
+            self.label_bottle.setText("Waterbottle Found")
+            self.label_bottle.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label_bottle.setText("Waterbottle not found")
+            self.label_bottle.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
 
 class StateMachineStatus(QWidget):
     # Define signal to update the label
@@ -729,6 +921,7 @@ class CameraFeed:
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
+    statusSignal = pyqtSignal(str)
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Rover Control Panel")
@@ -737,6 +930,11 @@ class RoverGUI(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
         self.velocity_control = VelocityControl()
+        self.gui_status_sub = rospy.Subscriber('gui_status', String, self.string_callback)
+        self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
+        # self.manual_abort_pub = rospy.Publisher('/manual_abort_check', Bool, queue_size=5)
+        self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
+        self.reached_state = None
 
         # Create tab
         self.split_screen_tab = QWidget()
@@ -753,6 +951,9 @@ class RoverGUI(QMainWindow):
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
 
+        
+        self.statusSignal.connect(self.string_signal_receive)
+
 
         self.setup_control_tab()
         self.setup_split_screen_tab()
@@ -760,6 +961,32 @@ class RoverGUI(QMainWindow):
         self.setup_cams_tab()
         
 
+    def string_callback(self, msg):
+        self.statusTerminal.string_callback(msg)
+        self.statusSignal.emit(msg.data)
+
+    def string_signal_receive(self, msg):
+        msg_list = msg.split(" ")
+        goal_reached_msg = ["Goal", "Point", "Reached:"]
+        reached = True
+        for i in range(len(goal_reached_msg)):
+            try:
+                if msg_list[i] != goal_reached_msg[i]:
+                    reached = False
+                    break
+            except IndexError:
+                reached = False
+                break
+        if reached:
+            self.reached_state = msg_list[3]
+        else:
+            self.reached_state = None
+        if self.reached_state is not None:
+            self.setStyleSheet("background-color: #adebb2")
+            self.status_label.setText(f"Goal Reached: {self.reached_state}")
+        else:
+            self.setStyleSheet("background-color: #FFFFFF")
+            self.status_label.setText("")
 
 
         
@@ -919,8 +1146,56 @@ class RoverGUI(QMainWindow):
         # vertical_splitter.addWidget(controls_group)
         control_tab_layout = QVBoxLayout()
         control_tab_layout.addWidget(self.controls_group)
+
+        # Create the new section to appear above camera
+        status_group = QGroupBox("Status")
+        status_layout = QHBoxLayout()  # Changed from QVBoxLayout to QHBoxLayout
+        status_group.setMaximumHeight(100)  # Set maximum height
+        
+        # Add widgets to the new section
+        self.status_label = QLabel("")
+        self.status_label.setStyleSheet("font-size: 64px")  
+        # self.next_state_input = QLineEdit()
+        # self.next_state_input.setPlaceholderText("Enter next state")
+        # self.next_state_input.setStyleSheet("font-size: 16px")
+        # self.next_state_input.setFixedWidth(150)  # Adjust width as needed
+        next_button = QPushButton("Next Task")
+        # manual_abort_button = QPushButton("Manual Abort")
+        auto_abort_button = QPushButton("Auto Abort")
+        
+        # Make buttons smaller to match the reduced section height
+        button_style = "padding: 4px; min-height: 20px;"
+        next_button.setStyleSheet(button_style)
+        next_button.clicked.connect(self.pub_next_state)
+        # manual_abort_button.setStyleSheet(button_style)
+        # manual_abort_button.clicked.connect(self.pub_manual_abort)
+        auto_abort_button.setStyleSheet(button_style)
+        auto_abort_button.clicked.connect(self.pub_auto_abort)
+        
+        # Add widgets to layout horizontally
+        status_layout.addWidget(self.status_label)
+        # status_layout.addWidget(self.next_state_input)  # Add input field before button
+        status_layout.addWidget(next_button)
+        # status_layout.addWidget(manual_abort_button)
+        status_layout.addWidget(auto_abort_button)
+        status_group.setLayout(status_layout)
+
         splitter = QSplitter(Qt.Horizontal)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+          # Create the detection section with ArucoBar and ObjectBar side by side
+        detection_group = QGroupBox("Detection")
+        detection_layout = QHBoxLayout()
+        detection_group.setMaximumHeight(150)  # Increase from 120 to 150
+        
+        # Create components
+        self.aruco_bar = ArucoBar()
+        self.object_bar = ObjectBar()
+        
+        # Add components to horizontal layout
+        detection_layout.addWidget(self.aruco_bar)
+        detection_layout.addWidget(self.object_bar)
+        detection_group.setLayout(detection_layout)
 
         # Add camera feed to the splitter
         camera_group = QGroupBox("Camera Feed")
@@ -968,13 +1243,34 @@ class RoverGUI(QMainWindow):
         self.checkbox_setting_splitter.stateChanged.connect(
             lambda state: self.on_checkbox_state_changed(state, self.map_overlay_splitter)
         )
-        map_layout.addWidget(self.checkbox_setting_splitter)
+        self.clear_map_button = QPushButton("Clear Map")
+        self.clear_map_button.setStyleSheet(button_style)
+        self.clear_map_button.clicked.connect(self.map_overlay_splitter.clear_map)
+
+        # Create horizontal layout for checkbox and clear button
+        checkbox_layout = QHBoxLayout()
+        checkbox_layout.addWidget(self.checkbox_setting_splitter)
+        checkbox_layout.addStretch(1)  # This pushes the checkbox left and button right
+        checkbox_layout.addWidget(self.clear_map_button)
+        
+        # Create a container widget for the checkbox layout
+        checkbox_container = QWidget()
+        checkbox_container.setLayout(checkbox_layout)
+        
+        # Add the container to the map layout instead of individual widgets
+        map_layout.addWidget(checkbox_container)
         map_layout.addWidget(self.map_overlay_splitter)
         map_group.setLayout(map_layout)
 
-        # Add widgets to the splitter
-        splitter.addWidget(camera_group)
-        splitter.addWidget(map_group)
+        # Create a vertical splitter for the left side
+        left_side_splitter = QSplitter(Qt.Vertical)
+        left_side_splitter.addWidget(status_group)
+        left_side_splitter.addWidget(detection_group)
+        left_side_splitter.addWidget(camera_group)
+
+        # Create the horizontal splitter for the main layout
+        splitter.addWidget(left_side_splitter)  # Left side has new section stacked above camera
+        splitter.addWidget(map_group)           # Right side has map
         
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
@@ -1015,6 +1311,14 @@ class RoverGUI(QMainWindow):
         print(f"Changed to Gear: {value}")
         self.gear_slider_splitter.setValue(value)
 
+    def pub_next_state(self):
+        self.next_state_pub.publish(True)
+
+    def pub_manual_abort(self):
+        self.manual_abort_pub.publish(True)
+
+    def pub_auto_abort(self):
+        self.auto_abort_pub.publish(True)
 
 
 class CheckableComboBox(QComboBox):
