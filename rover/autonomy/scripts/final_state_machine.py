@@ -92,6 +92,8 @@ class GLOB_MSGS:
         self.odom_sub = rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) #Subscribes to the pose topic
         self.gui_loc = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray, self.coord_callback) 
         self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
+        self.next_state_sub = rospy.Subscriber("/next_state", Bool, self.next_task_callback)
+        self.next_task_check = False
         self.abort_check = False
         self.locations = None
         self.cartesian = None
@@ -107,8 +109,14 @@ class GLOB_MSGS:
     def abort_callback(self,msg):
         self.abort_check = msg.data
     
+    def next_task_callback(self, msg):
+        self.next_task_check = msg.data
+    
     def get_abort_check(self):
         return self.abort_check
+    
+    def get_next_task_check(self):
+        return self.next_task_check
         
     def get_pose(self):
         return self.pose
@@ -300,6 +308,9 @@ class GNSS1(smach.State): #State for GNSS1
         userdata.prev_loc = "GNSS1"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #Removing state from location list
 
+        while(self.glob_msg.get_next_task_check is not True):
+            rospy.sleep(1)
+        self.glob_msg.next_task_check = False
         return "Location Selection"
         
         
@@ -344,6 +355,9 @@ class GNSS2(smach.State): #State for GNSS1
         userdata.prev_loc = "GNSS2"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #Removing state from location list
 
+        while(self.glob_msg.get_next_task_check is not True):
+            rospy.sleep(1)
+        self.glob_msg.next_task_check = False
         return "Location Selection"
 
 class AR1(smach.State): #State for AR1
@@ -420,6 +434,10 @@ class AR1(smach.State): #State for AR1
                 return "ABORT"
         userdata.prev_loc = "AR1"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
+
+        while(self.glob_msg.get_next_task_check is not True):
+            rospy.sleep(1)
+        self.glob_msg.next_task_check = False
         return "Location Selection"
                     
 
@@ -494,6 +512,10 @@ class AR2(smach.State):
                 return "ABORT"
         userdata.prev_loc = "AR2"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
+
+        while(self.glob_msg.get_next_task_check is not True):
+            rospy.sleep(1)
+        self.glob_msg.next_task_check = False
         return "Location Selection"
 
 class AR3(smach.State):
@@ -568,6 +590,10 @@ class AR3(smach.State):
             # print("Failed to reach the location")
         userdata.prev_loc = "AR3"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
+
+        while(self.glob_msg.get_next_task_check is not True):
+            rospy.sleep(1)
+        self.glob_msg.next_task_check = False
         return "Location Selection"
 
 class OBJ1(smach.State): #mallet
@@ -647,8 +673,13 @@ class OBJ1(smach.State): #mallet
                 userdata.aborted_state = "OBJ1"
                 self.glob_msg.pub_state_name("")
                 return "ABORT"  
+            
         userdata.prev_loc = "OBJ1"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
+
+        while(self.glob_msg.get_next_task_check is not True):
+            rospy.sleep(1)
+        self.glob_msg.next_task_check = False
         return "Location Selection"
     
 class OBJ2(smach.State): #waterbottle
@@ -728,8 +759,13 @@ class OBJ2(smach.State): #waterbottle
                 userdata.aborted_state = "OBJ2"
                 self.glob_msg.pub_state_name("")
                 return "ABORT"  
+            
         userdata.prev_loc = "OBJ2"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
+
+        while(self.glob_msg.get_next_task_check is not True):
+            rospy.sleep(1)
+        self.glob_msg.next_task_check = False
         return "Location Selection"
     
     
