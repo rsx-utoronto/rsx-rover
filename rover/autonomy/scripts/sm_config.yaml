@@ -53,9 +53,9 @@ Aruco_homing_ang_vel: 0 #0.8
 Obj_homing_lin_vel: 0 #1
 Obj_homing_ang_vel: 0 #0.5
 
-drive_param_grid_search: aa #'drive'
+drive_param_grid_search: 'drive'
 pose_param_grid_search: '/pose'
 
 # sm_straight_line params
-drive_param_straight_line: aa #'/drive'
+drive_param_straight_line: '/drive'
 pose_param_straight_line: '/pose'
