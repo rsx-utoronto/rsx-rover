@@ -112,9 +112,15 @@ def main():
 		(43.6598290, -79.2778141)
 	]
 
+	mdrs = [
+		(38.431078, -110.810864),
+		(38.395515, -110.769358)
+	]
+
 	locations = [
-		# front_campus
-		woodbine_beach
+		# front_campus,
+		# woodbine_beach,
+		mdrs
 	]
 
 	internet_map_servers = [MapServers.ARCGIS_World_Imagery]

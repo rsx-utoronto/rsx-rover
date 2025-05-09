@@ -21,6 +21,7 @@ from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
+from calian_gnss_ros2_msg.msg import GnssSignalStatus
 
 #cache folder of map tiles generated from tile_scraper.py
 CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
@@ -40,6 +41,7 @@ class mapOverlay(QWidget):
         
         # ROS Subscriber for GPS coordinates
         rospy.Subscriber('/calian_gnss/gps', NavSatFix, self.update_gps_coordinates)
+        rospy.Subscriber('/calian_gnss/gps_extended', GnssSignalStatus, self.update_gps_heading)
     
     #initialize overall layout
     def initOverlayout(self):
@@ -53,6 +55,9 @@ class mapOverlay(QWidget):
         self.viewer.set_robot_position(msg.latitude,msg.longitude)
         if self.centreOnRover == True:
             self.viewer.center_on_gps( gps_point) 
+
+    def update_gps_heading(self, msg):
+        self.viewer.headingSignal.emit(msg.heading)
 
     def clear_map(self):
         self.viewer.clear_lines()
@@ -586,6 +591,51 @@ class LngLatEntryFromFile(QWidget):
                 # map_points.append((lat, lng, 5, point_name))
                 print(f"{point_name}: {lat}, {lng}")
                 self.viewer.viewer.goal_points[i//2].setLatLng([lat, lng])
+
+
+class LngLatDeliveryEntryFromFile(QWidget):
+    def __init__(self, map_overlay):
+        super().__init__()
+        self.array = Float32MultiArray()
+        layout = QVBoxLayout(self)
+
+        self.submit_button = QPushButton("Get Delivery Data From File")
+        self.submit_button.clicked.connect(self.collect_data)
+        layout.addWidget(self.submit_button)
+        self.setLayout(layout)
+
+        self.viewer = map_overlay
+
+        self.viewer.viewer.add_point_layer('gps_points', 'green', 'green', 'yellow')
+
+    def collect_data(self):
+        # Read data from the file
+        file_path = Path(__file__).parent.parent.parent.resolve() / "delivery_lat_lon_goal.csv"
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+
+        # Process each line and publish
+        data = []
+        for line in lines:
+            t = list(map(float, line.strip().split(',')[1:3]))
+            n = line.strip().split(',')[0]
+            data.append(n)
+            for i in t:
+                data.append(i)
+        print("Plotting points from file data")
+        print(data)
+        
+        # Create MapPoint objects from the data (pairs of lat, lng values)
+        # map_points = []
+        for i in range(0, len(data), 3):
+            if i + 1 < len(data):  # Ensure we have both lat and lng and they're not zero
+                lat = data[i+1]
+                lng = data[i+2]
+                # Create a MapPoint with a radius of 5 and a name based on index
+                point_name = data[i]
+                # map_points.append((lat, lng, 5, point_name))
+                print(f"{point_name}: {lat}, {lng}")
+                self.viewer.viewer.add_goal(point_name, lat, lng)
            
 
 class VelocityControl:
@@ -1078,6 +1128,7 @@ class RoverGUI(QMainWindow):
     def setup_lngLat_tab(self):
         self.lngLatEntry = LngLatEntryBar(self.map_overlay_splitter)
         self.lngLatFile = LngLatEntryFromFile(self.map_overlay_splitter)
+        self.lngLatDeliveryFile = LngLatDeliveryEntryFromFile(self.map_overlay_splitter)
         self.stateMachineDialog = StateMachineStatus()
         self.arucoBox = ArucoWidget()
         
@@ -1094,6 +1145,7 @@ class RoverGUI(QMainWindow):
         Lnglat_tab_layout = QVBoxLayout()
         Lnglat_tab_layout.addWidget(self.lngLatEntry)
         Lnglat_tab_layout.addWidget(self.lngLatFile)
+        Lnglat_tab_layout.addWidget(self.lngLatDeliveryFile)
         Lnglat_tab_layout.addWidget(self.stateMachineDialog)
         Lnglat_tab_layout.addWidget(self.arucoGroupBox) 
         
