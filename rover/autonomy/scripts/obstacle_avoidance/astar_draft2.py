@@ -109,10 +109,10 @@ class OctoMapAStar:
         self.current_orientation_y=0
         self.current_orientation_z=0
         self.current_corner_array = [
-    Point(x=0, y=0, z=0),
-    Point(x=0, y=-0, z=0),
-    Point(x=-0, y=-0, z=0),
-    Point(x=-0, y=0, z=0)
+    Point(x=0.5, y=0.4, z=0),
+    Point(x=0.5, y=-0.4, z=0),
+    Point(x=-0.5, y=-0.4, z=0),
+    Point(x=-0.5, y=0.4, z=0)
 
 ]#0.5, 0.4.0
         
@@ -246,7 +246,7 @@ class OctoMapAStar:
             return occupied_points
 
 
-    def publish_bounding_box(self):
+    def publish_bounding_box_old(self):
         marker = Marker()
         rospy.loginfo("Publishing bounding box")
         marker.header.frame_id = "map"  # Adjust based on your TF setup
@@ -288,6 +288,35 @@ class OctoMapAStar:
         marker.lifetime = rospy.Duration(0)
 
         # Publish the marker
+        self.bounding_box_pub.publish(marker)
+
+    def publish_bounding_box(self):
+        marker = Marker()
+        rospy.loginfo("Publishing bounding box from corners")
+        marker.header.frame_id = "map"  # or "odom", depending on your TF setup
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "rover_bounding_box"
+        marker.id = 0
+        marker.type = Marker.LINE_STRIP
+        marker.action = Marker.ADD
+
+        marker.scale.x = 0.05  # Line width
+
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0
+
+        # Transform corners to global frame using odometry pose
+        pose = (self.current_position_x, self.current_position_y, self.yaw)
+        global_corners = self.transform_corners(pose)
+
+        # Convert back to geometry_msgs/Point
+        marker.points = [Point(x=pt[0], y=pt[1], z=self.current_position_z) for pt in global_corners]
+        
+        # Close the loop by repeating the first point at the end
+        marker.points.append(marker.points[0])
+
         self.bounding_box_pub.publish(marker)
     
     def odom_callback(self, msg):
