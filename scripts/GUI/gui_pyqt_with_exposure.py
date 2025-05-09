@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+from multiprocessing.connection import Client
 import sys
 import rospy
 import map_viewer as map_viewer
@@ -22,7 +23,6 @@ from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
 #Imports for exposure
-from stereolabs_zed_interfaces.srv import SetParameters, SetParametersRequest
 
 #cache folder of map tiles generated from tile_scraper.py
 CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
@@ -797,6 +797,7 @@ class CameraFeed:
         self.label1 = label1
         self.label2 = label2
         self.splitter = splitter
+        self.exposure_value = 50
 
         # Set size policies correctly
         self.label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -816,10 +817,6 @@ class CameraFeed:
     def register_subscriber1(self):
         if self.image_sub1 is None:
             self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color/compressed", CompressedImage, self.callback1)
-            #Addition for exposure
-            rospy.wait_for_service("/zed_node/set_parameters")
-            self.set_params = rospy.ServiceProxy("/zed_node/set_parameters", SetParameters)
-
 
     def unregister_subscriber1(self):
         if self.image_sub1:
@@ -865,6 +862,10 @@ class CameraFeed:
         if cv_image is None:
             return  
 
+        alpha = self.exposure_value / 50.0   # contrast: 0.02 to 2.0
+        beta = (self.exposure_value - 50) * 2  # brightness: -98 to +100
+
+        cv_image = cv2.convertScaleAbs(cv_image, alpha=alpha, beta=beta)
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
         if label == self.label1 and self.bbox:
@@ -925,20 +926,6 @@ class CameraFeed:
             self.splitter.setStretchFactor(0, 1)
             self.splitter.setStretchFactor(1, 1)
 
-    #functions for exposure
-    def set_parameter(self, name, value):
-        req = SetParametersRequest()
-        req.param = [{'parameter_name': name, 'parameter_value': str(value)}]
-        try:
-            self.set_params(req)
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Service call failed: {e}")
-
-    def set_exposure(self, value):
-        self.set_parameter('exposure', value)
-
-    def set_auto_exposure(self, enabled: bool):
-        self.set_parameter('auto_exposure', int(enabled))
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
@@ -962,6 +949,8 @@ class RoverGUI(QMainWindow):
         self.longlat_tab = QWidget()
         self.controlTab = QWidget()
         self.camsTab = QWidget()
+
+        self.simulated_exposure = 50
 
         # Add tab to QTabWidget
         self.tabs.addTab(self.split_screen_tab, "Main Gui")
@@ -1040,8 +1029,6 @@ class RoverGUI(QMainWindow):
         self.camerasplitter_cams_tab = QSplitter(Qt.Horizontal)
         self.camera_feed_cams_tab = CameraFeed(self.camera_label1_cams_tab, self.camera_label2_cams_tab,self.camerasplitter_cams_tab)
         self.camerasplitter_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        self.camera_feed_cams_tab.set_auto_exposure(False)  # Disable auto-exposure
 
         
 
@@ -1180,7 +1167,7 @@ class RoverGUI(QMainWindow):
         slider_layout.addWidget(self.gear_slider_splitter)
         gear_group.setLayout(slider_layout)
 
-        slider_layout.addWidget(self.exposure_slider_splitter)
+        slider_layout2.addWidget(self.exposure_slider_splitter)
         exposure_group.setLayout(slider_layout2)
 
         # Add joystick and gear controls side by side
@@ -1359,8 +1346,7 @@ class RoverGUI(QMainWindow):
         self.gear_slider_splitter.setValue(value)
     
     def change_exposure(self,value):
-        print(f"Exposure: {value}")
-        self.camera_feed_cams_tab.set_exposure(value)
+        self.camera_feed_cams_tab.exposure_value = value
 
     def pub_next_state(self):
         self.next_state_pub.publish(True)
