@@ -255,19 +255,19 @@ class MapViewer(QWidget):
 	def clear_lines(self):
 		# Clear all layer lines
 		for layer, points in self.map_points.items():
-			self.points_line[layer].setLatLngs([])
+			# Use JavaScript to clear the polyline points
+			self.map.runJavaScript(f'{self.points_line[layer].jsName}.setLatLngs([]);', 0)
 			self.points_layer[layer].clearLayers()
 		
 		# Clear robot path line
-		self.robot_line.setLatLngs([])
+		self.map.runJavaScript(f'{self.robot_line.jsName}.setLatLngs([]);', 0)
 		
 		# Get current robot position
 		current_pos = None
 		if self.last_moved_robot_position:
 			current_pos = [self.last_moved_robot_position[0], self.last_moved_robot_position[1]]
-		
+			
 		# Reset the last drawn position to current position
-		# This ensures new lines start from current position
 		self.last_drawn_robot_position = current_pos
 		
 		# Force update the map to clear all visible lines

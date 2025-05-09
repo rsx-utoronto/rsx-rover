@@ -924,6 +924,7 @@ class RoverGUI(QMainWindow):
     statusSignal = pyqtSignal(str)
     def __init__(self):
         super().__init__()
+        self.statusTerminal = statusTerminal()
         self.setWindowTitle("Rover Control Panel")
         self.setGeometry(100, 100, 1200, 800)
         # Initialize QTabWidget
@@ -984,9 +985,7 @@ class RoverGUI(QMainWindow):
         if self.reached_state is not None:
             self.setStyleSheet("background-color: #adebb2")
             self.status_label.setText(f"Goal Reached: {self.reached_state}")
-        else:
-            self.setStyleSheet("background-color: #FFFFFF")
-            self.status_label.setText("")
+        
 
 
         
@@ -1278,7 +1277,6 @@ class RoverGUI(QMainWindow):
         # Create a group box for the status terminal
         vertSplitter = QSplitter(Qt.Vertical)
         vertSplitter.addWidget(splitter)
-        self.statusTerminal = statusTerminal()
         self.statusTermGroupBox = QGroupBox("Status Messages")
         status_term_layout = QVBoxLayout()
         status_term_layout.addWidget(self.statusTerminal)
@@ -1313,12 +1311,16 @@ class RoverGUI(QMainWindow):
 
     def pub_next_state(self):
         self.next_state_pub.publish(True)
+        self.setStyleSheet("background-color: #FFFFFF")
+        self.status_label.setText("")
 
-    def pub_manual_abort(self):
-        self.manual_abort_pub.publish(True)
+    # def pub_manual_abort(self):
+    #     self.manual_abort_pub.publish(True)
 
     def pub_auto_abort(self):
         self.auto_abort_pub.publish(True)
+        self.setStyleSheet("background-color: #FFFFFF")
+        self.status_label.setText("")
 
 
 class CheckableComboBox(QComboBox):
