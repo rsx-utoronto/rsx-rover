@@ -14,4 +14,8 @@
 		<arg name="rviz"			value="false"/>
     </include>
 
+<param name="/use_sim_time" value="true" />
+    <node name="playbag" pkg="rosbag" type="play"
+        args="--clock /home/laura/Downloads/rtab_map.bag" />
 </launch>
+
