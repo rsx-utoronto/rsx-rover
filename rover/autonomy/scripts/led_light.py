@@ -68,7 +68,7 @@ class LedLight():
         # Run the v4l2-ctl command and capture the output
         #journalctl -k | grep -i usb
 
-        command = './scripts/utils/gen/find_usb.sh'
+        command = 'rover_ws/src/rsx-rover/scripts/utils/gen/find_usb.sh'
 
         output = subprocess.run(['bash', command], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -83,9 +83,11 @@ class LedLight():
         found_led = False
 
         for line in lines:
+            print(line)
             # Check for the USB camera device header
             if led_device in line:
               found_led = True
+              print("Found LED device header:", led_device)
             
             # If we are in the USB camera section, look for the device path
             if found_led:
@@ -99,7 +101,8 @@ class LedLight():
 
     def state_callback(self, msg):
       mode = msg.data.strip()
-      serial_port = self.linux_get_led_port() #only works when accessing with sudo
+      serial_port =  self.linux_get_led_port().strip() #only works when accessing with sudo
+      print("Serial Port:", serial_port)
       #serial_port = "/dev/ttyUSB0" #Find out the seriel_port
       board = serial.Serial(port=serial_port, baudrate=115200, timeout=1)
 
@@ -108,7 +111,7 @@ class LedLight():
       #global res
       #mode = msg.rover_mode stm32
       if mode == 'mission done':
-        res = 'green\n' # 'green' not working yet
+        res = 'green' # 'green' not working yet
         for i in range(3):
           if i > 0:
             board.open()
@@ -122,14 +125,15 @@ class LedLight():
           time.sleep(0.3)
         
       elif mode == 'auto': 
-        res = 'red\n'
+        res = 'red'
         print(res)
         x = board.write(bytes(res, 'utf-8'))
+        print(x)
       else:
-        res = 'blue\n' 
+        res = 'blue' 
         print(res)
         x = board.write(bytes(res, 'utf-8'))
-      print(x)
+        print(x)
         
 
 # spin() simply keeps python from exiting until this node is stopped
