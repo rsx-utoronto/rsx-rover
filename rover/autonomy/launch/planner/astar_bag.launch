@@ -1,0 +1,16 @@
+<launch>
+
+    <include file="$(find rover)/rover/autonomy/launch/mapping/octomap_bag.launch" >
+        <arg name="bag_filename" value="/home/rsx/rover_ws/bags/zed_myhal_basement2.bag" />
+    </include>
+
+    <node name="astar_rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/autonomy/config/astar.rviz"/>
+
+    <!-- <node name="astar" pkg="rover" type="astar_draft2.py" output="screen"/> -->
+
+    <node name="astar" pkg="rover" type="old_working_astar.py" output="screen"/>
+
+    <node name="astar_viz" pkg="rover" type="astar_trajectory.py" output="screen"/>
+
+
+</launch>

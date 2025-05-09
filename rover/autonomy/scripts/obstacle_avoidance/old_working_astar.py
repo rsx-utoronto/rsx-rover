@@ -19,6 +19,8 @@ Feb 8 update:
 """
 import rospy
 import numpy as np
+np.float = float
+
 from nav_msgs.msg import Odometry
 from octomap_msgs.msg import Octomap
 from nav_msgs.msg import OccupancyGrid
@@ -67,7 +69,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1  # Resolution of 2D grid (meters per cell)
         self.grid_origin=(0.0,0.0)
-        self.goal = (9.0,7.0)
+        self.goal = (1.0,1.0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
