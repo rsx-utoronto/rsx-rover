@@ -222,7 +222,6 @@ class OctoMapAStar:
                         x = (voxel_index % (256 * 256)) % 256
                         y = (voxel_index % (256 * 256)) // 256
                         z = voxel_index // (256 * 256)
-                        occupied_points.append((x * resolution, y * resolution, z * resolution))
             
                         x_real = x * resolution
                         y_real = y * resolution
@@ -270,7 +269,6 @@ class OctoMapAStar:
         marker.pose.position.z = self.current_position_z + box_height / 2  # Center height
         print("ORIENTATION XXX", self.current_orientation_x*100)
         
-
         import tf.transformations as tf
 
         roll = self.current_orientation_x  # Assuming this is the roll angle (wrong if it's already a quaternion)
@@ -363,47 +361,29 @@ class OctoMapAStar:
                 if 0 <= z <= 50:  # Height threshold -< this should be 0.2<z<1.5!!!
                     #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
                     occupancy_grid[grid_x, grid_y] = 100000 # 100000
-                  
+                '''
                     for dx in range(-inflation_cells, inflation_cells):
-    
                             for dy in range(-inflation_cells-1, inflation_cells+1):
                                 # new_x = grid_x + dx 
                                 # new_y = grid_y + dy   
                                 new_x = min(max(grid_x + dx, 0), grid_size[0] - 1)
                                 new_y = min(max(grid_y + dy, 0), grid_size[1] - 1)   
                                 print("inflation_cells", inflation_cells) 
-                                occupancy_grid[new_x, new_y] = 100000  #np.inf  
+                                occupancy_grid[new_x, new_y] = 100000 
+                '''
            # rospy.loginfo(f"Grid position: ({grid_x}, {grid_y}) -> Cost: {occupancy_grid[grid_x, grid_y]}")
         return occupancy_grid
 
 ### A* start 
-
-    def height_cost_old(self, current, neighbor): #this is g function for height
+    def height_cost(self, current, neighbor): #this is g function for height
         current_height = self.occupancy_grid[current[0], current[1]]
         neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
         if current_height == -1 or neighbor_height == -1:  
-            return 100000 
-        if current_height > 1000 or neighbor_height > 1000: 
+            return 100000
+        if current_height > 100000 or neighbor_height >100000: 
             return 100000
         return abs(current_height - neighbor_height)
-    
-    def height_cost(self, current, neighbor):
-        current_height = self.occupancy_grid[current[0], current[1]]
-        neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
-
-        # Default cost when unknown
-        cost = abs(current_height - neighbor_height)
-
-        if current_height <= 0 or neighbor_height <= 0:
-            return 5.0  # traversable but low-quality
-
-        # Increase penalty for "obstacles"
-        if current_height >= 1000 or neighbor_height >= 1000:
-            return 100000  # still finite!
-
-        return cost + 1.0  # base cost + delta
         
-
     def heuristic(self, node, goal): #h fucntion -> euclidean distance
         return np.linalg.norm(np.array(node) - np.array(goal))
 
@@ -431,8 +411,8 @@ class OctoMapAStar:
                 return self.reconstruct_path(came_from, current)
 
             for neighbor in self.get_neighbors(current):
-                
                 height_cost = self.height_cost(current, neighbor)  #  height-based cost
+                print("here is height_cost", height_cost)
                 tentative_g_score = g_score[current] + height_cost  # Add the height cost to the g_score
                 if height_cost < 100000: 
                     print("height cost is less than 10000")
