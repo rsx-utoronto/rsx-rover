@@ -256,12 +256,12 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                 sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 if self.glob_msg.abort_check:
-                    userdata.aborted_state = "Location Selection"
+                    userdata.aborted_state = list(path.items())[0][0]
                     return "ABORT"
             except rospy.ROSInterruptException:
                 self.glob_msg.pub_state(f"ROS Interrupt Exception during Location Selection")
                 if self.glob_msg.abort_check:
-                    userdata.aborted_state = "Location Selection"
+                    userdata.aborted_state = list(path.items())[0][0]
                     return "ABORT"
             return list(path.items())[0][0]
         else: #all mission have been done
@@ -308,7 +308,7 @@ class GNSS1(smach.State): #State for GNSS1
         userdata.prev_loc = "GNSS1"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #Removing state from location list
 
-        while(self.glob_msg.get_next_task_check is not True):
+        while(self.glob_msg.get_next_task_check() is not True):
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
         return "Location Selection"
@@ -346,6 +346,7 @@ class GNSS2(smach.State): #State for GNSS1
         else:
             self.glob_msg.pub_state("Failed to reach GNSS2 location")
             if self.glob_msg.abort_check:
+                
                 self.glob_msg.pub_state("Aborting for state GNSS2")
                 userdata.aborted_state = "GNSS2"
                 return "ABORT"
@@ -355,8 +356,9 @@ class GNSS2(smach.State): #State for GNSS1
         userdata.prev_loc = "GNSS2"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #Removing state from location list
 
-        while(self.glob_msg.get_next_task_check is not True):
+        while(self.glob_msg.get_next_task_check() is not True):
             rospy.sleep(1)
+            self.glob_msg.pub_state("Waiting for next state button")
         self.glob_msg.next_task_check = False
         return "Location Selection"
 
@@ -435,7 +437,7 @@ class AR1(smach.State): #State for AR1
         userdata.prev_loc = "AR1"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
 
-        while(self.glob_msg.get_next_task_check is not True):
+        while(self.glob_msg.get_next_task_check() is not True):
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
         return "Location Selection"
@@ -513,7 +515,7 @@ class AR2(smach.State):
         userdata.prev_loc = "AR2"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
 
-        while(self.glob_msg.get_next_task_check is not True):
+        while(self.glob_msg.get_next_task_check() is not True):
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
         return "Location Selection"
@@ -591,7 +593,7 @@ class AR3(smach.State):
         userdata.prev_loc = "AR3"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
 
-        while(self.glob_msg.get_next_task_check is not True):
+        while(self.glob_msg.get_next_task_check() is not True):
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
         return "Location Selection"
@@ -677,8 +679,9 @@ class OBJ1(smach.State): #mallet
         userdata.prev_loc = "OBJ1"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
 
-        while(self.glob_msg.get_next_task_check is not True):
+        while(self.glob_msg.get_next_task_check() is not True):
             rospy.sleep(1)
+            self.glob_msg.pub_state("Waiting for next state button")
         self.glob_msg.next_task_check = False
         return "Location Selection"
     
@@ -763,7 +766,7 @@ class OBJ2(smach.State): #waterbottle
         userdata.prev_loc = "OBJ2"
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
 
-        while(self.glob_msg.get_next_task_check is not True):
+        while(self.glob_msg.get_next_task_check() is not True):
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
         return "Location Selection"
@@ -776,7 +779,7 @@ class ABORT(smach.State):  # Assuming it won't be called before we try to go to 
         smach.State.__init__(
             self,
             outcomes=["Location Selection"],
-            input_keys=["prev_loc", "start_location", "aborted_state", "rem_loc_dict"],
+            input_keys=["prev_loc", "start_location", "aborted_state", "rem_loc_dict", "locations_dict"],
             output_keys=["rem_loc_dict"]
         )
         self.glob_msg = None
@@ -785,6 +788,7 @@ class ABORT(smach.State):  # Assuming it won't be called before we try to go to 
         self.glob_msg = glob_msg
 
     def execute(self, userdata):
+        self.glob_msg.abort_check = False
         # Determine the location to return to
         if userdata.prev_loc == "start":
             self.glob_msg.pub_state("No previous location available; returning to start location.")
@@ -795,7 +799,10 @@ class ABORT(smach.State):  # Assuming it won't be called before we try to go to 
             return_location = userdata.locations_dict[userdata.prev_loc]
         self.glob_msg.abort_check = False
         self.glob_msg.pub_state(f"Aborting to location: {return_location} to {userdata.prev_loc}")
-        if userdata.aborted_state != "Location Selection":
+        if len(userdata.rem_loc_dict) == len(userdata.locations_dict):
+            self.glob_msg.cartesian.pop(userdata.aborted_state)
+        
+        if len(userdata.rem_loc_dict) < len(userdata.locations_dict):
             userdata.rem_loc_dict.pop(userdata.aborted_state)
 
         try:
@@ -994,7 +1001,8 @@ def main():
                     "prev_loc": "prev_loc",  # Use the previous location for abort
                     "start_location" : "start_location",
                     "rem_loc_dict": "rem_loc_dict",
-                    "aborted_state" : "aborted_state"
+                    "aborted_state" : "aborted_state",
+                    "location_dict" : "location_dict"
                 }
             )
         

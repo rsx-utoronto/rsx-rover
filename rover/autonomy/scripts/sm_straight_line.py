@@ -23,12 +23,12 @@ class StraightLineApproach:
         self.targets = targets
         self.found = False
         self.abort_check = False
-        self.x = 0
-        self.y = 0
+        self.x = -100000
+        self.y = -100000
         self.heading = 0
-        self.pose_subscriber = rospy.Subscriber(sm_config.get("pose_param_straight_line"), PoseStamped, self.pose_callback)
+        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        self.drive_publisher = rospy.Publisher(sm_config.get("drive_param_straight_line"), Twist, queue_size=10)
+        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
         self.aruco_found = False
         self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
         #new additions
@@ -96,6 +96,7 @@ class StraightLineApproach:
 
             target_heading = math.atan2(target_y - self.y, target_x - self.x)
             target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
+            # print(f"Current Position: ({self.x}, {self.y})")
            # print("Target Heading:", math.degrees(target_heading), "Cur Heading:", math.degrees(self.heading))
             angle_diff = target_heading - self.heading
             
@@ -132,6 +133,7 @@ class StraightLineApproach:
             print(f"Moving towards target: ({target_x}, {target_y})")
             self.move_to_target(target_x, target_y)
             if self.abort_check:
+                self.abort_check = False
                 break
             rospy.sleep(1)
 
