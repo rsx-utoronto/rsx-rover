@@ -39,7 +39,7 @@ class ObjectDetectionNode():
         self.K = None
         self.D = None
         script_dir=os.path.dirname(os.path.abspath(__file__))
-        model_path=os.path.join(script_dir, 'best.pt')
+        model_path=os.path.join(script_dir, 'mallet.pt')
         self.model = YOLO(model_path)  # Load YOLO model
         
         #self.model = YOLO('best.pt')  #Load YOLO model

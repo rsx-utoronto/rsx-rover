@@ -1,0 +1,5 @@
+<launch>
+
+    <node pkg="rover" type="final_state_machine.py" name="rover_state_machine" output="screen" />
+
+</launch>

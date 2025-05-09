@@ -44,9 +44,9 @@ class GS_Traversal:
                    "OBJ2":False}
         
         # self.odom_subscriber = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        self.pose_subscriber = rospy.Subscriber(sm_config.get("pose_param_grid_search"), PoseStamped, self.pose_callback)
+        self.pose_subscriber = rospy.Subscriber('pose', PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        self.drive_publisher = rospy.Publisher(sm_config.get("drive_param_grid_search"), Twist, queue_size=10)
+        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
 
         #new additions
         self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
@@ -96,7 +96,7 @@ class GS_Traversal:
     def aruco_detection_callback(self, data):
         # print("sm grid search_ data.data", data.data)
         if data.data:
-            if self.count <= 3:
+            if self.count <= 2:
                 self.count +=1
             else:
                 self.aruco_found = data.data
@@ -105,7 +105,7 @@ class GS_Traversal:
     
     def mallet_detection_callback(self, data):
         if data.data:
-            if self.count <= 3:
+            if self.count <= 2:
                 self.count += 1
             else:
                 self.mallet_found = data.data
@@ -114,7 +114,7 @@ class GS_Traversal:
 
     def waterbottle_detection_callback(self, data):
         if data.data:
-            if self.count <= 3:
+            if self.count <= 2:
                 self.count += 1
             else:
                     
@@ -194,9 +194,12 @@ class GS_Traversal:
                 if state == "AR1" or state == "AR2" or state == "AR3":
                     aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+                    print ("FUCK YOU")
+                    print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                 elif state == "OBJ1" or state == "OBJ2":
-                    aimer = aruco_homing.AimerROS(640, 360, 1450, 50, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
+                    aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
                     rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
+                    print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
                 rate = rospy.Rate(10) #this code needs to be adjusted
                 for i in range(50):
                     rate.sleep()
@@ -204,19 +207,21 @@ class GS_Traversal:
                     twist = Twist()
                     if aimer.linear_v == 0 and aimer.angular_v == 0:
                         print ("at weird", aimer.linear_v, aimer.angular_v)
-                        twist.linear.x = 0
-                        twist.angular.z = 0
+                        twist.linear.x = 0.0
+                        twist.angular.z = 0.0
                         pub.publish(twist)
                         return
                     if aimer.angular_v == 1:
-                        twist.angular.z = aimer.max_angular_v
-                        twist.linear.x = 0
+                        twist.angular.z = float(aimer.max_angular_v)
+                        print ("first if",aimer.max_angular_v)
+                        twist.linear.x = 0.0
                     elif aimer.angular_v == -1:
-                        twist.angular.z = -aimer.max_angular_v
-                        twist.linear.x = 0
+                        twist.angular.z = float(-aimer.max_angular_v)
+                        twist.linear.x = 0.0
                     elif aimer.linear_v == 1:
-                        twist.linear.x = aimer.max_linear_v
-                        twist.angular.z = 0
+                        print ("second check",aimer.max_linear_v)
+                        twist.linear.x = float(aimer.max_linear_v)
+                        twist.angular.z = 0.0
                     
                     pub.publish(twist)
                     rate.sleep()
