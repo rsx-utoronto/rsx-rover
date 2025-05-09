@@ -46,6 +46,8 @@ Feb 8 update:
 """
 import rospy
 import numpy as np
+np.float = float
+
 from nav_msgs.msg import Odometry
 from octomap_msgs.msg import Octomap
 from nav_msgs.msg import OccupancyGrid
