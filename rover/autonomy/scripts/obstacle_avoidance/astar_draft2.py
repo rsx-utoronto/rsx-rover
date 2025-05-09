@@ -111,8 +111,8 @@ class OctoMapAStar:
         self.current_corner_array = [
     Point(x=0, y=0, z=0),
     Point(x=0, y=-0, z=0),
-    Point(x=-0.5, y=-0, z=0),
-    Point(x=-0.5, y=0, z=0)
+    Point(x=-0, y=-0, z=0),
+    Point(x=-0, y=0, z=0)
 
 ]#0.5, 0.4.0
         
@@ -417,10 +417,10 @@ class OctoMapAStar:
     def a_star(self, start, goal):
         print("in A_star")
         open_set = PriorityQueue()
-        open_set.put((0, start))  # Put start with f_score = 0
+        open_set.put((0, start))  #  start with f_score = 0
         came_from = {}
-        g_score = {start: 0}  # The cost of getting to the start node is 0
-        f_score = {start: self.heuristic(start, goal)}  # Initial f_score based on heuristic
+        g_score = {start: 0}  #  cost of getting to the start node is 0
+        f_score = {start: self.heuristic(start, goal)}  # initial f_score based on heuristic
 
         while not open_set.empty():
             _, current = open_set.get()
@@ -429,32 +429,36 @@ class OctoMapAStar:
                 return self.reconstruct_path(came_from, current)
 
             for neighbor in self.get_neighbors(current):
-                height_cost = self.height_cost(current, neighbor)  # Get height-based cost
+                
+                height_cost = self.height_cost(current, neighbor)  #  height-based cost
                 tentative_g_score = g_score[current] + height_cost  # Add the height cost to the g_score
-                if height_cost != 100000: 
+                if height_cost < 100000: 
+                    print("height cost is less than 10000")
                     if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
                         came_from[neighbor] = current
                         g_score[neighbor] = tentative_g_score
                         f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)  # f = g + h
                         open_set.put((f_score[neighbor], neighbor))
-                else: 
-                    print("H is actually infinity")
         rospy.logwarn("A* failed to find a path")
         return []
     
     def is_pose_valid(self, pose):
         """Returns True if all corners of the footprint at this pose are in free space"""
         for corner in self.transform_corners(pose):
+            print("in is pose valid", corner)
             x, y = corner
             grid_x = int((x - self.grid_origin[0]) / self.grid_resolution)
             grid_y = int((y - self.grid_origin[1]) / self.grid_resolution)
+            print("grid x and y:", grid_x, grid_y)
 
             if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
+                print("checkpoint 1 is true")
                 return False  # Out of bounds
 
             if self.occupancy_grid[grid_x, grid_y] >= 100000:
-                return False  # This corner is in an obstacle
-
+                print("checkopoint 2 is true")
+                return True  # This corner is in an obstacle
+            
         return True
     
     def get_neighbors_old(self, node):
@@ -490,21 +494,22 @@ class OctoMapAStar:
             y = local_x * sin_theta + local_y * cos_theta + y_pose
 
             transformed.append((x, y))
+            
         return transformed
     
     def get_neighbors(self, node):
         neighbors = []
         x, y = node
-
         for dx, dy in [(-1, -1), (1, 1), (0, -1), (0, 1), (1, 0), (-1, 0)]:
             nx, ny = x + dx, y + dy
-
             if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
                 # Check the *footprint* at the new node's position
                 if self.is_pose_valid((nx * self.grid_resolution, ny * self.grid_resolution, 0)):
+                    print("pose is valid !!!!!!")
                     neighbors.append((nx, ny))
                 else:
-                    pass  # Debug print if you want
+                   print("Object detected")
+                   # Debug print if you want
         return neighbors
     
 ### A* END

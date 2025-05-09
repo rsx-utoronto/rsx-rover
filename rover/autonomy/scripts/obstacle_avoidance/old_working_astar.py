@@ -293,7 +293,6 @@ class OctoMapAStar:
 
             if current == goal:
                 return self.reconstruct_path(came_from, current)
-
             for neighbor in self.get_neighbors(current):
                 height_cost = self.height_cost(current, neighbor)  # Get height-based cost
                 tentative_g_score = g_score[current] + height_cost  # Add the height cost to the g_score
