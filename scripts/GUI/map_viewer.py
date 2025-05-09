@@ -40,6 +40,7 @@ class Locations(Enum):
 
 class MapViewer(QWidget):
 	"""View markers and robot position overlaid on a satellite map."""
+	headingSignal = pyqtSignal(float)
 
 	def __init__(self, *args, **kwargs):
 		
@@ -76,32 +77,43 @@ class MapViewer(QWidget):
 		# 'initialize' tile layer
 		self.tile_layer = None
 
+		self.headingSignal.connect(self.set_robot_rotation)
 
 		# initialize robot icon
 		robot_startup_location = Locations.engineering.value
-		# self.robot_icon = L.icon(str(Path(__file__).parent.resolve() / "../resources/robot.png"),
-		# {
-		# 	"iconSize": [26, 25],
-		# 	"iconAnchor": [10, 12]
-		# })
 
-		# path = str(Path(__file__).parent.resolve() / "icons/map_icon_start.png")
-		# # print(path)
-		# icon = L.icon(
-		# {
-		# 	'iconUrl': path,
-		# 	'iconSize': [26, 25],
-		# 	'iconAnchor': [10, 12]
-		# })
+		# Get absolute path to the rover icon
+		rover_icon_path = str(Path(__file__).parent.resolve() / "icons/rover.png")
 
+		# Create the marker first
 		self.robot = L.marker(robot_startup_location, {
 			'rotationAngle': 0,
-			'rotationOrigin': '10px 12px'
-			# 'icon': icon
+			'rotationOrigin': '13px 13px'
 		})
+
 		self.robot.bindPopup("Robot")
-		# self.robot.setIcon(self.robot_icon)
 		self.robot.addTo(self.map)
+		self.map.runJavaScript(
+			f'''
+			try {{
+				var roverIcon = L.icon({{
+					iconUrl: "{rover_icon_path}",
+					iconSize: [26, 26],
+					iconAnchor: [13, 13]
+				}});
+				
+				// Make sure we have a valid reference before setting the icon
+				if (typeof {self.robot.jsName} !== 'undefined') {{
+					{self.robot.jsName}.setIcon(roverIcon);
+					console.log("Robot icon set successfully");
+				}} else {{
+					console.error("Robot marker reference not found: {self.robot.jsName}");
+				}}
+			}} catch(e) {{
+				console.error("Error setting robot icon:", e);
+			}}
+		''', 0)
+		
 		self.goal_points = [None] * 8
 
 		coordArray = ["Start", "GNSS 1","GNSS 2", "AR 1", "AR 2", "AR 3", "OBJ 1", "OBJ 2"]
@@ -139,6 +151,22 @@ class MapViewer(QWidget):
 		self.selected_marker: Dict[str, Circle] = {}
 		self.show_selected_marker: Dict[str, bool] = {}
 		self.circle_color: Dict[str, str] = {}
+
+	def add_goal(self, name: str, lat: float, long: float) -> None:
+		"""Add a goal to the map."""
+		if name == "Start":
+			self.goal_points[0].setLatLng([lat, long])
+		else:
+			path = str(Path(__file__).parent.resolve() / "icons/map_icon_base.png")
+			self.goal_points.append(L.marker([lat, long], {
+				'rotationAngle': 0,
+				'rotationOrigin': '10px 12px',
+				'title': name
+			}))
+			self.goal_points[-1].addTo(self.map)
+			self.map.runJavaScript('var markerIcon = L.icon({"iconUrl": "' + path + '"});', 0)
+			self.map.runJavaScript(f'{self.goal_points[-1].jsName}.setIcon(markerIcon);', 0)
+			self.goal_points[-1].bindPopup(name)
 
 	def centre_on_gps_callback(self,event):
 		#receives data from javascript on lnglat boundss
