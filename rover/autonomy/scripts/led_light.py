@@ -111,26 +111,26 @@ class LedLight():
       #global res
       #mode = msg.rover_mode stm32
       if mode == 'mission done':
-        res = 'green' # 'green' not working yet
+        res = 'green\n' # 'green' not working yet
         for i in range(3):
           if i > 0:
             board.open()
           board.write(bytes(res, 'utf-8')) 
-          board.close()
-          time.sleep(0.3) 
-          board.open()   
-          board.write(bytes('off\n', 'utf-8'))
-          board.flush() # Ensure it's sent before closing
-          board.close()
-          time.sleep(0.3)
+          #board.close()
+          #time.sleep(0.3) 
+          #board.open()   
+          #board.write(bytes('off\n', 'utf-8'))
+          #board.flush() # Ensure it's sent before closing
+          #board.close()
+          #time.sleep(0.3)
         
       elif mode == 'auto': 
-        res = 'red'
+        res = 'red\n'
         print(res)
         x = board.write(bytes(res, 'utf-8'))
         print(x)
       else:
-        res = 'blue' 
+        res = 'blue\n' 
         print(res)
         x = board.write(bytes(res, 'utf-8'))
         print(x)
