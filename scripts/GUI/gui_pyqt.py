@@ -921,6 +921,7 @@ class CameraFeed:
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
+    statusSignal = pyqtSignal(str)
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Rover Control Panel")
@@ -950,6 +951,9 @@ class RoverGUI(QMainWindow):
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
 
+        
+        self.statusSignal.connect(self.string_signal_receive)
+
 
         self.setup_control_tab()
         self.setup_split_screen_tab()
@@ -959,7 +963,10 @@ class RoverGUI(QMainWindow):
 
     def string_callback(self, msg):
         self.statusTerminal.string_callback(msg)
-        msg_list = msg.data.split(" ")
+        self.statusSignal.emit(msg.data)
+
+    def string_signal_receive(self, msg):
+        msg_list = msg.split(" ")
         goal_reached_msg = ["Goal", "Point", "Reached:"]
         reached = True
         for i in range(len(goal_reached_msg)):
