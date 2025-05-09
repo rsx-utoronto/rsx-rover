@@ -1,25 +1,17 @@
 #!/usr/bin/env python3
 
-#import rospy
-#from rover.msg import StateMsg
-#from std_msgs.msg import String
 import time
 import serial
 import subprocess 
 import serial.tools.list_ports
 from std_msgs.msg import String
 import rospy
-#from std_msgs.msg import String
-#import rospy
-
-#Make a subscriber in here instead of the State Machine file
 
 #For Windows
-
 class LedLight():
-   #rospy.init_node('led_listener', anonymous=True) #is it needed - delete if not needed 
     def __init__(self):
       self.led_sub = rospy.Subscriber("led_light", String, self.state_callback)
+      self.board = None
 
     def list_all_ports(self):
       ports = [port.device for port in serial.tools.list_ports.comports()]
@@ -62,8 +54,7 @@ class LedLight():
         if port == port_name:
               print(port)
               return port
-
-
+        
     def linux_get_led_port(self):
         # Run the v4l2-ctl command and capture the output
         #journalctl -k | grep -i usb
@@ -72,7 +63,7 @@ class LedLight():
 
         output = subprocess.run(['bash', command], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    # Get the output and errors from the script
+        # Get the output and errors from the script
         stdout = output.stdout.decode()
 
         # Split the output into lines
@@ -83,7 +74,6 @@ class LedLight():
         found_led = False
 
         for line in lines:
-            print(line)
             # Check for the USB camera device header
             if led_device in line:
               found_led = True
@@ -99,23 +89,26 @@ class LedLight():
 
         return led_port #led_device
 
-    def state_callback(self, msg):
-      mode = msg.data.strip()
+    def init_board(self):
       serial_port =  self.linux_get_led_port().strip() #only works when accessing with sudo
       print("Serial Port:", serial_port)
       #serial_port = "/dev/ttyUSB0" #Find out the seriel_port
-      board = serial.Serial(port=serial_port, baudrate=115200, timeout=1)
+      self.board = serial.Serial(port=serial_port, baudrate=115200, timeout=1)
+      self.board.write(bytes("blue\n", 'utf-8'))
+      
 
+    def state_callback(self, msg):
+      mode = msg.data.strip()
       # mode = msg.data
       #print(mode)
       #global res
       #mode = msg.rover_mode stm32
       if mode == 'mission done':
         res = 'green\n' # 'green' not working yet
-        for i in range(3):
-          if i > 0:
-            board.open()
-          board.write(bytes(res, 'utf-8')) 
+        #for i in range(3):
+          #if i > 0:
+            #self.board.open()
+        self.board.write(bytes(res, 'utf-8')) 
           #board.close()
           #time.sleep(0.3) 
           #board.open()   
@@ -127,26 +120,21 @@ class LedLight():
       elif mode == 'auto': 
         res = 'red\n'
         print(res)
-        x = board.write(bytes(res, 'utf-8'))
+        x = self.board.write(bytes(res, 'utf-8'))
         print(x)
       else:
         res = 'blue\n' 
         print(res)
-        x = board.write(bytes(res, 'utf-8'))
+        x = self.board.write(bytes(res, 'utf-8'))
         print(x)
         
-
-# spin() simply keeps python from exiting until this node is stopped
-#rospy.spin()
-
-#if __name__ == "__main__":
-#   main()
 
 if __name__ == "__main__":
     # Initialize the ROS node
     rospy.init_node('led_listener', anonymous=True)
     try:
         led = LedLight()
+        led.init_board()
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
