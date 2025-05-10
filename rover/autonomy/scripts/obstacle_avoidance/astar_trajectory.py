@@ -17,7 +17,7 @@ class Visualizer:
 
         # Subscribers
         self.astar_sub = rospy.Subscriber('/astar_waypoints', Float32MultiArray, self.astar_callback)
-        self.trajectories_sub = rospy.Subscriber('/dwa_trajectories', Path, self.trajectories_callback)
+        self.trajectories_sub = rospy.Subscriber('/dwa_trajectories', MarkerArray, self.trajectories_callback)
         self.waypoints = []
 
     def trajectories_callback(self, msg):

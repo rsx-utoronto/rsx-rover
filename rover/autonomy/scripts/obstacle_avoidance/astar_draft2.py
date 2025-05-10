@@ -111,10 +111,10 @@ class OctoMapAStar:
         self.current_orientation_y=0
         self.current_orientation_z=0
         self.current_corner_array = [
-    Point(x=0, y=0, z=0),
-    Point(x=0, y=-0, z=0),
-    Point(x=-0, y=-0, z=0),
-    Point(x=-0, y=0, z=0)
+    Point(x=0.5, y=0.5, z=0),
+    Point(x=0.5, y=-0.5, z=0),
+    Point(x=-0.5, y=-0.5, z=0),
+    Point(x=-0.5, y=0.5, z=0)
 
 ]#0.5, 0.4.0
         
@@ -199,7 +199,7 @@ class OctoMapAStar:
         """
         rospy.loginfo("Decoding OctoMap...")
         rover_radius= 0.1
-        resolution= 0.1
+        resolution= 1.0
         inflation_cells = 0 #int ((rover_radius / (resolution)) )
 
         if octomap_msg.binary:
