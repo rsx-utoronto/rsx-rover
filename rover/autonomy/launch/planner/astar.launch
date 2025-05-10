@@ -7,7 +7,7 @@
 
     <!-- <node name="astar" pkg="rover" type="astar_draft2.py" output="screen"/> -->
 
-    <node name="astar" pkg="rover" type="old_working_astar.py" output="screen"/>
+    <node name="astar" pkg="rover" type="astar_draft2.py.py" output="screen"/>
 
     <node name="astar_viz" pkg="rover" type="astar_trajectory.py" output="screen"/>
 

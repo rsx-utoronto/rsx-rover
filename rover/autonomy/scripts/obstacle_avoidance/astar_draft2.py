@@ -111,14 +111,13 @@ class OctoMapAStar:
         self.current_orientation_y=0
         self.current_orientation_z=0
         self.current_corner_array = [
-    Point(x=0.5, y=0.4, z=0),
-    Point(x=0.5, y=-0.4, z=0),
-    Point(x=-0.5, y=-0.4, z=0),
-    Point(x=-0.5, y=0.4, z=0)
+    Point(x=0.4, y=0.3, z=0),
+    Point(x=0.4, y=-0.3, z=0),
+    Point(x=-0.4, y=-0.3, z=0),
+    Point(x=-0.4, y=0.3, z=0)
 
 ]#0.5, 0.4.0
         
-    
     def pointcloud_callback(self, msg):
             """
             Callback function to process the point cloud data and update the OctoMap.
@@ -247,52 +246,8 @@ class OctoMapAStar:
             rospy.loginfo(f"Decoded {len(occupied_points)} occupied points from OctoMap.")
             return occupied_points
 
-
-    def publish_bounding_box_old(self):
-        marker = Marker()
-        rospy.loginfo("Publishing bounding box")
-        marker.header.frame_id = "map"  # Adjust based on your TF setup
-        marker.header.stamp = rospy.Time.now()
-        marker.ns = "rover_bounding_box"
-        marker.id = 0
-        marker.type = Marker.CUBE  # Cube represents the bounding box
-        marker.action = Marker.ADD
-
-        # Define the size of the bounding box (Adjust these values)
-        box_length = 1.0  # X dimension (meters)
-        box_width = 0.8   # Y dimension (meters)
-        box_height = 0.5  # Z dimension (meters)
-
-        # Set the position of the bounding box (Center it around the rover)
-        marker.pose.position.x = self.current_position_x
-        marker.pose.position.y = self.current_position_y
-        marker.pose.position.z = self.current_position_z + box_height / 2  # Center height
-        print("ORIENTATION XXX", self.current_orientation_x*100)
-        
-        import tf.transformations as tf
-
-        roll = self.current_orientation_x  # Assuming this is the roll angle (wrong if it's already a quaternion)
-        pitch = self.current_orientation_y
-        yaw = self.current_orientation_z
-
-        # Set the scale of the box
-        marker.scale.x = box_length
-        marker.scale.y = box_width 
-        marker.scale.z = box_height
-
-        # Set the color (RGBA)
-        marker.color.r = 0.0
-        marker.color.g = 1.0
-        marker.color.b = 0.0
-        marker.color.a = 0.5  #Transparency
-
-        # Set lifetime (0 means it persists)
-        marker.lifetime = rospy.Duration(0)
-
-        # Publish the marker
-        self.bounding_box_pub.publish(marker)
-
     def publish_bounding_box(self):
+        # note there is an older publish bounding box function that just makes a box around the rover..
         marker = Marker()
         rospy.loginfo("Publishing bounding box from corners")
         marker.header.frame_id = "map"  # or "odom", depending on your TF setup
@@ -315,7 +270,6 @@ class OctoMapAStar:
 
         # Convert back to geometry_msgs/Point
         marker.points = [Point(x=pt[0], y=pt[1], z=self.current_position_z) for pt in global_corners]
-        
         # Close the loop by repeating the first point at the end
         marker.points.append(marker.points[0])
 
@@ -332,18 +286,6 @@ class OctoMapAStar:
         self.current_orientation_y = msg.pose.pose.orientation.y
         self.current_orientation_z = msg.pose.pose.orientation.z
         self.current_orientation_w = msg.pose.pose.orientation.w
-
-        # self.current_left_front_wheel_x=self.current_position_x + 0.5
-        # self.current_left_front_wheel_y=self.current_position_y - 0.5
-        
-        # self.current_right_front_wheel_x = self.current_position_x + 0.5
-        # self.current_right_front_wheel_y = self.current_position_y + 0.5
-
-        # self.current_left_back_wheel_x =  self.current_position_x - 0.5
-        # self.current_left_back_wheel_y = self.current_position_y - 0.5
-
-        # self.current_right_back_wheel_x = self.current_position_x - 0.5
-        # self.current_right_back_wheel_y= self.current_position_y + 0.5
 
         # Convert quaternion to Euler angles to get roll, pitch, and yaw (theta)
         (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
@@ -370,7 +312,7 @@ class OctoMapAStar:
         converts 3d map into 2d map with height filtering
         Process OctoMap into a 2D occupancy grid based on height values.
         """
-        grid_size = (200, 200)  # Number of cells in x and y
+        grid_size = (2000, 2000)  # Number of cells in x and y
         resolution = 0.1        # Grid resolution in meters
         rover_radius = 0
         saftey_margin= 0
@@ -387,9 +329,9 @@ class OctoMapAStar:
     
             # Clamp indices to valid bounds
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
-                if 0 <= z <= 50:  # Height threshold -< this should be 0.2<z<1.5!!!
+                if z>2:  # Height threshold -< this should be 0.2<z<1.5!!!
                     #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
-                    occupancy_grid[grid_x, grid_y] = 100000 # 100000
+                    occupancy_grid[grid_x, grid_y] = 1000 # 1000
                 '''
                     for dx in range(-inflation_cells, inflation_cells):
                             for dy in range(-inflation_cells-1, inflation_cells+1):
@@ -398,7 +340,7 @@ class OctoMapAStar:
                                 new_x = min(max(grid_x + dx, 0), grid_size[0] - 1)
                                 new_y = min(max(grid_y + dy, 0), grid_size[1] - 1)   
                                 print("inflation_cells", inflation_cells) 
-                                occupancy_grid[new_x, new_y] = 100000 
+                                occupancy_grid[new_x, new_y] = 1000 
                 '''
            # rospy.loginfo(f"Grid position: ({grid_x}, {grid_y}) -> Cost: {occupancy_grid[grid_x, grid_y]}")
         return occupancy_grid
@@ -408,9 +350,9 @@ class OctoMapAStar:
         current_height = self.occupancy_grid[current[0], current[1]]
         neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
         if current_height == -1 or neighbor_height == -1:  
-            return 100000
-        if current_height > 100000 or neighbor_height >100000: 
-            return 100000
+            return 1000
+        if current_height > 1000 or neighbor_height >1000: 
+            return 1000
         return abs(current_height - neighbor_height)
         
     def heuristic(self, node, goal): #h fucntion -> euclidean distance
@@ -443,7 +385,7 @@ class OctoMapAStar:
                 height_cost = self.height_cost(current, neighbor)  #  height-based cost
                 print("here is height_cost", height_cost)
                 tentative_g_score = g_score[current] + height_cost  # Add the height cost to the g_score
-                if height_cost < 100000: 
+                if height_cost < 1000: 
                     print("height cost is less than 10000")
                     if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
                         came_from[neighbor] = current
@@ -455,38 +397,27 @@ class OctoMapAStar:
     
     def is_pose_valid(self, pose):
         """Returns True if all corners of the footprint at this pose are in free space"""
+        print("in is pose valid", self.transform_corners(pose))
+        
         for corner in self.transform_corners(pose):
-            print("in is pose valid", corner)
             x, y = corner
+            print("occupancy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
+            
+            print("corner x,y is ", x,y, self.grid_origin[1])
             grid_x = int((x - self.grid_origin[0]) / self.grid_resolution)
             grid_y = int((y - self.grid_origin[1]) / self.grid_resolution)
             print("grid x and y:", grid_x, grid_y)
-
+            print("for one point, this is self occupancy gird",self.occupancy_grid[grid_x, grid_y])
             if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
                 print("checkpoint 1 is true")
-                return False  # Out of bounds
+                return False  # out of bounds
 
-            if self.occupancy_grid[grid_x, grid_y] >= 100000:
+            if self.occupancy_grid[grid_x, grid_y] >= 1000:
                 print("checkopoint 2 is true")
-                return True  # This corner is in an obstacle
+                return False  # This corner is in an obstacle
             
         return True
-    
-    def get_neighbors_old(self, node):
-        """
-        Get neighboring cells in the grid, avoiding obstacles (e.g., value of 100000).
-        """
-        neighbors = []
-        x, y = node
-        for dx, dy in [(-1, -1), (1, 1), (0, -1), (0, 1), (1, 0), (-1, 0)]:  # Check neighboring cells (up, down, left, right)
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
-                if self.occupancy_grid[nx, ny] <100000:  
-                    neighbors.append((nx, ny))
-                else: 
-                    print("OBJECT DETECTED")
-        return neighbors
-    
+
     def transform_corners(self, pose):
         """
         Transforms the current bounding box corners to the given (x, y, theta) pose.
@@ -505,7 +436,6 @@ class OctoMapAStar:
             y = local_x * sin_theta + local_y * cos_theta + y_pose
 
             transformed.append((x, y))
-            
         return transformed
     
     def get_neighbors(self, node):
@@ -514,13 +444,12 @@ class OctoMapAStar:
         for dx, dy in [(-1, -1), (1, 1), (0, -1), (0, 1), (1, 0), (-1, 0)]:
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
-                # Check the *footprint* at the new node's position
+                print("negihbors: ",nx * self.grid_resolution, ny * self.grid_resolution, x*self.grid_resolution, y*self.grid_resolution)
                 if self.is_pose_valid((nx * self.grid_resolution, ny * self.grid_resolution, 0)):
                     print("pose is valid !!!!!!")
                     neighbors.append((nx, ny))
                 else:
                    print("Object detected")
-                   # Debug print if you want
         return neighbors
     
 ### A* END
