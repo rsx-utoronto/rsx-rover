@@ -101,7 +101,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1  # Resolution of 2D grid (meters per cell)
         self.grid_origin=(0.0,0.0)
-        self.goal = (9.0,7.0)
+        self.goal = (2.0,0.0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -111,10 +111,10 @@ class OctoMapAStar:
         self.current_orientation_y=0
         self.current_orientation_z=0
         self.current_corner_array = [
-    Point(x=0.4, y=0.3, z=0),
-    Point(x=0.4, y=-0.3, z=0),
-    Point(x=-0.4, y=-0.3, z=0),
-    Point(x=-0.4, y=0.3, z=0)
+    Point(x=0.5, y=0.5, z=0),
+    Point(x=0.5, y=-0.5, z=0),
+    Point(x=-0.5, y=-0.5, z=0),
+    Point(x=-0.5, y=0.5, z=0)
 
 ]#0.5, 0.4.0
         
@@ -329,7 +329,7 @@ class OctoMapAStar:
     
             # Clamp indices to valid bounds
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
-                if z>2:  # Height threshold -< this should be 0.2<z<1.5!!!
+                if z>0.1:  # Height threshold -< this should be 0.2<z<1.5!!!
                     #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
                     occupancy_grid[grid_x, grid_y] = 1000 # 1000
                 '''
@@ -409,8 +409,8 @@ class OctoMapAStar:
             print("grid x and y:", grid_x, grid_y)
             print("for one point, this is self occupancy gird",self.occupancy_grid[grid_x, grid_y])
             if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
-                print("checkpoint 1 is true")
-                return False  # out of bounds
+                print("checkpoint 1 is true", grid_x, self.occupancy_grid.shape[0])
+                return True  # out of bounds
 
             if self.occupancy_grid[grid_x, grid_y] >= 1000:
                 print("checkopoint 2 is true")
@@ -500,7 +500,7 @@ class OctoMapAStar:
 
             start =  (int(self.current_position_x), int(self.current_position_y))
            # print("THIS IS START", start)
-            goal = (27, 3)  # change this!
+            goal = self.goal  # change this!
 
             rospy.loginfo("Running A* algorithm...")
             path = self.a_star(start, goal)

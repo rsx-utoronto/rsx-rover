@@ -7,7 +7,11 @@ Panels:
         - /Global Options1
         - /Status1
         - /MarkerArray1
+        - /TF1
+        - /TF1/Frames1
+        - /TF1/Tree1
         - /Marker1/Status1
+        - /MarkerArray2
       Splitter Ratio: 0.5
     Tree Height: 359
   - Class: rviz/Selection
@@ -117,7 +121,7 @@ Visualization Manager:
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
         base_link:
           Value: true
         map:
@@ -125,27 +129,27 @@ Visualization Manager:
         odom:
           Value: true
         zed2_baro_link:
-          Value: true
+          Value: false
         zed2_base_link:
-          Value: true
+          Value: false
         zed2_camera_center:
-          Value: true
+          Value: false
         zed2_imu_link:
-          Value: true
+          Value: false
         zed2_left_camera_frame:
-          Value: true
+          Value: false
         zed2_left_camera_optical_frame:
-          Value: true
+          Value: false
         zed2_mag_link:
-          Value: true
+          Value: false
         zed2_right_camera_frame:
-          Value: true
+          Value: false
         zed2_right_camera_optical_frame:
-          Value: true
+          Value: false
         zed2_temp_left_link:
-          Value: true
+          Value: false
         zed2_temp_right_link:
-          Value: true
+          Value: false
       Marker Alpha: 1
       Marker Scale: 1
       Name: TF
@@ -230,7 +234,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.2239460945129395
+      Distance: 0.14371348917484283
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -238,17 +242,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 4.233272075653076
-        Y: -0.004905657842755318
-        Z: 3.851532220840454
+        X: 2.5617356300354004
+        Y: -0.6339191198348999
+        Z: 4.629287242889404
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0503968000411987
+      Pitch: 0.9753968715667725
       Target Frame: base_link
-      Yaw: 5.935434818267822
+      Yaw: 5.9704365730285645
     Saved: ~
 Window Geometry:
   Displays:
