@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# A similar file to CAN_send, but for the last motor and its power
+
 from CAN_utilities import *
 import rospy
 from std_msgs.msg import Float32MultiArray
@@ -18,11 +20,11 @@ class CAN_Send():
 		self.pub_rate = 2000
 		self.triggered = 0
 
-		# Subscriber buffers
+		# Subscriber buffers (CHANGE)
 		self.CURR_POS			= [0, 0, 0, 0, 0, 0, 0] # ADDED BACK 7TH MOTOR
 		self.SAFE_GOAL_POS	 	= [0, 0, 0, 0, 0, 0, 0]	# ADDED BACK 7TH MOTOR
 
-		# Variables for ROS publishers and subscribers
+		# Variables for ROS publishers and subscribers (CHANGE?)
 		self.SafePos_sub 		= rospy.Subscriber("arm_safe_goal_pos", Float32MultiArray, self.callback_SafePos)
 		self.CurrPos_sub		= rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.callback_CurrPos)
 
@@ -66,7 +68,7 @@ class CAN_Send():
 		# self.SAFE_GOAL_POS[6] -= (self.SAFE_GOAL_POS[4] - self.CURR_POS[4])
 		# print(self.SAFE_GOAL_POS[6])
 	
-	def send_msgs(self):
+	def send_msgs(self): #(CHANGE!)
 		
 		# Set publishing rate to self.pub_rate
 		rate = rospy.Rate(self.pub_rate)
