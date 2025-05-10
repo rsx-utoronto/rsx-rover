@@ -23,7 +23,7 @@ class ArmSciNode():
                     atan2(161, 110.7) + atan2(112.99, 348.08),
                     (atan2(92, 67) + atan2(110.75, 161)),
                     0]
-        angleOrientation = [1, 1, 1, 1, 1]
+        angleOrientation = [1, -1, 1, -1, 1]
         startingAngles = [0, pi-atan2(348.08, 112.99), 
                            (-pi/2)+atan2(112.99, 348.08), -pi/2, 0]
 
@@ -122,10 +122,11 @@ class ArmSciNode():
 
     def publishAngles(self, anglesToPub):
         goalTopicData = Float32MultiArray()
-        offsetAngles = rad2deg(self.arm.addSparkMaxOffsets(anglesToPub))
+        correctedDirection = self.arm.correctAngleDirection(anglesToPub)
+        offsetAngles = rad2deg(self.arm.addSparkMaxOffsets(correctedDirection))
         goalTopicData.data = [offsetAngles[0], offsetAngles[1], offsetAngles[2],
                               0, 0, offsetAngles[3], offsetAngles[4]] 
-        self.publishVizAngles(anglesToPub)
+        self.publishVizAngles(correctedDirection)
         self.goalPub.publish(goalTopicData)
 
     # ROS Topic Subscriptions
