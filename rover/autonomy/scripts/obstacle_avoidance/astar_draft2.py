@@ -73,7 +73,7 @@ class OctoMapAStar:
         # Parameters
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
         self.waypoint_topic = rospy.get_param("~waypoint_topic", "/waypoint")
-        self.update_rate = rospy.get_param("~update_rate", 100.0)  # Frequency in Hz 
+        self.update_rate = rospy.get_param("~update_rate", 1.0)  # Frequency in Hz 
         self.vel_topic = rospy.get_param("~vel_topic", "/cmd_vel")  # Velocity command
         self.height_min = rospy.get_param("~height_min", 0.2)  # Min height for obstacles
         self.height_max = rospy.get_param("~height_max", 15)  # Max height for obstacles
@@ -111,10 +111,10 @@ class OctoMapAStar:
         self.current_orientation_y=0
         self.current_orientation_z=0
         self.current_corner_array = [
-    Point(x=0.5, y=0.5, z=0),
-    Point(x=0.5, y=-0.5, z=0),
-    Point(x=-0.5, y=-0.5, z=0),
-    Point(x=-0.5, y=0.5, z=0)
+    Point(x=0, y=0, z=0),
+    Point(x=0, y=-0, z=0),
+    Point(x=-0, y=-0, z=0),
+    Point(x=-0, y=0, z=0)
 
 ]#0.5, 0.4.0
         
@@ -349,11 +349,11 @@ class OctoMapAStar:
     def height_cost(self, current, neighbor): #this is g function for height
         current_height = self.occupancy_grid[current[0], current[1]]
         neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
-        if current_height == -1 or neighbor_height == -1:  
-            return 1000
+        # if current_height == -1 or neighbor_height == -1:  
+        #     return 1000
         if current_height > 1000 or neighbor_height >1000: 
             return 1000
-        return abs(current_height - neighbor_height)
+        return abs(current_height - neighbor_height) + 1
         
     def heuristic(self, node, goal): #h fucntion -> euclidean distance
         return np.linalg.norm(np.array(node) - np.array(goal))
@@ -386,7 +386,7 @@ class OctoMapAStar:
                 print("here is height_cost", height_cost)
                 tentative_g_score = g_score[current] + height_cost  # Add the height cost to the g_score
                 if height_cost < 1000: 
-                    print("height cost is less than 10000")
+                    print("height cost is less than 1000")
                     if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
                         came_from[neighbor] = current
                         g_score[neighbor] = tentative_g_score
@@ -404,13 +404,13 @@ class OctoMapAStar:
             print("occupancy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
             
             print("corner x,y is ", x,y, self.grid_origin[1])
-            grid_x = int((x - self.grid_origin[0]) / self.grid_resolution)
-            grid_y = int((y - self.grid_origin[1]) / self.grid_resolution)
+            grid_x = int((x - self.grid_origin[0])) # / self.grid_resolution)
+            grid_y = int((y - self.grid_origin[1])) # / self.grid_resolution)
             print("grid x and y:", grid_x, grid_y)
             print("for one point, this is self occupancy gird",self.occupancy_grid[grid_x, grid_y])
-            if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
-                print("checkpoint 1 is true", grid_x, self.occupancy_grid.shape[0])
-                return True  # out of bounds
+            # if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
+            #     print("checkpoint 1 is true", grid_x, self.occupancy_grid.shape[0])
+            #     return True  # out of bounds
 
             if self.occupancy_grid[grid_x, grid_y] >= 1000:
                 print("checkopoint 2 is true")
@@ -443,13 +443,13 @@ class OctoMapAStar:
         x, y = node
         for dx, dy in [(-1, -1), (1, 1), (0, -1), (0, 1), (1, 0), (-1, 0)]:
             nx, ny = x + dx, y + dy
-            if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
-                print("negihbors: ",nx * self.grid_resolution, ny * self.grid_resolution, x*self.grid_resolution, y*self.grid_resolution)
-                if self.is_pose_valid((nx * self.grid_resolution, ny * self.grid_resolution, 0)):
-                    print("pose is valid !!!!!!")
-                    neighbors.append((nx, ny))
-                else:
-                   print("Object detected")
+            # if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
+            print("neighbours: ",nx, ny, x, y)
+            if self.is_pose_valid((nx, ny, 0)):
+                print("pose is valid !!!!!!")
+                neighbors.append((nx, ny))
+            else:
+                print("Object detected")
         return neighbors
     
 ### A* END
