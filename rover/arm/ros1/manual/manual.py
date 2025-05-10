@@ -26,7 +26,8 @@ class Manual():
         # 3 - Right analog vertical
         # 4 - L1 / R1 
         # 5 - L2 / R2 (analog)
-        self.controller_input    = [0, 0, 0, 0, 0, 0]
+        # 6 - X / O (gripper open/close)
+        self.controller_input    = [0, 0, 0, 0, 0, 0, 0]
 
         ## Buffer for storing and publishing goal position
         # Idx - Associated Motor:
@@ -38,7 +39,7 @@ class Manual():
         # 5 - Motor 16 (Wrist 2)
         # 6 - Motor 17 (End Effector Open/Close)
         self.goal_pos            = Float32MultiArray()
-        self.goal_pos.data       = [0, 0, 0, 0, 0, 0]
+        self.goal_pos.data       = [0, 0, 0, 0, 0, 0, 0]
 
         ## Buffer to hold error messages and offsets
         # Message Descriptions:
@@ -46,12 +47,12 @@ class Manual():
         # 1 -> Faraway position
         # 2 -> Exceeding Max Current
         # 3 -> Hitting Limit Switch
-        self.error_messages      = [0, 0, 0, 0, 0, 0]
-        self.error_offsets       = [0, 0, 0, 0, 0, 0]
+        self.error_messages      = [0, 0, 0, 0, 0, 0, 0]
+        self.error_offsets       = [0, 0, 0, 0, 0, 0, 0]
 
-        ## Constant Speed limits, values are chosen by trial and error #TODO
-        self.SPEED_LIMIT         = [-0.01, 0.009, 0.015, 0.075, 
-                                    0.12, 0.12]
+        ## Constant Speed limits, values are chosen by trial and error #TODO Find value for 7th motor
+
+        self.SPEED_LIMIT         = [-0.01, 0.009, 0.015, 0.075, 0.12, 0.12, 0.3]
 
         ## Variable for the status, start at idle
         self.status              = "Idle"
@@ -130,6 +131,7 @@ class Manual():
         self.controller_input[3] = inputs.r_horizontal
         self.controller_input[4] = inputs.l1 - inputs.r1
         self.controller_input[5] = inputs.l2 - inputs.r2
+        self.controller_input[6] = inputs.x - inputs.o  # Added Gripper open/close, check if correct (x open and o close)
 
         # Print Statement for console view
         #print("State:", self.status)

@@ -240,12 +240,12 @@ def createDHTable(jointAngles):
     '''
 
     # units in mm [r, al]
-    DHTable = np.array([[0, math.pi/2, 95, jointAngles[0]],
-                        [360, 0, 0, jointAngles[1]],
-                        [100, math.pi/2, 0, jointAngles[2]],
-                        [0, -math.pi/2, 340, jointAngles[3]],
+    DHTable = np.array([[0, math.pi/2, 79, jointAngles[0]],
+                        [400, 0, 0, jointAngles[1]],
+                        [115, math.pi/2, 0, jointAngles[2]],
+                        [0, -math.pi/2, 389, jointAngles[3]],
                         [0, math.pi/2, 0, jointAngles[4]],
-                        [0, 0, 230, jointAngles[5]]]) #253.125
+                        [0, 0, 219, jointAngles[5]]]) #253.125
     
     # DHTable = np.array([[0, math.pi/2, 75, jointAngles[0]],
     #                     [375, 0, 0, jointAngles[1]],

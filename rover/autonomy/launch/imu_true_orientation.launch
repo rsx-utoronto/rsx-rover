@@ -1,0 +1,16 @@
+<launch>
+<!-- Makes a topic that publishes true orientation (magnetic east is 0) in earth frame
+Uses IMU and Magnetometer data -->
+
+  <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />
+
+  <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" >
+    <param name="publish_tf" value="false" />
+    <param name="use_mag" value="true" />
+    <param name="world_frame" value="enu" />
+    <remap from="imu/mag" to="/zed_node/imu/mag" />
+    <remap from="imu/data_raw" to="/imu/enu" />
+    <remap from="imu/data" to="/imu/orient" />
+  </node>
+
+</launch>

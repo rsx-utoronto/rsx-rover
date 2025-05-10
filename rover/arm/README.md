@@ -1,13 +1,20 @@
 # Arm Code
 
+## Pre-Steps
+
+- make sure the arm is connected to the CAN network
+  - RSX uses a CAN USB like [this](https://www.amazon.ca/DSD-TECH-Adapter-Hardware-Canable/dp/B0BQ5G3KLR?pd_rd_w=MVljX&content-id=amzn1.sym.03d0a222-babc-4fe5-b7df-e90dd70bc007&pf_rd_p=03d0a222-babc-4fe5-b7df-e90dd70bc007&pf_rd_r=8DTA2VFZT7G3QNVWZZQ3&pd_rd_wg=6qoEh&pd_rd_r=cea5c5e8-ec16-4a88-9ab4-614c6502759c&pd_rd_i=B0BQ5G3KLR)
+- make sure the arm has enough power
+  - power supply capable of delivering at least 12V with a high current limit
+
 ## CAN Setup
 
 To enable the CAN network, open a terminal and type the following (assuming you have the repository cloned)
 
 ### Terminal 1
 ```
-cd ~/rover-ws/src/rsx-rover/scripts/utils/gen
-./setup_can.bash
+cd ~/rover_ws/src/rsx-rover/scripts/utils/gen
+./setup_can.sh
 (Enter the password for your system)
 ```
 
@@ -60,6 +67,11 @@ python3 ~/rover_ws/src/rsx-rover/rover/arm/scripts/gripper/gripper_controller.py
 Run CAN_recv node (before CAN_send)
 ```
 rosrun rover CAN_recv.py
+```
+
+Before proceeding further, make sure that all the angles that the arm thinks it are zero with:
+```
+rostopic echo /arm_curr_pos
 ```
 
 ### Terminal 6/7
@@ -147,6 +159,7 @@ arm_keyboard_controller.py file to see what each keyboard button mimics.
 rosrun rover arm_keyboard_controller.py
 roslaunch rover arm_rviz.launch # or use gazebo
 ```
+
 ### GUI Control
 The GUI control uses a graphical interface to mimic the robots inputs. The setup process is kind of tedious, but doing these commands ensures everything will go well:
 ```
@@ -154,3 +167,14 @@ roscore
 roslaunch arm_gui_run.launch
 ```
 After these, be sure to set the arm into manual on the gui for the arm adjustment to work. 
+
+# Rover Instructions
+
+**ON AMD**
+```
+rosrun rover manual_control
+```
+**ON BASE**
+```
+roslaunch rover joy.launch
+```

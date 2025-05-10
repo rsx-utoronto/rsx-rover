@@ -16,7 +16,12 @@ We primarily develop is C++ and Python using ROS noetic.
 
 ## Getting Started 
 
-Note: It is recommended to set up [ssh keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) 
+Note: It is recommended to set up [ssh keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
+
+### Requirements
+
+- Ubuntu 20.04
+- ROS Noetic
 
 ### On Ubuntu Focal w/ ROS noetic 
 ```

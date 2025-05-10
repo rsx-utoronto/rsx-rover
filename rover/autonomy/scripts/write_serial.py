@@ -14,7 +14,7 @@ class write_serial():
 
 
 # ser = serial.Serial('/dev/ttyACM0', 9600)
-# str = 'a'
+# str = 'm'
 # # a, g, m
 # # a is autonomy -> red
 # # g is goal -> green flashing
@@ -23,8 +23,6 @@ class write_serial():
 #     # print(ser.read())
 
 #     ser.write(str.encode('utf-8'))
-#     # print to terminal 
-    
 #     # print(str.encode('utf-8'))
 #     time.sleep(0.1)
 # ser.close()

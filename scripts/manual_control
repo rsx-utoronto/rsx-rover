@@ -1,27 +1,9 @@
 #!/bin/bash
 
 # This script is used to setup the rover for manual control
-# Create a new tmux session called motors to launch the motor nodes 
-
-
-# tmux new-session -s motors 'source /home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh && sleep 2 && roslaunch rover falcons.launch && tmux detach-client' # detach the tmux session motors
-
-# # Create a new tmux session called manual_control
-
-# tmux new-session -s manual_control 'rosrun rover drive_sender_node && tmux detach-client'
-
-# # Create a new tmux session for the joystick
-# tmux new-session -s joy 'roslaunch rover joy.launch && tmux detach-client'
-
-# # tmux new-session -s zed # Create a new tmux session called zed
-
-# ssh jetson 'source /opt/ros/noetic/setup.bash && source ~/rover_ws/devel/setup.bash && export ROS_MASTER_URI=http://192.168.0.99:11311 && export ROS_IP=192.168.0.250  && roslaunch rover zed_odom.launch && exit'
-
-# # tmux detach-client # detach the tmux session zed
-
-# gnome-terminal -- bash -c "source /home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh && sleep 2 && roslaunch rover falcons.launch; exec bash"
-# gnome-terminal -- bash -c "rosrun rover drive_sender_node; exec bash"
-# gnome-terminal -- bash -c "roslaunch rover joy.launch"
+# It will start the necessary nodes and launch files to allow for manual control of the rover
+# It also launches the zed camera file on the jetson to allow for visual aid in manual control
+# To kill, run the command `tmux kill-session -t manual`
 
 source /opt/ros/noetic/setup.bash && source /home/rsx/rover_ws/devel/setup.bash
 
@@ -33,7 +15,7 @@ tmux new-session -d -s manual
 
 tmux new-window -t manual:1 'bash -c "source /home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh && sleep 2 && roslaunch rover falcons.launch; exec bash"'
 tmux new-window -t manual:2 'bash -c "rosrun rover drive_sender_node; exec bash"'
-tmux new-window -t manual:3 'bash -c "roslaunch rover realsense.launch; exec bash"'
+# tmux new-window -t manual:3 'bash -c "roslaunch rover realsense.launch; exec bash"'
 # tmux new-window -t manual:4 'bash -c "roslaunch rover joy.launch; exec bash"'
 
 ssh jetson 'source /opt/ros/noetic/setup.bash && source ~/rover_ws/devel/setup.bash && export ROS_MASTER_URI=http://192.168.0.99:11311 && export ROS_IP=192.168.0.250  && roslaunch rover zed_odom.launch && exit'
