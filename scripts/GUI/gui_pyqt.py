@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayou
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import NavSatFix, CompressedImage
+from sensor_msgs.msg import NavSatFix, CompressedImage, Image
 from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
 from cv_bridge import CvBridge
 import cv2
@@ -833,10 +833,12 @@ class ResizableLabel(QLabel):
 
 
 class CameraFeed:
-    def __init__(self, label1, label2, splitter):
+    def __init__(self, label1, label2, label3, label4, splitter):
         self.bridge = CvBridge()
         self.image_sub1 = None
         self.image_sub2 = None
+        self.image_sub3 = None
+        self.image_sub4 = None
         self.state_sub = rospy.Subscriber("state", String, self.state_callback)
 
         self.obj_bbox = rospy.Subscriber("object/bbox", Float64MultiArray, self.bbox_callback)
@@ -844,16 +846,22 @@ class CameraFeed:
 
         self.label1 = label1
         self.label2 = label2
+        self.label3 = label3
+        self.label4 = label4
         self.splitter = splitter
 
         # Set size policies correctly
         self.label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.label3.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.label4.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label1.setMinimumSize(300, 200)
         self.label2.setMinimumSize(300, 200)
+        self.label3.setMinimumSize(300, 200)
+        self.label4.setMinimumSize(300, 200)
         self.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        self.active_cameras = {"Zed (front) camera": False, "Butt camera": False}
+        self.active_cameras = {"Zed (front) camera": False, "Butt camera": False, "Microscope camera": False, "Genie camera": False}
         self.bbox = None  
 
         self.bbox_timer = QTimer()
@@ -878,6 +886,25 @@ class CameraFeed:
         if self.image_sub2:
             self.image_sub2.unregister()
             self.image_sub2 = None
+
+    def register_subscriber3(self):
+        if self.image_sub3 is None:
+            self.image_sub3 = rospy.Subscriber("/microscope", Image, self.callback3)
+
+    def unregister_subscriber3(self):
+        if self.image_sub3:
+            self.image_sub3.unregister()
+            self.image_sub3 = None
+        
+    def register_subscriber4(self):
+        if self.image_sub4 is None:
+            self.image_sub4 = rospy.Subscriber("/geniecam", Image, self.callback4)
+    
+    def unregister_subscriber4(self):
+        if self.image_sub4:
+            self.image_sub4.unregister()
+            self.image_sub4 = None
+
     def state_callback(self, msg):
         self.state = msg.data
 
@@ -901,6 +928,14 @@ class CameraFeed:
     def callback2(self, data):
         if self.active_cameras["Butt camera"]:
             self.update_image(data, self.label2)
+    
+    def callback3(self, data):
+        if self.active_cameras["Microscope camera"]:
+            self.update_image(data, self.label3)
+
+    def callback4(self, data):
+        if self.active_cameras["Genie camera"]:
+            self.update_image(data, self.label4)
 
     def update_image(self, data, label):
         """Decode and update the camera image with bounding box."""
@@ -947,27 +982,42 @@ class CameraFeed:
         else:
             self.unregister_subscriber2()
 
+        if self.active_cameras["Microscope camera"]:
+            self.register_subscriber3()
+        else:
+            self.unregister_subscriber3()
+
+        if self.active_cameras["Genie camera"]:
+            self.register_subscriber4()
+        else:
+            self.unregister_subscriber4()
+
     def update_visibility(self):
         active_count = sum(self.active_cameras.values())
-        if active_count == 0:
-            self.label1.hide()
-            self.label2.hide()
-        elif active_count == 1:
-            if self.active_cameras["Zed (front) camera"]:
-                self.label1.show()
-                self.label2.hide()
-                self.splitter.setStretchFactor(0, 1)
-                self.splitter.setStretchFactor(1, 0)
-            else:
-                self.label1.hide()
-                self.label2.show()
-                self.splitter.setStretchFactor(0, 0)
-                self.splitter.setStretchFactor(1, 1)
-        else:  
+        if self.active_cameras["Zed (front) camera"]:
             self.label1.show()
-            self.label2.show()
             self.splitter.setStretchFactor(0, 1)
+        else:
+            self.label1.hide()
+            self.splitter.setStretchFactor(0, 0)
+        if self.active_cameras["Butt camera"]:
+            self.label2.show()
             self.splitter.setStretchFactor(1, 1)
+        else:
+            self.label2.hide()
+            self.splitter.setStretchFactor(1, 0)
+        if self.active_cameras["Microscope camera"]:
+            self.label3.show()
+            self.splitter.setStretchFactor(2, 1)
+        else:
+            self.label3.hide()
+            self.splitter.setStretchFactor(2, 0)
+        if self.active_cameras["Genie camera"]:
+            self.label4.show()
+            self.splitter.setStretchFactor(3, 1)
+        else:
+            self.label4.hide()
+            self.splitter.setStretchFactor(3, 0)
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
@@ -1064,9 +1114,20 @@ class RoverGUI(QMainWindow):
         self.camera_label2_cams_tab.setMinimumSize(320, 240)
         self.camera_label2_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         self.camera_label2_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label3_cams_tab = ResizableLabel()
+        self.camera_label3_cams_tab.setMinimumSize(320, 240)
+        self.camera_label3_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label3_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label4_cams_tab = ResizableLabel()
+        self.camera_label4_cams_tab.setMinimumSize(320, 240)
+        self.camera_label4_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label4_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         # ROS functionality
         self.camerasplitter_cams_tab = QSplitter(Qt.Horizontal)
-        self.camera_feed_cams_tab = CameraFeed(self.camera_label1_cams_tab, self.camera_label2_cams_tab,self.camerasplitter_cams_tab)
+        self.camera_feed_cams_tab = CameraFeed(self.camera_label1_cams_tab, self.camera_label2_cams_tab, self.camera_label3_cams_tab, self.camera_label4_cams_tab, self.camerasplitter_cams_tab)
         self.camerasplitter_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         
@@ -1078,6 +1139,8 @@ class RoverGUI(QMainWindow):
         camera_layout.addWidget(self.camera_selector_cams_tab)
         self.camerasplitter_cams_tab.addWidget(self.camera_label1_cams_tab)
         self.camerasplitter_cams_tab.addWidget(self.camera_label2_cams_tab)
+        self.camerasplitter_cams_tab.addWidget(self.camera_label3_cams_tab)
+        self.camerasplitter_cams_tab.addWidget(self.camera_label4_cams_tab)
         camera_layout.addWidget(self.camerasplitter_cams_tab)
 
         # camera_layout.addWidget(self.camera_label_splitter)
@@ -1264,9 +1327,20 @@ class RoverGUI(QMainWindow):
         self.camera_label2.setMinimumSize(320, 240)
         self.camera_label2.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         self.camera_label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label3 = ResizableLabel()
+        self.camera_label3.setMinimumSize(320, 240)
+        self.camera_label3.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label3.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label4 = ResizableLabel()
+        self.camera_label4.setMinimumSize(320, 240)
+        self.camera_label4.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label4.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         # ROS functionality
         self.camerasplitter = QSplitter(Qt.Horizontal)
-        self.camera_feed = CameraFeed(self.camera_label1, self.camera_label2,self.camerasplitter)
+        self.camera_feed = CameraFeed(self.camera_label1, self.camera_label2, self.camera_label3, self.camera_label4, self.camerasplitter)
         self.camerasplitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         
@@ -1278,6 +1352,8 @@ class RoverGUI(QMainWindow):
         camera_layout.addWidget(self.camera_selector)
         self.camerasplitter.addWidget(self.camera_label1)
         self.camerasplitter.addWidget(self.camera_label2)
+        self.camerasplitter.addWidget(self.camera_label3)
+        self.camerasplitter.addWidget(self.camera_label4)
         camera_layout.addWidget(self.camerasplitter)
 
         # camera_layout.addWidget(self.camera_label_splitter)
@@ -1416,7 +1492,7 @@ class CameraSelect(QWidget):
         self.toolButton.setText("Cameras List")
         self.toolMenu = QMenu(self)
 
-        self.cameras = ["Zed (front) camera", "Butt camera"]
+        self.cameras = ["Zed (front) camera", "Butt camera", "Genie camera", "Microscope camera"]
         self.selected_cameras = {camera: False for camera in self.cameras}
 
         for camera in self.cameras:
