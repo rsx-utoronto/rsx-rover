@@ -3,11 +3,11 @@
         <arg name="bag_filename" value="/home/garvish/bags/zed_myhal_basement2.bag" />
     </include>
 
-    <node name="astar_rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/autonomy/config/astar.rviz"/>
+    <node name="astar_rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/autonomy/config/astar_cpp.rviz"/>
 
     <node name="astar_goal" pkg="rover" type="dwa_goal.py" output="screen">
         <param name="goal_topic" value="/goal" />
-        <param name="goal_x" value="0.0" />
+        <param name="goal_x" value="10.0" />
         <param name="goal_y" value="0.0" />
     </node>
 

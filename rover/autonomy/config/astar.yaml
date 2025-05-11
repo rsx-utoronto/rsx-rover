@@ -1,4 +1,4 @@
-planner_frequency: 10 # Rate in Hz
+planner_frequency: 2 # Rate in Hz
 
 grid_resolution: 1 # Resolution of the grid in meters
 

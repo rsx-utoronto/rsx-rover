@@ -12,7 +12,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <math.h>
 #include <tf2/utils.h>
-#include "trajectory_visualizer.h"
+#include "trajectory_visualizer_astar.h"
 #include "astar_structs.h"
 #include <queue>
 #include <vector>

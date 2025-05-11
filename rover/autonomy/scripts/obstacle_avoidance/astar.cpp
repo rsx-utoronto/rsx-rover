@@ -273,106 +273,118 @@ void Astar::plan()
     ros::Rate loop_rate(rate);
     while (ros::ok())
     {
-        ROS_INFO("Planning...");
-        if (!goal_received) 
+        if (this->goal_received) 
         {
-            ROS_WARN_THROTTLE(5.0, "Waiting for goal...");
-            loop_rate.sleep();
-            continue;
-        }
-        if (!octree_) 
-        {
-            ROS_WARN_THROTTLE(5.0, "Waiting for octomap...");
-            loop_rate.sleep();
-            continue;
-        }
-        // Astar algorithm
-        std::vector<GridNode> path;
-
-
-        // 1. define start position
-        GridNode start_node;
-        create_node(current_pose, start_node, nullptr);
-
-        // 2. define goal position
-        GridNode goal_node;
-
-        // TO DO: verify is it's ok to gave nullptr for goal node
-        create_node(goal, goal_node, nullptr);
-
-        // 3. create open and closed lists
-        std::priority_queue<GridNode> open_list; // Uses the existing operator< for comparison
-        std::vector<GridNode> closed_list;
-        open_list.push(start_node);
-        
-        while (open_list.size() > 0)
-        {
-            // 4. pop the node with the lowest f value
-            GridNode current_node = open_list.top();
-            open_list.pop();
-
-            // 5. check if goal is reached
-            if (goal_reached(current_node, goal_node))
+            if (!octree_)
             {
-                ROS_INFO("Goal found");
-                // reconstruct path
-                GridNode *node = &current_node;
-                while (node != nullptr)
-                {
-                    path.push_back(*node);
-                    node = node->parent;
+                ROS_WARN("No octomap received yet, skipping planning...");
+                ros::spinOnce();
+                loop_rate.sleep();
+                continue;
+            }
+
+            ROS_INFO("Planning...");
+            // Astar algorithm
+            std::vector<GridNode> path;
+
+
+            // 1. define start position
+            GridNode start_node;
+            create_node(current_pose, start_node, nullptr);
+
+            // 2. define goal position
+            GridNode goal_node;
+
+            // TO DO: verify is it's ok to gave nullptr for goal node
+            create_node(goal, goal_node, nullptr);
+
+            // 3. create open and closed lists
+            std::priority_queue<GridNode> open_list; // Uses the existing operator< for comparison
+            std::vector<GridNode> closed_list;
+            open_list.push(start_node);
+            
+            while (open_list.size() > 0)
+            {
+                
+                const size_t MAX_NODES = 30000;    // ~80 MB with GridNode=24 B
+                if (closed_list.size() > MAX_NODES) {
+                ROS_ERROR("A* aborted: node cap hit");
+                return;
                 }
-                std::reverse(path.begin(), path.end());
-                break;
-            }
+                
+                // 4. pop the node with the lowest f value
+                GridNode current_node = open_list.top();
+                open_list.pop();
 
-            // 6. check if node is already in closed list and add if not
-            if (closed_list.end() != std::find(closed_list.begin(), closed_list.end(), current_node))
-            {
-                continue; // already evaluated
-            }
-            closed_list.push_back(current_node);
-
-            // 7. generate children nodes
-            std::vector<GridNode> children_nodes;
-            for (int i = -1; i <= 1; i++)
-            {
-                for (int j = -1; j <= 1; j++)
+                // 5. check if goal is reached
+                if (goal_reached(current_node, goal_node))
                 {
-                    if (i == 0 && j == 0) continue; // skip the parent node
-                    Pose2D child_pose;
-                    GridNode child_node;
-                    // TO DO: change robot_grid_n to a different resolution param
-                    child_pose.x = current_node.pose.x + i * rf.robot_grid_n;
-                    child_pose.y = current_node.pose.y + j * rf.robot_grid_n;
-                    create_node(child_pose, child_node, &current_node);
-                    children_nodes.push_back(child_node);
+                    ROS_INFO("Goal found");
+                    // reconstruct path
+                    GridNode *node = &current_node;
+                    while (node != nullptr)
+                    {
+                        path.push_back(*node);
+                        node = node->parent;
+                    }
+                    std::reverse(path.begin(), path.end());
+                    break;
+                }
+
+                // 6. check if node is already in closed list and add if not
+                if (closed_list.end() != std::find(closed_list.begin(), closed_list.end(), current_node))
+                {
+                    continue; // already evaluated
+                }
+                closed_list.push_back(current_node);
+
+                // 7. generate children nodes
+                std::vector<GridNode> children_nodes;
+                for (int i = -1; i <= 1; i++)
+                {
+                    for (int j = -1; j <= 1; j++)
+                    {
+                        if (i == 0 && j == 0) continue; // skip the parent node
+                        Pose2D child_pose;
+                        GridNode child_node;
+                        // TO DO: change robot_grid_n to a different resolution param
+                        child_pose.x = current_node.pose.x + i * rf.robot_grid_n;
+                        child_pose.y = current_node.pose.y + j * rf.robot_grid_n;
+                        create_node(child_pose, child_node, &current_node);
+                        children_nodes.push_back(child_node);
+                    }
+                }
+
+                // 8. check for collisions and add to open list
+                // for now pushing all nodes to open list (collision cost is already included in g)
+                for (const auto &child : children_nodes)
+                {
+                    // if (!check_collision(child))
+                    // {
+                    //     open_list.push(child);
+                    // }
+
+                    open_list.push(child);
                 }
             }
 
-            // 8. check for collisions and add to open list
-            // for now pushing all nodes to open list (collision cost is already included in g)
-            for (const auto &child : children_nodes)
+            if (path.size() > 0)
             {
-                // if (!check_collision(child))
-                // {
-                //     open_list.push(child);
-                // }
-
-                open_list.push(child);
+                ROS_INFO("Path found");
+                // publish path
+                vis.publishPath(path);
             }
-        }
-
-        if (path.size() > 0)
-        {
-            ROS_INFO("Path found");
-            // publish path
-            vis.publishPath(path);
+            else
+            {
+                ROS_WARN("No path found");
+            }
         }
         else
         {
-            ROS_WARN("No path found");
+            ROS_WARN("Waiting for goal...");
         }
+        ros::spinOnce();
+        loop_rate.sleep();
     }
 }
 

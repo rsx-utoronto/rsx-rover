@@ -70,7 +70,11 @@ namespace astar // These structs will only be used in the astar namespace
         double f;
         GridNode* parent;
 
-        bool operator<(GridNode const& o) const { return f > o.f; }
+        bool operator<(GridNode const& o) const 
+        { 
+            if (std::fabs(f - o.f) < 1e-6) return g < o.g;  // prefer deeper g
+            return f > o.f; 
+        }
 
         bool operator==(GridNode const& o) const 
         {

@@ -1,6 +1,6 @@
 <launch>
     <include file="$(find rover)/rover/autonomy/launch/mapping/octomap_bag.launch" >
-        <arg name="bag_filename" value="/home/reim_y/Downloads/zed_myhal_basement.bag" />
+        <arg name="bag_filename" value="/home/garvish/bags/zed_myhal_basement2.bag" />
     </include>
 
     <node name="dwa_rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/autonomy/config/dwa_planner.rviz"/>
