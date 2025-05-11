@@ -1,9 +1,9 @@
 import numpy as np
-from math import sin, cos, atan2, sqrt
+from math import pi, sin, cos, atan2, sqrt
 from copy import deepcopy
 
 class Arm():
-    def __init__(self, numJoints:int, dhTable, offsets, angleOrientation):
+    def __init__(self, numJoints:int, dhTable, offsets, angleOrientation, startingAngles):
         ''' Object That represents a robot arm config with common functions
 
         Parameters
@@ -19,19 +19,27 @@ class Arm():
         self.curAngles = [0]*numJoints
         self.goalAngles = [0]*numJoints 
         self.prevGoalAngles = [0]*numJoints
+        self.sparkMaxOffsets = [0]*self.numJoints
+        self.trueStartingAngles = [0]*self.numJoints
+        self.publishingAngles = [0]*self.numJoints
+
+        if len(startingAngles) != numJoints:
+            print("The number of joints in the starting angles liss")
+        self.startingAngles = startingAngles
+        self.goalAngles = deepcopy(startingAngles)
 
         if len(dhTable) != numJoints:
-            print("The number of joints in the DH table is less than the value specified!")
+            print("The number of joints in the DH table does not match the nuber specified")
             raise TypeError
         self.dhTable = np.array(dhTable) # pass [d, Theta, r, alpha]
 
         if len(offsets) != numJoints:
-            print("The number of joints in the offsets list is less than the value specified!")
+            print("The number of joints in the offsets list does not match the nuber specified")
             raise TypeError
         self.offsets = offsets
 
         if len(angleOrientation) != numJoints:
-            print("The number of joints in the offsets list is less than the value specified!")
+            print("The number of joints in the angle orientation does not match the nuber specified")
             raise TypeError
         self.angleOrientation = angleOrientation
 
@@ -113,20 +121,59 @@ class Arm():
         angles = self.getGoalAngles()
         offsetAngles = [0]*self.numJoints
         for i in range(len(angles)): 
-            offsetAngles[i] = angles[i] + self.offsets[i]
+            offsetAngles[i] = angles[i] + self.offsets[i] 
         return deepcopy(offsetAngles) 
 
     def removeOffsets(self, angles):
         correctedAngles = [0]*self.numJoints
         for i in range(len(angles)):
-            correctedAngles[i] = angles[i] - self.offsets[i]
+            correctedAngles[i] = angles[i] - self.offsets[i] 
         return deepcopy(correctedAngles)
+
+    def getPublishingAngles(self):
+        angles = self.getOffsetGoalAngles()
+        for i in range(self.numJoints):
+            self.publishingAngles[i] = angles[i] - self.trueStartingAngles[i]
+        return deepcopy(self.publishingAngles)
 
     def correctAngleDirection(self, angles):
         correctedDirection = [0]*self.numJoints
         for i in range(len(angles)):
             correctedDirection[i] = angles[i]*self.angleOrientation[i]
         return deepcopy(correctedDirection)
+
+    def removeSparkMaxOffsets(self, angles):
+        offsetAngles = deepcopy(angles)
+        if len(angles) != self.numJoints:
+            return angles
+        for i in range(self.numJoints):
+            offsetAngles[i] -= self.sparkMaxOffsets[i]
+        return offsetAngles
+
+    def addSparkMaxOffsets(self, angles):
+        offsetAngles = deepcopy(angles)
+        # offsetAngles[1] += pi/2
+        if len(angles) != self.numJoints:
+            return angles
+        for i in range(self.numJoints):
+            offsetAngles[i] += self.sparkMaxOffsets[i] #- self.trueStartingAngles[i] 
+            # offsetAngles[i] +=  - self.trueStartingAngles[i] 
+        return offsetAngles
+
+    def storeSparkMaxOffsets(self, sparkMaxAngles):
+        if len(sparkMaxAngles) != self.numJoints:
+            return False
+        self.sparkMaxOffsets = sparkMaxAngles
+        self.goalAngles = self.removeSparkMaxOffsets(self.goalAngles)
+        return True
+
+    def homeArm(self):
+        homeAngles = self.getOffsetGoalAngles()
+        homeAngles[1] -= pi/2
+        self.storeSparkMaxOffsets(homeAngles)
+        self.goalAngles = deepcopy(self.startingAngles)
+        print(f'---- {self.startingAngles} -----')
+        print(f'---- {self.goalAngles} -----')
 
     def calculateRotationAngles(self, transformationMatrix):
         ''' Returns the roll, pitch, and yaw angles of a transformation matrix

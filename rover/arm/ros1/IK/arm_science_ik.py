@@ -11,12 +11,11 @@ class KinematicsMode():
 
 class SciArm(Arm):
     def __init__(self, numJoints:int, dhTable, offsets, angleOrientation, startingAngles):
-        super().__init__(numJoints, dhTable, offsets, angleOrientation)
+        super().__init__(numJoints, dhTable, offsets, angleOrientation, startingAngles)
         self.modes = ["Forward", "Cyl"]
-        self.goalAngles = startingAngles
         self.cylTarget = [0, 208.65, 722.49, 0, 0] # [theta, r, z, alpha, EE]
         self.prevTarget = [0, 208.65, 722.49, 0, 0] # [theta, r, z, alpha, EE]
-        self.sparkMaxOffsets = [0]*self.numJoints
+        self.trueStartingAngles = [0, pi/2, 0, 0, 0]
 
     def move_to_position(self, position_name):
         # Move the arm to a specific position
@@ -62,29 +61,6 @@ class SciArm(Arm):
                 self.cylTarget[4] += self.CONTROL_SPEED*500
             if isButtonPressed["L1"]:
                 self.cylTarget[4] -= self.CONTROL_SPEED*500
-
-    def removeSparkMaxOffsets(self, angles):
-        offsetAngles = deepcopy(angles)
-        if len(angles) != self.numJoints:
-            return angles
-        for i in range(self.numJoints):
-            offsetAngles[i] -= self.sparkMaxOffsets[i]
-        return offsetAngles
-
-    def addSparkMaxOffsets(self, angles):
-        offsetAngles = deepcopy(angles)
-        if len(angles) != self.numJoints:
-            return angles
-        for i in range(self.numJoints):
-            offsetAngles[i] += self.sparkMaxOffsets[i]
-        return offsetAngles
-
-    def storeSparkMaxOffsets(self, sparkMaxAngles):
-        if len(sparkMaxAngles) != self.numJoints:
-            return False
-        self.sparkMaxOffsets = sparkMaxAngles
-        self.goalAngles = self.removeSparkMaxOffsets(self.goalAngles)
-        return True
 
     def forwardKinematics(self):
         r4 = self.dhTable[3][2]

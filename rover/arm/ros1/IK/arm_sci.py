@@ -13,17 +13,18 @@ class ArmSciNode():
         self.armState = "Idle"
         self.joyInputQueue = Queue(maxsize=5)
         self.curAngleQueue = Queue(maxsize=5)
+
         dhTable = [[79.7, 0, 0, pi/2],
                    [0,    0, 367, 0],
                    [0,    0, 195, 0],
                    [0,    0, 67, pi/2],
                    [92,   0, 0, 0]]
         offsets = [0,
-                    (-pi/2)-atan2(112.99, 348.08), 
+                    -atan2(112.99, 348.08), 
                     atan2(161, 110.7) + atan2(112.99, 348.08),
                     (atan2(92, 67) + atan2(110.75, 161)),
                     0]
-        angleOrientation = [1, -1, 1, -1, 1]
+        angleOrientation = [1, 1, 1, -1, 1]
         startingAngles = [0, pi-atan2(348.08, 112.99), 
                            (-pi/2)+atan2(112.99, 348.08), -pi/2, 0]
 
@@ -117,17 +118,22 @@ class ArmSciNode():
 
     def publishVizAngles(self, anglesToViz):
         vizAngles = Float32MultiArray()
+        anglesToViz[1] += pi/2 
+        # anglesToViz[3] += pi/2 
         vizAngles.data = rad2deg(anglesToViz)
         self.vizPub.publish(vizAngles)
 
     def publishAngles(self, anglesToPub):
         goalTopicData = Float32MultiArray()
-        correctedDirection = self.arm.correctAngleDirection(anglesToPub)
+        correctedDirection = self.arm.correctAngleDirection(self.arm.getPublishingAngles())
         offsetAngles = rad2deg(self.arm.addSparkMaxOffsets(correctedDirection))
         goalTopicData.data = [offsetAngles[0], offsetAngles[1], offsetAngles[2],
                               0, 0, offsetAngles[3], offsetAngles[4]] 
-        self.publishVizAngles(correctedDirection)
+        
+        # testTopicData = Float32MultiArray()
+        # testTopicData.data = self.arm.getPublishingAngles()
         self.goalPub.publish(goalTopicData)
+        self.publishVizAngles(correctedDirection)
 
     # ROS Topic Subscriptions
     def onCurrPosUpdate(self, data:Float32MultiArray):
@@ -196,9 +202,8 @@ class ArmSciNode():
                     print(f'------ {self.arm.curMode} ------')
                 if buttonPressed["CIRCLE"] == 2:
                     # self.arm.storeSparkMaxOffsets(self.arm.curAngles)
-                    self.arm.storeSparkMaxOffsets(self.arm.curAngles)
                     print('------ Homed------')
-                    print(self.arm.sparkMaxOffsets)
+                    self.arm.homeArm()
 
                 if self.armState == "IK" and self.arm.getCurMode() == "Cyl":
                     self.arm.controlTarget(buttonPressed, joystickStatus)
