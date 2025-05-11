@@ -6,10 +6,12 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Marker1
-        - /Marker2
-        - /Marker2/Status1
-        - /Marker3
+        - /MarkerArray1
+        - /TF1
+        - /TF1/Frames1
+        - /TF1/Tree1
+        - /Marker1/Status1
+        - /MarkerArray2
       Splitter Ratio: 0.5
     Tree Height: 359
   - Class: rviz/Selection
@@ -190,24 +192,16 @@ Visualization Manager:
       Value: false
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /dwa_planner/dwa_trajectory
+      Marker Topic: /rover_bounding_box
       Name: Marker
       Namespaces:
-        dwa_trajectories: true
+        rover_bounding_box: true
       Queue Size: 100
       Value: true
-    - Class: rviz/Marker
+    - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /dwa_planner/robot_footprint
-      Name: Marker
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /dwa_planner/robot_grid
-      Name: Marker
+      Marker Topic: /astar_waypoints_markers
+      Name: MarkerArray
       Namespaces:
         {}
       Queue Size: 100
@@ -240,7 +234,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.379167318344116
+      Distance: 0.14371348917484283
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -248,17 +242,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 4.233272075653076
-        Y: -0.004905657842755318
-        Z: 3.851532220840454
+        X: 2.5617356300354004
+        Y: -0.6339191198348999
+        Z: 4.629287242889404
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2603967189788818
+      Pitch: 0.9753968715667725
       Target Frame: base_link
-      Yaw: 5.840431213378906
+      Yaw: 5.9704365730285645
     Saved: ~
 Window Geometry:
   Displays:
