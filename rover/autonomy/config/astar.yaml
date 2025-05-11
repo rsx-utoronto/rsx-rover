@@ -1,0 +1,16 @@
+planner_frequency: 10 # Rate in Hz
+
+grid_resolution: 1 # Resolution of the grid in meters
+
+# Robot Footprint
+robot_width: 1.0
+robot_length: 1.0
+robot_height: 1.0
+robot_grid_n: 10
+
+# Obstacle avoidance parameters
+min_z: 0.3 # Minimum height to consider obstacles
+max_z: 1.5 # Maximum height to consider obstacles
+
+# Goal Tolerance Parameters
+xy_goal_tolerance: 0.2 # Distance to goal to consider it reached (in meters)
