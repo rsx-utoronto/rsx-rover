@@ -48,7 +48,7 @@ class Arm():
         self.modes = ["Forward"]
         self.curMode = self.modes[0] # makes this a data structure function callback
         self.numModes = len(self.modes)
-        self.CONTROL_SPEED = 0.001 
+        self.CONTROL_SPEED = 0.003 
     
     def updateDHTable(self, newAngles):
         ''' Updates to the DH Table to have the current joint angles
@@ -163,6 +163,7 @@ class Arm():
     def storeSparkMaxOffsets(self, sparkMaxAngles):
         if len(sparkMaxAngles) != self.numJoints:
             return False
+        sparkMaxAngles[3] = -sparkMaxAngles[3]
         self.sparkMaxOffsets = sparkMaxAngles
         self.goalAngles = self.removeSparkMaxOffsets(self.goalAngles)
         return True

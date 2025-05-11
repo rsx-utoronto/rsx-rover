@@ -13,6 +13,7 @@ class ArmSciNode():
         self.armState = "Idle"
         self.joyInputQueue = Queue(maxsize=5)
         self.curAngleQueue = Queue(maxsize=5)
+        self.joyInput = []
 
         dhTable = [[79.7, 0, 0, pi/2],
                    [0,    0, 367, 0],
@@ -173,6 +174,7 @@ class ArmSciNode():
                             "R-Right": -data.r_horizontal, "R-Down": -data.r_vertical, "R2": data.r2}
         
         self.joyInputQueue.put([isButtonPressed, joystickAxesStatus])
+        self.joyInput = [isButtonPressed, joystickAxesStatus]
 
     # Main Loop Code
 
@@ -192,6 +194,7 @@ class ArmSciNode():
             
             if not self.joyInputQueue.empty():
                 [buttonPressed, joystickStatus] = self.joyInputQueue.get()
+                [buttonPressed, joystickStatus] = self.joyInput
 
                                 # Add new button combination for sampling sequence
                 # if buttonPressed["L1"] and buttonPressed["R1"]:

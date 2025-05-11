@@ -58,9 +58,9 @@ class SciArm(Arm):
             if isButtonPressed["L2"]:
                 self.cylTarget[2] -= self.CONTROL_SPEED*500
             if isButtonPressed["R1"]:
-                self.cylTarget[4] += self.CONTROL_SPEED*500
+                self.cylTarget[4] += self.CONTROL_SPEED*10000
             if isButtonPressed["L1"]:
-                self.cylTarget[4] -= self.CONTROL_SPEED*500
+                self.cylTarget[4] -= self.CONTROL_SPEED*10000
 
     def forwardKinematics(self):
         r4 = self.dhTable[3][2]
@@ -89,9 +89,9 @@ class SciArm(Arm):
             self.goalAngles[3] -= self.CONTROL_SPEED
 
         if isButtonPressed["R1"]:
-            self.goalAngles[4] += self.CONTROL_SPEED
+            self.goalAngles[4] += self.CONTROL_SPEED*10000
         if isButtonPressed["L1"]:
-            self.goalAngles[4] -= self.CONTROL_SPEED
+            self.goalAngles[4] -= self.CONTROL_SPEED*10000
         self.forwardKinematics() 
 
     def passiveForwardKinematics(self):
