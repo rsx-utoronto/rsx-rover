@@ -72,9 +72,8 @@ class OctoMapAStar:
             
             # Iterate through occupied cells
             iterator = octomap.begin_leafs_bbx(
-                octomap.Pointcloud(min=[-100, -100, 0.2],  # Min XYZ (0.2m height threshold)
-                octomap.Pointcloud(max=[100, 100, 2.0])    # Max XYZ
-            
+                octomap.Point3d(-100, -100, 0.2),  # Min XYZ (0.2m height threshold)
+                octomap.Point3d(100,100,2) )  # Max XYZ
             for node in iterator:
                 if octomap.isNodeOccupied(node):
                     x = node.getCoordinate().x()
