@@ -46,7 +46,6 @@ void Astar::define_parameters(ros::NodeHandle &nh)
     nh.param<double>("robot_grid_n", rf.robot_grid_n, 10);
     nh.param<double>("min_z", oac.min_z, 0.0);
     nh.param<double>("max_z", oac.max_z, 1.0);
-    nh.param<double>("obstacle_threshold", oac.obstacle_threshold, 0.5);
     nh.param<double>("xy_goal_tolerance", xy_goal_tolerance, 0.1);
 
     // Initial pose set to 0 just in case the odom topic is not publishing
@@ -210,7 +209,7 @@ double Astar::find_node_height(const GridNode &node)
 }
 
 
-void Astar::cost_from_parent(const GridNode &parent, const GridNode &node)
+double Astar::cost_from_parent(const GridNode &parent, const GridNode &node)
 {
     /* Returns the cost from the parent node to the current node */
     // Euclidean distance
@@ -218,9 +217,9 @@ void Astar::cost_from_parent(const GridNode &parent, const GridNode &node)
     double dy = node.pose.y - parent.pose.y;
 
     // Height difference
-    height_diff = std::abs(find_node_height(node) - find_node_height(parent));
+    double height_diff = std::abs(find_node_height(node) - find_node_height(parent));
 
-    return sqrt(dx * dx + dy * dy) + height_diff;
+    return (sqrt(dx * dx + dy * dy) + height_diff);
 }
 
 double Astar::h(const GridNode &node)
@@ -233,21 +232,23 @@ double Astar::h(const GridNode &node)
     return sqrt(dx * dx + dy * dy);
 }
 
-void Astar::create_node(const Pose2D &pose, GridNode &node)
-{
-    /* Creates a node from the given pose */
+// Implementation
+void Astar::create_node(const Pose2D &pose, GridNode &node, GridNode* parent) {
     node.pose = pose;
-
-    if node.parent != nullptr
+    node.parent = parent;
+    
+    // Calculate g score based on parent (if exists)
+    if (parent == nullptr) 
     {
-        node.g = node.parent->g + cost_from_parent(node.parent, node);
-    }
-    else
+        node.g = 0.0;  // Start node
+    } 
+    else 
     {
-        node.g = 0.0;
+        node.g = parent->g + cost_from_parent(*parent, node);
     }
+    
+    // Calculate f score
     node.f = node.g + h(node);
-    node.parent = nullptr;
 }
 
 bool Astar::goal_reached(GridNode &current_node, GridNode &goal_node)
@@ -291,16 +292,18 @@ void Astar::plan()
 
         // 1. define start position
         GridNode start_node;
-        create_node(current_pose, start_node);
-
+        create_node(current_pose, start_node, nullptr);
 
         // 2. define goal position
         GridNode goal_node;
-        create_node(goal, goal_node);
+
+        // TO DO: verify is it's ok to gave nullptr for goal node
+        create_node(goal, goal_node, nullptr);
+
         // 3. create open and closed lists
         std::priority_queue<GridNode> open_list; // Uses the existing operator< for comparison
         std::vector<GridNode> closed_list;
-        open_list.push_back(start_node);
+        open_list.push(start_node);
         
         while (open_list.size() > 0)
         {
@@ -338,11 +341,11 @@ void Astar::plan()
                 {
                     if (i == 0 && j == 0) continue; // skip the parent node
                     Pose2D child_pose;
-
+                    GridNode child_node;
                     // TO DO: change robot_grid_n to a different resolution param
                     child_pose.x = current_node.pose.x + i * rf.robot_grid_n;
                     child_pose.y = current_node.pose.y + j * rf.robot_grid_n;
-                    create_node(child_pose, child_node);
+                    create_node(child_pose, child_node, &current_node);
                     children_nodes.push_back(child_node);
                 }
             }

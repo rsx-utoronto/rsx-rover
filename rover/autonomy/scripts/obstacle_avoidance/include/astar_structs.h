@@ -7,10 +7,11 @@
 // #pragma once // This is another way to prevent multiple inclusions
 #ifndef ROVER_ASTAR_STRUCTS_H
 #define ROVER_ASTAR_STRUCTS_H
+#include <cmath>    // for std::abs
 
 
 
-namespace astar // These structs will only be used in the dwa namespace
+namespace astar // These structs will only be used in the astar namespace
 // This is a way to organize the code and make it more reausable
 // And to prevent name clashes
 {
@@ -26,12 +27,12 @@ namespace astar // These structs will only be used in the dwa namespace
     };
 
     /**
-     * @struct DWAConfig
+     * @struct AstarConfig
      * @brief Configuration parameters for the Dynamic Window Approach planner.
      */
     struct AstarConfig
     {
-        grid_resolution;  ///< Resolution of the grid
+        double grid_resolution;  ///< Resolution of the grid
     };
 
     /**
@@ -64,12 +65,21 @@ namespace astar // These structs will only be used in the dwa namespace
      */
     struct GridNode 
     {
-    Pose2D pose;       // node coordinates in the grid
-    double g;            // cost‐to‐come
-    double f;            // g + h
-    GridNode* parent;    // back‐link for path reconstruction
-    bool operator<(GridNode const& o) const { return f > o.f; }  // for min‐heap
+        Pose2D pose;
+        double g;
+        double f;
+        GridNode* parent;
+
+        bool operator<(GridNode const& o) const { return f > o.f; }
+
+        bool operator==(GridNode const& o) const 
+        {
+            static constexpr double eps = 1e-6;
+            return std::abs(pose.x - o.pose.x) < eps
+                && std::abs(pose.y - o.pose.y) < eps;
+        }
     };
+
 }
 
 #endif // ROVER_ASTAR_STRUCTS_H

@@ -42,10 +42,9 @@ public:
     
     // Node creation
     double find_node_height(const GridNode &node);
-    void cost_from_parent(const GridNode &parent, const GridNode &node);
+    double cost_from_parent(const GridNode &parent, const GridNode &node);
     double h(const GridNode &node);
-    void create_node(const Pose2D &pose, GridNode &node);
-
+    void create_node(const Pose2D &pose, GridNode &node, GridNode* parent);
     // Obstacle avoidance
     bool check_collision(const std::vector<Pose2D> &traj);
 

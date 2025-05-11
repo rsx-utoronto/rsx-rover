@@ -1,0 +1,23 @@
+<launch>
+    <include file="$(find rover)/rover/autonomy/launch/mapping/octomap_bag.launch" >
+        <arg name="bag_filename" value="/home/garvish/bags/zed_myhal_basement2.bag" />
+    </include>
+
+    <node name="astar_rviz" pkg="rviz" type="rviz" args="-d $(find rover)/rover/autonomy/config/astar.rviz"/>
+
+    <node name="astar_goal" pkg="rover" type="dwa_goal.py" output="screen">
+        <param name="goal_topic" value="/goal" />
+        <param name="goal_x" value="0.0" />
+        <param name="goal_y" value="0.0" />
+    </node>
+
+    <node name="astar_planner" pkg="rover" type="astar" output="screen">
+        <param name="odom_topic" value="/rtabmap/odom" /> <!-- /odom by default--> 
+        <param name="octomap_topic" value="/octomap_full"/> <!-- /octomap_full by default--> 
+        <param name="map_topic" value="/map" />
+        <param name="goal_topic" value="/goal" />
+        <param name="cmd_vel_topic" value="/cmd_vel" />
+        <rosparam file="$(find rover)/rover/autonomy/config/astar.yaml" command="load" /> 
+    </node>
+
+</launch>

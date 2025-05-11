@@ -17,7 +17,7 @@ public:
      * @brief Publish multiple nodes as LINE_STRIP markers in RViz.
      * @param path A vector of nodes
      */
-    void publishPath(const std::vector<std::vector<GridNode>>& path);
+    void publishPath(const std::vector<GridNode>& path);
 
     /**
      * @brief Publish a robot footprint as a LINE_STRIP marker in RViz.

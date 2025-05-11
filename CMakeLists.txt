@@ -154,6 +154,10 @@ add_library(dwa_visualizer
   rover/autonomy/scripts/obstacle_avoidance/trajectory_visualizer.cpp
 )
 
+add_library(astar_visualizer
+  rover/autonomy/scripts/obstacle_avoidance/trajectory_visualizer_astar.cpp
+)
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -176,6 +180,9 @@ add_library(dwa_visualizer
 
 # Specify libraries to link a library or executable target against
 target_link_libraries(dwa_visualizer
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(astar_visualizer
   ${catkin_LIBRARIES}
 )
 
@@ -254,6 +261,9 @@ target_link_libraries(arm_point_cloud_assembler ${catkin_LIBRARIES} ${PCL_LIBRAR
 
 add_executable(dwa_planner rover/autonomy/scripts/obstacle_avoidance/dwa_planner.cpp)
 target_link_libraries(dwa_planner ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} dwa_visualizer)
+
+add_executable(astar rover/autonomy/scripts/obstacle_avoidance/astar.cpp)
+target_link_libraries(astar ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} astar_visualizer)
 
 # catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
 #  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
