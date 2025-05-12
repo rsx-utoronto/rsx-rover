@@ -105,7 +105,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 1  # Resolution of 2D grid (meters per cell)
         self.grid_origin=(0.0,0.0)
-        self.goal = (2,0)
+        self.goal = (4,0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -344,7 +344,7 @@ class OctoMapAStar:
     
             # Clamp indices to valid bounds
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
-                if z>0.3:
+                if z>0.1:
                     #Height threshold -< this should be 0.2<z<1.5!!!
                     #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
                     occupancy_grid[grid_x, grid_y] = 1000 # 1000
@@ -432,7 +432,7 @@ class OctoMapAStar:
             if self.occupancy_grid[grid_x, grid_y] >= 1000:
                 print("checkpoint 2 true",x,y, grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
                 self.publish_invalid_pose_marker(x, y)  # Visualize in RViz
-                return False  # This corner is in an obstacle
+                return True  # This corner is in an obstacle
            
         return True
     
@@ -454,13 +454,13 @@ class OctoMapAStar:
         marker.scale.x = 0.2
         marker.scale.y = 0.2
         marker.scale.z = 0.2
-        marker.color.r = 1.0
-        marker.color.g = 0.0
+        marker.color.r = 0.0
+        marker.color.g = 1.0
         marker.color.b = 0.0
         marker.color.a = 1.0
-        marker.lifetime = rospy.Duration(2.0)  # markers disappear after 2 seconds
+        marker.lifetime = rospy.Duration(8.0)  # markers disappear after 2 seconds
 
-        self.invalid_pose_pub.publish(marker)
+        self.invaliid_pose_sub.publish(marker)
 
     def transform_corners(self, pose):
         """
