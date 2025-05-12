@@ -116,7 +116,7 @@ class OctoMapAStar:
     Point(x=-0.4, y=-0.4, z=0),
     Point(x=-0.4, y=0.4, z=0)
 
-]#0.5, 0.4.0
+] #0.5, 0.4.0
         
     def pointcloud_callback(self, msg):
             """
@@ -174,7 +174,7 @@ class OctoMapAStar:
         """
         Publish the generated OctoMap as a ROS message.
         """
-       # rospy.loginfo("Publishing OctoMap...")
+        # rospy.loginfo("Publishing OctoMap...")
         octomap_msg = self.tree.writeBinaryMsg()
         header = Header()
         header.stamp = rospy.Time.now()
@@ -510,24 +510,17 @@ class OctoMapAStar:
     def run(self):
         while not rospy.is_shutdown():
             if self.occupancy_grid is None:
-              #  print("STOPPED looking for path")
-                #rospy.logwarn("Waiting for occupancy grid...")
                 self.rate.sleep()
                 continue
-           
-
             start =  self.world_to_grid(self.current_position_x, self.current_position_y) #(int(self.current_position_x), int(self.current_position_y))
-           
-            # print("THIS IS START", start)
+            print("start", start)
             goal = self.goal  # change this!
-
-            #rospy.loginfo("Running A* algorithm...")
             path = self.a_star(start, goal)
+            
             if path:
-                
-               # print("PATH Found", path)
-              #  rospy.logwarn("A* found a path", path)
-                #rospy.loginfo(f"Path found: {path}")
+                # print("PATH Found", path)
+                # rospy.logwarn("A* found a path", path)
+                # rospy.loginfo(f"Path found: {path}")
                 current_pos = start
             
                 for waypoint in path:
@@ -536,6 +529,51 @@ class OctoMapAStar:
                     rospy.sleep(1 / self.update_rate) 
                 self.publish_waypoints(path)
             self.rate.sleep()           
+
+    def run(self):
+        last_position = None
+        last_path = []
+        replan_interval = rospy.Duration(1.0)
+        last_plan_time = rospy.Time.now()
+
+        while not rospy.is_shutdown():
+            if self.occupancy_grid is None:
+                self.rate.sleep()
+                continue
+
+            start = self.world_to_grid(self.current_position_x, self.current_position_y)
+            goal = self.goal
+
+            need_replan = False
+
+            # Replan if too much time has passed
+            # if rospy.Time.now() - last_plan_time > replan_interval:
+            #     need_replan = True
+
+            # Replan if robot has moved significantly
+            if last_position:
+                dx = start[0] - last_position[0]
+                dy = start[1] - last_position[1]
+                if abs(dx) > 1 or abs(dy) > 1:
+                    need_replan = True
+
+            if need_replan:
+                path = self.a_star(start, goal)
+                if path:
+                    last_path = path
+                    last_position = start
+                    last_plan_time = rospy.Time.now()
+                    self.publish_waypoints(path)
+
+            # Follow the path a little bit at a time
+            if last_path:
+                next_waypoint = last_path[1] if len(last_path) > 1 else last_path[0]
+                curr_world = self.grid_to_world(*start)
+                wp_world = self.grid_to_world(*next_waypoint)
+                self.publish_velocity(curr_world, wp_world)
+
+            self.rate.sleep()
+
 
 if __name__ == "__main__":
     try:
