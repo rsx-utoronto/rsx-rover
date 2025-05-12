@@ -430,10 +430,37 @@ class OctoMapAStar:
 
             if self.occupancy_grid[grid_x, grid_y] >= 1000:
                 print("checkpoint 2 true",x,y, grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
+                self.publish_invalid_pose_marker(x, y)  # Visualize in RViz
                 return False  # This corner is in an obstacle
            # else: 
                 #print("checkopoint 2 is false for grid_x, grid_y", grid_x, grid_y)
         return True
+    
+    def publish_invalid_pose_marker(self, x, y, z=0.1):
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "invalid_pose"
+        marker.id = int(rospy.Time.now().to_sec() * 1000) % 1000000  # give it a semi-unique ID
+        marker.type = Marker.CUBE
+        marker.action = Marker.ADD
+        marker.pose.position.x = x
+        marker.pose.position.y = y
+        marker.pose.position.z = z
+        marker.pose.orientation.x = 0.0
+        marker.pose.orientation.y = 0.0
+        marker.pose.orientation.z = 0.0
+        marker.pose.orientation.w = 1.0
+        marker.scale.x = 0.2
+        marker.scale.y = 0.2
+        marker.scale.z = 0.2
+        marker.color.r = 1.0
+        marker.color.g = 0.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0
+        marker.lifetime = rospy.Duration(2.0)  # markers disappear after 2 seconds
+
+        self.invalid_pose_pub.publish(marker)
 
     def transform_corners(self, pose):
         """
@@ -559,58 +586,57 @@ class OctoMapAStar:
                     current_pos = waypoint
                     rospy.sleep(1 / self.update_rate) 
                 self.publish_waypoints(path)
-
             self.rate.sleep()     
             
-    def run_new(self):
-        last_plan_time = rospy.Time.now()
-        replan_interval = rospy.Duration(3.0)
-        current_path = []
-        current_wp_index = 0  # Track which waypoint we're pursuing
-        path_lock = threading.Lock()  # Add this at class initialization
+    # def run_new(self):
+    #     last_plan_time = rospy.Time.now()
+    #     replan_interval = rospy.Duration(3.0)
+    #     current_path = []
+    #     current_wp_index = 0  # Track which waypoint we're pursuing
+    #     path_lock = threading.Lock()  # Add this at class initialization
 
-        while not rospy.is_shutdown():
-            # Update grid origin with current position
-            self.grid_origin = (self.current_position_x, self.current_position_y)
+    #     while not rospy.is_shutdown():
+    #         # Update grid origin with current position
+    #         self.grid_origin = (self.current_position_x, self.current_position_y)
             
-            # Get current grid positions
-            start = self.world_to_grid(self.current_position_x, self.current_position_y)
-            goal = self.goal
+    #         # Get current grid positions
+    #         start = self.world_to_grid(self.current_position_x, self.current_position_y)
+    #         goal = self.goal
 
-            # Replanning conditions
-            need_replan = False
-            if (rospy.Time.now() - last_plan_time > replan_interval or
-                not current_path or
-                current_wp_index >= len(current_path)):
-                need_replan = True
+    #         # Replanning conditions
+    #         need_replan = False
+    #         if (rospy.Time.now() - last_plan_time > replan_interval or
+    #             not current_path or
+    #             current_wp_index >= len(current_path)):
+    #             need_replan = True
 
-            # Path following
-            if current_path and current_wp_index < len(current_path):
-                target_wp = current_path[current_wp_index]
-                current_world = self.grid_to_world(*start)
-                target_world = self.grid_to_world(*target_wp)
+    #         # Path following
+    #         if current_path and current_wp_index < len(current_path):
+    #             target_wp = current_path[current_wp_index]
+    #             current_world = self.grid_to_world(*start)
+    #             target_world = self.grid_to_world(*target_wp)
                 
-                # Calculate distance to waypoint
-                dx = target_world[0] - current_world[0]
-                dy = target_world[1] - current_world[1]
-                distance = math.hypot(dx, dy)
+    #             # Calculate distance to waypoint
+    #             dx = target_world[0] - current_world[0]
+    #             dy = target_world[1] - current_world[1]
+    #             distance = math.hypot(dx, dy)
                 
-                if distance > 0.1:
-                    self.publish_velocity(current_world, target_world)
-                else:
-                    current_wp_index += 1  # Move to next waypoint
+    #             if distance > 0.1:
+    #                 self.publish_velocity(current_world, target_world)
+    #             else:
+    #                 current_wp_index += 1  # Move to next waypoint
 
-            # Replanning
-            if need_replan:
-                new_path = self.a_star(start, goal)
-                if new_path:
-                    with path_lock:
-                        current_path = new_path
-                        current_wp_index = 0  # Reset to first waypoint
-                    last_plan_time = rospy.Time.now()
-                    self.publish_waypoints(current_path)
+    #         # Replanning
+    #         if need_replan:
+    #             new_path = self.a_star(start, goal)
+    #             if new_path:
+    #                 with path_lock:
+    #                     current_path = new_path
+    #                     current_wp_index = 0  # Reset to first waypoint
+    #                 last_plan_time = rospy.Time.now()
+    #                 self.publish_waypoints(current_path)
 
-            self.rate.sleep()
+    #         self.rate.sleep()
 
 if __name__ == "__main__":
     try:
