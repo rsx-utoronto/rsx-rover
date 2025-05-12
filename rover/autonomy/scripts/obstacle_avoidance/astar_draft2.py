@@ -445,7 +445,7 @@ class OctoMapAStar:
     def get_neighbors(self, node):
         neighbors = []
         x, y = node
-        for dx, dy in [(-1, -1), (1, 1), (0, -1), (0, 1), (1, 0), (-1, 0)]:
+        for dx, dy in [(-1, -1), (1, 1), (-1,1), (1,-1), (0, -1), (0, 1), (1, 0), (-1, 0)]:
             nx, ny = x + dx, y + dy
             # if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
           #  print("neighbours: ",nx, ny, x, y)
