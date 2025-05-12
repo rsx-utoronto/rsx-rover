@@ -17,6 +17,7 @@ class RTABMapInitialPose:
     def pose_callback(self, data):
         self.initialPose.header = data.header
         self.initialPose.pose.pose = data.pose
+        self.initialPose.pose.pose.position.z = 0.0
         self.initialPose.pose.covariance = [0] * 36  # Initialize covariance to zero
 
     def call_rtabmap_initialpose(self):
