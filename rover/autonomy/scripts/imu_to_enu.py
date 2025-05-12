@@ -22,20 +22,20 @@ class ImuDataToENU:
         transformed.angular_velocity.x = -data.angular_velocity.y
         transformed.angular_velocity.y = data.angular_velocity.x
         transformed.angular_velocity.z = data.angular_velocity.z
-        # new_orientation = self.transform_orientation(data.orientation)
-        # transformed.orientation.x = new_orientation[0]
-        # transformed.orientation.y = new_orientation[1]
-        # transformed.orientation.z = new_orientation[2]
-        # transformed.orientation.w = new_orientation[3]
+        new_orientation = self.transform_orientation(data.orientation)
+        transformed.orientation.x = new_orientation[0]
+        transformed.orientation.y = new_orientation[1]
+        transformed.orientation.z = new_orientation[2]
+        transformed.orientation.w = new_orientation[3]
         transformed.linear_acceleration_covariance = self.transform_covariance(data.linear_acceleration_covariance)
         transformed.angular_velocity_covariance = self.transform_covariance(data.angular_velocity_covariance)
-        # transformed.orientation_covariance = self.transform_covariance(data.orientation_covariance)
+        transformed.orientation_covariance = self.transform_covariance(data.orientation_covariance)
         self.pub.publish(transformed)
 
-    # def transform_orientation(self, orientation):
-    #     rpy = tf.transformations.euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
-    #     new_orientation = tf.transformations.quaternion_from_euler(-rpy[1], rpy[0], rpy[2])
-    #     return new_orientation
+    def transform_orientation(self, orientation):
+        rpy = tf.transformations.euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
+        new_orientation = tf.transformations.quaternion_from_euler(-rpy[1], rpy[0], rpy[2])
+        return new_orientation
 
     def transform_covariance(self, covariance):
         new_covariance = [0] * 9
