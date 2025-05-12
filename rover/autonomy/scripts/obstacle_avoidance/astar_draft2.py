@@ -101,7 +101,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 1  # Resolution of 2D grid (meters per cell)
         self.grid_origin=(0.0,0.0)
-        self.goal = (7,1)
+        self.goal = (4,0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -177,7 +177,7 @@ class OctoMapAStar:
         # rospy.loginfo("Publishing OctoMap...")
         octomap_msg = self.tree.writeBinaryMsg()
         header = Header()
-        header.stamp = rospy.Time.now()
+       #header.stamp = rospy.Time.now()
         header.frame_id = "map"
         octomap_msg.header = header
         self.octomap_pub.publish(octomap_msg)
@@ -528,7 +528,8 @@ class OctoMapAStar:
             if last_position:
                 dx = start[0] - last_position[0]
                 dy = start[1] - last_position[1]
-                if abs(dx) > 1 or abs(dy) > 1:
+                if abs(dx) > 0.5 or abs(dy)>1:
+                    print("need to replan because last_position moved")
                     need_replan = True
 
             if need_replan:
@@ -540,7 +541,7 @@ class OctoMapAStar:
                     current_pos = start
                     last_position = start
                     need_replan = False
-                    path_available=True
+                    path_available= path
                     
             if path_available:
                 for waypoint in path:
@@ -548,7 +549,8 @@ class OctoMapAStar:
                     current_pos = waypoint
                     rospy.sleep(1 / self.update_rate) 
                 self.publish_waypoints(path)
-            self.rate.sleep()           
+
+            self.rate.sleep()     
 
     def run_new(self):
         last_position = None
