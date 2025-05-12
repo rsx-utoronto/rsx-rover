@@ -66,9 +66,6 @@ from geometry_msgs.msg import Point, Pose
 from visualization_msgs.msg import Marker
 import tf.transformations as tf
 
-
-
-
 class OctoMapAStar:
     def __init__(self):
         rospy.init_node("octomap_a_star_planner", anonymous=True)
@@ -277,6 +274,16 @@ class OctoMapAStar:
         marker.points.append(marker.points[0])
 
         self.bounding_box_pub.publish(marker)
+    
+    def world_to_grid(self, x, y):
+        gx = int((x - self.grid_origin[0]) / self.grid_resolution)
+        gy = int((y - self.grid_origin[1]) / self.grid_resolution)
+        return gx, gy
+
+    def grid_to_world(self, gx, gy):
+        x = gx * self.grid_resolution + self.grid_origin[0]
+        y = gy * self.grid_resolution + self.grid_origin[1]
+        return x, y
     
     def odom_callback(self, msg):
         # Extract robot's position from the Odometry message
@@ -489,7 +496,13 @@ class OctoMapAStar:
         msg = Float32MultiArray()
 
         # Flatten the waypoint list (e.g., [(x1, y1), (x2, y2)] -> [x1, y1, x2, y2])
-        flattened_waypoints = [coord for waypoint in waypoints for coord in waypoint]
+       # flattened_waypoints = [coord for waypoint in waypoints for coord in waypoint]
+        
+        flattened_waypoints = []
+        for gx, gy in waypoints:
+            x, y = self.grid_to_world(gx, gy)
+            flattened_waypoints.extend([x, y])
+            
         msg.data = flattened_waypoints  # Set the data field with the flattened list
         self.astar_pub.publish(msg)
 
@@ -502,8 +515,8 @@ class OctoMapAStar:
                 continue
            
 
-            start =  (int(self.current_position_x), int(self.current_position_y))
-           # print("THIS IS START", start)
+            start =  start = self.world_to_grid(self.current_position_x, self.current_position_y) #(int(self.current_position_x), int(self.current_position_y))
+            # print("THIS IS START", start)
             goal = self.goal  # change this!
 
             #rospy.loginfo("Running A* algorithm...")
