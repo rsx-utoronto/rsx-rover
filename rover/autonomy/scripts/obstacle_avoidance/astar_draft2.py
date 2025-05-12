@@ -99,9 +99,9 @@ class OctoMapAStar:
 
         # Map and planning variables
         self.occupancy_grid = None
-        self.grid_resolution = 0.1  # Resolution of 2D grid (meters per cell)
+        self.grid_resolution = 1  # Resolution of 2D grid (meters per cell)
         self.grid_origin=(0.0,0.0)
-        self.goal = (3,0.0) #30,-10
+        self.goal = (7,1)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -323,10 +323,10 @@ class OctoMapAStar:
         Process OctoMap into a 2D occupancy grid based on height values.
         """
         grid_size = (2000, 2000)  # Number of cells in x and y
-        resolution = 0.1        # Grid resolution in meters
+              # Grid resolution in meters
         rover_radius = 0
         saftey_margin= 0
-        inflation_cells = int ((rover_radius / (resolution)) + saftey_margin)
+      ##inflation_cells = int ((rover_radius / (self.aftey_margin)
         
         occupancy_grid = np.zeros(grid_size, dtype=np.float32)
         occupied_points = self.decode_octomap(octomap_msg)
@@ -334,12 +334,13 @@ class OctoMapAStar:
         for point in occupied_points:
             x, y, z = point
             # Convert to grid indices
-            grid_x = int((x - self.grid_origin[0]) / resolution)
-            grid_y = int((y - self.grid_origin[1]) / resolution)
+            grid_x = int(round(x - self.grid_origin[0]) / self.grid_resolution)
+            grid_y = int(round(y - self.grid_origin[1]) / self.grid_resolution)
     
             # Clamp indices to valid bounds
             if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
-                if z>0.1:  # Height threshold -< this should be 0.2<z<1.5!!!
+                if z>0.3:
+                    #Height threshold -< this should be 0.2<z<1.5!!!
                     #normalized_cost = int((z - 0.2) / (1.5 - 0.2) * 100)
                     occupancy_grid[grid_x, grid_y] = 1000 # 1000
                 '''
@@ -361,8 +362,11 @@ class OctoMapAStar:
         neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
         # if current_height == -1 or neighbor_height == -1:  
         #     return 1000
-        if current_height > 1000 or neighbor_height >1000: 
-            return 1000
+        if current_height > 1000:
+            return current_height
+        elif neighbor_height >1000: 
+            return neighbor_height
+        
         return abs(current_height - neighbor_height) + 1
         
     def heuristic(self, node, goal): #h fucntion -> euclidean distance
@@ -408,25 +412,23 @@ class OctoMapAStar:
     
     def is_pose_valid(self, pose):
         """Returns True if all corners of the footprint at this pose are in free space"""
-     #   print("in is pose valid", self.transform_corners(pose))
-        
+        # print("in is pose valid", self.transform_corners(pose)
         for corner in self.transform_corners(pose):
             x, y = corner
            # print("occupancy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
-            
            # print("corner x,y is ", x,y, self.grid_origin[1])
-            grid_x = int((x - self.grid_origin[0])/self.grid_resolution) # / self.grid_resolution)
-            grid_y = int((y - self.grid_origin[1])/ self.grid_resolution) # / self.grid_resolution)
-          #  print("grid x and y:", grid_x, grid_y)
-           # print("for one point, this is self occupancy gird",self.occupancy_grid[grid_x, grid_y])
+            grid_x =int (round(x- self.grid_origin[0])/self.grid_resolution) 
+            grid_y =int(round (y - self.grid_origin[1])/ self.grid_resolution) 
+         # print("for one point, this is self occupancy gird",self.occupancy_grid[grid_x, grid_y])
             # if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
             #     print("checkpoint 1 is true", grid_x, self.occupancy_grid.shape[0])
             #     return True  # out of bounds
 
             if self.occupancy_grid[grid_x, grid_y] >= 1000:
-                print("checkopoint 2 is true")
+                print("checkpoint 2 true",x,y, grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
                 return False  # This corner is in an obstacle
-            
+           # else: 
+                #print("checkopoint 2 is false for grid_x, grid_y", grid_x, grid_y)
         return True
 
     def transform_corners(self, pose):
@@ -456,9 +458,9 @@ class OctoMapAStar:
         for dx, dy in [(-1, -1), (1, 1), (-1,1), (1,-1), (0, -1), (0, 1), (1, 0), (-1, 0)]:
             nx, ny = x + dx, y + dy
             # if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
-          #  print("neighbours: ",nx, ny, x, y)
-            if self.is_pose_valid((nx, ny, current_yaw)):
-           #     print("pose is valid !!!!!!")
+            # print("neighbours: ",nx, ny, x, y)
+            if self.is_pose_valid((nx, ny,0)):
+            #  print("pose is valid !!!!!!")
                 neighbors.append((nx, ny))
             # else:
             #     print("Object detected")
