@@ -510,6 +510,10 @@ class OctoMapAStar:
         self.astar_pub.publish(msg)
 
     def run(self):
+        need_replan=True
+        last_position=(0,0)
+        last_plan_time = rospy.Time.now()
+        replan_interval= rospy.Duration(3.0)
         while not rospy.is_shutdown():
             if self.occupancy_grid is None:
                 self.rate.sleep()
@@ -517,14 +521,28 @@ class OctoMapAStar:
             start =  self.world_to_grid(self.current_position_x, self.current_position_y) #(int(self.current_position_x), int(self.current_position_y))
             print("start", start)
             goal = self.goal  # change this!
-            path = self.a_star(start, goal)
             
-            if path:
-                # print("PATH Found", path)
-                # rospy.logwarn("A* found a path", path)
-                # rospy.loginfo(f"Path found: {path}")
-                current_pos = start
-            
+            if rospy.Time.now() - last_plan_time > replan_interval:
+                need_replan = True
+
+            if last_position:
+                dx = start[0] - last_position[0]
+                dy = start[1] - last_position[1]
+                if abs(dx) > 1 or abs(dy) > 1:
+                    need_replan = True
+
+            if need_replan:
+                path = self.a_star(start, goal)
+                if path:
+                    # print("PATH Found", path)
+                    # rospy.logwarn("A* found a path", path)
+                    # rospy.loginfo(f"Path found: {path}")
+                    current_pos = start
+                    last_position = start
+                    need_replan = False
+                    path_available=True
+                    
+            if path_available:
                 for waypoint in path:
                     self.publish_velocity(current_pos, waypoint)
                     current_pos = waypoint
@@ -532,7 +550,7 @@ class OctoMapAStar:
                 self.publish_waypoints(path)
             self.rate.sleep()           
 
-    def run(self):
+    def run_new(self):
         last_position = None
         last_path = []
         replan_interval = rospy.Duration(1.0)
