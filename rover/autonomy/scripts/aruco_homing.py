@@ -32,8 +32,8 @@ class Aimer: #
 
     def update(self, aruco_top_left: tuple, aruco_top_right: tuple, 
                aruco_bottom_left: tuple, aruco_bottom_right: tuple) -> None: # update linear_v, angular_v
-        if aruco_top_left == None or aruco_top_right == None or aruco_bottom_left == None or aruco_bottom_right == None:
-            self.linear_v, self.angular_v = 0, 0
+        # if aruco_top_left == None or aruco_top_right == None or aruco_bottom_left == None or aruco_bottom_right == None:
+        #    self.linear_v, self.angular_v = 0, 0
 
         # the middle of the aruco tag is aruco_x
         aruco_x = (aruco_top_left[0] + aruco_top_right[0] + aruco_bottom_left[0] + aruco_bottom_right[0]) / 4

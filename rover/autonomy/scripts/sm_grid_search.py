@@ -13,6 +13,7 @@ import sm_straight_line as StraightLineApproach
 
 import yaml
 import os
+import time
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
@@ -201,27 +202,56 @@ class GS_Traversal:
                     rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
                     print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
                 rate = rospy.Rate(10) #this code needs to be adjusted
+                
+                # Wait a bit for initial detection
                 for i in range(50):
                     rate.sleep()
+                
+                # Add variables for tracking detection memory
+                last_detection_time = time.time()
+                detection_memory_duration = 2.0  # 2 seconds of memory
+                detection_active = False
+                
                 while (not rospy.is_shutdown()) and (self.abort_check is False):
                     twist = Twist()
-                    if aimer.linear_v == 0 and aimer.angular_v == 0:
-                        print ("at weird", aimer.linear_v, aimer.angular_v)
-                        twist.linear.x = 0.0
-                        twist.angular.z = 0.0
-                        pub.publish(twist)
-                        return
-                    if aimer.angular_v == 1:
-                        twist.angular.z = float(aimer.max_angular_v)
-                        print ("first if",aimer.max_angular_v)
-                        twist.linear.x = 0.0
-                    elif aimer.angular_v == -1:
-                        twist.angular.z = float(-aimer.max_angular_v)
-                        twist.linear.x = 0.0
-                    elif aimer.linear_v == 1:
-                        print ("second check",aimer.max_linear_v)
-                        twist.linear.x = float(aimer.max_linear_v)
-                        twist.angular.z = 0.0
+                    
+                    # Check if we have valid values from the aimer
+                    if aimer.linear_v is not None and aimer.angular_v is not None:
+                        # We have a detection, update the timer
+                        last_detection_time = time.time()
+                        detection_active = True
+                        
+                        # Check if we've reached the target
+                        if aimer.linear_v == 0 and aimer.angular_v == 0:
+                            print ("at weird", aimer.linear_v, aimer.angular_v)
+                            twist.linear.x = 0.0
+                            twist.angular.z = 0.0
+                            pub.publish(twist)
+                            return
+                            
+                        # Normal homing behavior
+                        if aimer.angular_v == 1:
+                            twist.angular.z = float(aimer.max_angular_v)
+                            print ("first if",aimer.max_angular_v)
+                            twist.linear.x = 0.0
+                        elif aimer.angular_v == -1:
+                            twist.angular.z = float(-aimer.max_angular_v)
+                            twist.linear.x = 0.0
+                        elif aimer.linear_v == 1:
+                            print ("second check",aimer.max_linear_v)
+                            twist.linear.x = float(aimer.max_linear_v)
+                            twist.angular.z = 0.0
+                    else:
+                        # No detection, check if we're within memory duration
+                        if detection_active and time.time() - last_detection_time < detection_memory_duration:
+                            print("Using last movement commands from memory")
+                            # Continue with last valid movement
+                            # (twist values are already set from previous iteration)
+                        else:
+                            # Memory expired, go back to grid search
+                            print("Detection lost and memory expired, returning to grid search")
+                            detection_active = False
+                            break
                     
                     pub.publish(twist)
                     rate.sleep()
