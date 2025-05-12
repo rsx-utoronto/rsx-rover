@@ -1,25 +1,7 @@
 <launch>
     <rosparam param="use_sim_time"> true </rosparam>
 
-    <include file="$(find rtabmap_launch)/launch/rtabmap.launch">
-        <arg name="rtabmap_args"  value="--delete_db_on_start"/>
-        <!-- RGB-Depth -->
-        <arg name="rgb_topic"  value="/zed_node/rgb/image_rect_color"/>
-        <arg name="depth_topic"  value="/zed_node/depth/depth_registered"/>
-        <arg name="camera_info_topic" value="/zed_node/rgb/camera_info"/>
-        <arg name="wait_imu_to_init" value="true"/>
-        <arg name="imu_topic"  value="/zed_node/imu/data"/>
-        <arg name="frame_id" value="base_link_fake"/>
-        <arg name="approx_sync" value="false"/>
-        <arg name="rtabmap_viz"		value="false"/>
-		<arg name="rviz"			value="false"/>
-
-        <arg name="publish_tf" value="false"/>
-        <arg name="publish_tf_map" value="false"/>
-        <arg name="odom_tf_angular_variance" value="-1"/>
-        <arg name="odom_tf_linear_variance" value="-1"/>
-    </include>
-
+    
     <node pkg="tf" type="static_transform_publisher" name="gps_broadcaster_base_to_gps" args="-0.2 -0.355 0.18 0 0 0 1 base_link gps 100">
         <!-- <remap from="tf" to="tf_ekf"/> -->
     </node>
