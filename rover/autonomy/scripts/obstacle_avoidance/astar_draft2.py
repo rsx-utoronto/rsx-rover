@@ -521,7 +521,7 @@ class OctoMapAStar:
                 continue
             start =  self.world_to_grid(self.current_position_x, self.current_position_y) #(int(self.current_position_x), int(self.current_position_y))
             print("start", start)
-            goal = self.goal  # change this!
+            goal = self.goal  
             
             print("still in a*")
             if rospy.Time.now() - last_plan_time > replan_interval:
@@ -537,6 +537,8 @@ class OctoMapAStar:
                     need_replan = True
 
             if need_replan:
+                need_replan=False
+                print("attempting to replan")
                 path = self.a_star(start, goal)
                 if path:
                     # print("PATH Found", path)
@@ -555,51 +557,6 @@ class OctoMapAStar:
                 self.publish_waypoints(path)
 
             self.rate.sleep()     
-
-    def run_new(self):
-        last_position = None
-        last_path = []
-        replan_interval = rospy.Duration(1.0)
-        last_plan_time = rospy.Time.now()
-
-        while not rospy.is_shutdown():
-            if self.occupancy_grid is None:
-                self.rate.sleep()
-                continue
-
-            start = self.world_to_grid(self.current_position_x, self.current_position_y)
-            goal = self.goal
-
-            need_replan = False
-
-            # Replan if too much time has passed
-            # if rospy.Time.now() - last_plan_time > replan_interval:
-            #     need_replan = True
-
-            # Replan if robot has moved significantly
-            if last_position:
-                dx = start[0] - last_position[0]
-                dy = start[1] - last_position[1]
-                if abs(dx) > 1 or abs(dy) > 1:
-                    need_replan = True
-
-            if need_replan:
-                path = self.a_star(start, goal)
-                if path:
-                    last_path = path
-                    last_position = start
-                    last_plan_time = rospy.Time.now()
-                    self.publish_waypoints(path)
-
-            # Follow the path a little bit at a time
-            if last_path:
-                next_waypoint = last_path[1] if len(last_path) > 1 else last_path[0]
-                curr_world = self.grid_to_world(*start)
-                wp_world = self.grid_to_world(*next_waypoint)
-                self.publish_velocity(curr_world, wp_world)
-
-            self.rate.sleep()
-
 
 if __name__ == "__main__":
     try:
