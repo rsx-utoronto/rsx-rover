@@ -86,6 +86,7 @@ class OctoMapAStar:
         self.boundary= ((-100000, -1000000, -100000), (100000, 100000, 100000)) 
         self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        self.invaliid_pose_sub=rospy.Publisher('/invalid_pose_markers', Marker, queue_size=10)
 
         self.robot_footprint=[]
         # Add a marker publisher
@@ -104,7 +105,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 1  # Resolution of 2D grid (meters per cell)
         self.grid_origin=(0.0,0.0)
-        self.goal = (4,0)
+        self.goal = (2,0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -193,7 +194,7 @@ class OctoMapAStar:
         octomap_data = self.process_octomap(msg) # extract 3d data from octomap and converts into 2d grid 
         if octomap_data is not None:
             self.occupancy_grid = octomap_data 
-            rospy.loginfo("2D occupancy grid generated from OctoMap.")
+           # rospy.loginfo("2D occupancy grid generated from OctoMap.")
 
     def decode_octomap(self, octomap_msg):
         """
@@ -246,7 +247,7 @@ class OctoMapAStar:
                     #                     # Convert the neighboring voxel to real-world coordinates and add it to occupied points
                     #                     occupied_points.append((new_x * resolution, new_y * resolution, new_z * resolution))
 
-            rospy.loginfo(f"Decoded {len(occupied_points)} occupied points from OctoMap.")
+          #  rospy.loginfo(f"Decoded {len(occupied_points)} occupied points from OctoMap.")
             return occupied_points
 
     def publish_bounding_box(self):
@@ -431,8 +432,7 @@ class OctoMapAStar:
             if self.occupancy_grid[grid_x, grid_y] >= 1000:
                 print("checkpoint 2 true",x,y, grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
                 return False  # This corner is in an obstacle
-           # else: 
-                #print("checkopoint 2 is false for grid_x, grid_y", grid_x, grid_y)
+           
         return True
 
     def transform_corners(self, pose):
@@ -516,20 +516,22 @@ class OctoMapAStar:
     def run(self):
         need_replan=True
         last_position=(0,0)
+        self.current_path= []
         last_plan_time = rospy.Time.now()
         replan_interval= rospy.Duration(3.0)
+        path_available=False
+        goal=self.goal
         while not rospy.is_shutdown():
             if self.occupancy_grid is None:
                 print("self.occupancy_grid")
                 self.rate.sleep()
                 continue
+           # self.grid_origin = (self.current_position_x, self.current_position_y)
             start =  self.world_to_grid(self.current_position_x, self.current_position_y) #(int(self.current_position_x), int(self.current_position_y))
-            print("start", start)
-            goal = self.goal  
             
+            need_replan=False
             print("still in a*")
             if rospy.Time.now() - last_plan_time > replan_interval:
-
                 print("need to replan because time passed")
                 need_replan = True
 
@@ -542,24 +544,30 @@ class OctoMapAStar:
 
             if need_replan:
                 need_replan=False
-                print("attempting to replan")
+                print("attempting to replan", need_replan, path_available)
                 path = self.a_star(start, goal)
                 if path:
                     # print("PATH Found", path)
                     # rospy.logwarn("A* found a path", path)
                     # rospy.loginfo(f"Path found: {path}")
                     current_pos = start
+                    self.current_path=path
                     last_position = start
-                    need_replan = False
-                    path_available= path
+                  #  need_replan = False
+                    path_available = True
                     
-            if path_available and not need_replan:
-                for waypoint in path:
-                    self.publish_velocity(current_pos, waypoint)
-                    current_pos = waypoint
-                    rospy.sleep(1 / self.update_rate) 
-                self.publish_waypoints(path)
-
+                    for waypoint in path:
+                        self.publish_velocity(current_pos, waypoint)
+                        current_pos = waypoint
+                        rospy.sleep(1 / self.update_rate) 
+                    self.publish_waypoints(path)
+                    
+            # if path_available: #and not need_replan:
+            #     for waypoint in path:
+            #         self.publish_velocity(current_pos, waypoint)
+            #         current_pos = waypoint
+            #         rospy.sleep(1 / self.update_rate) 
+            #     self.publish_waypoints(path)
             self.rate.sleep()     
             
     def run_new(self):

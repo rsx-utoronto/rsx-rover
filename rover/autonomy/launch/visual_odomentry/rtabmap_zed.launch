@@ -16,6 +16,7 @@
 		<arg name="rviz"			value="false"/>
         <!-- Disable transform publishing -->
         <arg name="publish_tf" value="false"/>
+        <arg name="publish_tf_odom" value="false"/>
         <arg name="publish_tf_map" value="false"/>
         <arg name="odom_tf_angular_variance" value="-1"/>
         <arg name="odom_tf_linear_variance" value="-1"/>
@@ -33,6 +34,7 @@
     </include>
 
     <param name="/rtabmap/publish_tf" type="bool" value="false"/>
-    <param name="/rtabmap_ros/publish_tf" type="bool" value="false"/>
+    <param name="/rtabmap/publish_tf_odom" type="bool" value="false"/>
+    <param name="/rtabmap_ros/publish_tf_odom" type="bool" value="false"/>
 
 </launch>
