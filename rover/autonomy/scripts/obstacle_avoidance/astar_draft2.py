@@ -65,6 +65,7 @@ from std_msgs.msg import Float32MultiArray
 from geometry_msgs.msg import Point, Pose
 from visualization_msgs.msg import Marker
 import tf.transformations as tf
+import threading
 from threading import Lock
 
 
@@ -512,13 +513,14 @@ class OctoMapAStar:
         msg.data = flattened_waypoints  # Set the data field with the flattened list
         self.astar_pub.publish(msg)
 
-    def run_new(self):
+    def run(self):
         need_replan=True
         last_position=(0,0)
         last_plan_time = rospy.Time.now()
         replan_interval= rospy.Duration(3.0)
         while not rospy.is_shutdown():
             if self.occupancy_grid is None:
+                print("self.occupancy_grid")
                 self.rate.sleep()
                 continue
             start =  self.world_to_grid(self.current_position_x, self.current_position_y) #(int(self.current_position_x), int(self.current_position_y))
@@ -560,7 +562,7 @@ class OctoMapAStar:
 
             self.rate.sleep()     
             
-    def run(self):
+    def run_new(self):
         last_plan_time = rospy.Time.now()
         replan_interval = rospy.Duration(3.0)
         current_path = []
