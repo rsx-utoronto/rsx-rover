@@ -14,25 +14,6 @@
         <arg name="approx_sync" value="false"/>
         <arg name="rtabmap_viz"		value="true"/>
 		<arg name="rviz"			value="false"/>
-        <!-- Disable transform publishing -->
-        <arg name="publish_tf" value="false"/>
-        <arg name="publish_tf_map" value="false"/>
-        <arg name="odom_tf_angular_variance" value="-1"/>
-        <arg name="odom_tf_linear_variance" value="-1"/>
-
-        <remap from="/tf" to="/tf_fake"/>
-
-        <!-- Disable map optimization -->
-        <param name="Reg/Strategy" type="string" value="0"/>
-        <param name="Mem/STMSize" type="string" value="1"/>
-        <param name="Mem/IncrementalMemory" type="string" value="false"/>
-        <param name="RGBD/NeighborLinkRefining" type="string" value="false"/>
-        <param name="Optimizer/Iterations" type="string" value="0"/>
-        <param name="Mem/NotLinkedNodesKept" type="string" value="false"/>
-
     </include>
-
-    <param name="/rtabmap/publish_tf" type="bool" value="false"/>
-    <param name="/rtabmap_ros/publish_tf" type="bool" value="false"/>
 
 </launch>
