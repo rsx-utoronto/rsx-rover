@@ -869,6 +869,8 @@ class CameraFeed:
         self.bbox_timer.timeout.connect(self.clear_bbox)
         self.bbox_timer.setSingleShot(True)
 
+        self.exposure_value = 50
+
     def register_subscriber1(self):
         if self.image_sub1 is None:
             self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color/compressed", CompressedImage, self.callback1)
@@ -944,6 +946,10 @@ class CameraFeed:
         if cv_image is None:
             return  
 
+        alpha = self.exposure_value / 50.0   # contrast: 0.02 to 2.0
+        beta = (self.exposure_value - 50) * 2  # brightness: -98 to +100
+
+        cv_image = cv2.convertScaleAbs(cv_image, alpha=alpha, beta=beta)
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
         if label == self.label1 and self.bbox:
@@ -1173,12 +1179,23 @@ class RoverGUI(QMainWindow):
         slider_layout.addWidget(self.gear_slider_control)
         gear_group.setLayout(slider_layout)
 
+        #Exposure slider
+        exposure_group = QGroupBox("Exposure Control")
+        exposure_layout = QVBoxLayout()
+        self.exposure_slider_control = Slider(Qt.Horizontal)
+        self.exposure_slider_control.setMinimum(0)
+        self.exposure_slider_control.setMaximum(100)
+        self.exposure_slider_control.setValue(50)
+        exposure_layout.addWidget(self.exposure_slider_control)
+        exposure_group.setLayout(exposure_layout)
+
         # Sync joystick movements between tabs
         self.joystick_control.joystickMoved.connect(self.sync_joysticks)
 
         # Add to layout
         controls_layout.addWidget(joystick_group)
         controls_layout.addWidget(gear_group)
+        controls_layout.addWidget(exposure_group)
         self.controls_group.setLayout(controls_layout)
 
         control_tab_layout = QVBoxLayout()
@@ -1244,16 +1261,29 @@ class RoverGUI(QMainWindow):
         self.gear_slider_splitter.setMaximum(100)
         self.gear_slider_splitter.setValue(0)
 
+        # Exposure slider
+        exposure_group = QGroupBox("Exposure Control")
+        slider_layout2 = QVBoxLayout()
+        # make a new slider object 
+        self.exposure_slider_splitter = Slider(Qt.Horizontal)
+        self.exposure_slider_splitter.setMinimum(0)
+        self.exposure_slider_splitter.setMaximum(100)
+        self.exposure_slider_splitter.setValue(50)
 
         # Connect the signal to the function
         self.gear_slider_splitter.valueUpdated.connect(self.change_gear)
+        self.exposure_slider_splitter.valueUpdated.connect(self.change_exposure)
         
         slider_layout.addWidget(self.gear_slider_splitter)
         gear_group.setLayout(slider_layout)
 
+        slider_layout2.addWidget(self.exposure_slider_splitter)
+        exposure_group.setLayout(slider_layout2)
+
         # Add joystick and gear controls side by side
         controls_layout.addWidget(joystick_group)
         controls_layout.addWidget(gear_group)
+        controls_layout.addWidget(exposure_group)
         self.controls_group.setMinimumHeight(100)
 
         self.controls_group.setLayout(controls_layout)
@@ -1436,6 +1466,10 @@ class RoverGUI(QMainWindow):
         self.velocity_control.set_gear(value/10+1)
         print(f"Changed to Gear: {value}")
         self.gear_slider_splitter.setValue(value)
+    
+    def change_exposure(self,value):
+        #self.camera_feed_cams_tab.exposure_value = value
+        self.camera_feed.exposure_value = value
 
     def pub_next_state(self):
         self.next_state_pub.publish(True)
