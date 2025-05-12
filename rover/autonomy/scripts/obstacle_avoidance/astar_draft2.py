@@ -99,7 +99,7 @@ class OctoMapAStar:
 
         # Map and planning variables
         self.occupancy_grid = None
-        self.grid_resolution = 1  # Resolution of 2D grid (meters per cell)
+        self.grid_resolution = 0.1  # Resolution of 2D grid (meters per cell)
         self.grid_origin=(0.0,0.0)
         self.goal = (3,0.0) #30,-10
         self.rate = rospy.Rate(self.update_rate)
@@ -415,8 +415,8 @@ class OctoMapAStar:
            # print("occupancy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
             
            # print("corner x,y is ", x,y, self.grid_origin[1])
-            grid_x = int((x - self.grid_origin[0])) # / self.grid_resolution)
-            grid_y = int((y - self.grid_origin[1])) # / self.grid_resolution)
+            grid_x = int((x - self.grid_origin[0])/self.grid_resolution) # / self.grid_resolution)
+            grid_y = int((y - self.grid_origin[1])/ self.grid_resolution) # / self.grid_resolution)
           #  print("grid x and y:", grid_x, grid_y)
            # print("for one point, this is self occupancy gird",self.occupancy_grid[grid_x, grid_y])
             # if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
@@ -452,11 +452,12 @@ class OctoMapAStar:
     def get_neighbors(self, node):
         neighbors = []
         x, y = node
+        current_yaw=self.yaw
         for dx, dy in [(-1, -1), (1, 1), (-1,1), (1,-1), (0, -1), (0, 1), (1, 0), (-1, 0)]:
             nx, ny = x + dx, y + dy
             # if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
           #  print("neighbours: ",nx, ny, x, y)
-            if self.is_pose_valid((nx, ny, 0)):
+            if self.is_pose_valid((nx, ny, current_yaw)):
            #     print("pose is valid !!!!!!")
                 neighbors.append((nx, ny))
             # else:
@@ -515,7 +516,8 @@ class OctoMapAStar:
                 continue
            
 
-            start =  start = self.world_to_grid(self.current_position_x, self.current_position_y) #(int(self.current_position_x), int(self.current_position_y))
+            start =  self.world_to_grid(self.current_position_x, self.current_position_y) #(int(self.current_position_x), int(self.current_position_y))
+           
             # print("THIS IS START", start)
             goal = self.goal  # change this!
 
