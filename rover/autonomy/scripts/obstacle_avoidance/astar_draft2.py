@@ -65,6 +65,8 @@ from std_msgs.msg import Float32MultiArray
 from geometry_msgs.msg import Point, Pose
 from visualization_msgs.msg import Marker
 import tf.transformations as tf
+from threading import Lock
+
 
 class OctoMapAStar:
     def __init__(self):
@@ -510,7 +512,7 @@ class OctoMapAStar:
         msg.data = flattened_waypoints  # Set the data field with the flattened list
         self.astar_pub.publish(msg)
 
-    def run(self):
+    def run_new(self):
         need_replan=True
         last_position=(0,0)
         last_plan_time = rospy.Time.now()
@@ -557,6 +559,56 @@ class OctoMapAStar:
                 self.publish_waypoints(path)
 
             self.rate.sleep()     
+            
+    def run(self):
+        last_plan_time = rospy.Time.now()
+        replan_interval = rospy.Duration(3.0)
+        current_path = []
+        current_wp_index = 0  # Track which waypoint we're pursuing
+        path_lock = threading.Lock()  # Add this at class initialization
+
+        while not rospy.is_shutdown():
+            # Update grid origin with current position
+            self.grid_origin = (self.current_position_x, self.current_position_y)
+            
+            # Get current grid positions
+            start = self.world_to_grid(self.current_position_x, self.current_position_y)
+            goal = self.goal
+
+            # Replanning conditions
+            need_replan = False
+            if (rospy.Time.now() - last_plan_time > replan_interval or
+                not current_path or
+                current_wp_index >= len(current_path)):
+                need_replan = True
+
+            # Path following
+            if current_path and current_wp_index < len(current_path):
+                target_wp = current_path[current_wp_index]
+                current_world = self.grid_to_world(*start)
+                target_world = self.grid_to_world(*target_wp)
+                
+                # Calculate distance to waypoint
+                dx = target_world[0] - current_world[0]
+                dy = target_world[1] - current_world[1]
+                distance = math.hypot(dx, dy)
+                
+                if distance > 0.1:
+                    self.publish_velocity(current_world, target_world)
+                else:
+                    current_wp_index += 1  # Move to next waypoint
+
+            # Replanning
+            if need_replan:
+                new_path = self.a_star(start, goal)
+                if new_path:
+                    with path_lock:
+                        current_path = new_path
+                        current_wp_index = 0  # Reset to first waypoint
+                    last_plan_time = rospy.Time.now()
+                    self.publish_waypoints(current_path)
+
+            self.rate.sleep()
 
 if __name__ == "__main__":
     try:
