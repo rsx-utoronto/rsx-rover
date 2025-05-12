@@ -177,7 +177,7 @@ class OctoMapAStar:
         # rospy.loginfo("Publishing OctoMap...")
         octomap_msg = self.tree.writeBinaryMsg()
         header = Header()
-       #header.stamp = rospy.Time.now()
+        header.stamp = rospy.Time.now()
         header.frame_id = "map"
         octomap_msg.header = header
         self.octomap_pub.publish(octomap_msg)
@@ -523,7 +523,10 @@ class OctoMapAStar:
             print("start", start)
             goal = self.goal  # change this!
             
+            print("still in a*")
             if rospy.Time.now() - last_plan_time > replan_interval:
+
+                print("need to replan because time passed")
                 need_replan = True
 
             if last_position:
@@ -544,7 +547,7 @@ class OctoMapAStar:
                     need_replan = False
                     path_available= path
                     
-            if path_available:
+            if path_available and not need_replan:
                 for waypoint in path:
                     self.publish_velocity(current_pos, waypoint)
                     current_pos = waypoint
