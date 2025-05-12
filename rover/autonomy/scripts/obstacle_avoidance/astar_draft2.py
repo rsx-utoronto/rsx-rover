@@ -116,7 +116,7 @@ class OctoMapAStar:
     Point(x=-0.4, y=-0.4, z=0),
     Point(x=-0.4, y=0.4, z=0)
 
-] #0.5, 0.4.0
+] 
         
     def pointcloud_callback(self, msg):
             """
@@ -249,6 +249,7 @@ class OctoMapAStar:
     def publish_bounding_box(self):
         # note there is an older publish bounding box function that just makes a box around the rover..
         marker = Marker()
+        marker.header.frame_id = "map"  # <<< ADD THIS LINE
        # rospy.loginfo("Publishing bounding box from corners")
        # marker.header.frame_id = "map"  # or "odom", depending on your TF setup
         marker.header.stamp = rospy.Time.now()
