@@ -12,8 +12,8 @@
         <arg name="odom_frame_id" value="odom"/>
         <arg name="map_frame_id" value="map"/>
         <arg name="approx_sync" value="false"/>
-        <arg name="rtabmap_viz"		value="true"/>
-		<arg name="rviz"			value="false"/>
+        <arg name="rtabmap_viz"	value="true"/>
+		<arg name="rviz" value="false"/>
     </include>
 
 </launch>
