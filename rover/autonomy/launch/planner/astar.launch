@@ -8,6 +8,8 @@
     <!-- <node name="astar" pkg="rover" type="astar_draft2.py" output="screen"/> -->
 
     <node name="astar" pkg="rover" type="astar_draft2.py" output="screen"/>
+   <!-- <node name="astar" pkg="rover" type="astar_algorithm.py" output="screen"/> -->
+ 
 
     <node name="astar_viz" pkg="rover" type="astar_trajectory.py" output="screen"/>
 
