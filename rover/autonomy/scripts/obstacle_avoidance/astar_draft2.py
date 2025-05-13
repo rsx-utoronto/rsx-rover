@@ -75,11 +75,13 @@ class OctoMapAStar:
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         self.obstacle_threshold = 100
         self.grid_size=(int(1000.0/self.grid_resolution), int(1000.0/self.grid_resolution)) # (width, height)
+        self.origin=(0,0)
         self.half_w=self.grid_size[0] * self.grid_resolution / 2.0
         self.half_h= self.grid_size[1] * self.grid_resolution / 2.0
         self.grid_origin = (self.half_w, self.half_h)
         # self.grid_origin=(self.grid_size[0]/2, self.grid_size[1]/2)
-        self.goal = (self.grid_origin[0]+3, self.grid_origin[1]+ 3)
+        self.goal = (3,0)
+        self.grid_goal = (self.grid_origin[0]+3, self.grid_origin[1]+ 3)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -314,8 +316,8 @@ class OctoMapAStar:
         self.bounding_box_pub.publish(marker)
     
     def world_to_grid(self, x, y):
-        gx = int(round((x - self.grid_origin[0]) / self.grid_resolution)) 
-        gy = int(round((y - self.grid_origin[1]) / self.grid_resolution))
+        gx = int(round((x - self.grid_origin[0])))#self.grid_resolution)) 
+        gy = int(round((y - self.grid_origin[1])))#elf.grid_resolution))
         return gx, gy
 
     def grid_to_world(self, gx, gy):
