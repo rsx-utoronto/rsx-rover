@@ -60,14 +60,14 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         #self.grid_origin=(0.0,0.0)
-        self.goal = (5,-5)
+        self.goal = (3,4)
         self.obstacle_threshold = 100
         self.grid_size=(10000,10000)
         self.grid_origin = (
             -(self.grid_size[0]* self.grid_resolution)/2,  # -100.0 meters (for 0.1m resolution)
             -(self.grid_size[1]* self.grid_resolution)/2  # -100.0 meters
         )
-       #self.grid_origin = (0.0, 0.0)
+        self.grid_origin = (0.0, 0.0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -81,7 +81,7 @@ class OctoMapAStar:
             Point(x=0.3, y=-0.3, z=0),
             Point(x=-0.3, y=-0.3, z=0),
             Point(x=-0.3, y=0.3, z=0) ]
-        self.z_min=0.3
+        self.z_min=0.2
         self.z_max=1.5
         
         # Publishers and Subscribers
@@ -327,9 +327,9 @@ class OctoMapAStar:
         neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
         # if current_height == -1 or neighbor_height == -1:  
         #     return 1000
-        if current_height > self.obstacle_threshold:
+        if current_height >= self.obstacle_threshold:
             return current_height
-        elif neighbor_height >self.obstacle_threshold: 
+        elif neighbor_height >= self.obstacle_threshold: 
             return neighbor_height
         
         return abs(current_height - neighbor_height) + 1
@@ -358,8 +358,8 @@ class OctoMapAStar:
             _, current = open_set.get()
 
             # Skip nodes already processed
-            if current in closed:
-                continue
+            # if current in closed:
+            #     continue
             closed.add(current)
 
             if current == goal:
@@ -390,13 +390,14 @@ class OctoMapAStar:
            # print("corner x,y is ", x,y, self.grid_origin[1])
             grid_x, grid_y = self.world_to_grid(x,y)
            
-            grid_x = int(x)
-            grid_y = int(y)
+            # grid_x = int(x)
+            # grid_y = int(y)
          #  print("grid_x, grid_y is ", grid_x, grid_y,x,y)
             if self.occupancy_grid[grid_x, grid_y] >= self.obstacle_threshold:
                 print("checkpoint 2 true",grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
-
-                self.publish_invalid_pose_marker(grid_x,grid_y)         
+                self.publish_invalid_pose_marker(grid_x, grid_y)                     
+                world_x, world_y = self.grid_to_world(grid_x, grid_y)
+                # self.publish_invalid_pose_marker(world_x, world_y)         
                 return False  # This corner is in an obstacle
 
         return True
