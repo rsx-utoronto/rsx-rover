@@ -74,7 +74,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         self.grid_origin=(0.0,0.0)
-        self.goal = (5,3)
+        self.goal = (3,3)
         self.obstacle_threshold = 100
         self.grid_size=(2000,2000)
         self.rate = rospy.Rate(self.update_rate)
@@ -90,8 +90,8 @@ class OctoMapAStar:
             Point(x=0.3, y=-0.3, z=0),
             Point(x=-0.3, y=-0.3, z=0),
             Point(x=-0.3, y=0.3, z=0) ]
-        self.z_min=0.3
-        self.z_max=1.5
+        self.z_min=0.1
+        self.z_max=15
         
         # Publishers and Subscribers
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
@@ -333,7 +333,7 @@ class OctoMapAStar:
             x, y, z = point
             # Convert to grid indices
             grid_x, grid_y = self.world_to_grid(x,y)
-    
+            print(grid_x, grid_y)
             # Clamp indices to valid bounds
             if 0 <= grid_x < self.grid_size[0] and 0 <= grid_y < self.grid_size[1]:
                 #print("here is z", z)
@@ -537,6 +537,7 @@ class OctoMapAStar:
             #     return True  # out of bounds
 
             if self.occupancy_grid[grid_x, grid_y] >= self.obstacle_threshold:
+           #if self.occupancy_grid[x, y] >= self.obstacle_threshold:
                 print("checkpoint 2 true",x,y, grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
                 #self.publish_invalid_pose_marker(x, y)  # Visualize in RViz
                 return False  # This corner is in an obstacle
@@ -649,6 +650,7 @@ class OctoMapAStar:
 
     def run(self):
         need_replan=True
+        first_time=True
         last_position=(0,0)
         self.current_path= []
         last_plan_time = rospy.Time.now()
@@ -676,8 +678,9 @@ class OctoMapAStar:
                     print("need to replan because last_position moved")
                     need_replan = True
 
-            if need_replan:
+            if need_replan or first_time:
                 need_replan=False
+                first_time=False
                 print("attempting to replan", need_replan, path_available)
                 path = self.a_star(start, goal)
                 if path:
