@@ -18,7 +18,7 @@ class LedLight():
       return ports
 
     def windows_get_led_port(self):
-      item_name = "USB\\VID_0483&PID_374B&MI_02\\6&348E67AE&0&0002"
+      item_name = "USB\\VID_0483&PID_374B&MI_02\\6&348E67AE&0&0002" #Not updated
 
       command = "Get-WMIObject Win32_SerialPort"
 
@@ -70,7 +70,8 @@ class LedLight():
         lines = stdout.splitlines()
         
         led_port = ''
-        led_device = 'STMicroelectronics_STM32_STLink_0672FF575487884867140825'
+
+        led_device = '1a86_USB2.0-Serial'
         found_led = False
 
         for line in lines:
@@ -94,7 +95,9 @@ class LedLight():
       print("Serial Port:", serial_port)
       #serial_port = "/dev/ttyUSB0" #Find out the seriel_port
       self.board = serial.Serial(port=serial_port, baudrate=115200, timeout=1)
-      self.board.write(bytes("blue\n", 'utf-8'))
+      rospy.sleep(2)
+      self.board.write(bytes('blue\n', 'utf-8'))
+      print("I'm initialized!")
       
 
     def state_callback(self, msg):
