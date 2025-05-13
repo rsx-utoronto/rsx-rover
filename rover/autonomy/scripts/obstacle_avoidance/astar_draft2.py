@@ -74,8 +74,11 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         self.obstacle_threshold = 100
-        self.grid_size=(10000,10000)
-        self.grid_origin=(self.grid_size[0]/2, self.grid_size[1]/2)
+        self.grid_size=(int(1000.0/self.grid_resolution), int(1000.0/self.grid_resolution)) # (width, height)
+        self.half_w=self.grid_size[0] * self.grid_resolution / 2.0
+        self.half_h= self.grid_size[1] * self.grid_resolution / 2.0
+        self.grid_origin = (self.half_w, self.half_h)
+        # self.grid_origin=(self.grid_size[0]/2, self.grid_size[1]/2)
         self.goal = (self.grid_origin[0]+3, self.grid_origin[1]+ 3)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
@@ -311,7 +314,7 @@ class OctoMapAStar:
         self.bounding_box_pub.publish(marker)
     
     def world_to_grid(self, x, y):
-        gx = int(round((x - self.grid_origin[0]) / self.grid_resolution))
+        gx = int(round((x - self.grid_origin[0]) / self.grid_resolution)) 
         gy = int(round((y - self.grid_origin[1]) / self.grid_resolution))
         return gx, gy
 
@@ -535,9 +538,9 @@ class OctoMapAStar:
             # if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
             #     print("checkpoint 1 is true", grid_x, self.occupancy_grid.shape[0])
             #     return True  # out of bounds
-
+            print("here are the corners and the grid", corner, x, y, grid_x, grid_y, self.grid_origin[0], self.grid_origin[1])
             if self.occupancy_grid[grid_x, grid_y] >= self.obstacle_threshold:
-           #if self.occupancy_grid[x, y] >= self.obstacle_threshold:
+            #if self.occupancy_grid[x, y] >= self.obstacle_threshold:
                 print("checkpoint 2 true",x,y, grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
                 #self.publish_invalid_pose_marker(x, y)  # Visualize in RViz
                 return False  # This corner is in an obstacle
@@ -590,7 +593,9 @@ class OctoMapAStar:
         Transforms the current bounding box corners to the given (x, y, theta) pose.
         Returns a list of (x, y) tuples in global space.
         """
+
         x_pose, y_pose, theta = pose
+       
         cos_theta = math.cos(theta)
         sin_theta = math.sin(theta)
 
