@@ -2,227 +2,6 @@
 
 """
 A* path planning with OctoMap integration for obstacle avoidance.
-- Goal: Compute a path to a goal while avoiding obstacles using height and occupancy costs.
-- Obstacles below 0.2m height are considered traversable; above are avoided.
-- Publishes resulting path as nav_msgs/Path for RViz visualization.
-"""
-
-import rospy
-import numpy as np
-from nav_msgs.msg import Odometry, Path
-from octomap_msgs.msg import Octomap
-from geometry_msgs.msg import PoseStamped, Twist, Point
-from sensor_msgs.msg import PointCloud2
-from visualization_msgs.msg import Marker
-import ros_numpy
-from octree import OctreeNode
-from queue import PriorityQueue
-from std_msgs.msg import Header
-import math
-import tf.transformations as tf
-
-class OctoMapAStar:
-    def __init__(self):
-        rospy.init_node("octomap_a_star_planner", anonymous=True)
-
-        # Parameters
-        self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
-        self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed/point_cloud/cloud_registered")
-        self.odom_topic = rospy.get_param("~odom_topic", "/rtabmap/odom")
-        self.tree_resolution = rospy.get_param("~resolution", 0.1)
-        self.goal = (9, 7)  # Default goal (x, y)
-        self.grid_resolution = 0.1
-        self.grid_origin = (0.0, 0.0)
-        self.update_rate = rospy.Rate(10)
-
-        # Publishers and Subscribers
-        self.path_pub = rospy.Publisher("/astar_path", Path, queue_size=10)
-        self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
-        self.pointcloud_sub = rospy.Subscriber(self.pointcloud_topic, PointCloud2, self.pointcloud_callback)
-        self.odom_sub = rospy.Subscriber(self.odom_topic, Odometry, self.odom_callback)
-        
-        self.tree = OctreeNode(((-100, -100, -5), (100, 100, 5)), self.tree_resolution)
-        self.occupancy_grid = None
-
-        self.current_position = (0, 0)
-
-    def odom_callback(self, msg):
-        self.current_position = (
-            msg.pose.pose.position.x,
-            msg.pose.pose.position.y
-        )
-
-    def pointcloud_callback(self, msg):
-        print("in pointcloud _callback")
-        point_cloud = ros_numpy.point_cloud2.pointcloud2_to_array(msg)
-        points = np.zeros((point_cloud.shape[0], 3), dtype=np.float32)
-        points[:, 0] = point_cloud['x']
-        points[:, 1] = point_cloud['y']
-        points[:, 2] = point_cloud['z']
-        points = points[np.isfinite(points).all(axis=1)]
-
-        for point in points:
-            self.tree.updateNode(tuple(point), True)
-
-        self.tree.updateInnerOccupancy()
-
-    def octomap_callback(self, msg):
-        print("in octomap callback")
-        self.occupancy_grid = self.process_octomap(msg)
-        
-    def decode_octomap(self, octomap_msg):
-        """
-        Convert a binary OctoMap message into a list of occupied 3D points.
-        Note: Assumes 256x256x256 max grid size — adjust if needed.
-        """
-        rospy.loginfo("Decoding OctoMap...")
-        resolution = octomap_msg.resolution
-        occupied_points = []
-
-        # Loop over each byte in the binary data
-        for offset, byte in enumerate(octomap_msg.data):
-            for bit in range(8):
-                if (byte >> bit) & 1:
-                    # Compute voxel index
-                    voxel_index = offset * 8 + bit
-                    x = (voxel_index % (256 * 256)) % 256
-                    y = (voxel_index % (256 * 256)) // 256
-                    z = voxel_index // (256 * 256)
-
-                    # Convert to real-world coordinates
-                    x_real = x * resolution
-                    y_real = y * resolution
-                    z_real = z * resolution
-
-                    occupied_points.append((x_real, y_real, z_real))
-
-        rospy.loginfo(f"Decoded {len(occupied_points)} occupied voxels.")
-        return occupied_points   
-    
-    def process_octomap(self, octomap_msg):
-        """
-        Convert 3D OctoMap to 2D occupancy grid based on height.
-        Marks cells as obstacles if height > 0.2m.
-        """
-        grid_size = (200, 200)
-        resolution = self.grid_resolution
-        rover_radius = 0  # Use actual rover radius here
-        safety_margin = 0
-        inflation_cells = int((rover_radius + safety_margin) / resolution)
-
-        occupancy_grid = np.zeros(grid_size, dtype=np.float32)
-        occupied_points = self.decode_octomap(octomap_msg)
-
-        for x, y, z in occupied_points:
-            grid_x = int((x - self.grid_origin[0]) / resolution)
-            grid_y = int((y - self.grid_origin[1]) / resolution)
-
-            if 0 <= grid_x < grid_size[0] and 0 <= grid_y < grid_size[1]:
-               # print("Z", z)
-                if z > 0.2:  # Considered an obstacle
-                    for dx in range(-inflation_cells, inflation_cells + 1):
-                        for dy in range(-inflation_cells, inflation_cells + 1):
-                            new_x = min(max(grid_x + dx, 0), grid_size[0] - 1)
-                            new_y = min(max(grid_y + dy, 0), grid_size[1] - 1)
-                            occupancy_grid[new_x, new_y] = 1000  # Assign high cost
-               # else: 
-                #    print("not always an obstacle")
-        return occupancy_grid
-
-    def heuristic(self, a, b):
-        return np.linalg.norm(np.array(a) - np.array(b))
-
-    def get_neighbors(self, node):
-        x, y = node
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < 200 and 0 <= ny < 200:
-                # print("first checkpoint")
-                if self.occupancy_grid[nx, ny] < 1000:
-                    yield (nx, ny)
-
-    def a_star(self, start, goal):
-        print(f"A* called from {start} to {goal}")
-        open_set = PriorityQueue()
-        open_set.put((0, start))
-        came_from = {}
-        g_score = {start: 0}
-        f_score = {start: self.heuristic(start, goal)}
-
-        visited_count = 0
-
-        while not open_set.empty():
-            _, current = open_set.get()
-            visited_count += 1
-
-            if current == goal:
-                print(f"Goal reached after visiting {visited_count} nodes.")
-                return self.reconstruct_path(came_from, current)
-
-            for neighbor in self.get_neighbors(current):
-                #print(f"Considering neighbor: {neighbor}")
-                tentative_g = g_score[current] + 1
-                if neighbor not in g_score or tentative_g < g_score[neighbor]:
-                    came_from[neighbor] = current
-                    g_score[neighbor] = tentative_g
-                    f_score[neighbor] = tentative_g + self.heuristic(neighbor, goal)
-                    open_set.put((f_score[neighbor], neighbor))
-        
-        print(f"Open set exhausted. Visited {visited_count} nodes. No path found.")
-        return []
-    
-    def reconstruct_path(self, came_from, current):
-        path = [current]
-        while current in came_from:
-            current = came_from[current]
-            path.append(current)
-        path.reverse()
-        return path
-
-    def publish_path(self, path):
-        print("publishing path")
-        msg = Path()
-        msg.header.frame_id = "map"
-        msg.header.stamp = rospy.Time.now()
-        for x, y in path:
-            pose = PoseStamped()
-            pose.header.frame_id = "map"
-            pose.pose.position.x = x * self.grid_resolution
-            pose.pose.position.y = y * self.grid_resolution
-            pose.pose.orientation.w = 1.0
-            msg.poses.append(pose)
-        self.path_pub.publish(msg)
-
-    def run(self):
-        while not rospy.is_shutdown():
-            if self.occupancy_grid is None:
-                rospy.loginfo("Waiting for occupancy grid...")
-                self.update_rate.sleep()
-                continue
-
-            start = (int(self.current_position[0] / self.grid_resolution),
-                     int(self.current_position[1] / self.grid_resolution))
-            goal = (int(self.goal[0] / self.grid_resolution), int(self.goal[1] / self.grid_resolution))
-          
-            path = self.a_star(start, goal)
-            print("path is", path)
-            if path:
-                print("found path")
-                self.publish_path(path)
-            self.update_rate.sleep()
-
-if __name__ == '__main__':
-    try:
-        planner = OctoMapAStar()
-        planner.run()
-    except rospy.ROSInterruptException:
-        pass
-'''
-
-#!/usr/bin/env python3
-
-"""
-A* path planning with OctoMap integration for obstacle avoidance.
 
 Want to get map of surroundngs using octomap within 5m -> to process it we will give each block a value representing its cost. 
 The cost depends on height, density -> we go to lowest cost.
@@ -294,15 +73,10 @@ class OctoMapAStar:
         self.boundary= ((-100000, -1000000, -100000), (100000, 100000, 100000)) 
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
+        self.grid_origin=(0.0,0.0)
+        self.goal = (5,3)
         self.obstacle_threshold = 100
-        self.grid_size=(int(1000.0/self.grid_resolution), int(1000.0/self.grid_resolution)) # (width, height)
-        self.origin=(0,0)
-        self.half_w=self.grid_size[0] / 2.0
-        self.half_h= self.grid_size[1]  / 2.0
-        self.grid_origin = (self.half_w, self.half_h)
-        # self.grid_origin=(self.grid_size[0]/2, self.grid_size[1]/2)
-        self.goal = (6,0)
-        self.grid_goal = (self.grid_origin[0]+3, self.grid_origin[1]+ 3)
+        self.grid_size=(2000,2000)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -315,9 +89,9 @@ class OctoMapAStar:
             Point(x=0.3, y=0.3, z=0),
             Point(x=0.3, y=-0.3, z=0),
             Point(x=-0.3, y=-0.3, z=0),
-            Point(x=-0.3, y=0.3, z=0)]
-        self.z_min = 0.2
-        self.z_max = 15
+            Point(x=-0.3, y=0.3, z=0) ]
+        self.z_min=0.3
+        self.z_max=1.5
         
         # Publishers and Subscribers
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
@@ -529,7 +303,6 @@ class OctoMapAStar:
         # Transform corners to global frame using odometry pose
         pose = (self.current_position_x, self.current_position_y, self.yaw)
         global_corners = self.transform_corners(pose)
-       
 
         # Convert back to geometry_msgs/Point
         marker.points = [Point(x=pt[0], y=pt[1], z=self.current_position_z) for pt in global_corners]
@@ -538,13 +311,13 @@ class OctoMapAStar:
         self.bounding_box_pub.publish(marker)
     
     def world_to_grid(self, x, y):
-        gx = int(round((x - self.grid_origin[0])/self.grid_resolution)) 
-        gy = int(round((y - self.grid_origin[1])/self.grid_resolution))
+        gx = int(round((x - self.grid_origin[0]) / self.grid_resolution))
+        gy = int(round((y - self.grid_origin[1]) / self.grid_resolution))
         return gx, gy
 
     def grid_to_world(self, gx, gy):
-        x = gx* self.grid_resolution+self.grid_origin[0]
-        y = gy* self.grid_resolution+self.grid_origin[1]
+        x = gx * self.grid_resolution + self.grid_origin[0]
+        y = gy * self.grid_resolution + self.grid_origin[1]
         return x, y
     
     def process_octomap_old(self, octomap_msg):
@@ -554,21 +327,19 @@ class OctoMapAStar:
         """
              
         occupancy_grid = np.zeros(self.grid_size, dtype=np.float32)
-        
         occupied_points = self.decode_octomap(octomap_msg)
 
         for point in occupied_points:
             x, y, z = point
             # Convert to grid indices
             grid_x, grid_y = self.world_to_grid(x,y)
-            
+    
             # Clamp indices to valid bounds
             if 0 <= grid_x < self.grid_size[0] and 0 <= grid_y < self.grid_size[1]:
                 #print("here is z", z)
                 if self.z_min < z < self.z_max:
                     occupancy_grid[grid_x, grid_y] = self.obstacle_threshold 
                     world_x, world_y = self.grid_to_world(grid_x, grid_y)
-                    print("here is the world x and y", world_x, world_y)
                     self.publish_invalid_pose_marker(world_x, world_y)
                     
         # rospy.loginfo(f"Grid position: ({grid_x}, {grid_y}) -> Cost: {occupancy_grid[grid_x, grid_y]}")
@@ -582,7 +353,6 @@ class OctoMapAStar:
         Convert 3D OctoMap into a 2D occupancy grid (int8, 0=free, 100=occ)
         and publish any new obstacle markers in RViz.
         """
-     #  print("HERE IS PROCESSED DATA", self.world_to_grid(self.goal[0], self.goal[1]))
         # 1) Create/zero the grid
         w, h = self.grid_size
         grid = np.zeros((h, w), dtype=np.int8)   # shape = (rows, cols) #confirm shape!!!
@@ -607,6 +377,7 @@ class OctoMapAStar:
             # cell[0] = row, cell[1] = col
             world_x, world_y = self.grid_to_world(cell[1], cell[0])
             self.publish_invalid_pose_marker(world_x, world_y)
+
 
         return grid
         
@@ -764,15 +535,9 @@ class OctoMapAStar:
             # if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
             #     print("checkpoint 1 is true", grid_x, self.occupancy_grid.shape[0])
             #     return True  # out of bounds
-            
 
-            # grid_x = int(x)
-            # grid_y = int(y)
-           #print("here are the corners and the grid", corner, grid_x, grid_y,x,y, self.grid_origin[0],     self.grid_origin[1])
-               
             if self.occupancy_grid[grid_x, grid_y] >= self.obstacle_threshold:
-            #if self.occupancy_grid[x, y] >= self.obstacle_threshold:
-             #  print("checkpoint 2 true",x,y, grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
+                print("checkpoint 2 true",x,y, grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
                 #self.publish_invalid_pose_marker(x, y)  # Visualize in RViz
                 return False  # This corner is in an obstacle
 
@@ -825,7 +590,6 @@ class OctoMapAStar:
         Returns a list of (x, y) tuples in global space.
         """
         x_pose, y_pose, theta = pose
-       
         cos_theta = math.cos(theta)
         sin_theta = math.sin(theta)
 
@@ -836,7 +600,7 @@ class OctoMapAStar:
 
             x = local_x * cos_theta - local_y * sin_theta + x_pose
             y = local_x * sin_theta + local_y * cos_theta + y_pose
-          
+
             transformed.append((x, y))
         return transformed
     
@@ -885,7 +649,6 @@ class OctoMapAStar:
 
     def run(self):
         need_replan=True
-        first_time=True
         last_position=(0,0)
         self.current_path= []
         last_plan_time = rospy.Time.now()
@@ -913,9 +676,8 @@ class OctoMapAStar:
                     print("need to replan because last_position moved")
                     need_replan = True
 
-            if need_replan or first_time:
+            if need_replan:
                 need_replan=False
-                first_time=False
                 print("attempting to replan", need_replan, path_available)
                 path = self.a_star(start, goal)
                 if path:
@@ -940,7 +702,3 @@ if __name__ == "__main__":
         planner.run()
     except rospy.ROSInterruptException:
         pass
-
-
-
-'''
