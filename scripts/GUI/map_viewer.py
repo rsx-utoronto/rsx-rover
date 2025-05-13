@@ -137,6 +137,21 @@ class MapViewer(QWidget):
 			self.map.runJavaScript('var markerIcon = L.icon({"iconUrl": "' + path + '"});', 0)
 			self.map.runJavaScript(f'{self.goal_points[i].jsName}.setIcon(markerIcon);', 0)
 
+		# add scale to the map
+		self.map.runJavaScript(
+			'''
+			var scaleControl = L.control.scale({
+				position: 'bottomright',
+				metric: true,
+				imperial: false,
+				updateWhenIdle: false,
+				updateWhenZooming: true,
+				updateWhenDragging: false
+			});
+			scaleControl.addTo(map);
+			''', 
+			0
+		)
 
 		# initialize robot line
 		self.last_moved_robot_position = None
