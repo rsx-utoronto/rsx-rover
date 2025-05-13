@@ -73,10 +73,10 @@ class OctoMapAStar:
         self.boundary= ((-100000, -1000000, -100000), (100000, 100000, 100000)) 
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
-        self.grid_origin=(0.0,0.0)
-        self.goal = (3,3)
         self.obstacle_threshold = 100
-        self.grid_size=(2000,2000)
+        self.grid_size=(10000,10000)
+        self.grid_origin=(self.grid_size[0]/2, self.grid_size[1]/2)
+        self.goal = (self.grid_origin[0]+3, self.grid_origin[1]+ 3)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -89,9 +89,9 @@ class OctoMapAStar:
             Point(x=0.3, y=0.3, z=0),
             Point(x=0.3, y=-0.3, z=0),
             Point(x=-0.3, y=-0.3, z=0),
-            Point(x=-0.3, y=0.3, z=0) ]
-        self.z_min=0.1
-        self.z_max=15
+            Point(x=-0.3, y=0.3, z=0)]
+        self.z_min = 0.2
+        self.z_max = 15
         
         # Publishers and Subscribers
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
