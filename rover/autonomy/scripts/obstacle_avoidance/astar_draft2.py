@@ -60,13 +60,14 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         #self.grid_origin=(0.0,0.0)
-        self.goal = (5,3)
+        self.goal = (5,-5)
         self.obstacle_threshold = 100
         self.grid_size=(10000,10000)
         self.grid_origin = (
             -(self.grid_size[0]* self.grid_resolution)/2,  # -100.0 meters (for 0.1m resolution)
             -(self.grid_size[1]* self.grid_resolution)/2  # -100.0 meters
         )
+       #self.grid_origin = (0.0, 0.0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -169,6 +170,9 @@ class OctoMapAStar:
         if octomap_data is not None:
             self.occupancy_grid = octomap_data 
            # rospy.loginfo("2D occupancy grid generated from OctoMap.")
+      # print("here is the new data from world_togrid", self.world_to_grid(self.current_position_x, self.current_position_y))
+      # print("here is the new data from grid toworld", self.grid_to_world(5000,5000))
+
 
     def decode_octomap(self, octomap_msg):
         """
@@ -270,7 +274,7 @@ class OctoMapAStar:
         for cell in occupied_cells:
             # cell[0] = row, cell[1] = col
             world_x, world_y = self.grid_to_world(cell[1], cell[0])
-            self.publish_invalid_pose_marker(world_x, world_y)
+        #    self.publish_invalid_pose_marker(world_x, world_y)
 
         return grid
         
@@ -385,14 +389,14 @@ class OctoMapAStar:
            # print("occupancy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
            # print("corner x,y is ", x,y, self.grid_origin[1])
             grid_x, grid_y = self.world_to_grid(x,y)
-            # print("for one point, this is self occupancy gird",self.occupancy_grid[grid_x, grid_y])
-            # if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
-            #     print("checkpoint 1 is true", grid_x, self.occupancy_grid.shape[0])
-            #     return True  # out of bounds
-
+           
+            grid_x = int(x)
+            grid_y = int(y)
+         #  print("grid_x, grid_y is ", grid_x, grid_y,x,y)
             if self.occupancy_grid[grid_x, grid_y] >= self.obstacle_threshold:
-                print("checkpoint 2 true",x,y, grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
-                #self.publish_invalid_pose_marker(x, y)  # Visualize in RViz
+                print("checkpoint 2 true",grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
+
+                self.publish_invalid_pose_marker(grid_x,grid_y)         
                 return False  # This corner is in an obstacle
 
         return True
