@@ -34,14 +34,14 @@ third: make sure it can make a path around them
 
 import rospy
 import numpy as np
-import ros_numpy
 np.float = float
+import ros_numpy
 from nav_msgs.msg import Odometry, OccupancyGrid
 from octomap_msgs.msg import Octomap
 from geometry_msgs.msg import PoseStamped, Twist, Pose, Point, Quaternion
 from sensor_msgs.msg import PointCloud2
 from octree import OctreeNode
-from octomap import Octree
+#from Octomap import Octree
 from queue import PriorityQueue
 from std_msgs.msg import Header, Float32MultiArray
 import math
@@ -74,7 +74,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         self.grid_origin=(0.0,0.0)
-        self.goal = (0,4)
+        self.goal = (5,3)
         self.obstacle_threshold = 100
         self.grid_size=(2000,2000)
         self.rate = rospy.Rate(self.update_rate)
@@ -86,10 +86,10 @@ class OctoMapAStar:
         self.current_orientation_y=0
         self.current_orientation_z=0
         self.current_corner_array = [
-            Point(x=0.2, y=0.2, z=0),
-            Point(x=0.2, y=-0.2, z=0),
-            Point(x=-0.2, y=-0.2, z=0),
-            Point(x=-0.2, y=0.2, z=0) ]
+            Point(x=0.3, y=0.3, z=0),
+            Point(x=0.3, y=-0.3, z=0),
+            Point(x=-0.3, y=-0.3, z=0),
+            Point(x=-0.3, y=0.3, z=0) ]
         self.z_min=0.3
         self.z_max=1.5
         
@@ -210,7 +210,7 @@ class OctoMapAStar:
             self.occupancy_grid = octomap_data 
            # rospy.loginfo("2D occupancy grid generated from OctoMap.")
 
-    def decode_octomap_old(self, octomap_msg):
+    def decode_octomap(self, octomap_msg):
         """
         makes a list of occupied points in 3D space
         Decode an OctoMap binary message into a list of occupied points without using struct.
@@ -270,7 +270,7 @@ class OctoMapAStar:
 
         return occupied
 
-    def decode_octomap(self, octomap_msg):
+    def decode_octomap_new(self, octomap_msg):
         # Load the OctoMap from the ROS message
         octree = octomap.OcTree(octomap_msg.resolution)
         octree.readBinaryData(octomap_msg.data)
@@ -373,9 +373,11 @@ class OctoMapAStar:
 
         # 5) (Optional) publish new markers once per cell
         occupied_cells = np.argwhere(grid == self.obstacle_threshold)
-        self.publish_invalid_pose_markers({
-            (cell[1], cell[0])  # note: (x,y) = (col,row)
-            for cell in occupied_cells})
+        for cell in occupied_cells:
+            # cell[0] = row, cell[1] = col
+            world_x, world_y = self.grid_to_world(cell[1], cell[0])
+            self.publish_invalid_pose_marker(world_x, world_y)
+
 
         return grid
         
