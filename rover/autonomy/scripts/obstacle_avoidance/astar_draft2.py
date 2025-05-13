@@ -378,7 +378,6 @@ class OctoMapAStar:
             world_x, world_y = self.grid_to_world(cell[1], cell[0])
             self.publish_invalid_pose_marker(world_x, world_y)
 
-
         return grid
         
     def publish_occupancy_grid(self, occupancy_grid):
