@@ -74,9 +74,14 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         self.obstacle_threshold = 100
-        self.grid_size=(10000,10000)
-        self.grid_origin=(self.grid_size[0]/2, self.grid_size[1]/2)
-        self.goal = (self.grid_origin[0]+3, self.grid_origin[1]+ 3)
+        self.grid_size=(int(1000.0/self.grid_resolution), int(1000.0/self.grid_resolution)) # (width, height)
+        self.origin=(0,0)
+        self.half_w=self.grid_size[0] / 2.0
+        self.half_h= self.grid_size[1]  / 2.0
+        self.grid_origin = (self.half_w, self.half_h)
+        # self.grid_origin=(self.grid_size[0]/2, self.grid_size[1]/2)
+        self.goal = (6,0)
+        self.grid_goal = (self.grid_origin[0]+3, self.grid_origin[1]+ 3)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -303,6 +308,7 @@ class OctoMapAStar:
         # Transform corners to global frame using odometry pose
         pose = (self.current_position_x, self.current_position_y, self.yaw)
         global_corners = self.transform_corners(pose)
+       
 
         # Convert back to geometry_msgs/Point
         marker.points = [Point(x=pt[0], y=pt[1], z=self.current_position_z) for pt in global_corners]
@@ -311,13 +317,13 @@ class OctoMapAStar:
         self.bounding_box_pub.publish(marker)
     
     def world_to_grid(self, x, y):
-        gx = int(round((x - self.grid_origin[0]) / self.grid_resolution))
-        gy = int(round((y - self.grid_origin[1]) / self.grid_resolution))
+        gx = int(round((x - self.grid_origin[0])/self.grid_resolution)) 
+        gy = int(round((y - self.grid_origin[1])/self.grid_resolution))
         return gx, gy
 
     def grid_to_world(self, gx, gy):
-        x = gx * self.grid_resolution + self.grid_origin[0]
-        y = gy * self.grid_resolution + self.grid_origin[1]
+        x = gx* self.grid_resolution+self.grid_origin[0]
+        y = gy* self.grid_resolution+self.grid_origin[1]
         return x, y
     
     def process_octomap_old(self, octomap_msg):
@@ -327,19 +333,21 @@ class OctoMapAStar:
         """
              
         occupancy_grid = np.zeros(self.grid_size, dtype=np.float32)
+        
         occupied_points = self.decode_octomap(octomap_msg)
 
         for point in occupied_points:
             x, y, z = point
             # Convert to grid indices
             grid_x, grid_y = self.world_to_grid(x,y)
-            print(grid_x, grid_y)
+            
             # Clamp indices to valid bounds
             if 0 <= grid_x < self.grid_size[0] and 0 <= grid_y < self.grid_size[1]:
                 #print("here is z", z)
                 if self.z_min < z < self.z_max:
                     occupancy_grid[grid_x, grid_y] = self.obstacle_threshold 
                     world_x, world_y = self.grid_to_world(grid_x, grid_y)
+                    print("here is the world x and y", world_x, world_y)
                     self.publish_invalid_pose_marker(world_x, world_y)
                     
         # rospy.loginfo(f"Grid position: ({grid_x}, {grid_y}) -> Cost: {occupancy_grid[grid_x, grid_y]}")
@@ -353,6 +361,7 @@ class OctoMapAStar:
         Convert 3D OctoMap into a 2D occupancy grid (int8, 0=free, 100=occ)
         and publish any new obstacle markers in RViz.
         """
+     #  print("HERE IS PROCESSED DATA", self.world_to_grid(self.goal[0], self.goal[1]))
         # 1) Create/zero the grid
         w, h = self.grid_size
         grid = np.zeros((h, w), dtype=np.int8)   # shape = (rows, cols) #confirm shape!!!
@@ -534,10 +543,15 @@ class OctoMapAStar:
             # if not (0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]):
             #     print("checkpoint 1 is true", grid_x, self.occupancy_grid.shape[0])
             #     return True  # out of bounds
+            
 
+            # grid_x = int(x)
+            # grid_y = int(y)
+           #print("here are the corners and the grid", corner, grid_x, grid_y,x,y, self.grid_origin[0],     self.grid_origin[1])
+               
             if self.occupancy_grid[grid_x, grid_y] >= self.obstacle_threshold:
-           #if self.occupancy_grid[x, y] >= self.obstacle_threshold:
-                print("checkpoint 2 true",x,y, grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
+            #if self.occupancy_grid[x, y] >= self.obstacle_threshold:
+             #  print("checkpoint 2 true",x,y, grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
                 #self.publish_invalid_pose_marker(x, y)  # Visualize in RViz
                 return False  # This corner is in an obstacle
 
@@ -590,6 +604,7 @@ class OctoMapAStar:
         Returns a list of (x, y) tuples in global space.
         """
         x_pose, y_pose, theta = pose
+       
         cos_theta = math.cos(theta)
         sin_theta = math.sin(theta)
 
@@ -600,7 +615,7 @@ class OctoMapAStar:
 
             x = local_x * cos_theta - local_y * sin_theta + x_pose
             y = local_x * sin_theta + local_y * cos_theta + y_pose
-
+          
             transformed.append((x, y))
         return transformed
     
