@@ -65,7 +65,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         #self.grid_origin=(0.0,0.0)
-        self.goal = (7,10)
+        self.goal = (7,0)
         self.obstacle_threshold = 100
         self.grid_size=(10000,10000)
         self.grid_origin = (
@@ -86,7 +86,7 @@ class OctoMapAStar:
             Point(x=0.3, y=-0.3, z=0),
             Point(x=-0.3, y=-0.3, z=0), #with 0.5, it produces green blocks!
             Point(x=-0.3, y=0.3, z=0) ]
-        self.z_min = 0.3
+        self.z_min = 0.2
         self.z_max = 3
         
         # Publishers and Subscribers
@@ -114,6 +114,25 @@ class OctoMapAStar:
         mask = np.isfinite(xyz).all(axis=1)
         xyz = xyz[mask]
 
+        w,h = self.grid_size
+        new_height_grid = np.zeros((h, w), dtype=np.float32)  # heights
+        grid= np.zeros((h, w), dtype=np.int8)   # shape = (rows, cols) #confirm shape!!!
+
+        for x,y,z in xyz:
+            if not (self.z_min < z < self.z_max):
+                print("not in threshold", z)
+                continue
+
+            gx,gy=self.world_to_grid(x,y)
+            if 0 <= gx < self.grid_size[0] and 0 <= gy < self.grid_size[1]: #whithin the height threshhold so assign obstacle_threshold
+                grid[gy, gx] = self.obstacle_threshold   # mark as occupied
+                new_height_grid[gy, gx] = z  # Store actual height
+                world_x, world_y = self.grid_to_world(gx, gy)       
+                self.publish_invalid_pose_marker(world_x, world_y)  # Publish invalid pose marker
+
+        
+        self.height_gri=new_height_grid
+        self.occupancy_grid=grid
         # 2) Ray-trace free space and mark endpoints occupied in one call
         self.tree.insertPointCloud(
             xyz,
@@ -172,10 +191,11 @@ class OctoMapAStar:
         Convert OctoMap to a 2D occupancy grid.
         """
         # Parse OctoMap data and project into 2D grid
-        octomap_data = self.process_octomap(msg) # extract 3d data from octomap and converts into 2d grid 
+      #  octomap_data = self.process_octomap(msg) # extract 3d data from octomap and converts into 2d grid 
+        octomap_data = self.decode_octomap(msg) # extract 3d data from octomap and converts into 2d grid
         if octomap_data is not None:
             self.occupancy_grid = octomap_data 
-           # rospy.loginfo("2D occupancy grid generated from OctoMap.")
+            #rospy.loginfo("2D occupancy grid generated from OctoMap.")
       # print("here is the new data from world_togrid", self.world_to_grid(self.current_position_x, self.current_position_y))
       # print("here is the new data from grid toworld", self.grid_to_world(5000,5000))
 
@@ -256,6 +276,7 @@ class OctoMapAStar:
         Convert 3D OctoMap into a 2D occupancy grid (int8, 0=free, 100=occ)
         and publish any new obstacle markers in RViz.
         """
+        
       #  self.height_grid = np.zeros_like(self.occupancy_grid, dtype=np.float32)
         # 1) Create/zero the grid
         w, h = self.grid_size
@@ -266,13 +287,17 @@ class OctoMapAStar:
 
         # 3) Project into 2D
         for x, y, z in occupied3d:
+            
             if not (self.z_min < z < self.z_max):
+                print("not in threshold", z)
                 continue
             gx, gy = self.world_to_grid(x, y)
             if 0 <= gx < w and 0 <= gy < h: #whithin the height threshhold so assign obstacle_threshold
                 grid[gy, gx] = self.obstacle_threshold   # mark as occupied
-              
                 self.height_grid[gy, gx] = z  # Store actual height
+                world_x, world_y = self.grid_to_world(gx, gy)
+                print("publishing invalid pose markers", world_x, world_y)
+                self.publish_invalid_pose_marker(world_x, world_y)  # Publish invalid pose marker
         self.occupancy_grid=grid
         return grid
 
@@ -370,7 +395,7 @@ class OctoMapAStar:
                # self.publish_invalid_pose_marker(grid_x, grid_y)     
                            
                 world_x, world_y = self.grid_to_world(grid_x, grid_y)
-                self.publish_invalid_pose_marker(world_x, world_y)         
+                #self.publish_invalid_pose_marker(world_x, world_y)         
                 return False  # This corner is in an obstacle
 
         return True
@@ -385,7 +410,7 @@ class OctoMapAStar:
                 if self.occupancy_grid[grid_y, grid_x] >= self.obstacle_threshold:
                     print("checkpoint 2 true", grid_x, grid_y, pose, self.occupancy_grid[grid_y, grid_x])
                     world_x, world_y = self.grid_to_world(grid_x, grid_y)
-                    self.publish_invalid_pose_marker(world_x, world_y)
+                   # self.publish_invalid_pose_marker(world_x, world_y)
                     return False
         return True
     
