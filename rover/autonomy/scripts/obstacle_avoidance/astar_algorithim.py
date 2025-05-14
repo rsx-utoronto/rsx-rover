@@ -31,11 +31,15 @@ from sensor_msgs.msg import PointCloud2
 from queue import PriorityQueue
 from std_msgs.msg import Header, Float32MultiArray
 import math
-from visualization_msgs.msg import Marker
+from visualization_msgs.msg import Marker,MarkerArray
 import tf.transformations as tf
 from tf.transformations import quaternion_from_euler
 import threading
 from threading import Lock
+=
+from geometry_msgs.msg import Point
+from std_msgs.msg import Float32MultiArray, String
+from nav_msgs.msg import Path
 
 
 class AstarObstacleAvoidance():
@@ -96,6 +100,10 @@ class AstarObstacleAvoidance():
         self.vel_pub = rospy.Publisher(self.vel_topic, Twist, queue_size=10)
         self.pointcloud_sub = rospy.Subscriber(self.pointcloud_topic, PointCloud2, self.pointcloud_callback)
         self.octomap_pub = rospy.Publisher(self.octomap_topic, Octomap, queue_size=10)
+        self.frame_id = frame_id
+        self.marker_array_pub = rospy.Publisher('/dwa_trajectories', MarkerArray, queue_size=1)
+        self.astar_marker_pub = rospy.Publisher('/astar_waypoints_markers', MarkerArray, queue_size=1)  # New publisher for A* markers
+        self.footprint_pub = rospy.Publisher('/robot_footprint', Marker, queue_size=1)
 
 
     def pointcloud_callback(self, msg):
@@ -164,7 +172,86 @@ class AstarObstacleAvoidance():
         header.frame_id = "map"
         octomap_msg.header = header
         self.octomap_pub.publish(octomap_msg)
+    def publish_trajectories(self, trajectories):
+        marker_array = MarkerArray()
+        marker_id = 0
 
+        for traj in trajectories:
+            line_marker = Marker()
+            line_marker.header.frame_id = self.frame_id
+            line_marker.header.stamp = rospy.Time.now()
+            line_marker.ns = "dwa_trajectories"
+            line_marker.id = marker_id
+            line_marker.type = Marker.LINE_STRIP
+            line_marker.action = Marker.ADD
+            line_marker.scale.x = 0.02
+            line_marker.color.r = 1.0
+            line_marker.color.g = 1.0
+            line_marker.color.b = 0.0
+            line_marker.color.a = 1.0
+            line_marker.pose.orientation.w = 1.0
+            line_marker.lifetime = rospy.Duration(0.1)
+
+            for point in traj:
+                p = Point()
+                p.x = point.x
+                p.y = point.y
+                p.z = 0.0
+                line_marker.points.append(p)
+
+            marker_array.markers.append(line_marker)
+            marker_id += 1
+
+        self.marker_array_pub.publish(marker_array)
+
+    def publish_waypoints(self, waypoints):
+        marker_array = MarkerArray()
+
+        # Points marker for waypoints (larger size)
+        points_marker = Marker()
+        points_marker.header.frame_id = self.frame_id
+        points_marker.header.stamp = rospy.Time.now()
+        points_marker.ns = "astar_points"
+        points_marker.id = 0
+        points_marker.type = Marker.POINTS
+        points_marker.action = Marker.ADD
+        points_marker.scale.x = 0.2  # Increased size
+        points_marker.scale.y = 0.2
+        points_marker.color.r = 1.0
+        points_marker.color.g = 0.0
+        points_marker.color.b = 0.0
+        points_marker.color.a = 1.0
+        points_marker.lifetime = rospy.Duration(0)
+
+        # Line strip connecting waypoints
+        line_marker = Marker()
+        line_marker.header.frame_id = self.frame_id
+        line_marker.header.stamp = rospy.Time.now()
+        line_marker.ns = "astar_line"
+        line_marker.id = 1
+        line_marker.type = Marker.LINE_STRIP
+        line_marker.action = Marker.ADD
+        line_marker.scale.x = 0.1  # Line width
+        line_marker.color.r = 1.0
+        line_marker.color.g = 0.0
+        line_marker.color.b = 0.0
+        line_marker.color.a = 1.0
+        line_marker.pose.orientation.w = 1.0
+        line_marker.lifetime = rospy.Duration(0)
+
+        # Populate both markers with waypoints
+        for wp in waypoints:
+            p = Point()
+            p.x = wp[0]
+            p.y = wp[1]
+            p.z = 0.0
+            points_marker.points.append(p)
+            line_marker.points.append(p)
+
+        marker_array.markers.append(points_marker)
+        marker_array.markers.append(line_marker)
+
+        self.astar_marker_pub.publish(marker_array)
     def publish_bounding_box(self):
         # note there is an older publish bounding box function that just makes a box around the rover..
         marker = Marker()
