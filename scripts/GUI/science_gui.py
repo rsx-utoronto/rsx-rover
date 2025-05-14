@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 
+import csv
 import sys
 import rospy
 import map_viewer as map_viewer
@@ -16,16 +17,20 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayou
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
+from rover.arm.ros1.gripper import arm_serial_connector
 from sensor_msgs.msg import NavSatFix, CompressedImage, Image
 from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
+import pyqtgraph as pg
+
 
 
 #cache folder of map tiles generated from tile_scraper.py
 CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
+science_arduino_board_name = None #Glob variable for board name, SHOULD BE CHANGED
 
 #map widget that has map viewer 
 class mapOverlay(QWidget):
@@ -1070,6 +1075,12 @@ class RoverGUI(QMainWindow):
         self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
         self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
         self.reached_state = None
+        self.ph1_plot_data = []
+        self.ph2_plot_data = []
+        self.hum_plot_data = []
+        self.temp_plot_data = []
+        self.pmt_plot_data = []
+        self.ph1_time, self.ph2_time, self.hum_time, self.temp_time, self.pmt_time = 1
 
         # Create tabs
         self.scienceTab = QWidget()  # Create science tab first
@@ -1489,6 +1500,89 @@ class RoverGUI(QMainWindow):
         self.auto_abort_pub.publish(True)
         self.setStyleSheet("background-color: #FFFFFF")
         self.status_label.setText("")
+    
+        # Format example: A0: xx.xx A1: xx.xx Signal Voltage (A0 - A1): xx.xx
+    def get_probe_data_callback(self, data):
+        msg = data.data.split(" ")
+        if self.ph1_button: #Arbitrary Button Name
+            if self.ph1_time == 1:
+                ph1_time_buffer = []
+                ph1_data_buffer = []
+            ph1_time_buffer.append(self.ph1_time)
+            ph1_graph_data = msg[0][4:]
+            ph1_data_buffer.append(ph1_graph_data)
+            self.ph1_time += 1
+        if self.ph1_save_button and ph1_data_buffer != [] and ph1_time_buffer != []: #Arbitrary Button Name
+            self.ph1_plot_data = [ph1_data_buffer, ph1_time_buffer]
+            self.ph1_time = 1
+            ph1_data_buffer.clear()
+            ph1_time_buffer.clear()
+
+        if self.ph2_button: #Arbitrary Button Name
+            if self.ph2_time == 1:
+                ph2_time_buffer = []
+                ph2_data_buffer = []
+            ph2_time_buffer.append(self.ph2_time)
+            ph2_graph_data = msg[1][4:]
+            ph2_data_buffer.append(ph2_graph_data)
+            self.ph2_time += 1
+        if self.ph2_save_button and ph2_data_buffer != [] and ph2_time_buffer != []: #Arbitrary Button Name
+            self.ph2_plot_data = [ph2_data_buffer, ph2_time_buffer]
+            self.ph2_time = 1
+            ph2_data_buffer.clear()
+            ph2_time_buffer.clear()
+        
+        if self.hum_button: #Arbitrary Button Name
+            if self.hum_time == 1:
+                hum_time_buffer = []
+                hum_data_buffer = []
+            hum_time_buffer.append(self.hum_time)
+            hum_graph_data = msg[2][4:]
+            hum_data_buffer.append(hum_graph_data)
+            self.hum_time += 1
+        if self.hum_save_button and hum_data_buffer != [] and hum_time_buffer != []: #Arbitrary Button Name
+            self.hum_plot_data = [hum_data_buffer, hum_time_buffer]
+            self.hum_time = 1
+            hum_data_buffer.clear()
+            hum_time_buffer.clear()
+        
+        if self.temp_button: #Arbitrary Button Name
+            if self.temp_time == 1:
+                temp_time_buffer = []
+                temp_data_buffer = []
+            temp_time_buffer.append(self.temp_time)
+            temp_graph_data = msg[3][5:]
+            temp_data_buffer.append(temp_graph_data)
+            self.temp_time += 1
+        if self.temp_save_button and temp_data_buffer != [] and temp_time_buffer != []: #Arbitrary Button Name
+            self.temp_plot_data = [temp_data_buffer, temp_time_buffer]
+            self.temp_time = 1
+            temp_data_buffer.clear()
+            temp_time_buffer.clear()
+
+        if self.pmt_button: #Arbitrary Button Name
+            if self.pmt_time == 1:
+                pmt_time_buffer = []
+                pmt_data_buffer = []
+            pmt_time_buffer.append(self.pmt_time)
+            pmt_graph_data = msg[2][4:]
+            pmt_data_buffer.append(pmt_graph_data)
+            self.pmt_time += 1
+        if self.pmt_save_button and pmt_data_buffer != [] and pmt_time_buffer != []: #Arbitrary Button Name
+            self.pmt_plot_data = [pmt_data_buffer, pmt_time_buffer]
+            self.pmt_time = 1
+            pmt_data_buffer.clear()
+            pmt_time_buffer.clear()
+         
+    def plot_science_data(self, data_buffer, time_buffer, dataType): #dataType is a string to indicated what kind of data is plotted
+        self.science_plot = pg.PlotWidget() #self.science_plot is the PlotWidget object that is going to be displayed in the data display section
+        self.setCentralWidget(self.science_plot)
+        self.science_plot.setBackground("w")
+        pen = pg.mkPen(color=(255, 0, 0))
+        self.plot_graph.setLabel("left", dataType)
+        self.plot_graph.setLabel("bottom", "Time")
+        self.science_plot.plot(time_buffer, data_buffer, pen=pen, symbol="+",symbolSize=10, symbolBrush="b")
+        
 
 class SensorBlock(QWidget):
     def __init__(self):

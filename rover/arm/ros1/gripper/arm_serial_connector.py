@@ -92,7 +92,7 @@ class Serial_Port:
         else:
             print("\nPort not connected")
     
-    def read_bytes(self) -> str:
+    def read_bytes(self, key='\n') -> str:
         """
         
         """
@@ -100,8 +100,11 @@ class Serial_Port:
         if self.device_port:
 
             # Read data value coming to the device port
-            data = self.device_port.read_until()
-            return str(data, encoding='utf-8')
+            data = self.device_port.read_until(expected=key)
+            if data != "":
+                return str(data, encoding='utf-8')
+            else:
+                return None
 
     def set_permissions(self):
         """
