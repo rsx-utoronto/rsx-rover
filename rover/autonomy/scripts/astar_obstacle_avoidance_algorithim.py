@@ -26,7 +26,7 @@ from nav_msgs.msg import Odometry, OccupancyGrid
 from octomap_msgs.msg import Octomap
 from geometry_msgs.msg import PoseStamped, Twist, Pose, Point, Quaternion
 from sensor_msgs.msg import PointCloud2
-from octree import OctreeNode
+#from octree import OctreeNode
 #from Octomap import Octree
 from queue import PriorityQueue
 from std_msgs.msg import Header, Float32MultiArray

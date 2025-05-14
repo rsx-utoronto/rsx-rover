@@ -5,7 +5,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Bool, Float32MultiArray
-from rover.autonomy.scripts.astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
+from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
 import math
 import ar_detection_node as adn
 
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     targets = [(9, 2)]  
     try:
         rospy.init_node('straight_line_approach_node')
-        approach = StraightLineObstacleAvoidance(1.5, 0.5, targets)
+        approach = StraightLineObstacleAvoidance(0, 0, targets)
         approach.navigate()
     except rospy.ROSInterruptException:
         pass
