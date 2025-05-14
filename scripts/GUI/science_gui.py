@@ -23,6 +23,7 @@ import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
 
+
 #cache folder of map tiles generated from tile_scraper.py
 CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
 
@@ -1272,47 +1273,62 @@ class RoverGUI(QMainWindow):
         button_style = "padding: 4px; min-height: 20px;"
         # Create main tab
         self.scienceTab = QWidget()
-        self.tabs.addTab(self.scienceTab, "Science")
         
         # Main horizontal splitter dividing the tab into 2 sections
         main_splitter = QSplitter(Qt.Horizontal)
         
         # Left section with vertical splitter
         left_vertical_splitter = QSplitter(Qt.Vertical)
+        left_vertical_splitter.setHandleWidth(1)  # Minimize the splitter handle width
         
         # First item in left vertical splitter
-        left_top_widget = QGroupBox("") # top controls bar
-        left_top_layout = QVBoxLayout()
-        left_top_widget.setLayout(left_top_layout)
+        left_top_widget = SensorBlock()
+        left_top_widget.setMinimumHeight(40)  # Ensure minimum height
         
         # Second item in left vertical splitter with horizontal splitter
-        left_middle_widget = QGroupBox("") # chem fam controls
+        left_middle_widget = QGroupBox("")
+        left_middle_widget.setMaximumHeight(200)  # Set maximum height constraint
         left_middle_splitter = QSplitter(Qt.Horizontal)
+        left_middle_splitter.setHandleWidth(1)  # Minimize the splitter handle width
         
-        # Add 2 items to the horizontal splitter
-        left_middle_item1 = QGroupBox("") # chem
-        left_middle_item1_layout = QVBoxLayout()
-        left_middle_item1.setLayout(left_middle_item1_layout)
+        # Add 2 items to the horizontal splitter with reduced height
+        left_middle_item1 = SampleBlock(True)
+        left_middle_item1.setMaximumHeight(180)  # Limit SampleBlock height
         
-        left_middle_item2 = QGroupBox("") # fam
-        left_middle_item2_layout = QVBoxLayout()
-        left_middle_item2.setLayout(left_middle_item2_layout)
+        left_middle_item2 = SampleBlock(False)
+        left_middle_item2.setMaximumHeight(180)  # Limit SampleBlock height
         
         left_middle_splitter.addWidget(left_middle_item1)
         left_middle_splitter.addWidget(left_middle_item2)
         
         left_middle_layout = QVBoxLayout()
+        left_middle_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins
+        left_middle_layout.setSpacing(0)  # Remove spacing
         left_middle_layout.addWidget(left_middle_splitter)
         left_middle_widget.setLayout(left_middle_layout)
 
-        left_bottom_widget = QGroupBox("") # data display
+        left_bottom_widget = QGroupBox("")
         left_bottom_layout = QVBoxLayout()
+        left_bottom_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins
+        left_bottom_layout.setSpacing(0)  # Remove spacing
         left_bottom_widget.setLayout(left_bottom_layout)
+        
+        # Remove title margins from all group boxes
+        left_top_widget.setStyleSheet("QGroupBox { margin-top: 0px; }")
+        left_middle_widget.setStyleSheet("QGroupBox { margin-top: 0px; }")
+        left_bottom_widget.setStyleSheet("QGroupBox { margin-top: 0px; }")
+        left_middle_item1.setStyleSheet("QGroupBox { margin-top: 0px; }")
+        left_middle_item2.setStyleSheet("QGroupBox { margin-top: 0px; }")
         
         # Add widgets to left vertical splitter
         left_vertical_splitter.addWidget(left_top_widget)
         left_vertical_splitter.addWidget(left_middle_widget)
         left_vertical_splitter.addWidget(left_bottom_widget)
+        
+        # Set stretch factors to minimize the middle section height
+        left_vertical_splitter.setStretchFactor(0, 1)  # Change from 0 to 1 to give SensorBlock space
+        left_vertical_splitter.setStretchFactor(1, 2)  # Middle section - some stretch
+        left_vertical_splitter.setStretchFactor(2, 3)  # Bottom section - most space
         
         # Right section with vertical splitter
         right_vertical_splitter = QSplitter(Qt.Vertical)
@@ -1386,17 +1402,20 @@ class RoverGUI(QMainWindow):
         self.camera_feed = CameraFeed(self.camera_label1, self.camera_label2, self.camera_label3, self.camera_label4, self.camera_label5, self.camerasplitter)
         self.camerasplitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        self.genieControl = GenieControl()
-
         self.select_splitter = QSplitter(Qt.Horizontal)
-        self.select_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        self.select_splitter.addWidget(self.camerasplitter)
-        self.select_splitter.addWidget(self.genieControl)
+        self.select_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # Change to Minimum
+        self.select_splitter.setMaximumHeight(50)  # Set a maximum height
 
         # Use CameraSelect menu-based selector
         self.camera_selector = CameraSelect()
-        self.camera_selector.cameras_changed.connect(self.camera_feed.update_active_cameras)
+        self.camera_selector.cameras_changed.connect(self.update_active_cameras_science)
+        self.camera_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # Ensure this is minimal height
+
+        self.genieControl = GenieControl()
+        self.genieControl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # Ensure this is minimal height
+
+        self.select_splitter.addWidget(self.camera_selector)
+        self.select_splitter.addWidget(self.genieControl)
 
         camera_layout.addWidget(self.select_splitter)
         self.camerasplitter.addWidget(self.camera_label1)
@@ -1424,6 +1443,22 @@ class RoverGUI(QMainWindow):
         science_tab_layout = QVBoxLayout()
         science_tab_layout.addWidget(main_splitter)
         self.scienceTab.setLayout(science_tab_layout)
+
+    def update_active_cameras_science(self, active_cameras):
+        self.camera_feed.update_active_cameras(active_cameras)
+        # Update visibility of the genie control based on active cameras
+        # if active_cameras["Genie camera"]:
+        #     self.genieControl.show_genie_button(True)
+        # else:
+        #     self.genieControl.show_genie_button(False)
+        if active_cameras["Microscope camera"]:
+            self.genieControl.show_zoom_controls(True)
+        else:
+            self.genieControl.show_zoom_controls(False)
+        if active_cameras["Zed (front) camera"]:
+            self.genieControl.show_pano_button(True)
+        else:
+            self.genieControl.show_pano_button(False)
 
     def on_checkbox_state_changed(self, state,map_overlay):
         if state == Qt.Checked:
@@ -1455,12 +1490,307 @@ class RoverGUI(QMainWindow):
         self.setStyleSheet("background-color: #FFFFFF")
         self.status_label.setText("")
 
+class SensorBlock(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setMinimumSize(100, 40)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # Change to Minimum
+        
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+        
+        # Make labels more visible
+        probe_label = QLabel("Probe")
+        probe_label.setStyleSheet("font-weight: bold;")
+        fad_label = QLabel("FAD")
+        fad_label.setStyleSheet("font-weight: bold;")
+        
+        self.read_button = QPushButton("Read")
+        self.save_button = QPushButton("Save")
+        self.data_button = QPushButton("Data")
+        self.fad_main_button = QPushButton("Main")
+        self.fad_button_1 = QPushButton("1")
+        self.fad_button_2 = QPushButton("2")
+        self.read_button.setStyleSheet("padding: 4px; min-height: 20px;")
+        self.save_button.setStyleSheet("padding: 4px; min-height: 20px;")
+        self.data_button.setStyleSheet("padding: 4px; min-height: 20px;")
+        self.fad_main_button.setStyleSheet("padding: 4px; min-height: 20px;")
+        self.fad_button_1.setStyleSheet("padding: 4px; min-height: 20px;")
+        self.fad_button_2.setStyleSheet("padding: 4px; min-height: 20px;")
+        self.read_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.save_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.data_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.fad_main_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.fad_button_1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.fad_button_2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.read_button.clicked.connect(self.read)
+        self.save_button.clicked.connect(self.save)
+        self.data_button.clicked.connect(self.data)
+        self.fad_main_button.clicked.connect(self.fad_main)
+        self.fad_button_1.clicked.connect(self.fad_1)
+        self.fad_button_2.clicked.connect(self.fad_2)
+        
+        self.layout.addWidget(probe_label)
+        self.layout.addWidget(self.read_button)
+        self.layout.addWidget(self.save_button)
+        self.layout.addWidget(self.data_button)
+        self.layout.addWidget(fad_label)
+        self.layout.addWidget(self.fad_main_button)
+        self.layout.addWidget(self.fad_button_1)
+        self.layout.addWidget(self.fad_button_2)
+        
+        self.setLayout(self.layout)
+        self.setFixedHeight(40)
+
+    def read(self):
+        print("Read Sensor")
+    
+    def save(self):
+        print("Save Sensor")
+
+    def data(self):
+        print("Data Sensor")
+    
+    def fad_main(self):
+        print("FAD Main")
+
+    def fad_1(self):
+        print("FAD 1")
+    
+    def fad_2(self):
+        print("FAD 2")
+        
+
+class SampleBlock(QWidget):
+    def __init__(self, chem: bool):
+        super().__init__()
+        self.setMinimumSize(100, 100)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Change to Expanding
+        self.site1_block = SampleSubBlock(chem, True)
+        self.site2_block = SampleSubBlock(chem, False)
+
+        self.chem = chem
+
+        self.top_bar_layout = QHBoxLayout()
+        if chem:
+            self.top_bar_layout.addWidget(QLabel("Chem"))
+            self.mid_button = QPushButton("Ninhydrin")
+        else:
+            self.top_bar_layout.addWidget(QLabel("FAM"))
+            self.mid_button = QPushButton("Switch")
+        self.data_button = QPushButton("Data")
+        
+        # Set expanding size policy for the buttons
+        self.mid_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.data_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        self.top_bar_layout.addWidget(self.mid_button)
+        self.top_bar_layout.addWidget(self.data_button)
+        self.top_bar_layout.setContentsMargins(0, 0, 0, 0)
+        self.top_bar_layout.setSpacing(0)
+        self.mid_button.setStyleSheet("padding: 4px; min-height: 20px;")
+        self.data_button.setStyleSheet("padding: 4px; min-height: 20px;")
+        self.mid_button.clicked.connect(self.switch)
+        self.data_button.clicked.connect(self.data)
+        self.top_bar = QWidget()
+        self.top_bar.setLayout(self.top_bar_layout)
+        self.top_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # Change to Expanding
+
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.top_bar)
+        self.layout.addWidget(self.site1_block)
+        self.layout.addWidget(self.site2_block)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+        self.setLayout(self.layout)
+
+    def switch(self):
+        if self.chem:
+            print("Switched Chem")
+        else:
+            print("Switched Soil")
+    
+    def data(self):
+        if self.chem:
+            print("Data Chem")
+        else:
+            print("Data Soil")
+
+class SampleSubBlock(QWidget):
+    def __init__(self, chem: bool, site1: bool):
+        super().__init__()
+        self.setMinimumSize(100, 40)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Change to Expanding
+        
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+        
+        self.chem = chem
+        self.site1 = site1
+        
+        if self.site1:
+            self.smaple_button = QPushButton("Site 1 Sample")
+            self.read_button = QPushButton("Read Site 1")
+            self.save_button = QPushButton("Save Site 1")
+        else:
+            self.smaple_button = QPushButton("Site 2 Sample")
+            self.read_button = QPushButton("Read Site 2")
+            self.save_button = QPushButton("Save Site 2")
+            
+        buttonStyle = "padding: 4px; min-height: 20px;"
+        self.smaple_button.setStyleSheet(buttonStyle)
+        self.read_button.setStyleSheet(buttonStyle)
+        self.save_button.setStyleSheet(buttonStyle)
+        
+        # Set all buttons to use expanding size policy
+        self.smaple_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.read_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.save_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        self.smaple_button.clicked.connect(self.sample)
+        self.read_button.clicked.connect(self.read)
+        self.save_button.clicked.connect(self.save)
+
+        # Use a horizontal layout with a 2:1 ratio between sample button and right side
+        hLayout = QHBoxLayout()
+        hLayout.setContentsMargins(0, 0, 0, 0)
+        hLayout.setSpacing(0)
+        
+        # Create vertical layout for read/save buttons
+        rightVLayout = QVBoxLayout()
+        rightVLayout.addWidget(self.read_button)
+        rightVLayout.addWidget(self.save_button)
+        rightVLayout.setContentsMargins(0, 0, 0, 0)
+        rightVLayout.setSpacing(0)
+        
+        rightWidget = QWidget()
+        rightWidget.setLayout(rightVLayout)
+        rightWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        # Add widgets with stretch factors to control relative sizes
+        hLayout.addWidget(self.smaple_button, 2)  # 2/3 of space
+        hLayout.addWidget(rightWidget, 1)        # 1/3 of space
+        
+        self.layout.addLayout(hLayout)
+        self.setLayout(self.layout)
+
+    def sample(self):
+        if self.chem:
+            print("Sampled Chem")
+        else:
+            print("Sampled Soil")
+    
+    def read(self):
+        if self.chem:
+            print("Read Chem")
+        else:
+            print("Read Soil")
+
+    def save(self):
+        if self.chem:
+            print("Saved Chem")
+        else:
+            print("Saved Soil")
+
 class GenieControl(QWidget):
     def __init__(self):
         super().__init__()
-        self.splitter = QSplitter(Qt.Horizontal)
-        # self.lens_splitter = QSplitter(Qt.Vertical)
-        self.take_pano
+        
+        # Create a proper layout
+        self.layout = QVBoxLayout()
+        
+        # Create a row layout for buttons
+        button_layout = QHBoxLayout()
+
+        microscope_layout = QVBoxLayout()
+        
+        # Create buttons
+        self.take_pano_button = QPushButton("Take Pano")
+        self.toggle_genie_button = QPushButton("Toggle Genie Filter")
+        self.microscope_zoom_in_button = QPushButton("+")
+        self.microscope_zoom_out_button = QPushButton("-")
+        
+        # Set button styles
+        button_style = "padding: 4px; min-height: 20px;"
+        self.take_pano_button.setStyleSheet(button_style)
+        self.toggle_genie_button.setStyleSheet(button_style)
+        self.microscope_zoom_in_button.setStyleSheet(button_style)
+        self.microscope_zoom_out_button.setStyleSheet(button_style)
+        
+        # Set size policies to make buttons fit their content
+        self.take_pano_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self.toggle_genie_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self.microscope_zoom_in_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.microscope_zoom_out_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        
+        # Set fixed dimensions for zoom buttons
+        self.microscope_zoom_in_button.setFixedSize(30, 30)
+        self.microscope_zoom_out_button.setFixedSize(30, 30)
+        
+        # Connect button signals to slots
+        self.take_pano_button.clicked.connect(self.take_pano)
+        self.toggle_genie_button.clicked.connect(self.toggle_genie)
+        self.microscope_zoom_in_button.clicked.connect(self.zoom_in_microscope)
+        self.microscope_zoom_out_button.clicked.connect(self.zoom_out_microscope)
+
+        # Add zoom buttons to vertical layout
+        microscope_layout.addWidget(self.microscope_zoom_in_button)
+        microscope_layout.addWidget(self.microscope_zoom_out_button)
+        microscope_layout.setSpacing(2)
+        
+        # Create a widget for the microscope controls
+        microscope_widget = QWidget()
+        microscope_widget.setLayout(microscope_layout)
+        microscope_widget.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        
+        # Add stretch FIRST to push buttons to the right
+        button_layout.addStretch(1)
+        
+        # Add buttons to the row layout (now they'll be right-aligned)
+        button_layout.addWidget(self.take_pano_button)
+        button_layout.addWidget(self.toggle_genie_button)
+        button_layout.addWidget(microscope_widget)
+        
+        # Add the button row to the main layout
+        self.layout.addLayout(button_layout)
+        
+        # Apply the layout to the widget
+        self.setLayout(self.layout)
+
+        self.show_pano_button(False)
+        # self.show_genie_button(False)
+        self.show_zoom_controls(False)
+
+    def show_pano_button(self, show=True):
+        """Show or hide the panorama button"""
+        self.take_pano_button.setVisible(show)
+    
+    def show_genie_button(self, show=True):
+        """Show or hide the genie filter toggle button"""
+        self.toggle_genie_button.setVisible(show)
+    
+    def show_zoom_controls(self, show=True):
+        """Show or hide both zoom buttons"""
+        self.microscope_zoom_in_button.setVisible(show)
+        self.microscope_zoom_out_button.setVisible(show)
+    
+    def take_pano(self):
+        # Implement the logic to take a panorama
+        print("Taking panorama...")
+    
+    def toggle_genie(self):
+        # Implement the logic to toggle the genie lens
+        print("Toggling genie lens...")
+    
+    def zoom_in_microscope(self):
+        # Implement the logic to zoom in on the microscope
+        print("Zooming in on microscope...")
+
+    def zoom_out_microscope(self):
+        # Implement the logic to zoom out on the microscope
+        print("Zooming out on microscope...")
 
 class CheckableComboBox(QComboBox):
     def __init__(self, title = '', parent=None):
@@ -1497,8 +1827,9 @@ class CameraSelect(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.layout = QVBoxLayout()
-
+        self.layout = QHBoxLayout()  # Change to HBoxLayout for better horizontal layout
+        self.layout.setContentsMargins(5, 5, 5, 5)  # Reduce margins
+        
         self.toolButton = QToolButton(self)
         self.toolButton.setText("Cameras List")
         self.toolMenu = QMenu(self)
@@ -1514,8 +1845,11 @@ class CameraSelect(QWidget):
         self.toolButton.setMenu(self.toolMenu)
         self.toolButton.setPopupMode(QToolButton.InstantPopup)
         self.layout.addWidget(self.toolButton)
-        self.layout.addStretch()
+        self.layout.addStretch(1)
         self.setLayout(self.layout)
+        
+        # Set a maximum height for the widget
+        self.setMaximumHeight(40)
 
     def handle_camera_selection(self, action):
         camera = action.text()

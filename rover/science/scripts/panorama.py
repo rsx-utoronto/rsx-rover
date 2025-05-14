@@ -53,8 +53,8 @@ class Publisher:
 
 class Panorama:
     def __init__(self, sub: Subscriber, pub: Publisher):
-        self.sub:Subscriber = sub
-        self.pub:Publisher = pub
+        self.sub:Subscriber = Subscriber()
+        self.pub:Publisher = Publisher()
         self.stitcher = stitcher.Stitcher()
 
     def start(self, num_images):
@@ -81,9 +81,9 @@ class Panorama:
 
 def main():
     rospy.init_node('panorama')
-    sub = Subscriber()
-    pub = Publisher()
-    pan = Panorama(sub, pub)
+    # sub = Subscriber()
+    # pub = Publisher()
+    pan = Panorama()
     pan.start(10)
 
 if __name__ == '__main__':
