@@ -88,7 +88,7 @@ class AstarObstacleAvoidance():
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.bounding_box_pub = rospy.Publisher("/rover_bounding_box", Marker, queue_size=10)
         self.invaliid_pose_sub=rospy.Publisher('/invalid_pose_markers', Marker, queue_size=10)
-        self.occ_pub=rospy.Publisher('/EDWARD', OccupancyGrid, queue_size=10)
+        #self.occ_pub=rospy.Publisher('/EDWARD', OccupancyGrid, queue_size=10)
         # self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
         # self.pose_sub = rospy.Subscriber(self.pose_topic, PoseStamped, self.odom_callback)
         self.waypoint_pub = rospy.Publisher(self.waypoint_topic, PoseStamped, queue_size=10)
