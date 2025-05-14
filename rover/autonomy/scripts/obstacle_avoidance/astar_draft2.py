@@ -86,7 +86,7 @@ class OctoMapAStar:
             Point(x=0.3, y=-0.3, z=0),
             Point(x=-0.3, y=-0.3, z=0), #with 0.5, it produces green blocks!
             Point(x=-0.3, y=0.3, z=0) ]
-        self.z_min = 0.2
+        self.z_min = -0.25
         self.z_max = 3
         
         # Publishers and Subscribers
@@ -147,7 +147,7 @@ class OctoMapAStar:
         # )
  
         # self.tree.updateInnerOccupancy()
-        self.publish_octomap()
+        #self.publish_octomap()
     
     def odom_callback(self, msg):
             # Extract robot's position from the Odometry message
@@ -229,10 +229,8 @@ class OctoMapAStar:
         
         # Check obstacles first
         if self.occupancy_grid[current_gy, current_gx] >= self.obstacle_threshold:
-
             return float('inf')
         if self.occupancy_grid[neighbor_gy, neighbor_gx] >= self.obstacle_threshold:
-    
             return float('inf')
         
         # Use actual height difference
