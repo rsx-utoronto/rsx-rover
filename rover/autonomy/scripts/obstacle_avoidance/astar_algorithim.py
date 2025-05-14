@@ -120,7 +120,7 @@ class OctoMapAStar:
 
         for x,y,z in xyz:
             if not (self.z_min < z < self.z_max):
-                print("not in threshold", z)
+               # print("not in threshold", z)
                 continue
 
             gx,gy=self.world_to_grid(x,y)
@@ -279,7 +279,7 @@ class OctoMapAStar:
             if (0 <= grid_x < self.occupancy_grid.shape[1]) and (0 <= grid_y < self.occupancy_grid.shape[0]):
       
                 if self.occupancy_grid[grid_y, grid_x] >= self.obstacle_threshold:
-                    print("checkpoint 2 true", grid_x, grid_y, pose, self.occupancy_grid[grid_y, grid_x])
+                  #  print("checkpoint 2 true", grid_x, grid_y, pose, self.occupancy_grid[grid_y, grid_x])
                     world_x, world_y = self.grid_to_world(grid_x, grid_y)
                    # self.publish_invalid_pose_marker(world_x, world_y)
                     return False
@@ -436,7 +436,7 @@ class OctoMapAStar:
                         current_pos = waypoint
                         rospy.sleep(1 / self.update_rate) 
                     self.publish_waypoints(path)
-
+                    print("path")
             self.rate.sleep()     
             
 if __name__ == "__main__":
