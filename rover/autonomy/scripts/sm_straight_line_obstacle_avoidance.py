@@ -36,7 +36,7 @@ import tf.transformations as tf
 from tf.transformations import quaternion_from_euler
 import threading
 from threading import Lock
-=
+
 from geometry_msgs.msg import Point
 from std_msgs.msg import Float32MultiArray, String
 from nav_msgs.msg import Path
@@ -73,7 +73,7 @@ class AstarObstacleAvoidance():
         )
         # self.grid_origin = (0.0, 0.0)
         self.rate = rospy.Rate(self.update_rate)
-        self.tree = OctreeNode(self.boundary, self.tree_resolution)
+        #self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
         self.current_position_y=0 
         self.current_position_z=0
@@ -100,7 +100,7 @@ class AstarObstacleAvoidance():
         self.vel_pub = rospy.Publisher(self.vel_topic, Twist, queue_size=10)
         self.pointcloud_sub = rospy.Subscriber(self.pointcloud_topic, PointCloud2, self.pointcloud_callback)
         self.octomap_pub = rospy.Publisher(self.octomap_topic, Octomap, queue_size=10)
-        self.frame_id = frame_id
+        #self.frame_id = frame_id
         self.marker_array_pub = rospy.Publisher('/dwa_trajectories', MarkerArray, queue_size=1)
         self.astar_marker_pub = rospy.Publisher('/astar_waypoints_markers', MarkerArray, queue_size=1)  # New publisher for A* markers
         self.footprint_pub = rospy.Publisher('/robot_footprint', Marker, queue_size=1)
@@ -172,13 +172,14 @@ class AstarObstacleAvoidance():
         header.frame_id = "map"
         octomap_msg.header = header
         self.octomap_pub.publish(octomap_msg)
+    
     def publish_trajectories(self, trajectories):
         marker_array = MarkerArray()
         marker_id = 0
 
         for traj in trajectories:
             line_marker = Marker()
-            line_marker.header.frame_id = self.frame_id
+            line_marker.header.frame_id = "map"
             line_marker.header.stamp = rospy.Time.now()
             line_marker.ns = "dwa_trajectories"
             line_marker.id = marker_id
@@ -209,7 +210,7 @@ class AstarObstacleAvoidance():
 
         # Points marker for waypoints (larger size)
         points_marker = Marker()
-        points_marker.header.frame_id = self.frame_id
+        points_marker.header.frame_id = "map"
         points_marker.header.stamp = rospy.Time.now()
         points_marker.ns = "astar_points"
         points_marker.id = 0
@@ -225,7 +226,7 @@ class AstarObstacleAvoidance():
 
         # Line strip connecting waypoints
         line_marker = Marker()
-        line_marker.header.frame_id = self.frame_id
+        line_marker.header.frame_id = "map"
         line_marker.header.stamp = rospy.Time.now()
         line_marker.ns = "astar_line"
         line_marker.id = 1
@@ -472,6 +473,7 @@ class AstarObstacleAvoidance():
             
         msg.data = flattened_waypoints  # Set the data field with the flattened list
         self.astar_pub.publish(msg)
+        self.publish_waypoints(msg)  # Publish the waypoints for visualization
 
     def run(self):
         need_replan=True

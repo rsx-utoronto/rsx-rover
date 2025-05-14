@@ -31,16 +31,20 @@ from sensor_msgs.msg import PointCloud2
 from queue import PriorityQueue
 from std_msgs.msg import Header, Float32MultiArray
 import math
-from visualization_msgs.msg import Marker
+from visualization_msgs.msg import Marker,MarkerArray
 import tf.transformations as tf
 from tf.transformations import quaternion_from_euler
 import threading
 from threading import Lock
 
+from geometry_msgs.msg import Point
+from std_msgs.msg import Float32MultiArray, String
+from nav_msgs.msg import Path
+
 
 class AstarObstacleAvoidance():
     def __init__(self, goal=(2,0)):
-        
+        rospy.init_node("octomap_a_star_planner", anonymous=True)
         
         # Parameters
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
@@ -67,7 +71,6 @@ class AstarObstacleAvoidance():
             -(self.grid_size[0]* self.grid_resolution)/2,  # -100.0 meters (for 0.1m resolution)
             -(self.grid_size[1]* self.grid_resolution)/2  # -100.0 meters
         )
-        self.yaw=0.0
         # self.grid_origin = (0.0, 0.0)
         self.rate = rospy.Rate(self.update_rate)
         #self.tree = OctreeNode(self.boundary, self.tree_resolution)
@@ -89,7 +92,7 @@ class AstarObstacleAvoidance():
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.bounding_box_pub = rospy.Publisher("/rover_bounding_box", Marker, queue_size=10)
         self.invaliid_pose_sub=rospy.Publisher('/invalid_pose_markers', Marker, queue_size=10)
-        self.occ_pub=rospy.Publisher('/EDWARD', OccupancyGrid, queue_size=10)
+        #self.occ_pub=rospy.Publisher('/EDWARD', OccupancyGrid, queue_size=10)
         # self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
         # self.pose_sub = rospy.Subscriber(self.pose_topic, PoseStamped, self.odom_callback)
         self.waypoint_pub = rospy.Publisher(self.waypoint_topic, PoseStamped, queue_size=10)
@@ -97,6 +100,10 @@ class AstarObstacleAvoidance():
         self.vel_pub = rospy.Publisher(self.vel_topic, Twist, queue_size=10)
         self.pointcloud_sub = rospy.Subscriber(self.pointcloud_topic, PointCloud2, self.pointcloud_callback)
         self.octomap_pub = rospy.Publisher(self.octomap_topic, Octomap, queue_size=10)
+        #self.frame_id = frame_id
+        self.marker_array_pub = rospy.Publisher('/dwa_trajectories', MarkerArray, queue_size=1)
+        self.astar_marker_pub = rospy.Publisher('/astar_waypoints_markers', MarkerArray, queue_size=1)  # New publisher for A* markers
+        self.footprint_pub = rospy.Publisher('/robot_footprint', Marker, queue_size=1)
 
 
     def pointcloud_callback(self, msg):
@@ -129,7 +136,7 @@ class AstarObstacleAvoidance():
         
         self.height_grid=new_height_grid
         self.occupancy_grid=grid
-      #  print("occuapncy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
+        print("occuapncy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
     
     def odom_callback(self, msg):
             # Extract robot's position from the Odometry message
@@ -165,7 +172,87 @@ class AstarObstacleAvoidance():
         header.frame_id = "map"
         octomap_msg.header = header
         self.octomap_pub.publish(octomap_msg)
+    
+    def publish_trajectories(self, trajectories):
+        marker_array = MarkerArray()
+        marker_id = 0
 
+        for traj in trajectories:
+            line_marker = Marker()
+            line_marker.header.frame_id = "map"
+            line_marker.header.stamp = rospy.Time.now()
+            line_marker.ns = "dwa_trajectories"
+            line_marker.id = marker_id
+            line_marker.type = Marker.LINE_STRIP
+            line_marker.action = Marker.ADD
+            line_marker.scale.x = 0.02
+            line_marker.color.r = 1.0
+            line_marker.color.g = 1.0
+            line_marker.color.b = 0.0
+            line_marker.color.a = 1.0
+            line_marker.pose.orientation.w = 1.0
+            line_marker.lifetime = rospy.Duration(0.1)
+
+            for point in traj:
+                p = Point()
+                p.x = point.x
+                p.y = point.y
+                p.z = 0.0
+                line_marker.points.append(p)
+
+            marker_array.markers.append(line_marker)
+            marker_id += 1
+
+        self.marker_array_pub.publish(marker_array)
+
+    def publish_waypoints(self, waypoints):
+        marker_array = MarkerArray()
+
+        # Points marker for waypoints (larger size)
+        points_marker = Marker()
+        points_marker.header.frame_id = "map"
+        points_marker.header.stamp = rospy.Time.now()
+        points_marker.ns = "astar_points"
+        points_marker.id = 0
+        points_marker.type = Marker.POINTS
+        points_marker.action = Marker.ADD
+        points_marker.scale.x = 0.2  # Increased size
+        points_marker.scale.y = 0.2
+        points_marker.color.r = 1.0
+        points_marker.color.g = 0.0
+        points_marker.color.b = 0.0
+        points_marker.color.a = 1.0
+        points_marker.lifetime = rospy.Duration(0)
+
+        # Line strip connecting waypoints
+        line_marker = Marker()
+        line_marker.header.frame_id = "map"
+        line_marker.header.stamp = rospy.Time.now()
+        line_marker.ns = "astar_line"
+        line_marker.id = 1
+        line_marker.type = Marker.LINE_STRIP
+        line_marker.action = Marker.ADD
+        line_marker.scale.x = 0.1  # Line width
+        line_marker.color.r = 1.0
+        line_marker.color.g = 0.0
+        line_marker.color.b = 0.0
+        line_marker.color.a = 1.0
+        line_marker.pose.orientation.w = 1.0
+        line_marker.lifetime = rospy.Duration(0)
+
+        # Populate both markers with waypoints
+        for wp in waypoints:
+            p = Point()
+            p.x = wp[0]
+            p.y = wp[1]
+            p.z = 0.0
+            points_marker.points.append(p)
+            line_marker.points.append(p)
+
+        marker_array.markers.append(points_marker)
+        marker_array.markers.append(line_marker)
+
+        self.astar_marker_pub.publish(marker_array)
     def publish_bounding_box(self):
         # note there is an older publish bounding box function that just makes a box around the rover..
         marker = Marker()
@@ -232,7 +319,6 @@ class AstarObstacleAvoidance():
         return path
       
     def a_star(self, start, goal):
-       
         open_set = PriorityQueue()
         open_set.put((0, start))
         came_from = {}
@@ -276,7 +362,7 @@ class AstarObstacleAvoidance():
             if (0 <= grid_x < self.occupancy_grid.shape[1]) and (0 <= grid_y < self.occupancy_grid.shape[0]):
       
                 if self.occupancy_grid[grid_y, grid_x] >= self.obstacle_threshold:
-                   # print("checkpoint 2 true", grid_x, grid_y, pose, self.occupancy_grid[grid_y, grid_x])
+                  #  print("checkpoint 2 true", grid_x, grid_y, pose, self.occupancy_grid[grid_y, grid_x])
                     world_x, world_y = self.grid_to_world(grid_x, grid_y)
                    # self.publish_invalid_pose_marker(world_x, world_y)
                     return False
@@ -384,9 +470,10 @@ class AstarObstacleAvoidance():
         for gx, gy in waypoints:
             x, y = self.grid_to_world(gx, gy)
             flattened_waypoints.extend([x, y])
-        
+            
         msg.data = flattened_waypoints  # Set the data field with the flattened list
         self.astar_pub.publish(msg)
+        self.publish_waypoints(msg)  # Publish the waypoints for visualization
 
     def run(self):
         need_replan=True
@@ -433,11 +520,10 @@ class AstarObstacleAvoidance():
                         current_pos = waypoint
                         rospy.sleep(1 / self.update_rate) 
                     self.publish_waypoints(path)
-
+                    print("path")
             self.rate.sleep()     
             
 if __name__ == "__main__":
-    rospy.init_node("octomap_a_star_planner", anonymous=True)
     try:
         planner = AstarObstacleAvoidance()
         planner.run()
