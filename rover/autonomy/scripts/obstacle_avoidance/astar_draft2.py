@@ -94,7 +94,7 @@ class OctoMapAStar:
         self.bounding_box_pub = rospy.Publisher("/rover_bounding_box", Marker, queue_size=10)
         self.invaliid_pose_sub=rospy.Publisher('/invalid_pose_markers', Marker, queue_size=10)
         self.occ_pub=rospy.Publisher('/EDWARD', OccupancyGrid, queue_size=10)
-        self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
+      #  self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
         #self.pose_sub = rospy.Subscriber(self.pose_topic, PoseStamped, self.odom_callback)
         self.waypoint_pub = rospy.Publisher(self.waypoint_topic, PoseStamped, queue_size=10)
         self.astar_pub = rospy.Publisher('/astar_waypoints', Float32MultiArray, queue_size=10)
@@ -124,16 +124,17 @@ class OctoMapAStar:
                 continue
 
             gx,gy=self.world_to_grid(x,y)
-            if 0 <= gx < self.grid_size[0] and 0 <= gy < self.grid_size[1]: #whithin the height threshhold so assign obstacle_threshold
+            if 0 <= gx < w and 0 <= gy < h: #whithin the height threshhold so assign obstacle_threshold
                 grid[gy, gx] = self.obstacle_threshold   # mark as occupied
                 new_height_grid[gy, gx] = z  # Store actual height
                 world_x, world_y = self.grid_to_world(gx, gy)       
                 self.publish_invalid_pose_marker(world_x, world_y)  # Publish invalid pose marker
 
         
-        self.height_gri=new_height_grid
+        self.height_grid=new_height_grid
         self.occupancy_grid=grid
-        # 2) Ray-trace free space and mark endpoints occupied in one call
+        print("occuapncy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
+
         self.tree.insertPointCloud(
             xyz,
             self.sensor_origin,      # e.g. (0,0,1) in map frame
@@ -144,12 +145,9 @@ class OctoMapAStar:
             occupancy_thres=self.occupancy_thres,
             free_thres=self.free_thres
         )
-
-        # 3) Update inner nodes
+ 
         self.tree.updateInnerOccupancy()
-
-        # 4) Publish as octomap_msgs/Octomap
-        self.publish_octomap()
+        #self.publish_octomap()
 
     def odom_callback(self, msg):
             # Extract robot's position from the Odometry message
@@ -186,54 +184,6 @@ class OctoMapAStar:
         octomap_msg.header = header
         self.octomap_pub.publish(octomap_msg)
 
-    def octomap_callback(self, msg):
-        """
-        Convert OctoMap to a 2D occupancy grid.
-        """
-        # Parse OctoMap data and project into 2D grid
-      #  octomap_data = self.process_octomap(msg) # extract 3d data from octomap and converts into 2d grid 
-        octomap_data = self.decode_octomap(msg) # extract 3d data from octomap and converts into 2d grid
-        if octomap_data is not None:
-            self.occupancy_grid = octomap_data 
-            #rospy.loginfo("2D occupancy grid generated from OctoMap.")
-      # print("here is the new data from world_togrid", self.world_to_grid(self.current_position_x, self.current_position_y))
-      # print("here is the new data from grid toworld", self.grid_to_world(5000,5000))
-
-    def decode_octomap(self, octomap_msg):
-        """
-        makes a list of occupied points in 3D space
-        Decode an OctoMap binary message into a list of occupied points without using struct.
-        """
-       # rospy.loginfo("Decoding OctoMap...")
-        rover_radius = 0.1
-        resolution = self.grid_resolution
-        inflation_cells = 0 #int ((rover_radius / (resolution)) )
-
-        if octomap_msg.binary:
-            data = octomap_msg.data
-            resolution = octomap_msg.resolution
-
-            # Initialize an empty list to store occupied points
-            occupied_points = []
-
-            for offset, byte in enumerate(data):
-                for bit in range(8):
-                    if (byte >> bit) & 1:  # Check if the bit is set
-                        # Calculate voxel index in 3D grid
-                        voxel_index = offset * 8 + bit
-                        x = (voxel_index % (256 * 256)) % 256
-                        y = (voxel_index % (256 * 256)) // 256
-                        z = voxel_index // (256 * 256)
-            
-                        x_real = x * resolution
-                        y_real = y * resolution
-                        z_real = z * resolution
-
-                    # Add the main voxel to the list of occupied points
-                        occupied_points.append((x_real, y_real, z_real))
-
-            return occupied_points
-           
     def publish_bounding_box(self):
         # note there is an older publish bounding box function that just makes a box around the rover..
         marker = Marker()
@@ -271,48 +221,7 @@ class OctoMapAStar:
         y = gy * self.grid_resolution + self.grid_origin[1]
         return x, y
    
-    def process_octomap(self, octomap_msg):
-        """
-        Convert 3D OctoMap into a 2D occupancy grid (int8, 0=free, 100=occ)
-        and publish any new obstacle markers in RViz.
-        """
-        
-      #  self.height_grid = np.zeros_like(self.occupancy_grid, dtype=np.float32)
-        # 1) Create/zero the grid
-        w, h = self.grid_size
-        grid = np.zeros((h, w), dtype=np.int8)   # shape = (rows, cols) #confirm shape!!!
-        self.height_grid=np.zeros((h, w), dtype=np.float32)  # heights
-        # 2) Decode all occupied 3D voxels
-        occupied3d = self.decode_octomap(octomap_msg)
-
-        # 3) Project into 2D
-        for x, y, z in occupied3d:
-            
-            if not (self.z_min < z < self.z_max):
-                print("not in threshold", z)
-                continue
-            gx, gy = self.world_to_grid(x, y)
-            if 0 <= gx < w and 0 <= gy < h: #whithin the height threshhold so assign obstacle_threshold
-                grid[gy, gx] = self.obstacle_threshold   # mark as occupied
-                self.height_grid[gy, gx] = z  # Store actual height
-                world_x, world_y = self.grid_to_world(gx, gy)
-                print("publishing invalid pose markers", world_x, world_y)
-                self.publish_invalid_pose_marker(world_x, world_y)  # Publish invalid pose marker
-        self.occupancy_grid=grid
-        return grid
-
 ### A* start 
-    def height_cost_old(self, current, neighbor): #this is g function for height
-        current_height = self.occupancy_grid[current[1], current[0]]
-        neighbor_height = self.occupancy_grid[neighbor[1], neighbor[0]]
-        # if current_height == -1 or neighbor_height == -1:  
-        #     return 1000
-        if current_height >= self.obstacle_threshold:
-            return current_height
-        elif neighbor_height >= self.obstacle_threshold: 
-            return neighbor_height
-        return abs(current_height - neighbor_height) + 1
-    
     # Update height_cost:
     def height_cost(self, current, neighbor):
         current_gx, current_gy = current
@@ -377,29 +286,7 @@ class OctoMapAStar:
         rospy.logwarn("A* failed to find a path")
         return []
         
-    def is_pose_valid_old(self, pose):
-        """Returns True if all corners of the footprint at this pose are in free space"""
-        # print("in is pose valid", self.transform_corners(pose)
-        for corner in self.transform_corners(pose):
-            x, y = corner #already in grid coords
-           
-           # print("occupancy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
-
-           # grid_x, grid_y = self.world_to_grid(x,y)
-           
-            grid_x = int(x)
-            grid_y = int(y)
-          #  print("grid_x, grid_y is ", grid_x, grid_y,x,y, pose)
-            if self.occupancy_grid[grid_y, grid_x] >= self.obstacle_threshold:
-                print("checkpoint 2 true",grid_x, grid_y, pose, self.occupancy_grid[grid_y, grid_x])
-               # self.publish_invalid_pose_marker(grid_x, grid_y)     
-                           
-                world_x, world_y = self.grid_to_world(grid_x, grid_y)
-                #self.publish_invalid_pose_marker(world_x, world_y)         
-                return False  # This corner is in an obstacle
-
-        return True
-    
+  
     def is_pose_valid(self, pose):
         for corner in self.transform_corners(pose):
             x, y = corner
