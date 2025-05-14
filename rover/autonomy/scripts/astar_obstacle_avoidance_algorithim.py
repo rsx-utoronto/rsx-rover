@@ -40,7 +40,7 @@ from threading import Lock
 
 class AstarObstacleAvoidance():
     def __init__(self, goal=(2,0)):
-        rospy.init_node("octomap_a_star_planner", anonymous=True)
+        
         
         # Parameters
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
@@ -67,9 +67,10 @@ class AstarObstacleAvoidance():
             -(self.grid_size[0]* self.grid_resolution)/2,  # -100.0 meters (for 0.1m resolution)
             -(self.grid_size[1]* self.grid_resolution)/2  # -100.0 meters
         )
+        self.yaw=0.0
         # self.grid_origin = (0.0, 0.0)
         self.rate = rospy.Rate(self.update_rate)
-        self.tree = OctreeNode(self.boundary, self.tree_resolution)
+        #self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
         self.current_position_y=0 
         self.current_position_z=0
@@ -115,7 +116,7 @@ class AstarObstacleAvoidance():
 
         for x,y,z in xyz:
             if not (self.z_min < z < self.z_max):
-                print("not in threshold", z)
+               # print("not in threshold", z)
                 continue
 
             gx,gy=self.world_to_grid(x,y)
@@ -128,7 +129,7 @@ class AstarObstacleAvoidance():
         
         self.height_grid=new_height_grid
         self.occupancy_grid=grid
-        print("occuapncy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
+      #  print("occuapncy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
     
     def odom_callback(self, msg):
             # Extract robot's position from the Odometry message
@@ -231,6 +232,7 @@ class AstarObstacleAvoidance():
         return path
       
     def a_star(self, start, goal):
+       
         open_set = PriorityQueue()
         open_set.put((0, start))
         came_from = {}
@@ -274,7 +276,7 @@ class AstarObstacleAvoidance():
             if (0 <= grid_x < self.occupancy_grid.shape[1]) and (0 <= grid_y < self.occupancy_grid.shape[0]):
       
                 if self.occupancy_grid[grid_y, grid_x] >= self.obstacle_threshold:
-                    print("checkpoint 2 true", grid_x, grid_y, pose, self.occupancy_grid[grid_y, grid_x])
+                   # print("checkpoint 2 true", grid_x, grid_y, pose, self.occupancy_grid[grid_y, grid_x])
                     world_x, world_y = self.grid_to_world(grid_x, grid_y)
                    # self.publish_invalid_pose_marker(world_x, world_y)
                     return False
@@ -382,7 +384,7 @@ class AstarObstacleAvoidance():
         for gx, gy in waypoints:
             x, y = self.grid_to_world(gx, gy)
             flattened_waypoints.extend([x, y])
-            
+        
         msg.data = flattened_waypoints  # Set the data field with the flattened list
         self.astar_pub.publish(msg)
 
@@ -435,6 +437,7 @@ class AstarObstacleAvoidance():
             self.rate.sleep()     
             
 if __name__ == "__main__":
+    rospy.init_node("octomap_a_star_planner", anonymous=True)
     try:
         planner = AstarObstacleAvoidance()
         planner.run()

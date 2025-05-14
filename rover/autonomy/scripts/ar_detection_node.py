@@ -17,6 +17,8 @@ bridge = CvBridge()
 class ARucoTagDetectionNode():
 
     def __init__(self):
+        self.bridge = CvBridge()
+        self.curr_state = None
         # self.image_topic = "/camera/color/image_raw"
         self.image_topic = "/zed_node/rgb/image_rect_color"
         self.info_topic = "/zed_node/rgb/camera_info"
@@ -34,7 +36,6 @@ class ARucoTagDetectionNode():
         while (time.time() - t) < 2:
             #print("Passing time") 
             pass
-        self.bridge = CvBridge()
         #self.current_state = StateMsg()
         self.curr_aruco_detections = {}
         self.detected_aruco_ids = []
@@ -46,7 +47,6 @@ class ARucoTagDetectionNode():
         #self.updated_state_msg = StateMsg()
         #self.scanned_state_smg = StateMsg()
         self.found = False
-        self.curr_state = None
 
     def image_callback(self, ros_image):
         try:
@@ -55,6 +55,10 @@ class ARucoTagDetectionNode():
             print(e)
         else:
             # Do we need to undistort?
+            
+            # DELETE LATER
+            self.findArucoMarkers(cv_image)
+            
             if self.curr_state == "AR1" or self.curr_state == "AR2" or self.curr_state == "AR3":
                 self.findArucoMarkers(cv_image)
     
@@ -130,7 +134,7 @@ class ARucoTagDetectionNode():
                     img = cv2.putText(img, f"ID: {int(id)}", org, font, 
                                     fontScale, color, thickness, cv2.LINE_AA)
             
-            img_msg = bridge.cv2_to_imgmsg(img, encoding="passthrough")
+            img_msg = self.bridge.cv2_to_imgmsg(img, encoding="passthrough")
             self.vis_pub.publish(img_msg)
             
         #self.updated_state_msg = self.current_state

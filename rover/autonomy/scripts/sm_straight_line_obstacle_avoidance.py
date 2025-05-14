@@ -48,6 +48,7 @@ class StraightLineObstacleAvoidance:
     def astar_callback(self, msg):
         data = msg.data
         self.waypoints = [(data[i], data[i+1]) for i in range(0, len(data), 2)]
+        print("recieved waypoints", self.waypoints)
         rospy.loginfo(f"New path received with {len(self.waypoints)} waypoints")
 
     def odom_callback(self, msg):
@@ -135,8 +136,10 @@ class StraightLineObstacleAvoidance:
     def navigate(self, state="Location Selection"):
         planner = AstarObstacleAvoidance(self.targets[0])
         planner.run()
+        
         while not rospy.is_shutdown() and not self.abort_check:
             if self.targets:
+                print("in navigate")
                 # Continuously process the first target in the queue
                 target_x, target_y = self.targets[0]
                 self.move_to_target(target_x, target_y)
