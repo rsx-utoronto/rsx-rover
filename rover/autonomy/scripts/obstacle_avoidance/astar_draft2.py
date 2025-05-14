@@ -60,7 +60,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         #self.grid_origin=(0.0,0.0)
-        self.goal = (3,4)
+        self.goal = (3,0)
         self.obstacle_threshold = 100
         self.grid_size=(10000,10000)
         self.grid_origin = (
