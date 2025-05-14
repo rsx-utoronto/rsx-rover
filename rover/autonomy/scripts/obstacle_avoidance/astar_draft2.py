@@ -16,6 +16,11 @@ Documentary:
 - OctoMap is one way to turn that into a map (an octree of occupied vs. free space). - OctoMap needs 3D points + ray‐casts to build its occupancy tree.
 - Octree: What it is: A data structure used to partition 3D space hierarchically. Each node in an octree can have up to 8 children, subdividing space into smaller cubes (voxels).
 - OctoMapWhat it is: A library built on octrees, designed for robotic mapping and navigation.
+
+1. figure out why green blocks are not printing...
+make green blocks stay somehow. plan around that!
+2. make sure a*optimal.
+
 """
 
 import rospy
@@ -60,7 +65,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         #self.grid_origin=(0.0,0.0)
-        self.goal = (27,10)
+        self.goal = (7,10)
         self.obstacle_threshold = 100
         self.grid_size=(10000,10000)
         self.grid_origin = (
@@ -75,13 +80,13 @@ class OctoMapAStar:
         self.current_position_z=0
         self.current_orientation_x=0
         self.current_orientation_y=0
-        self.current_orientation_z=0.3
+        self.current_orientation_z=0
         self.current_corner_array = [
-            Point(x=0.5, y=0.5, z=0),
-            Point(x=0.5, y=-0.5, z=0),
-            Point(x=-0.5, y=-0.5, z=0),
-            Point(x=-0.5, y=0.5, z=0) ]
-        self.z_min=0.3
+            Point(x=0.3, y=0.3, z=0),
+            Point(x=0.3, y=-0.3, z=0),
+            Point(x=-0.3, y=-0.3, z=0), #with 0.5, it produces green blocks!
+            Point(x=-0.3, y=0.3, z=0) ]
+        self.z_min = 0.3
         self.z_max = 3
         
         # Publishers and Subscribers
@@ -97,6 +102,7 @@ class OctoMapAStar:
         self.pointcloud_sub = rospy.Subscriber(self.pointcloud_topic, PointCloud2, self.pointcloud_callback)
         self.octomap_pub = rospy.Publisher(self.octomap_topic, Octomap, queue_size=10)
         
+
     def pointcloud_callback(self, msg):
         """
         Take ZED PointCloud2 → update OcTree with both occupied + free voxels → publish OctoMap.
@@ -250,10 +256,11 @@ class OctoMapAStar:
         Convert 3D OctoMap into a 2D occupancy grid (int8, 0=free, 100=occ)
         and publish any new obstacle markers in RViz.
         """
+      #  self.height_grid = np.zeros_like(self.occupancy_grid, dtype=np.float32)
         # 1) Create/zero the grid
         w, h = self.grid_size
         grid = np.zeros((h, w), dtype=np.int8)   # shape = (rows, cols) #confirm shape!!!
-
+        self.height_grid=np.zeros((h, w), dtype=np.float32)  # heights
         # 2) Decode all occupied 3D voxels
         occupied3d = self.decode_octomap(octomap_msg)
 
@@ -264,23 +271,15 @@ class OctoMapAStar:
             gx, gy = self.world_to_grid(x, y)
             if 0 <= gx < w and 0 <= gy < h: #whithin the height threshhold so assign obstacle_threshold
                 grid[gy, gx] = self.obstacle_threshold   # mark as occupied
-
-        # # 4) Publish the 2D grid
-        # self.publish_occupancy_grid(grid)
-
-        # 5) (Optional) publish new markers once per cell
-        occupied_cells = np.argwhere(grid == self.obstacle_threshold)
-        for cell in occupied_cells:
-            # cell[0] = row, cell[1] = col
-            world_x, world_y = self.grid_to_world(cell[1], cell[0])
-        #    self.publish_invalid_pose_marker(world_x, world_y)
-
+              
+                self.height_grid[gy, gx] = z  # Store actual height
+        self.occupancy_grid=grid
         return grid
 
 ### A* start 
-    def height_cost(self, current, neighbor): #this is g function for height
-        current_height = self.occupancy_grid[current[0], current[1]]
-        neighbor_height = self.occupancy_grid[neighbor[0], neighbor[1]]
+    def height_cost_old(self, current, neighbor): #this is g function for height
+        current_height = self.occupancy_grid[current[1], current[0]]
+        neighbor_height = self.occupancy_grid[neighbor[1], neighbor[0]]
         # if current_height == -1 or neighbor_height == -1:  
         #     return 1000
         if current_height >= self.obstacle_threshold:
@@ -288,6 +287,23 @@ class OctoMapAStar:
         elif neighbor_height >= self.obstacle_threshold: 
             return neighbor_height
         return abs(current_height - neighbor_height) + 1
+    
+    # Update height_cost:
+    def height_cost(self, current, neighbor):
+        current_gx, current_gy = current
+        neighbor_gx, neighbor_gy = neighbor
+        
+        # Check obstacles first
+        if self.occupancy_grid[current_gy, current_gx] >= self.obstacle_threshold:
+
+            return float('inf')
+        if self.occupancy_grid[neighbor_gy, neighbor_gx] >= self.obstacle_threshold:
+    
+            return float('inf')
+        
+        # Use actual height difference
+        height_diff = abs(self.height_grid[current_gy, current_gx] - self.height_grid[neighbor_gy, neighbor_gx])
+        return height_diff + 1  # +1 for base movement cost
         
     def heuristic(self, node, goal): #h fucntion -> euclidean distance
         return np.linalg.norm(np.array(node) - np.array(goal))
@@ -336,46 +352,59 @@ class OctoMapAStar:
         rospy.logwarn("A* failed to find a path")
         return []
         
-    def is_pose_valid(self, pose):
+    def is_pose_valid_old(self, pose):
         """Returns True if all corners of the footprint at this pose are in free space"""
         # print("in is pose valid", self.transform_corners(pose)
         for corner in self.transform_corners(pose):
             x, y = corner #already in grid coords
+           
            # print("occupancy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
-           # print("corner x,y is ", x,y, self.grid_origin[1])
+
            # grid_x, grid_y = self.world_to_grid(x,y)
            
             grid_x = int(x)
             grid_y = int(y)
           #  print("grid_x, grid_y is ", grid_x, grid_y,x,y, pose)
-            if self.occupancy_grid[grid_x, grid_y] >= self.obstacle_threshold:
-          #      print("checkpoint 2 true",grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
+            if self.occupancy_grid[grid_y, grid_x] >= self.obstacle_threshold:
+                print("checkpoint 2 true",grid_x, grid_y, pose, self.occupancy_grid[grid_y, grid_x])
                # self.publish_invalid_pose_marker(grid_x, grid_y)     
-                
-                #world_x, world_y = self.grid_to_world(cell[1], cell[0])
-                #self.publish_invalid_pose_marker(world_x, world_y)                
+                           
                 world_x, world_y = self.grid_to_world(grid_x, grid_y)
                 self.publish_invalid_pose_marker(world_x, world_y)         
                 return False  # This corner is in an obstacle
 
         return True
     
+    def is_pose_valid(self, pose):
+        for corner in self.transform_corners(pose):
+            x, y = corner
+            grid_x, grid_y = self.world_to_grid(x, y)
+            
+            if (0 <= grid_x < self.occupancy_grid.shape[1]) and (0 <= grid_y < self.occupancy_grid.shape[0]):
+      
+                if self.occupancy_grid[grid_y, grid_x] >= self.obstacle_threshold:
+                    print("checkpoint 2 true", grid_x, grid_y, pose, self.occupancy_grid[grid_y, grid_x])
+                    world_x, world_y = self.grid_to_world(grid_x, grid_y)
+                    self.publish_invalid_pose_marker(world_x, world_y)
+                    return False
+        return True
+    
     def get_neighbors(self, node):
         neighbors = []
-        x, y = node
-        current_yaw=self.yaw
-        for dx, dy in [(-1, -1), (1, 1), (-1,1), (1,-1), (0, -1), (0, 1), (1, 0), (-1, 0)]:
-            nx, ny = x + dx, y + dy
-            # if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
-            # print("neighbours: ",nx, ny, x, y)
-          #  print("in is pose valid..", node)
+        gx, gy = node
+        current_yaw = self.yaw
+        
+        # Convert node to world coordinates for footprint check
+        wx, wy = self.grid_to_world(gx, gy)
+        
+        for dx, dy in [(-1,0), (1,0), (0,1), (0,-1), (-1,-1), (-1,1), (1,-1), (1,1)]:
+            ngx = gx + dx
+            ngy = gy + dy
+            # Convert neighbor to world coordinates
+            nx, ny = self.grid_to_world(ngx, ngy)
             if self.is_pose_valid((nx, ny, current_yaw)):
-            #  print("pose is valid !!!!!!")
-                neighbors.append((nx, ny))
-            # else:
-            #     print("Object detected")
+                neighbors.append((ngx, ngy))
         return neighbors
-    
     def publish_invalid_pose_marker(self, x, y, z=0.1):
         marker = Marker()
         marker.header.frame_id = "map"
