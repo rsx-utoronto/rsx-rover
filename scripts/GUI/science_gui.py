@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayou
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
-from rover.arm.ros1.gripper import arm_serial_connector
+# from rover.arm.ros1.gripper import arm_serial_connector
 from sensor_msgs.msg import NavSatFix, CompressedImage, Image
 from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
 from cv_bridge import CvBridge
@@ -1080,7 +1080,7 @@ class RoverGUI(QMainWindow):
         self.hum_plot_data = []
         self.temp_plot_data = []
         self.pmt_plot_data = []
-        self.ph1_time, self.ph2_time, self.hum_time, self.temp_time, self.pmt_time = 1
+        self.ph1_time, self.ph2_time, self.hum_time, self.temp_time, self.pmt_time = (1, 1, 1, 1, 1)
 
         # Create tabs
         self.scienceTab = QWidget()  # Create science tab first
