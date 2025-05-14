@@ -8,7 +8,7 @@
 
     <!-- <node name="astar" pkg="rover" type="astar_draft2.py" output="screen"/> -->
 
-    <node name="astar" pkg="rover" type="astar_draft2.py" output="screen"/>
+    <node name="astar" pkg="rover" type="astar_algorithim.py" output="screen"/>
 
     <node name="astar_viz" pkg="rover" type="astar_trajectory.py" output="screen"/>
    <!-- launch with: roslaunch rover astar_draft2.launch rover astar -->
