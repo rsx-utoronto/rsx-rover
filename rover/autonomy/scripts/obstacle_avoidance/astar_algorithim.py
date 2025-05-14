@@ -11,16 +11,11 @@ Potential note from Garvish:
     query out of octomap depth. for loop in depth!
     look at check_collision in dwa_planner.cpp
 
-Documentary: 
+Reim Notes Documentary: 
 - PointClouds are the universal 3D data format; Zcam generates this.
 - OctoMap is one way to turn that into a map (an octree of occupied vs. free space). - OctoMap needs 3D points + ray‐casts to build its occupancy tree.
 - Octree: What it is: A data structure used to partition 3D space hierarchically. Each node in an octree can have up to 8 children, subdividing space into smaller cubes (voxels).
 - OctoMapWhat it is: A library built on octrees, designed for robotic mapping and navigation.
-
-1. figure out why green blocks are not printing...
-make green blocks stay somehow. plan around that! why are they publishing around box??
-2. make sure a*optimal.
-
 """
 
 import rospy
@@ -31,7 +26,7 @@ from nav_msgs.msg import Odometry, OccupancyGrid
 from octomap_msgs.msg import Octomap
 from geometry_msgs.msg import PoseStamped, Twist, Pose, Point, Quaternion
 from sensor_msgs.msg import PointCloud2
-from octree import OctreeNode
+#from octree import OctreeNode
 #from Octomap import Octree
 from queue import PriorityQueue
 from std_msgs.msg import Header, Float32MultiArray
@@ -43,8 +38,8 @@ import threading
 from threading import Lock
 
 
-class OctoMapAStar:
-    def __init__(self):
+class AstarObstacleAvoidance():
+    def __init__(self, goal=(2,0)):
         rospy.init_node("octomap_a_star_planner", anonymous=True)
         
         # Parameters
@@ -65,14 +60,14 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         #self.grid_origin=(0.0,0.0)
-        self.goal = (7,0)
+        self.goal = goal
         self.obstacle_threshold = 100
         self.grid_size=(10000,10000)
         self.grid_origin = (
             -(self.grid_size[0]* self.grid_resolution)/2,  # -100.0 meters (for 0.1m resolution)
             -(self.grid_size[1]* self.grid_resolution)/2  # -100.0 meters
         )
-      #  self.grid_origin = (0.0, 0.0)
+        # self.grid_origin = (0.0, 0.0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -441,7 +436,7 @@ class OctoMapAStar:
             
 if __name__ == "__main__":
     try:
-        planner = OctoMapAStar()
+        planner = AstarObstacleAvoidance()
         planner.run()
     except rospy.ROSInterruptException:
         pass
