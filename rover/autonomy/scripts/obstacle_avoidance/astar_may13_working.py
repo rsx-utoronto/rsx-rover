@@ -76,7 +76,7 @@ class OctoMapAStar:
         self.grid_origin=(0.0,0.0)
         self.goal = (5,3)
         self.obstacle_threshold = 100
-        self.grid_size=(2000,2000)
+        self.grid_size=(10000,10000)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -244,45 +244,7 @@ class OctoMapAStar:
                         occupied_points.append((x_real, y_real, z_real))
 
             return occupied_points
-           
-    def decode_octomap_also_new(self, octomap_msg):
-        """
-        Rebuilds an OcTree from the binary msg and returns all occupied
-        leaf‐voxel world‐coordinates as a list of (x,y,z).
-        """
-        if not octomap_msg.binary:
-            rospy.logwarn("Only binary OctoMap is supported")
-            return []
-
-        # 1) Recreate the tree at the correct resolution
-        tree = OcTree(octomap_msg.resolution)
-
-        # 2) Feed it the raw bytes
-        raw = bytes(octomap_msg.data)
-        tree.readBinary(raw)
-
-        # 3) Iterate only the occupied leaves
-        occupied = []
-        for node in tree.leaf_node_iter():
-            if node.is_occupied():
-                x,y,z = node.get_coordinate()
-                occupied.append((x,y,z))
-
-        return occupied
-
-    def decode_octomap_new(self, octomap_msg):
-        # Load the OctoMap from the ROS message
-        octree = octomap.OcTree(octomap_msg.resolution)
-        octree.readBinaryData(octomap_msg.data)
-        
-        occupied_points = []
-        for node in octree.begin_leafs():
-            if octree.isNodeOccupied(node):
-                # Get node coordinates (respecting the map's origin)
-                coord = node.getCoordinate()
-                occupied_points.append(coord)
-        return occupied_points
-
+ 
     def publish_bounding_box(self):
         # note there is an older publish bounding box function that just makes a box around the rover..
         marker = Marker()
@@ -458,36 +420,6 @@ class OctoMapAStar:
         print("path", path)
         return path
     
-    def a_star_old(self, start, goal):
-        closed = set()
-        open_set = PriorityQueue()
-        open_set.put((0, start))  #  start with f_score = 0
-        came_from = {}
-        g_score = {start: 0}  #  cost of getting to the start node is 0
-        f_score = {start: self.heuristic(start, goal)}  # initial f_score based on heuristic
-            
-        while not open_set.empty():
-            _, current = open_set.get()
-
-            if current == goal:
-                return self.reconstruct_path(came_from, current)
-
-            for neighbor in self.get_neighbors(current):
-                height_cost = self.height_cost(current, neighbor)  #  height-based cost
-              #  print("here is height_cost", height_cost)
-                tentative_g_score = g_score[current] + height_cost  # Add the height cost to the g_score
-                if height_cost < self.obstacle_threshold: 
-                  #  print("height cost is less than 1000")
-                    if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
-                        came_from[neighbor] = current
-                        g_score[neighbor] = tentative_g_score
-                        f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)  # f = g + h
-                        open_set.put((f_score[neighbor], neighbor))
-                        
-        rospy.logwarn("A* failed to find a path")
-        return []
-    
-    
     def a_star(self, start, goal):
         open_set = PriorityQueue()
         open_set.put((0, start))
@@ -652,7 +584,7 @@ class OctoMapAStar:
         last_position=(0,0)
         self.current_path= []
         last_plan_time = rospy.Time.now()
-        replan_interval= rospy.Duration(3.0)
+        replan_interval= rospy.Duration(1.0)
         path_available=False
         goal=self.world_to_grid(self.goal[0], self.goal[1])
         while not rospy.is_shutdown():
