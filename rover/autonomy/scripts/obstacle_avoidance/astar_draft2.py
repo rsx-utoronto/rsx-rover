@@ -67,7 +67,7 @@ class OctoMapAStar:
             -(self.grid_size[0]* self.grid_resolution)/2,  # -100.0 meters (for 0.1m resolution)
             -(self.grid_size[1]* self.grid_resolution)/2  # -100.0 meters
         )
-        self.grid_origin = (0.0, 0.0)
+      #  self.grid_origin = (0.0, 0.0)
         self.rate = rospy.Rate(self.update_rate)
         self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -81,7 +81,7 @@ class OctoMapAStar:
             Point(x=0.3, y=-0.3, z=0),
             Point(x=-0.3, y=-0.3, z=0),
             Point(x=-0.3, y=0.3, z=0) ]
-        self.z_min=0.2
+        self.z_min=0.4
         self.z_max=1.5
         
         # Publishers and Subscribers
@@ -173,15 +173,14 @@ class OctoMapAStar:
       # print("here is the new data from world_togrid", self.world_to_grid(self.current_position_x, self.current_position_y))
       # print("here is the new data from grid toworld", self.grid_to_world(5000,5000))
 
-
     def decode_octomap(self, octomap_msg):
         """
         makes a list of occupied points in 3D space
         Decode an OctoMap binary message into a list of occupied points without using struct.
         """
        # rospy.loginfo("Decoding OctoMap...")
-        rover_radius= 0.1
-        resolution= self.grid_resolution
+        rover_radius = 0.1
+        resolution = self.grid_resolution
         inflation_cells = 0 #int ((rover_radius / (resolution)) )
 
         if octomap_msg.binary:
@@ -263,7 +262,7 @@ class OctoMapAStar:
             if not (self.z_min < z < self.z_max):
                 continue
             gx, gy = self.world_to_grid(x, y)
-            if 0 <= gx < w and 0 <= gy < h:
+            if 0 <= gx < w and 0 <= gy < h: #whithin the height threshhold so assign obstacle_threshold
                 grid[gy, gx] = self.obstacle_threshold   # mark as occupied
 
         # # 4) Publish the 2D grid
@@ -292,7 +291,8 @@ class OctoMapAStar:
         # --- MapMetaData ---
         info = msg.info
         info.resolution = self.grid_resolution
-        h, w = occupancy_grid.shape
+        h=self.grid_size[0]
+        w=self.grid_size[1]
         info.width  = w
         info.height = h
         # pose = where cell (0,0) lies in the world:
@@ -331,7 +331,6 @@ class OctoMapAStar:
             return current_height
         elif neighbor_height >= self.obstacle_threshold: 
             return neighbor_height
-        
         return abs(current_height - neighbor_height) + 1
         
     def heuristic(self, node, goal): #h fucntion -> euclidean distance
@@ -364,7 +363,7 @@ class OctoMapAStar:
 
             if current == goal:
                 return self.reconstruct_path(came_from, current)
-
+           # print("in get neighbors", current)
             for neighbor in self.get_neighbors(current):
                 if neighbor in closed:
                     continue  # Skip closed nodes
@@ -375,8 +374,8 @@ class OctoMapAStar:
                 if tentative_g < g_score.get(neighbor, float('inf')):
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g
-                    f = tentative_g + self.heuristic(neighbor, goal)
-                    open_set.put((f, neighbor))
+                    f_score[neighbor] = tentative_g + self.heuristic(neighbor, goal)
+                    open_set.put((f_score[neighbor], neighbor))
 
         rospy.logwarn("A* failed to find a path")
         return []
@@ -385,19 +384,19 @@ class OctoMapAStar:
         """Returns True if all corners of the footprint at this pose are in free space"""
         # print("in is pose valid", self.transform_corners(pose)
         for corner in self.transform_corners(pose):
-            x, y = corner
+            x, y = corner #already in grid coords
            # print("occupancy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
            # print("corner x,y is ", x,y, self.grid_origin[1])
-            grid_x, grid_y = self.world_to_grid(x,y)
+           # grid_x, grid_y = self.world_to_grid(x,y)
            
-            # grid_x = int(x)
-            # grid_y = int(y)
-         #  print("grid_x, grid_y is ", grid_x, grid_y,x,y)
+            grid_x = int(x)
+            grid_y = int(y)
+          #  print("grid_x, grid_y is ", grid_x, grid_y,x,y, pose)
             if self.occupancy_grid[grid_x, grid_y] >= self.obstacle_threshold:
-                print("checkpoint 2 true",grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
+          #      print("checkpoint 2 true",grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
                 self.publish_invalid_pose_marker(grid_x, grid_y)                     
-                world_x, world_y = self.grid_to_world(grid_x, grid_y)
-                # self.publish_invalid_pose_marker(world_x, world_y)         
+               # world_x, world_y = self.grid_to_world(grid_x, grid_y)
+                #self.publish_invalid_pose_marker(world_x, world_y)         
                 return False  # This corner is in an obstacle
 
         return True
@@ -410,6 +409,7 @@ class OctoMapAStar:
             nx, ny = x + dx, y + dy
             # if 0 <= nx < self.occupancy_grid.shape[0] and 0 <= ny < self.occupancy_grid.shape[1]:
             # print("neighbours: ",nx, ny, x, y)
+          #  print("in is pose valid..", node)
             if self.is_pose_valid((nx, ny, current_yaw)):
             #  print("pose is valid !!!!!!")
                 neighbors.append((nx, ny))
@@ -511,8 +511,9 @@ class OctoMapAStar:
         last_position=(0,0)
         self.current_path= []
         last_plan_time = rospy.Time.now()
-        replan_interval= rospy.Duration(3.0)
+        replan_interval= rospy.Duration(1.0)
         path_available=False
+        first_time=True
         goal=self.world_to_grid(self.goal[0], self.goal[1])
         while not rospy.is_shutdown():
             if self.occupancy_grid is None:
@@ -531,12 +532,13 @@ class OctoMapAStar:
             if last_position:
                 dx = start[0] - last_position[0]
                 dy = start[1] - last_position[1]
-                if abs(dx) > 0.5 or abs(dy)>1:
+                if abs(dx) > 0.5 or abs(dy)>0.5:
                     print("need to replan because last_position moved")
                     need_replan = True
 
-            if need_replan:
+            if need_replan or first_time:
                 need_replan=False
+                first_time=False
                 print("attempting to replan", need_replan, path_available)
                 path = self.a_star(start, goal)
                 if path:
