@@ -54,7 +54,7 @@ class OctoMapAStar:
         self.vel_topic = rospy.get_param("~vel_topic", "/cmd_vel")  # Velocity command
         self.height_min = rospy.get_param("~height_min", 0.2)  # Min height for obstacles
         self.height_max = rospy.get_param("~height_max", 15)  # Max height for obstacles
-        self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed/point_cloud/cloud_registered")
+        self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed_node/point_cloud/cloud_registered")
         self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
         self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
         self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")
@@ -94,14 +94,14 @@ class OctoMapAStar:
         self.bounding_box_pub = rospy.Publisher("/rover_bounding_box", Marker, queue_size=10)
         self.invaliid_pose_sub=rospy.Publisher('/invalid_pose_markers', Marker, queue_size=10)
         self.occ_pub=rospy.Publisher('/EDWARD', OccupancyGrid, queue_size=10)
-      #  self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
-        #self.pose_sub = rospy.Subscriber(self.pose_topic, PoseStamped, self.odom_callback)
+        # self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
+        # self.pose_sub = rospy.Subscriber(self.pose_topic, PoseStamped, self.odom_callback)
         self.waypoint_pub = rospy.Publisher(self.waypoint_topic, PoseStamped, queue_size=10)
         self.astar_pub = rospy.Publisher('/astar_waypoints', Float32MultiArray, queue_size=10)
         self.vel_pub = rospy.Publisher(self.vel_topic, Twist, queue_size=10)
         self.pointcloud_sub = rospy.Subscriber(self.pointcloud_topic, PointCloud2, self.pointcloud_callback)
         self.octomap_pub = rospy.Publisher(self.octomap_topic, Octomap, queue_size=10)
-        
+
 
     def pointcloud_callback(self, msg):
         """
@@ -135,20 +135,20 @@ class OctoMapAStar:
         self.occupancy_grid=grid
         print("occuapncy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
 
-        self.tree.insertPointCloud(
-            xyz,
-            self.sensor_origin,      # e.g. (0,0,1) in map frame
-            self.max_range,          # e.g. 5.0 meters
-            lazy_eval=True,
-            clamping_thres_min=self.clamping_min,
-            clamping_thres_max=self.clamping_max,
-            occupancy_thres=self.occupancy_thres,
-            free_thres=self.free_thres
-        )
+        # # self.tree.insertPointCloud(
+        #     xyz,
+        #     self.sensor_origin,      # e.g. (0,0,1) in map frame
+        #     self.max_range,          # e.g. 5.0 meters
+        #     lazy_eval=True,
+        #     clamping_thres_min=self.clamping_min,
+        #     clamping_thres_max=self.clamping_max,
+        #     occupancy_thres=self.occupancy_thres,
+        #     free_thres=self.free_thres
+        # )
  
-        self.tree.updateInnerOccupancy()
-        #self.publish_octomap()
-
+        # self.tree.updateInnerOccupancy()
+        self.publish_octomap()
+    
     def odom_callback(self, msg):
             # Extract robot's position from the Odometry message
             self.current_position_x = msg.pose.pose.position.x
@@ -317,6 +317,7 @@ class OctoMapAStar:
             if self.is_pose_valid((nx, ny, current_yaw)):
                 neighbors.append((ngx, ngy))
         return neighbors
+    
     def publish_invalid_pose_marker(self, x, y, z=0.1):
         marker = Marker()
         marker.header.frame_id = "map"

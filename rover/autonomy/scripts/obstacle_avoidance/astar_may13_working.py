@@ -63,11 +63,12 @@ class OctoMapAStar:
         self.vel_topic = rospy.get_param("~vel_topic", "/cmd_vel")  # Velocity command
         self.height_min = rospy.get_param("~height_min", 0.2)  # Min height for obstacles
         self.height_max = rospy.get_param("~height_max", 15)  # Max height for obstacles
-        self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed/point_cloud/cloud_registered")
+        self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed_node/point_cloud/cloud_registered")
         self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
         self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
         self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")
         
+        self.pointcloud_callback="/zed_node/point_cloud/cloud_registered"
         # Map and planning variables
         self.robot_footprint=[]
         self.boundary= ((-100000, -1000000, -100000), (100000, 100000, 100000)) 
