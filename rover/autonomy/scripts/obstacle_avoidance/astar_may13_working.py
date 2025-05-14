@@ -105,37 +105,7 @@ class OctoMapAStar:
         self.vel_pub = rospy.Publisher(self.vel_topic, Twist, queue_size=10)
         self.pointcloud_sub = rospy.Subscriber(self.pointcloud_topic, PointCloud2, self.pointcloud_callback)
         self.octomap_pub = rospy.Publisher(self.octomap_topic, Octomap, queue_size=10)
-        
-    def pointcloud_callback_old(self, msg):
-            """
-            Callback function to process the point cloud data and update the OctoMap.
-            subscribes to the point cloud topic, processes the 3D points, and updates the OctoMap (a 3D occupancy grid).
-            """
-            rospy.loginfo("Received point cloud, processing...")
-
-            # Convert ROS PointCloud2 message to numpy array
-            point_cloud = ros_numpy.point_cloud2.pointcloud2_to_array(msg)
-            points = np.zeros((point_cloud.shape[0], 3), dtype=np.float32)
-
-            # Extract x, y, z values from point cloud
-            points[:, 0] = point_cloud['x']
-            points[:, 1] = point_cloud['y']
-            points[:, 2] = point_cloud['z']
-
-            # Filter out invalid points (NaN or Inf)
-            valid_mask = np.isfinite(points).all(axis=1)
-            points = points[valid_mask]
-
-            # Update the OctoMap tree with the valid points
-            for point in points:
-                self.tree.updateNode(tuple(point), True)
-
-            # Update inner occupancy probabilities/ propogate to parents
-            self.tree.updateInnerOccupancy()
-
-            # Publish the OctoMap
-            self.publish_octomap() 
-    
+  
     def pointcloud_callback(self, msg):
         """
         Take ZED PointCloud2 → update OcTree with both occupied + free voxels → publish OctoMap.
@@ -339,8 +309,6 @@ class OctoMapAStar:
             # cell[0] = row, cell[1] = col
             world_x, world_y = self.grid_to_world(cell[1], cell[0])
             self.publish_invalid_pose_marker(world_x, world_y)
-
-
         return grid
         
     def publish_occupancy_grid(self, occupancy_grid):
@@ -401,16 +369,7 @@ class OctoMapAStar:
         
     def heuristic(self, node, goal): #h fucntion -> euclidean distance
         return np.linalg.norm(np.array(node) - np.array(goal))
-
-    def reconstruct_path_OLD(self, came_from, current):
-        path = []
-        while current in came_from:
-            path.append(current)
-            current = came_from[current]
-        path.reverse()
-        print("path", path)
-        return path
-    
+   
     def reconstruct_path(self, came_from, current):
         path = [current]  # Start with the goal node
         while current in came_from:
