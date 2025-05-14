@@ -60,7 +60,7 @@ class OctoMapAStar:
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         #self.grid_origin=(0.0,0.0)
-        self.goal = (3,0)
+        self.goal = (27,10)
         self.obstacle_threshold = 100
         self.grid_size=(10000,10000)
         self.grid_origin = (
@@ -75,14 +75,14 @@ class OctoMapAStar:
         self.current_position_z=0
         self.current_orientation_x=0
         self.current_orientation_y=0
-        self.current_orientation_z=0
+        self.current_orientation_z=0.3
         self.current_corner_array = [
-            Point(x=0.3, y=0.3, z=0),
-            Point(x=0.3, y=-0.3, z=0),
-            Point(x=-0.3, y=-0.3, z=0),
-            Point(x=-0.3, y=0.3, z=0) ]
-        self.z_min=0.4
-        self.z_max=1.5
+            Point(x=0.5, y=0.5, z=0),
+            Point(x=0.5, y=-0.5, z=0),
+            Point(x=-0.5, y=-0.5, z=0),
+            Point(x=-0.5, y=0.5, z=0) ]
+        self.z_min=0.3
+        self.z_max = 3
         
         # Publishers and Subscribers
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
@@ -276,50 +276,6 @@ class OctoMapAStar:
         #    self.publish_invalid_pose_marker(world_x, world_y)
 
         return grid
-        
-    def publish_occupancy_grid(self, occupancy_grid):
-        """
-        occupancy_grid: 2D numpy array of shape (W,H),
-        values >=0 mean cost, 0=free, >0=occupied.
-        """
-        msg = OccupancyGrid()
-
-        # --- Header ---
-        msg.header.stamp = rospy.Time.now()
-        msg.header.frame_id = "map"
-
-        # --- MapMetaData ---
-        info = msg.info
-        info.resolution = self.grid_resolution
-        h=self.grid_size[0]
-        w=self.grid_size[1]
-        info.width  = w
-        info.height = h
-        # pose = where cell (0,0) lies in the world:
-        info.origin = Pose()
-        info.origin.position = Point(self.grid_origin[0],
-                                     self.grid_origin[1],
-                                     0.0)
-        # no rotation
-        q = quaternion_from_euler(0, 0, 0)
-        info.origin.orientation = Quaternion(*q)
-
-        # --- data[] ---
-        # nav_msgs/OccupancyGrid expects a flat list of int8 values:
-        #   -1 = unknown, 0 = free, [1..100] = occupancy probability
-        flat = []
-        # choose your own thresholding: here 0→free, >0→100% occupied
-        for y in range(info.height):
-            for x in range(info.width):
-                val = occupancy_grid[x, y]
-                if val > 0:
-                    flat.append(100)
-                else:
-                    flat.append(0)
-        msg.data = flat
-
-        # --- publish ---
-        self.occ_pub.publish(msg)
 
 ### A* start 
     def height_cost(self, current, neighbor): #this is g function for height
@@ -357,8 +313,8 @@ class OctoMapAStar:
             _, current = open_set.get()
 
             # Skip nodes already processed
-            # if current in closed:
-            #     continue
+            if current in closed:
+                continue
             closed.add(current)
 
             if current == goal:
@@ -394,9 +350,12 @@ class OctoMapAStar:
           #  print("grid_x, grid_y is ", grid_x, grid_y,x,y, pose)
             if self.occupancy_grid[grid_x, grid_y] >= self.obstacle_threshold:
           #      print("checkpoint 2 true",grid_x, grid_y, pose, self.occupancy_grid[grid_x, grid_y])
-                self.publish_invalid_pose_marker(grid_x, grid_y)                     
-               # world_x, world_y = self.grid_to_world(grid_x, grid_y)
-                #self.publish_invalid_pose_marker(world_x, world_y)         
+               # self.publish_invalid_pose_marker(grid_x, grid_y)     
+                
+                #world_x, world_y = self.grid_to_world(cell[1], cell[0])
+                #self.publish_invalid_pose_marker(world_x, world_y)                
+                world_x, world_y = self.grid_to_world(grid_x, grid_y)
+                self.publish_invalid_pose_marker(world_x, world_y)         
                 return False  # This corner is in an obstacle
 
         return True
@@ -520,11 +479,9 @@ class OctoMapAStar:
                 print("self.occupancy_grid is None")
                 self.rate.sleep()
                 continue
-            # self.grid_origin = (self.current_position_x, self.current_position_y)
+       
             start =  self.world_to_grid(self.current_position_x, self.current_position_y) #(int(self.current_position_x), int(self.current_position_y))
-            
             need_replan=False
-            print("still in a*")
             if rospy.Time.now() - last_plan_time > replan_interval:
                 print("need to replan because time passed")
                 need_replan = True
@@ -533,7 +490,7 @@ class OctoMapAStar:
                 dx = start[0] - last_position[0]
                 dy = start[1] - last_position[1]
                 if abs(dx) > 0.5 or abs(dy)>0.5:
-                    print("need to replan because last_position moved")
+                    print("need to replan because position changed")
                     need_replan = True
 
             if need_replan or first_time:
@@ -556,7 +513,6 @@ class OctoMapAStar:
 
             self.rate.sleep()     
             
-
 if __name__ == "__main__":
     try:
         planner = OctoMapAStar()
