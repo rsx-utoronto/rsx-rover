@@ -1,0 +1,10 @@
+.vscode
+bryan-docker
+rover/autonomy/tests/lidar.bag
+rover/autonomy/tests/icsens-visual-inertial-lidar-dataset-1.bag
+*.pyc
+*.pyo
+__pycache__/
+rover/arm/scripts/__pycache__/
+tile_cache/
+genie_pics/

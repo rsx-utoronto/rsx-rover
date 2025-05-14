@@ -29,7 +29,8 @@ class ManualSwitch:
             except subprocess.CalledProcessError as e:
                 print(f"Script failed with error: {e.stderr}")
             self.switch_pressed = True
-
+        # check if zed publishing, if it doesn't have anything for x time wait 5 seconds check, if still no, relaunch the zed_dies.
+  
 if __name__ == '__main__':
     while not rospy.is_shutdown():
         manual_switch = ManualSwitch()

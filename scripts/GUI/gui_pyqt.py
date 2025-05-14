@@ -16,11 +16,12 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayou
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import NavSatFix, CompressedImage
+from sensor_msgs.msg import NavSatFix, CompressedImage, Image
 from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
+from calian_gnss_ros2_msg.msg import GnssSignalStatus
 
 #cache folder of map tiles generated from tile_scraper.py
 CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
@@ -40,6 +41,7 @@ class mapOverlay(QWidget):
         
         # ROS Subscriber for GPS coordinates
         rospy.Subscriber('/calian_gnss/gps', NavSatFix, self.update_gps_coordinates)
+        rospy.Subscriber('/calian_gnss/gps_extended', GnssSignalStatus, self.update_gps_heading)
     
     #initialize overall layout
     def initOverlayout(self):
@@ -53,6 +55,9 @@ class mapOverlay(QWidget):
         self.viewer.set_robot_position(msg.latitude,msg.longitude)
         if self.centreOnRover == True:
             self.viewer.center_on_gps( gps_point) 
+
+    def update_gps_heading(self, msg):
+        self.viewer.headingSignal.emit(msg.heading)
 
     def clear_map(self):
         self.viewer.clear_lines()
@@ -586,6 +591,51 @@ class LngLatEntryFromFile(QWidget):
                 # map_points.append((lat, lng, 5, point_name))
                 print(f"{point_name}: {lat}, {lng}")
                 self.viewer.viewer.goal_points[i//2].setLatLng([lat, lng])
+
+
+class LngLatDeliveryEntryFromFile(QWidget):
+    def __init__(self, map_overlay):
+        super().__init__()
+        self.array = Float32MultiArray()
+        layout = QVBoxLayout(self)
+
+        self.submit_button = QPushButton("Get Delivery Data From File")
+        self.submit_button.clicked.connect(self.collect_data)
+        layout.addWidget(self.submit_button)
+        self.setLayout(layout)
+
+        self.viewer = map_overlay
+
+        self.viewer.viewer.add_point_layer('gps_points', 'green', 'green', 'yellow')
+
+    def collect_data(self):
+        # Read data from the file
+        file_path = Path(__file__).parent.parent.parent.resolve() / "delivery_lat_lon_goal.csv"
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+
+        # Process each line and publish
+        data = []
+        for line in lines:
+            t = list(map(float, line.strip().split(',')[1:3]))
+            n = line.strip().split(',')[0]
+            data.append(n)
+            for i in t:
+                data.append(i)
+        print("Plotting points from file data")
+        print(data)
+        
+        # Create MapPoint objects from the data (pairs of lat, lng values)
+        # map_points = []
+        for i in range(0, len(data), 3):
+            if i + 1 < len(data):  # Ensure we have both lat and lng and they're not zero
+                lat = data[i+1]
+                lng = data[i+2]
+                # Create a MapPoint with a radius of 5 and a name based on index
+                point_name = data[i]
+                # map_points.append((lat, lng, 5, point_name))
+                print(f"{point_name}: {lat}, {lng}")
+                self.viewer.viewer.add_goal(point_name, lat, lng)
            
 
 class VelocityControl:
@@ -783,10 +833,12 @@ class ResizableLabel(QLabel):
 
 
 class CameraFeed:
-    def __init__(self, label1, label2, splitter):
+    def __init__(self, label1, label2, label3, label4, splitter):
         self.bridge = CvBridge()
         self.image_sub1 = None
         self.image_sub2 = None
+        self.image_sub3 = None
+        self.image_sub4 = None
         self.state_sub = rospy.Subscriber("state", String, self.state_callback)
 
         self.obj_bbox = rospy.Subscriber("object/bbox", Float64MultiArray, self.bbox_callback)
@@ -794,22 +846,30 @@ class CameraFeed:
 
         self.label1 = label1
         self.label2 = label2
+        self.label3 = label3
+        self.label4 = label4
         self.splitter = splitter
 
         # Set size policies correctly
         self.label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.label3.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.label4.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label1.setMinimumSize(300, 200)
         self.label2.setMinimumSize(300, 200)
+        self.label3.setMinimumSize(300, 200)
+        self.label4.setMinimumSize(300, 200)
         self.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        self.active_cameras = {"Zed (front) camera": False, "Butt camera": False}
+        self.active_cameras = {"Zed (front) camera": False, "Butt camera": False, "Microscope camera": False, "Genie camera": False}
         self.bbox = None  
 
         self.bbox_timer = QTimer()
         self.bbox_timer.setInterval(1000)
         self.bbox_timer.timeout.connect(self.clear_bbox)
         self.bbox_timer.setSingleShot(True)
+
+        self.exposure_value = 50
 
     def register_subscriber1(self):
         if self.image_sub1 is None:
@@ -828,6 +888,25 @@ class CameraFeed:
         if self.image_sub2:
             self.image_sub2.unregister()
             self.image_sub2 = None
+
+    def register_subscriber3(self):
+        if self.image_sub3 is None:
+            self.image_sub3 = rospy.Subscriber("/microscope", Image, self.callback3)
+
+    def unregister_subscriber3(self):
+        if self.image_sub3:
+            self.image_sub3.unregister()
+            self.image_sub3 = None
+        
+    def register_subscriber4(self):
+        if self.image_sub4 is None:
+            self.image_sub4 = rospy.Subscriber("/geniecam", Image, self.callback4)
+    
+    def unregister_subscriber4(self):
+        if self.image_sub4:
+            self.image_sub4.unregister()
+            self.image_sub4 = None
+
     def state_callback(self, msg):
         self.state = msg.data
 
@@ -851,6 +930,14 @@ class CameraFeed:
     def callback2(self, data):
         if self.active_cameras["Butt camera"]:
             self.update_image(data, self.label2)
+    
+    def callback3(self, data):
+        if self.active_cameras["Microscope camera"]:
+            self.update_image(data, self.label3)
+
+    def callback4(self, data):
+        if self.active_cameras["Genie camera"]:
+            self.update_image(data, self.label4)
 
     def update_image(self, data, label):
         """Decode and update the camera image with bounding box."""
@@ -859,6 +946,10 @@ class CameraFeed:
         if cv_image is None:
             return  
 
+        alpha = self.exposure_value / 50.0   # contrast: 0.02 to 2.0
+        beta = (self.exposure_value - 50) * 2  # brightness: -98 to +100
+
+        cv_image = cv2.convertScaleAbs(cv_image, alpha=alpha, beta=beta)
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
         if label == self.label1 and self.bbox:
@@ -897,33 +988,49 @@ class CameraFeed:
         else:
             self.unregister_subscriber2()
 
+        if self.active_cameras["Microscope camera"]:
+            self.register_subscriber3()
+        else:
+            self.unregister_subscriber3()
+
+        if self.active_cameras["Genie camera"]:
+            self.register_subscriber4()
+        else:
+            self.unregister_subscriber4()
+
     def update_visibility(self):
         active_count = sum(self.active_cameras.values())
-        if active_count == 0:
-            self.label1.hide()
-            self.label2.hide()
-        elif active_count == 1:
-            if self.active_cameras["Zed (front) camera"]:
-                self.label1.show()
-                self.label2.hide()
-                self.splitter.setStretchFactor(0, 1)
-                self.splitter.setStretchFactor(1, 0)
-            else:
-                self.label1.hide()
-                self.label2.show()
-                self.splitter.setStretchFactor(0, 0)
-                self.splitter.setStretchFactor(1, 1)
-        else:  
+        if self.active_cameras["Zed (front) camera"]:
             self.label1.show()
-            self.label2.show()
             self.splitter.setStretchFactor(0, 1)
+        else:
+            self.label1.hide()
+            self.splitter.setStretchFactor(0, 0)
+        if self.active_cameras["Butt camera"]:
+            self.label2.show()
             self.splitter.setStretchFactor(1, 1)
+        else:
+            self.label2.hide()
+            self.splitter.setStretchFactor(1, 0)
+        if self.active_cameras["Microscope camera"]:
+            self.label3.show()
+            self.splitter.setStretchFactor(2, 1)
+        else:
+            self.label3.hide()
+            self.splitter.setStretchFactor(2, 0)
+        if self.active_cameras["Genie camera"]:
+            self.label4.show()
+            self.splitter.setStretchFactor(3, 1)
+        else:
+            self.label4.hide()
+            self.splitter.setStretchFactor(3, 0)
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
     statusSignal = pyqtSignal(str)
     def __init__(self):
         super().__init__()
+        self.statusTerminal = statusTerminal()
         self.setWindowTitle("Rover Control Panel")
         self.setGeometry(100, 100, 1200, 800)
         # Initialize QTabWidget
@@ -984,9 +1091,7 @@ class RoverGUI(QMainWindow):
         if self.reached_state is not None:
             self.setStyleSheet("background-color: #adebb2")
             self.status_label.setText(f"Goal Reached: {self.reached_state}")
-        else:
-            self.setStyleSheet("background-color: #FFFFFF")
-            self.status_label.setText("")
+        
 
 
         
@@ -1015,9 +1120,20 @@ class RoverGUI(QMainWindow):
         self.camera_label2_cams_tab.setMinimumSize(320, 240)
         self.camera_label2_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         self.camera_label2_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label3_cams_tab = ResizableLabel()
+        self.camera_label3_cams_tab.setMinimumSize(320, 240)
+        self.camera_label3_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label3_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label4_cams_tab = ResizableLabel()
+        self.camera_label4_cams_tab.setMinimumSize(320, 240)
+        self.camera_label4_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label4_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         # ROS functionality
         self.camerasplitter_cams_tab = QSplitter(Qt.Horizontal)
-        self.camera_feed_cams_tab = CameraFeed(self.camera_label1_cams_tab, self.camera_label2_cams_tab,self.camerasplitter_cams_tab)
+        self.camera_feed_cams_tab = CameraFeed(self.camera_label1_cams_tab, self.camera_label2_cams_tab, self.camera_label3_cams_tab, self.camera_label4_cams_tab, self.camerasplitter_cams_tab)
         self.camerasplitter_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         
@@ -1029,6 +1145,8 @@ class RoverGUI(QMainWindow):
         camera_layout.addWidget(self.camera_selector_cams_tab)
         self.camerasplitter_cams_tab.addWidget(self.camera_label1_cams_tab)
         self.camerasplitter_cams_tab.addWidget(self.camera_label2_cams_tab)
+        self.camerasplitter_cams_tab.addWidget(self.camera_label3_cams_tab)
+        self.camerasplitter_cams_tab.addWidget(self.camera_label4_cams_tab)
         camera_layout.addWidget(self.camerasplitter_cams_tab)
 
         # camera_layout.addWidget(self.camera_label_splitter)
@@ -1061,12 +1179,23 @@ class RoverGUI(QMainWindow):
         slider_layout.addWidget(self.gear_slider_control)
         gear_group.setLayout(slider_layout)
 
+        #Exposure slider
+        exposure_group = QGroupBox("Exposure Control")
+        exposure_layout = QVBoxLayout()
+        self.exposure_slider_control = Slider(Qt.Horizontal)
+        self.exposure_slider_control.setMinimum(0)
+        self.exposure_slider_control.setMaximum(100)
+        self.exposure_slider_control.setValue(50)
+        exposure_layout.addWidget(self.exposure_slider_control)
+        exposure_group.setLayout(exposure_layout)
+
         # Sync joystick movements between tabs
         self.joystick_control.joystickMoved.connect(self.sync_joysticks)
 
         # Add to layout
         controls_layout.addWidget(joystick_group)
         controls_layout.addWidget(gear_group)
+        controls_layout.addWidget(exposure_group)
         self.controls_group.setLayout(controls_layout)
 
         control_tab_layout = QVBoxLayout()
@@ -1079,6 +1208,7 @@ class RoverGUI(QMainWindow):
     def setup_lngLat_tab(self):
         self.lngLatEntry = LngLatEntryBar(self.map_overlay_splitter)
         self.lngLatFile = LngLatEntryFromFile(self.map_overlay_splitter)
+        self.lngLatDeliveryFile = LngLatDeliveryEntryFromFile(self.map_overlay_splitter)
         self.stateMachineDialog = StateMachineStatus()
         self.arucoBox = ArucoWidget()
         
@@ -1095,6 +1225,7 @@ class RoverGUI(QMainWindow):
         Lnglat_tab_layout = QVBoxLayout()
         Lnglat_tab_layout.addWidget(self.lngLatEntry)
         Lnglat_tab_layout.addWidget(self.lngLatFile)
+        Lnglat_tab_layout.addWidget(self.lngLatDeliveryFile)
         Lnglat_tab_layout.addWidget(self.stateMachineDialog)
         Lnglat_tab_layout.addWidget(self.arucoGroupBox) 
         
@@ -1130,16 +1261,29 @@ class RoverGUI(QMainWindow):
         self.gear_slider_splitter.setMaximum(100)
         self.gear_slider_splitter.setValue(0)
 
+        # Exposure slider
+        exposure_group = QGroupBox("Exposure Control")
+        slider_layout2 = QVBoxLayout()
+        # make a new slider object 
+        self.exposure_slider_splitter = Slider(Qt.Horizontal)
+        self.exposure_slider_splitter.setMinimum(0)
+        self.exposure_slider_splitter.setMaximum(100)
+        self.exposure_slider_splitter.setValue(50)
 
         # Connect the signal to the function
         self.gear_slider_splitter.valueUpdated.connect(self.change_gear)
+        self.exposure_slider_splitter.valueUpdated.connect(self.change_exposure)
         
         slider_layout.addWidget(self.gear_slider_splitter)
         gear_group.setLayout(slider_layout)
 
+        slider_layout2.addWidget(self.exposure_slider_splitter)
+        exposure_group.setLayout(slider_layout2)
+
         # Add joystick and gear controls side by side
         controls_layout.addWidget(joystick_group)
         controls_layout.addWidget(gear_group)
+        controls_layout.addWidget(exposure_group)
         self.controls_group.setMinimumHeight(100)
 
         self.controls_group.setLayout(controls_layout)
@@ -1213,9 +1357,20 @@ class RoverGUI(QMainWindow):
         self.camera_label2.setMinimumSize(320, 240)
         self.camera_label2.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         self.camera_label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label3 = ResizableLabel()
+        self.camera_label3.setMinimumSize(320, 240)
+        self.camera_label3.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label3.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label4 = ResizableLabel()
+        self.camera_label4.setMinimumSize(320, 240)
+        self.camera_label4.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label4.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         # ROS functionality
         self.camerasplitter = QSplitter(Qt.Horizontal)
-        self.camera_feed = CameraFeed(self.camera_label1, self.camera_label2,self.camerasplitter)
+        self.camera_feed = CameraFeed(self.camera_label1, self.camera_label2, self.camera_label3, self.camera_label4, self.camerasplitter)
         self.camerasplitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         
@@ -1227,6 +1382,8 @@ class RoverGUI(QMainWindow):
         camera_layout.addWidget(self.camera_selector)
         self.camerasplitter.addWidget(self.camera_label1)
         self.camerasplitter.addWidget(self.camera_label2)
+        self.camerasplitter.addWidget(self.camera_label3)
+        self.camerasplitter.addWidget(self.camera_label4)
         camera_layout.addWidget(self.camerasplitter)
 
         # camera_layout.addWidget(self.camera_label_splitter)
@@ -1278,7 +1435,6 @@ class RoverGUI(QMainWindow):
         # Create a group box for the status terminal
         vertSplitter = QSplitter(Qt.Vertical)
         vertSplitter.addWidget(splitter)
-        self.statusTerminal = statusTerminal()
         self.statusTermGroupBox = QGroupBox("Status Messages")
         status_term_layout = QVBoxLayout()
         status_term_layout.addWidget(self.statusTerminal)
@@ -1310,15 +1466,23 @@ class RoverGUI(QMainWindow):
         self.velocity_control.set_gear(value/10+1)
         print(f"Changed to Gear: {value}")
         self.gear_slider_splitter.setValue(value)
+    
+    def change_exposure(self,value):
+        #self.camera_feed_cams_tab.exposure_value = value
+        self.camera_feed.exposure_value = value
 
     def pub_next_state(self):
         self.next_state_pub.publish(True)
+        self.setStyleSheet("background-color: #FFFFFF")
+        self.status_label.setText("")
 
-    def pub_manual_abort(self):
-        self.manual_abort_pub.publish(True)
+    # def pub_manual_abort(self):
+    #     self.manual_abort_pub.publish(True)
 
     def pub_auto_abort(self):
         self.auto_abort_pub.publish(True)
+        self.setStyleSheet("background-color: #FFFFFF")
+        self.status_label.setText("")
 
 
 class CheckableComboBox(QComboBox):
@@ -1362,7 +1526,7 @@ class CameraSelect(QWidget):
         self.toolButton.setText("Cameras List")
         self.toolMenu = QMenu(self)
 
-        self.cameras = ["Zed (front) camera", "Butt camera"]
+        self.cameras = ["Zed (front) camera", "Butt camera", "Genie camera", "Microscope camera"]
         self.selected_cameras = {camera: False for camera in self.cameras}
 
         for camera in self.cameras:
