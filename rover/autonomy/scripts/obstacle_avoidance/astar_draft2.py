@@ -18,7 +18,7 @@ Documentary:
 - OctoMapWhat it is: A library built on octrees, designed for robotic mapping and navigation.
 
 1. figure out why green blocks are not printing...
-make green blocks stay somehow. plan around that!
+make green blocks stay somehow. plan around that! why are they publishing around box??
 2. make sure a*optimal.
 
 """
