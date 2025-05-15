@@ -16,6 +16,7 @@ from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
 from sm_straight_line_obstacle_avoidance import StraightLineObstacleAvoidance
+from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
 import gps_conversion_functions as functions
 import gps_to_pose as gps_to_pose
 import sm_grid_search
@@ -257,7 +258,8 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 if target != 'AR3' and target != 'OBJ2' and userdata.prev_loc!='AR3' and userdata.prev_loc!='OBJ2':
                     sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                 else:
-                    sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
+                    #sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
+                    sla = AstarObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                 sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 if self.glob_msg.abort_check:
                     userdata.aborted_state = list(path.items())[0][0]

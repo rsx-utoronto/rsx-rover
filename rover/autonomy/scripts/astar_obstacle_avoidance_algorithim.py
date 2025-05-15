@@ -43,9 +43,8 @@ from nav_msgs.msg import Path
 
 
 class AstarObstacleAvoidance():
-    def __init__(self, goal=(3,0)):
-        
-        
+    def __init__(self, lin_vel = 0.5, ang_vel= 0.3, goal=(3,0)):
+          
         # Parameters
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
         self.waypoint_topic = rospy.get_param("~waypoint_topic", "/waypoint")
@@ -73,24 +72,24 @@ class AstarObstacleAvoidance():
         )
         # self.grid_origin = (0.0, 0.0)
         self.rate = rospy.Rate(self.update_rate)
-        #self.tree = OctreeNode(self.boundary, self.tree_resolution)
+        # self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
         self.current_position_y=0 
         self.current_position_z=0
         self.current_orientation_x=0
         self.current_orientation_y=0
         self.current_orientation_z=0
-        self.abort_check=False
+        self.abort_check = False
         self.current_corner_array = [
             Point(x=0.3, y=0.3, z=0),
             Point(x=0.3, y=-0.3, z=0),
-            Point(x=-0.3, y=-0.3, z=0), #with 0.5, it produces green blocks!
+            Point(x=-0.3, y=-0.3, z=0), # with 0.5, it produces green blocks!
             Point(x=-0.3, y=0.3, z=0) ]
         self.z_min = -0.25
         self.z_max = 3
-        self.yaw=0
-        self.lin_vel=0.5
-        self.ang_vel=0.3
+        self.yaw = 0
+        self.lin_vel = lin_vel
+        self.ang_vel = ang_vel
         
         # Publishers and Subscribers
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
@@ -115,7 +114,7 @@ class AstarObstacleAvoidance():
         """
         Take ZED PointCloud2 → update OcTree with both occupied + free voxels → publish OctoMap.
         """
-      #  rospy.loginfo("Received point cloud, processing…")
+       #  rospy.loginfo("Received point cloud, processing…")
 
         # 1) Get an (N×3) float32 array of xyz points, filter out NaNs
         xyz = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
@@ -164,7 +163,28 @@ class AstarObstacleAvoidance():
                 self.current_orientation_w
             ])
 
+            self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
+                                            msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
             self.publish_bounding_box()
+    
+    def to_euler_angles(self, w, x, y, z):
+        angles = [0, 0, 0]  # [roll, pitch, yaw]
+
+        # Roll (x-axis rotation)
+        sinr_cosp = 2 * (w * x + y * z)
+        cosr_cosp = 1 - 2 * (x * x + y * y)
+        angles[0] = math.atan2(sinr_cosp, cosr_cosp)
+
+        # Pitch (y-axis rotation)
+        sinp = math.sqrt(1 + 2 * (w * y - x * z))
+        cosp = math.sqrt(1 - 2 * (w * y - x * z))
+        angles[1] = 2 * math.atan2(sinp, cosp) - math.pi / 2
+
+        # Yaw (z-axis rotation)
+        siny_cosp = 2 * (w * z + x * y)
+        cosy_cosp = 1 - 2 * (y * y + z * z)
+        angles[2] = math.atan2(siny_cosp, cosy_cosp)
+        return angles
     
     def publish_octomap(self):
         """
@@ -365,8 +385,7 @@ class AstarObstacleAvoidance():
 
         rospy.logwarn("A* failed to find a path")
         return []
-        
-  
+         
     def is_pose_valid(self, pose):
         for corner in self.transform_corners(pose):
             x, y = corner
@@ -472,7 +491,7 @@ class AstarObstacleAvoidance():
 
         self.vel_pub.publish(velocity_msg)
 
-    def publish_waypoints(self, waypoints):
+    def publish_waypoints_yesterday(self, waypoints):
         # Create the Float32MultiArray message
         msg = Float32MultiArray()
 
@@ -551,7 +570,122 @@ class AstarObstacleAvoidance():
 
         # Stop when done
         self.drive_publisher.publish(Twist())
+    
+    def publish_waypoints(self, waypoints):
+        # Create the Float32MultiArray message
+        msg = Float32MultiArray()
+
+        # Flatten the waypoint list (e.g., [(x1, y1), (x2, y2)] -> [x1, y1, x2, y2])
+        # flattened_waypoints = [coord for waypoint in waypoints for coord in waypoint]
         
+        flattened_waypoints = []
+        for gx, gy in waypoints:
+            x, y = self.grid_to_world(gx, gy)
+            flattened_waypoints.extend([x, y])
+            
+        msg.data = flattened_waypoints  # Set the data field with the flattened list
+        self.astar_pub.publish(msg)
+        # print("flattened waypoints", flattened_waypoints)
+        self.publish_waypoints_rviz(flattened_waypoints)  # Publish the waypoints for visualization
+
+    def normalize_angle(self, angle):
+        while angle > math.pi:
+            angle -= 2 * math.pi
+        while angle < -math.pi:
+            angle += 2 * math.pi
+        return angle
+
+    
+    def navigate(self):
+        need_replan = True
+        last_position = (0, 0)
+        self.current_path = []
+        last_plan_time = rospy.Time.now()
+        replan_interval = rospy.Duration(1.0)
+        path_available = False
+        first_time = True
+        goal = self.world_to_grid(self.goal[0], self.goal[1])
+        rate = rospy.Rate(50)
+        threshold = 0.5  # meters
+        angle_threshold = 0.5  # radians
+        kp = 0.5  # Angular proportional gain
+
+        while not rospy.is_shutdown():
+            if self.occupancy_grid is None:
+                print("self.occupancy_grid is None")
+                rate.sleep()
+                continue
+            
+            start = self.world_to_grid(self.current_position_x, self.current_position_y)
+            need_replan = False
+            print("in checkpoint 1")
+            if rospy.Time.now() - last_plan_time > replan_interval:
+                need_replan = True
+
+            if last_position:
+                dx = start[0] - last_position[0]
+                dy = start[1] - last_position[1]
+                if abs(dx) > 0.5 or abs(dy) > 0.5:
+                    need_replan = True
+
+            if need_replan or first_time:
+                print("attempting to replan", need_replan, path_available)
+                need_replan = False
+                first_time = False
+                path = self.a_star(start, goal)
+                if path:
+                    print("path!",path)
+                    self.current_path = path
+                    last_position = start
+                    path_available = True
+                    self.publish_waypoints(path)
+
+            # Follow waypoints
+            while path_available and self.current_path and not self.abort_check:
+                print("in path available")
+                gx, gy = self.current_path[0]
+                target_x, target_y = self.grid_to_world(gx, gy)
+                dx = target_x - self.current_position_x
+                dy = target_y - self.current_position_y
+                target_distance = math.hypot(dx, dy)
+                target_heading = math.atan2(dy, dx)
+                #angle_diff = target_heading - self.yaw
+                angle_diff = target_heading - self.heading
+                print("HERE IS YAW", self.yaw)
+                print("here is heading", self.heading)
+                msg = Twist()
+
+
+                if angle_diff > math.pi:
+                    angle_diff -= 2 * math.pi
+                elif angle_diff < -math.pi:
+                    angle_diff += 2 * math.pi
+                    
+                if target_distance < threshold:
+                    self.current_path.pop(0)
+                    msg.linear.x = 0
+                    msg.angular.z = 0
+                    self.drive_publisher.publish(msg)
+                    rospy.loginfo("Reached waypoint. Proceeding to next.")
+                    continue
+
+                if abs(angle_diff) <= angle_threshold:
+                    msg.linear.x = self.lin_vel
+                    msg.angular.z = 0
+                else:
+                    msg.linear.x = 0
+                    msg.angular.z = angle_diff * kp
+                    if abs(msg.angular.z) < 0.3:
+                        msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
+
+                    #  self.vel_pub.publish(msg)
+                self.drive_publisher.publish(msg)
+                rate.sleep()
+        
+       # self.drive_publisher.publish(Twist())  # Stop the rover when done
+        
+
+       
     def run(self):
         need_replan=True
         last_position=(0,0)
@@ -600,95 +734,12 @@ class AstarObstacleAvoidance():
                    # self.publish_waypoints_rviz(path)
                     # print("path")
             self.rate.sleep()   
-    
-    def normalize_angle(self, angle):
-        while angle > math.pi:
-            angle -= 2 * math.pi
-        while angle < -math.pi:
-            angle += 2 * math.pi
-        return angle
-
-    
-    def run_and_drive(self):
-        need_replan = True
-        last_position = (0, 0)
-        self.current_path = []
-        last_plan_time = rospy.Time.now()
-        replan_interval = rospy.Duration(1.0)
-        path_available = False
-        first_time = True
-        goal = self.world_to_grid(self.goal[0], self.goal[1])
-        rate = rospy.Rate(50)
-        threshold = 0.5  # meters
-        angle_threshold = 0.5  # radians
-        kp = 0.5  # Angular proportional gain
-
-        while not rospy.is_shutdown():
-            if self.occupancy_grid is None:
-                print("self.occupancy_grid is None")
-                rate.sleep()
-                continue
-            print("not none")
-            start = self.world_to_grid(self.current_position_x, self.current_position_y)
-            need_replan = False
-            print("in checkpoint 1")
-            if rospy.Time.now() - last_plan_time > replan_interval:
-                need_replan = True
-
-            if last_position:
-                dx = start[0] - last_position[0]
-                dy = start[1] - last_position[1]
-                if abs(dx) > 0.5 or abs(dy) > 0.5:
-                    need_replan = True
-
-            if need_replan or first_time:
-                print("attempting to replan", need_replan, path_available)
-                need_replan = False
-                first_time = False
-                path = self.a_star(start, goal)
-                if path:
-                    print("path!",path)
-                    self.current_path = path
-                    last_position = start
-                    path_available = True
-                    self.publish_waypoints(path)
-
-            # Follow waypoints
-            while path_available and self.current_path:
-                print("in path available")
-                gx, gy = self.current_path[0]
-                target_x, target_y = self.grid_to_world(gx, gy)
-                dx = target_x - self.current_position_x
-                dy = target_y - self.current_position_y
-                distance = math.hypot(dx, dy)
-                target_heading = math.atan2(dy, dx)
-                angle_diff = target_heading - self.yaw
-                print("HERE IS YAW", self.yaw)
-                msg = Twist()
-
-                if distance < threshold:
-                    self.current_path.pop(0)
-                    rospy.loginfo("Reached waypoint. Proceeding to next.")
-                    continue
-
-                if abs(angle_diff) > angle_threshold:
-                    msg.angular.z = max(min(kp * angle_diff, 0.5), -0.5)
-                    if abs(msg.angular.z) < 0.3:
-                        msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
-                else:
-                    msg.linear.x = 0.5
-
-                    #  self.vel_pub.publish(msg)
-                self.drive_publisher.publish(msg)
-                rate.sleep()
-        
-
-        self.drive_publisher.publish(Twist())  # Stop the rover when done
+  
                 
 if __name__ == "__main__":
     rospy.init_node("octomap_a_star_planner", anonymous=True)
     try:
         planner = AstarObstacleAvoidance()
-        planner.run_and_drive()
+        planner.navigate()
     except rospy.ROSInterruptException:
         pass
