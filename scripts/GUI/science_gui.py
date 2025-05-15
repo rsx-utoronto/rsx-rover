@@ -1829,6 +1829,7 @@ class GenieControl(QWidget):
         self.toggle_genie_button = QPushButton("Toggle Genie Filter")
         self.microscope_zoom_in_button = QPushButton("+")
         self.microscope_zoom_out_button = QPushButton("-")
+        self.micro_slider_splitter = Slider(Qt.Horizontal)
         
         # Set button styles
         button_style = "padding: 4px; min-height: 20px;"
@@ -1836,17 +1837,21 @@ class GenieControl(QWidget):
         self.toggle_genie_button.setStyleSheet(button_style)
         self.microscope_zoom_in_button.setStyleSheet(button_style)
         self.microscope_zoom_out_button.setStyleSheet(button_style)
-        
+        self.micro_slider_splitter.setMinimum(0)
+        self.micro_slider_splitter.setMaximum(100)
+        self.micro_slider_splitter.setValue(50)
+
         # Set size policies to make buttons fit their content
         self.take_pano_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
         self.toggle_genie_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
         self.microscope_zoom_in_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.microscope_zoom_out_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         
-        # Set fixed dimensions for zoom buttons
+        # Set fixed dimensions for zoom + slider 
         self.microscope_zoom_in_button.setFixedSize(30, 30)
         self.microscope_zoom_out_button.setFixedSize(30, 30)
-        
+        self.micro_slider_splitter.setFixedSize(500, 30)
+
         # Connect button signals to slots
         self.take_pano_button.clicked.connect(self.take_pano)
         self.toggle_genie_button.clicked.connect(self.toggle_genie)
@@ -1865,10 +1870,11 @@ class GenieControl(QWidget):
         
         # Add stretch FIRST to push buttons to the right
         button_layout.addStretch(1)
-        
+
         # Add buttons to the row layout (now they'll be right-aligned)
         button_layout.addWidget(self.take_pano_button)
         button_layout.addWidget(self.toggle_genie_button)
+        button_layout.addWidget(self.micro_slider_splitter)
         button_layout.addWidget(microscope_widget)
         
         # Add the button row to the main layout
@@ -1891,6 +1897,7 @@ class GenieControl(QWidget):
     
     def show_zoom_controls(self, show=True):
         """Show or hide both zoom buttons"""
+        self.micro_slider_splitter.setVisible(show)
         self.microscope_zoom_in_button.setVisible(show)
         self.microscope_zoom_out_button.setVisible(show)
     
