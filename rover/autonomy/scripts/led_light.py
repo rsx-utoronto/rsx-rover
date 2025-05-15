@@ -125,8 +125,13 @@ class LedLight():
         print(res)
         x = self.board.write(bytes(res, 'utf-8'))
         print(x)
-      else:
+      elif mode == "manual":
         res = 'blue\n' 
+        print(res)
+        x = self.board.write(bytes(res, 'utf-8'))
+        print(x)
+      else:
+        res = 'off\n' 
         print(res)
         x = self.board.write(bytes(res, 'utf-8'))
         print(x)
