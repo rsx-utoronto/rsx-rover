@@ -106,6 +106,8 @@ class StraightLineObstacleAvoidance:
 
             # Calculate target direction and distance
             target_heading = math.atan2(target_y - self.y, target_x - self.x)
+            angle_diff = self.normalize_angle(target_heading - self.heading)
+            distance = math.hypot(target_x - self.x, target_y - self.y)
 
             # Create Twist message
             msg = Twist()
