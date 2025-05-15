@@ -39,7 +39,7 @@ import threading
 from threading import Lock
 
 from geometry_msgs.msg import Point
-from std_msgs.msg import Float32MultiArray, String
+from std_msgs.msg import Float32MultiArray, String, Bool
 from nav_msgs.msg import Path
 
 
@@ -107,7 +107,10 @@ class AstarObstacleAvoidance():
         self.astar_marker_pub = rospy.Publisher('/astar_waypoints_markers', MarkerArray, queue_size=1)  # New publisher for A* markers
         self.footprint_pub = rospy.Publisher('/robot_footprint', Marker, queue_size=1)
         self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
 
+    def abort_callback(self,msg):
+        self.abort_check = msg.data
 
     def pointcloud_callback(self, msg):
         """
@@ -361,11 +364,11 @@ class AstarObstacleAvoidance():
             closed.add(current)
 
             if current == goal:
-                print("in a*, open set is closed", current)
+             #   print("in a*, open set is closed", current)
                 return self.reconstruct_path(came_from, current)
           #  print("in get neighbors in astar", current)
             for neighbor in self.get_neighbors(current):
-                print("going to get neighbors", neighbor)
+              #  print("going to get neighbors", neighbor)
                 if neighbor in closed:
                     continue  # Skip closed nodes
 
