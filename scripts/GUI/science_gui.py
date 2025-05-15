@@ -1072,8 +1072,10 @@ class RoverGUI(QMainWindow):
         self.setCentralWidget(self.tabs)
         self.velocity_control = VelocityControl()
         self.gui_status_sub = rospy.Subscriber('gui_status', String, self.string_callback)
-        self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
-        self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
+        # self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
+        # self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
+        self.science_serial_controller = rospy.Publisher('/science_serial_control', String, queue_size=5)
+        self.science_serial_data = rospy.Subscriber('/science_serial_data', String, self.science_callback)
         self.reached_state = None
         self.ph1_plot_data = []
         self.ph2_plot_data = []
@@ -1293,7 +1295,7 @@ class RoverGUI(QMainWindow):
         left_vertical_splitter.setHandleWidth(1)  # Minimize the splitter handle width
         
         # First item in left vertical splitter
-        left_top_widget = SensorBlock()
+        left_top_widget = SensorBlock(self)
         left_top_widget.setMinimumHeight(40)  # Ensure minimum height
         
         # Second item in left vertical splitter with horizontal splitter
@@ -1303,10 +1305,10 @@ class RoverGUI(QMainWindow):
         left_middle_splitter.setHandleWidth(1)  # Minimize the splitter handle width
         
         # Add 2 items to the horizontal splitter with reduced height
-        left_middle_item1 = SampleBlock(True)
+        left_middle_item1 = SampleBlock(True, self)
         left_middle_item1.setMaximumHeight(180)  # Limit SampleBlock height
         
-        left_middle_item2 = SampleBlock(False)
+        left_middle_item2 = SampleBlock(False, self)
         left_middle_item2.setMaximumHeight(180)  # Limit SampleBlock height
         
         left_middle_splitter.addWidget(left_middle_item1)
@@ -1422,7 +1424,7 @@ class RoverGUI(QMainWindow):
         self.camera_selector.cameras_changed.connect(self.update_active_cameras_science)
         self.camera_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # Ensure this is minimal height
 
-        self.genieControl = GenieControl()
+        self.genieControl = GenieControl(self)
         self.genieControl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # Ensure this is minimal height
 
         self.select_splitter.addWidget(self.camera_selector)
@@ -1454,6 +1456,9 @@ class RoverGUI(QMainWindow):
         science_tab_layout = QVBoxLayout()
         science_tab_layout.addWidget(main_splitter)
         self.scienceTab.setLayout(science_tab_layout)
+
+    def science_callback(self, data):
+        pass
 
     def update_active_cameras_science(self, active_cameras):
         self.camera_feed.update_active_cameras(active_cameras)
@@ -1488,18 +1493,18 @@ class RoverGUI(QMainWindow):
         #self.camera_feed_cams_tab.exposure_value = value
         self.camera_feed.exposure_value = value
 
-    def pub_next_state(self):
-        self.next_state_pub.publish(True)
-        self.setStyleSheet("background-color: #FFFFFF")
-        self.status_label.setText("")
+    # def pub_next_state(self):
+    #     self.next_state_pub.publish(True)
+    #     self.setStyleSheet("background-color: #FFFFFF")
+    #     self.status_label.setText("")
 
     # def pub_manual_abort(self):
     #     self.manual_abort_pub.publish(True)
 
-    def pub_auto_abort(self):
-        self.auto_abort_pub.publish(True)
-        self.setStyleSheet("background-color: #FFFFFF")
-        self.status_label.setText("")
+    # def pub_auto_abort(self):
+    #     self.auto_abort_pub.publish(True)
+    #     self.setStyleSheet("background-color: #FFFFFF")
+    #     self.status_label.setText("")
     
         # Format example: A0: xx.xx A1: xx.xx Signal Voltage (A0 - A1): xx.xx
     def get_probe_data_callback(self, data):
@@ -1585,8 +1590,9 @@ class RoverGUI(QMainWindow):
         
 
 class SensorBlock(QWidget):
-    def __init__(self):
+    def __init__(self, ui: RoverGUI):
         super().__init__()
+        self.ui = ui
         self.setMinimumSize(100, 40)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # Change to Minimum
         
@@ -1604,8 +1610,8 @@ class SensorBlock(QWidget):
         self.save_button = QPushButton("Save")
         self.data_button = QPushButton("Data")
         self.fad_main_button = QPushButton("Main")
-        self.fad_button_1 = QPushButton("1")
-        self.fad_button_2 = QPushButton("2")
+        self.fad_button_1 = QPushButton("Site 1")
+        self.fad_button_2 = QPushButton("Site 2")
         self.read_button.setStyleSheet("padding: 4px; min-height: 20px;")
         self.save_button.setStyleSheet("padding: 4px; min-height: 20px;")
         self.data_button.setStyleSheet("padding: 4px; min-height: 20px;")
@@ -1647,18 +1653,22 @@ class SensorBlock(QWidget):
         print("Data Sensor")
     
     def fad_main(self):
+        self.ui.science_serial_controller.publish("Y")
         print("FAD Main")
 
     def fad_1(self):
+        self.ui.science_serial_controller.publish("X")
         print("FAD 1")
     
     def fad_2(self):
+        self.ui.science_serial_controller.publish("Z")
         print("FAD 2")
         
 
 class SampleBlock(QWidget):
-    def __init__(self, chem: bool):
+    def __init__(self, chem: bool, ui: RoverGUI):
         super().__init__()
+        self.ui = ui
         self.setMinimumSize(100, 100)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Change to Expanding
         self.site1_block = SampleSubBlock(chem, True)
@@ -1701,9 +1711,11 @@ class SampleBlock(QWidget):
 
     def switch(self):
         if self.chem:
-            print("Switched Chem")
+            self.ui.science_serial_controller.publish("N")
+            print("Ninhydrin")
         else:
-            print("Switched Soil")
+            self.ui.science_serial_controller.publish("S")
+            print("Switch PMT")
     
     def data(self):
         if self.chem:
@@ -1772,29 +1784,41 @@ class SampleSubBlock(QWidget):
 
     def sample(self):
         if self.chem:
-            print("Sampled Chem")
+            if self.site1:
+                self.ui.science_serial_controller.publish("A")
+                print("Sampled Chem Site 1")
+            else:
+                self.ui.science_serial_controller.publish("B")
+                print("Sampled Chem Site 2")
         else:
-            print("Sampled Soil")
+            if self.site1:
+                self.ui.science_serial_controller.publish("D")
+                print("Sampled FAM Site 1")
+            else:
+                self.ui.science_serial_controller.publish("E")
+                print("Sampled FAM Site 2")
     
     def read(self):
         if self.chem:
             print("Read Chem")
         else:
-            print("Read Soil")
+            print("Read FAM")
 
     def save(self):
         if self.chem:
             print("Saved Chem")
         else:
-            print("Saved Soil")
+            print("Saved FAM")
 
 class GenieControl(QWidget):
-    def __init__(self):
+    def __init__(self, ui: RoverGUI):
         super().__init__()
         
         # Create a proper layout
         self.layout = QVBoxLayout()
         
+        self.ui = ui
+
         # Create a row layout for buttons
         button_layout = QHBoxLayout()
 
@@ -1876,14 +1900,17 @@ class GenieControl(QWidget):
     
     def toggle_genie(self):
         # Implement the logic to toggle the genie lens
-        print("Toggling genie lens...")
+        self.ui.science_serial_controller.publish("M")
+        print("Toggling genie filter...")
     
     def zoom_in_microscope(self):
         # Implement the logic to zoom in on the microscope
+        self.ui.science_serial_controller.publish("I")
         print("Zooming in on microscope...")
 
     def zoom_out_microscope(self):
         # Implement the logic to zoom out on the microscope
+        self.ui.science_serial_controller.publish("O")
         print("Zooming out on microscope...")
 
 class CheckableComboBox(QComboBox):
