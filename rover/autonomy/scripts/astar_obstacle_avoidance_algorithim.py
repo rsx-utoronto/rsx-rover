@@ -43,7 +43,7 @@ from nav_msgs.msg import Path
 
 
 class AstarObstacleAvoidance():
-    def __init__(self, lin_vel = 0.5, ang_vel= 0.3, goal=(3,0)):
+    def __init__(self, lin_vel = 0.5, ang_vel= 0.3, goal=(2,0)):
           
         # Parameters
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
@@ -80,6 +80,7 @@ class AstarObstacleAvoidance():
         self.current_orientation_y=0
         self.current_orientation_z=0
         self.abort_check = False
+        self.heading=0
         self.current_corner_array = [
             Point(x=0.3, y=0.3, z=0),
             Point(x=0.3, y=-0.3, z=0),
@@ -144,28 +145,30 @@ class AstarObstacleAvoidance():
         #print("occuapncy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
     
     def odom_callback(self, msg):
+        print("in odom callback")
+        
             # Extract robot's position from the Odometry message
-            self.current_position_x = msg.pose.pose.position.x
-            self.current_position_y = msg.pose.pose.position.y
-            self.current_position_z = msg.pose.pose.position.z
+        self.current_position_x = msg.pose.pose.position.x
+        self.current_position_y = msg.pose.pose.position.y
+        self.current_position_z = msg.pose.pose.position.z
 
             # Extract robot's orientation (quaternion) from the Odometry message
-            self.current_orientation_x = msg.pose.pose.orientation.x
-            self.current_orientation_y = msg.pose.pose.orientation.y
-            self.current_orientation_z = msg.pose.pose.orientation.z
-            self.current_orientation_w = msg.pose.pose.orientation.w
+        self.current_orientation_x = msg.pose.pose.orientation.x
+        self.current_orientation_y = msg.pose.pose.orientation.y
+        self.current_orientation_z = msg.pose.pose.orientation.z
+        self.current_orientation_w = msg.pose.pose.orientation.w
 
             # Convert quaternion to Euler angles to get roll, pitch, and yaw (theta)
-            (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
+        (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
                 self.current_orientation_x,
                 self.current_orientation_y,
                 self.current_orientation_z,
                 self.current_orientation_w
             ])
 
-            self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
+        self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
                                             msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
-            self.publish_bounding_box()
+        self.publish_bounding_box()
     
     def to_euler_angles(self, w, x, y, z):
         angles = [0, 0, 0]  # [roll, pitch, yaw]
@@ -552,6 +555,7 @@ class AstarObstacleAvoidance():
             if abs(angle_diff) <= angle_threshold:
                # Move forward
                 print("trying to move forward")
+                print("target_distance", target_distance)
                 msg.linear.x = self.lin_vel
                 msg.angular.z = 0
 
@@ -587,6 +591,7 @@ class AstarObstacleAvoidance():
         self.astar_pub.publish(msg)
         # print("flattened waypoints", flattened_waypoints)
         self.publish_waypoints_rviz(flattened_waypoints)  # Publish the waypoints for visualization
+       
 
     def normalize_angle(self, angle):
         while angle > math.pi:
@@ -639,19 +644,25 @@ class AstarObstacleAvoidance():
                     last_position = start
                     path_available = True
                     self.publish_waypoints(path)
+                    
 
             # Follow waypoints
             while path_available and self.current_path and not self.abort_check:
-                print("in path available")
+                
                 gx, gy = self.current_path[0]
+                
                 target_x, target_y = self.grid_to_world(gx, gy)
+                print("in path available", self.current_path, gx, gy, target_x, target_y)
+                
                 dx = target_x - self.current_position_x
                 dy = target_y - self.current_position_y
-                target_distance = math.hypot(dx, dy)
+                # target_distance = math.hypot(dx, dy)
+                target_distance = math.sqrt((target_x - self.current_position_x) ** 2 + (target_y - self.current_position_y) ** 2)
                 target_heading = math.atan2(dy, dx)
+                
                 #angle_diff = target_heading - self.yaw
                 angle_diff = target_heading - self.heading
-                print("HERE IS YAW", self.yaw)
+                # print("HERE IS YAW", self.yaw)
                 print("here is heading", self.heading)
                 msg = Twist()
 
@@ -661,7 +672,8 @@ class AstarObstacleAvoidance():
                 elif angle_diff < -math.pi:
                     angle_diff += 2 * math.pi
                     
-                if target_distance < threshold:
+                if target_distance <= threshold:
+                    print("target distance", target_distance)
                     self.current_path.pop(0)
                     msg.linear.x = 0
                     msg.angular.z = 0
@@ -670,9 +682,13 @@ class AstarObstacleAvoidance():
                     continue
 
                 if abs(angle_diff) <= angle_threshold:
+                    print("angle_diff" ,   angle_diff)
+                    
+                    print("trying to move forward", target_distance, self.current_position_x, target_x)
                     msg.linear.x = self.lin_vel
                     msg.angular.z = 0
                 else:
+                    print("rotating", angle_diff)
                     msg.linear.x = 0
                     msg.angular.z = angle_diff * kp
                     if abs(msg.angular.z) < 0.3:
