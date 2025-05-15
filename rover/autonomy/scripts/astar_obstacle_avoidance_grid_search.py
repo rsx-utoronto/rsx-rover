@@ -43,7 +43,7 @@ from std_msgs.msg import Float32MultiArray, String
 from nav_msgs.msg import Path
 
 
-class AstarObstacleAvoidance():
+class AstarObstacleAvoidance_GridSearch():
     def __init__(self, lin_vel = 0.3, ang_vel= 0.3, goal=(5,0)):
           
         # Parameters
@@ -510,7 +510,7 @@ class AstarObstacleAvoidance():
             angle += 2 * math.pi
         return angle
     
-    def navigate(self):
+    def grid_search(self):
         need_replan = True
         last_position = (0, 0)
         self.current_path = []
@@ -595,11 +595,11 @@ class AstarObstacleAvoidance():
 
                 self.drive_publisher.publish(msg)
                 rate.sleep()
-                      
+                     
 if __name__ == "__main__":
     rospy.init_node("octomap_a_star_planner", anonymous=True)
     try:
-        planner = AstarObstacleAvoidance()
-        planner.navigate()
+        planner = AstarObstacleAvoidance_GridSearch()
+        planner.grid_search()
     except rospy.ROSInterruptException:
         pass

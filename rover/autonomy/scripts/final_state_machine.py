@@ -15,8 +15,8 @@ import ar_detection_node
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
-from sm_straight_line_obstacle_avoidance import StraightLineObstacleAvoidance
 from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
+from astar_obstacle_avoidance_grid_search import AstarObstacleAvoidance_GridSearch
 import gps_conversion_functions as functions
 import gps_to_pose as gps_to_pose
 import sm_grid_search
@@ -559,7 +559,7 @@ class AR3(smach.State):
 
             # rospy.init_node('aruco_tag1_detector', anonymous=True)
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
-            gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
+            gs =  AstarObstacleAvoidance_GridSearch.grid_search(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
             targets = gs.square_target() #generates multiple targets 
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR3")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)

@@ -21,6 +21,10 @@ AR_grid_search_w: 12
 AR_grid_search_h: 12
 AR_grid_search_tol: 2
 
+AR_grid_search_obstacle_avoidance_w: 12
+AR_grid_search_obstacle_avoidance_h: 12
+AR_grid_search_obstacle_avoidance_tol: 2
+
 OBJ_grid_search_w: 20
 OBJ_grid_search_h: 20
 OBJ_grid_search_tol: 2
