@@ -44,7 +44,7 @@ from nav_msgs.msg import Path
 
 class AstarObstacleAvoidance():
     def __init__(self, goal=(2,0)):
-        rospy.init_node("octomap_a_star_planner", anonymous=True)
+        
         
         # Parameters
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
@@ -136,7 +136,7 @@ class AstarObstacleAvoidance():
         
         self.height_grid=new_height_grid
         self.occupancy_grid=grid
-        print("occuapncy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
+        #print("occuapncy grid shape:::",self.occupancy_grid.shape[0], self.occupancy_grid.shape[1])
     
     def odom_callback(self, msg):
             # Extract robot's position from the Odometry message
@@ -205,8 +205,9 @@ class AstarObstacleAvoidance():
 
         self.marker_array_pub.publish(marker_array)
 
-    def publish_waypoints(self, waypoints):
+    def publish_waypoints_rviz(self, waypoints):
         marker_array = MarkerArray()
+        print("waypoints in publisher", waypoints)
 
         # Points marker for waypoints (larger size)
         points_marker = Marker()
@@ -242,6 +243,7 @@ class AstarObstacleAvoidance():
 
         # Populate both markers with waypoints
         for wp in waypoints:
+            
             p = Point()
             p.x = wp[0]
             p.y = wp[1]
@@ -253,6 +255,7 @@ class AstarObstacleAvoidance():
         marker_array.markers.append(line_marker)
 
         self.astar_marker_pub.publish(marker_array)
+        
     def publish_bounding_box(self):
         # note there is an older publish bounding box function that just makes a box around the rover..
         marker = Marker()
@@ -336,7 +339,7 @@ class AstarObstacleAvoidance():
 
             if current == goal:
                 return self.reconstruct_path(came_from, current)
-           # print("in get neighbors", current)
+          #  print("in get neighbors in astar", current)
             for neighbor in self.get_neighbors(current):
                 if neighbor in closed:
                     continue  # Skip closed nodes
@@ -473,7 +476,8 @@ class AstarObstacleAvoidance():
             
         msg.data = flattened_waypoints  # Set the data field with the flattened list
         self.astar_pub.publish(msg)
-        self.publish_waypoints(msg)  # Publish the waypoints for visualization
+        # print("flattened waypoints", flattened_waypoints)
+        self.publish_waypoints_rviz(flattened_waypoints)  # Publish the waypoints for visualization
 
     def run(self):
         need_replan=True
@@ -489,7 +493,7 @@ class AstarObstacleAvoidance():
                 print("self.occupancy_grid is None")
                 self.rate.sleep()
                 continue
-       
+            print("running")
             start =  self.world_to_grid(self.current_position_x, self.current_position_y) #(int(self.current_position_x), int(self.current_position_y))
             need_replan=False
             if rospy.Time.now() - last_plan_time > replan_interval:
@@ -520,10 +524,12 @@ class AstarObstacleAvoidance():
                         current_pos = waypoint
                         rospy.sleep(1 / self.update_rate) 
                     self.publish_waypoints(path)
-                    print("path")
+                   # self.publish_waypoints_rviz(path)
+                    # print("path")
             self.rate.sleep()     
             
 if __name__ == "__main__":
+    rospy.init_node("octomap_a_star_planner", anonymous=True)
     try:
         planner = AstarObstacleAvoidance()
         planner.run()

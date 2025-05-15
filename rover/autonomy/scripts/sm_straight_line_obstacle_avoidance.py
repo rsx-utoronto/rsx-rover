@@ -5,7 +5,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Bool, Float32MultiArray
-from rover.autonomy.scripts.astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
+from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
 import math
 import ar_detection_node as adn
 
