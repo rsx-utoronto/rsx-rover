@@ -43,7 +43,7 @@ from nav_msgs.msg import Path
 
 
 class AstarObstacleAvoidance():
-    def __init__(self, lin_vel = 0.5, ang_vel= 0.3, goal=(2,0)):
+    def __init__(self, lin_vel = 0.3, ang_vel= 0.3, goal=(5,0)):
           
         # Parameters
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
@@ -82,10 +82,10 @@ class AstarObstacleAvoidance():
         self.abort_check = False
         self.heading=0
         self.current_corner_array = [
-            Point(x=0.3, y=0.3, z=0),
-            Point(x=0.3, y=-0.3, z=0),
-            Point(x=-0.3, y=-0.3, z=0), # with 0.5, it produces green blocks!
-            Point(x=-0.3, y=0.3, z=0) ]
+            Point(x=0.55, y=0.55, z=0),
+            Point(x=0.55, y=-0.55, z=0),
+            Point(x=-0.55, y=-0.55, z=0), # with 0.5, it produces green blocks!
+            Point(x=-0.55, y=0.55, z=0) ]
         self.z_min = -0.25
         self.z_max = 3
         self.yaw = 0
