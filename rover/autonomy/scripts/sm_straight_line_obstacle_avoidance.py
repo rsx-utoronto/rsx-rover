@@ -91,6 +91,7 @@ class StraightLineObstacleAvoidance:
 
     def move_to_target(self, target_x, target_y, state="Location Selection"):
         rate = rospy.Rate(50)
+        
         threshold = 0.5  # meters
         angle_threshold = 0.2  # radians
         kp = 0.5  # Angular proportional gain
@@ -99,14 +100,12 @@ class StraightLineObstacleAvoidance:
             if not self.waypoints or self.x is None:
                 rate.sleep()
                 continue
-
+            print("in move to target")
             current_target = self.waypoints[0]
             target_x, target_y = current_target
 
             # Calculate target direction and distance
             target_heading = math.atan2(target_y - self.y, target_x - self.x)
-            angle_diff = self.normalize_angle(target_heading - self.heading)
-            distance = math.hypot(target_x - self.x, target_y - self.y)
 
             # Create Twist message
             msg = Twist()
@@ -124,6 +123,7 @@ class StraightLineObstacleAvoidance:
                     msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
             else:
                 # Move forward
+                print("trying to move forward")
                 msg.linear.x = self.lin_vel
 
             self.drive_publisher.publish(msg)
@@ -136,6 +136,7 @@ class StraightLineObstacleAvoidance:
         planner = AstarObstacleAvoidance(self.targets[0])
         planner.run()
         while not rospy.is_shutdown() and not self.abort_check:
+            print("in navigate")
             if self.targets:
                 # Continuously process the first target in the queue
                 target_x, target_y = self.targets[0]
@@ -158,7 +159,7 @@ if __name__ == '__main__':
     targets = [(9, 2)]  
     try:
         rospy.init_node('straight_line_approach_node')
-        approach = StraightLineObstacleAvoidance(1.5, 0.5, targets)
+        approach = StraightLineObstacleAvoidance(0.5, 0.5, targets)
         approach.navigate()
     except rospy.ROSInterruptException:
         pass

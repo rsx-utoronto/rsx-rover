@@ -87,6 +87,7 @@ class AstarObstacleAvoidance():
             Point(x=-0.3, y=0.3, z=0) ]
         self.z_min = -0.25
         self.z_max = 3
+        self.yaw=0
         
         # Publishers and Subscribers
         self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
@@ -242,11 +243,11 @@ class AstarObstacleAvoidance():
         line_marker.lifetime = rospy.Duration(0)
 
         # Populate both markers with waypoints
-        for wp in waypoints:
+        for index in range(0, len(waypoints), 2):
             
             p = Point()
-            p.x = wp[0]
-            p.y = wp[1]
+            p.x = waypoints[index]
+            p.y = waypoints[index+1]
             p.z = 0.0
             points_marker.points.append(p)
             line_marker.points.append(p)
@@ -318,7 +319,7 @@ class AstarObstacleAvoidance():
             current = came_from[current]
             path.append(current)  # Append predecessors
         path.reverse()  # Reverse to get start→goal
-        print("path", path)
+       # print("path", path)
         return path
       
     def a_star(self, start, goal):
@@ -479,6 +480,57 @@ class AstarObstacleAvoidance():
         # print("flattened waypoints", flattened_waypoints)
         self.publish_waypoints_rviz(flattened_waypoints)  # Publish the waypoints for visualization
 
+
+    def normalize_angle(self, angle):
+        while angle > math.pi:
+            angle -= 2 * math.pi
+        while angle < -math.pi:
+            angle += 2 * math.pi
+        return angle
+    
+    def move_to_target(self, target_x, target_y, state="Location Selection"):
+        rate = rospy.Rate(50)
+        
+        threshold = 0.5  # meters
+        angle_threshold = 0.2  # radians
+        kp = 0.5  # Angular proportional gain
+
+        while not rospy.is_shutdown() and not self.abort_check:
+            if not self.waypoints or self.x is None:
+                rate.sleep()
+                continue
+            print("in move to target")
+            current_target = self.waypoints[0]
+            target_x, target_y = current_target
+
+            # Calculate target direction and distance
+            target_heading = math.atan2(target_y - self.y, target_x - self.x)
+
+            # Create Twist message
+            msg = Twist()
+
+            if distance < threshold:
+                self.waypoints.pop(0)
+                rospy.loginfo("Reached waypoint. Proceeding to next.")
+                continue
+
+            if abs(angle_diff) > angle_threshold:
+                # Rotate in place
+                msg.angular.z = max(min(kp * angle_diff, self.ang_vel), -self.ang_vel)
+                # Minimum angular velocity to overcome friction
+                if abs(msg.angular.z) < 0.3:
+                    msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
+            else:
+                # Move forward
+                print("trying to move forward")
+                msg.linear.x = self.lin_vel
+
+            self.drive_publisher.publish(msg)
+            rate.sleep()
+
+        # Stop when done
+        self.drive_publisher.publish(Twist())
+        
     def run(self):
         need_replan=True
         last_position=(0,0)
