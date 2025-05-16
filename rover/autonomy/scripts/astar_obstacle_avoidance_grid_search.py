@@ -772,7 +772,7 @@ class AstarObstacleAvoidance_GS_Traversal():
         return False #Signalling that grid search has been done
 
 
-class GridSearch:
+class GridSearch():
     '''
     All values here should be treated as doubles
     w, h - refers to grid dimensions, ie. if comp tells us that it is within radius of 20 then our grid would be square with 40 by 40

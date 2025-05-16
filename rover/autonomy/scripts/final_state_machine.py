@@ -484,6 +484,7 @@ class AR2(smach.State):
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
             targets = gs.square_target() #generates multiple targets 
+           
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
             ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
