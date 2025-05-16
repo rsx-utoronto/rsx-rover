@@ -16,7 +16,7 @@ from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
 from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
-import astar_obstacle_avoidance_grid_search
+import astar_obstacle_avoidance_grid_search 
 import gps_conversion_functions as functions
 import gps_to_pose as gps_to_pose
 import sm_grid_search
@@ -254,12 +254,16 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 self.glob_msg.pub_state(f"Navigating to {list(path.items())[0][0]}") 
                 self.glob_msg.pub_state(f"Navigating to {self.glob_msg.cartesian[list(path.items())[0][0]]}") 
                 target = path[list(path.items())[0][0]]
-                print(target) # add check for if it's going to AR3, OBJ2 or leaving from those!
-                if target != 'AR3' and target != 'OBJ2' and userdata.prev_loc!='AR3' and userdata.prev_loc!='OBJ2':
-                    sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
-                else:
-                    #sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
+                target_name = list(path.items())[0][0]
+                print("target_name", target_name) # add check for if it's going to AR3, OBJ2 or leaving from those!
+                if target_name == "AR3" or target_name == 'OBJ2' or userdata.prev_loc =='AR3' or userdata.prev_loc =='OBJ2':
+                    print("doing obstacle_avoidance in straight line")
                     sla = AstarObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
+                  
+                else:
+                    print("NOT DOING OBStalce Avoidance")
+                    #sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
+                    sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                 sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 if self.glob_msg.abort_check:
                     userdata.aborted_state = list(path.items())[0][0]
@@ -561,6 +565,7 @@ class AR3(smach.State):
             # rospy.init_node('aruco_tag1_detector', anonymous=True)
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs =  astar_obstacle_avoidance_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
+            gs =  astar_obstacle_avoidance_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
             targets = gs.square_target() #generates multiple targets 
             gs_traversal_object = astar_obstacle_avoidance_grid_search.AstarObstacleAvoidance_GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR3")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
@@ -727,7 +732,9 @@ class OBJ2(smach.State): #waterbottle
 
             # rospy.init_node('object1_detector', anonymous=True) 
             gs = astar_obstacle_avoidance_grid_search.GridSearch(sm_config.get("OBJ_grid_search_w"), sm_config.get("OBJ_grid_search_h"), sm_config.get("OBJ_grid_search_tol"), userdata.rem_loc_dict["OBJ2"][0], userdata.rem_loc_dict["OBJ2"][1])  # define multiple target points here: cartesian
+            gs = astar_obstacle_avoidance_grid_search.GridSearch(sm_config.get("OBJ_grid_search_w"), sm_config.get("OBJ_grid_search_h"), sm_config.get("OBJ_grid_search_tol"), userdata.rem_loc_dict["OBJ2"][0], userdata.rem_loc_dict["OBJ2"][1])  # define multiple target points here: cartesian
             targets = gs.square_target()
+            gs_traversal_object = astar_obstacle_avoidance_grid_search.AstarObstacleAvoidance_GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ2")
             gs_traversal_object = astar_obstacle_avoidance_grid_search.AstarObstacleAvoidance_GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ2")
             rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
