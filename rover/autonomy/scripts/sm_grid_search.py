@@ -294,14 +294,7 @@ class GridSearch:
         self.start_x = start_x
         self.start_y = start_y
         # rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) # change topic name
-        
 
-    # def odom_callback(self, msg):
-    #     self.start_x = msg.pose.pose.position.x
-    #     self.start_y = msg.pose.pose.position.y
-    #     print(self.start_x)
-    #     print(self.start_y)
-    
     '''
     Generates a list of targets for square straight line approach.
     '''

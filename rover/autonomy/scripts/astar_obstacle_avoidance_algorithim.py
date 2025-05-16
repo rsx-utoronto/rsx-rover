@@ -39,7 +39,7 @@ import threading
 from threading import Lock
 
 from geometry_msgs.msg import Point
-from std_msgs.msg import Float32MultiArray, String
+from std_msgs.msg import Float32MultiArray, String, Bool
 from nav_msgs.msg import Path
 
 
@@ -111,6 +111,8 @@ class AstarObstacleAvoidance():
         self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
         self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
 
+    def abort_callback(self,msg):
+        self.abort_check = msg.data
 
     def pointcloud_callback(self, msg):
         """
