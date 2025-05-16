@@ -54,11 +54,8 @@ class ARucoTagDetectionNode():
         except CvBridgeError as e:
             print(e)
         else:
-            # Do we need to undistort?
-            
-            # DELETE LATER
-            self.findArucoMarkers(cv_image)
-            
+            # Do we need to undistort?    
+         
             if self.curr_state == "AR1" or self.curr_state == "AR2" or self.curr_state == "AR3":
                 self.findArucoMarkers(cv_image)
     
