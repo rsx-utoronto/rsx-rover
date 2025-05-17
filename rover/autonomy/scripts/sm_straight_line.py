@@ -15,6 +15,10 @@ file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
+
+# File for the straight line traversal class for the state machine. The class is initialized with linear, angular velocities, and target passed
+# through the state machine. When navigate function is called, it calls the move_to_target function which continuously calculates the target distance
+# and heading to determine the angular and linear velocities. When the target distance is within the threshold it breaks out of the loop to return.
     
 class StraightLineApproach:
     def __init__(self, lin_vel, ang_vel, targets):
@@ -97,7 +101,7 @@ class StraightLineApproach:
             target_heading = math.atan2(target_y - self.y, target_x - self.x)
             target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
             # print(f"Current Position: ({self.x}, {self.y})")
-            # print("Target Heading:", math.degrees(target_heading), "Cur Heading:", math.degrees(self.heading))
+            print("Target Heading:", math.degrees(target_heading), " Target Distance:", target_distance)
             angle_diff = target_heading - self.heading
             
             # print ( f"angle_diff: {angle_diff}")

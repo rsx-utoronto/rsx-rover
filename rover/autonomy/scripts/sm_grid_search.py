@@ -19,13 +19,20 @@ file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
+
+
+# File for the grid search class. Class is initialized with linear, angular velocities, and the target location sent through
+# the state machine. When the function square_target is called, it generates grid search targets in a spiral to navigate to. When 
+# navigate function is called it calls the move_to_target function on the generated square targets, tries to navigate to each of them. 
+# When aruco, waterbottle, or mallet callback functions detect an object in the corresponding state, it calls aruco homing
+# to navigate to the detected item to get close enough
     
 class GS_Traversal:
     def __init__(self, lin_vel, ang_vel, targets, state):
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
         self.targets = targets
-        self.found = False #Do we need?
+        self.found = False 
         self.abort_check = False
         self.x = 0
         self.y = 0
@@ -159,7 +166,7 @@ class GS_Traversal:
 
                 target_heading = math.atan2(target_y - self.y, target_x - self.x)
                 target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
-                # print("Target Heading:", math.degrees(target_heading), "Cur Heading:", math.degrees(self.heading))
+                print("Target Heading:", math.degrees(target_heading), " Target Distance:", target_distance)
                 angle_diff = target_heading - self.heading
 
                 if angle_diff > math.pi:
@@ -195,7 +202,7 @@ class GS_Traversal:
                 if state == "AR1" or state == "AR2" or state == "AR3":
                     aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
-                    print ("FUCK YOU")
+                    #print ("FUCK YOU")
                     print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                 elif state == "OBJ1" or state == "OBJ2":
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
@@ -265,7 +272,7 @@ class GS_Traversal:
         
         for target_x, target_y in self.targets:
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
-                print(f"Object detected during navigation: {self.state}")
+                print(f"Object detected during navigation: {self.found_objects[self.state]}")
                 return True
             
             print("Going to target", target_x, target_y)

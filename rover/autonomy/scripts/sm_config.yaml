@@ -67,3 +67,12 @@ pose_param_grid_search: '/pose'
 # sm_straight_line params
 drive_param_straight_line: '/drive'
 pose_param_straight_line: '/pose'
+
+zed_detection_image_topic: '/zed_node/rgb/image_rect_color'
+zed_detection_info_topic: '/zed_node/rgb/camera_info'
+
+#Change the below flag into true to get data from realsense for item detection
+realsense_detection: False
+realsense_detection_image_topic: '/camera/color/image_raw'
+realsense_detection_info_topic: '/camera/color/camera_info'
+realsense_pointcloud: '/camera/depth/points'

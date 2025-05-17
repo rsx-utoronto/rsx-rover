@@ -72,7 +72,6 @@ print("run states from yaml", RUN_STATES)
 # You use homing to get close enough to the object to count for points (ie. 1 m)
 # FOR HOMING SPECIFICALLY - need Aimer, and AimerROS () - BBOX (subscribe to different box)
 
-#lin_vel = 0.6, ang_vel = 0.3
 
 
 def shortest_path(start: str, locations: dict) -> list:
@@ -82,8 +81,9 @@ def shortest_path(start: str, locations: dict) -> list:
 
 # GLOB_MSGS class which includes all publishers, subscribers, callback functions, and the instances of AR and object detection nodes
 # which will be used throughout the code.
-# Publishers: gui_status(String), state(String), led_light(String)
-# Subscribers : pose(PoseStamped), /long_lat_goal_array(Float32MultiArray)  
+# Publishers: gui_status(String) [For publishing status messages to the GUI], state(String) [For indicating what state we are in], led_light(String)
+# [For publishing messages for led to light on]
+# Subscribers : pose(PoseStamped) [Gets the pose/location data], /long_lat_goal_array(Float32MultiArray) [Gets the GPS coordinates of task points]
 
 class GLOB_MSGS:
     def __init__(self):
@@ -176,7 +176,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         self.glob_msg = glob_msg
     
 
-    def initialize(self, userdata): #main init function
+    def initialize(self, userdata): # main init function
 
         rospy.Subscriber("/long_lat_goal_array", Float32MultiArray, self.glob_msg.coord_callback) #Subcribes to the gui location publisher
         while (self.glob_msg.locations is None and rospy.is_shutdown() == False): #Waits for all GPS locations to be received
@@ -189,7 +189,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         
         self.glob_msg.pub_state("Changing GPS coordinates to cartesian") 
         cartesian = {}
-        for el in cartesian_path: #For each location, it transforms the GPS coordinates to Cartesian coordinates
+        for el in cartesian_path: #For each location stated in the yaml file, it transforms the GPS coordinates to Cartesian coordinates
             if (el in RUN_STATES) or (el == "start"):
                 distance = functions.getDistanceBetweenGPSCoordinates((self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1]), (self.glob_msg.locations[el][0], self.glob_msg.locations[el][1]))
                 theta = functions.getHeadingBetweenGPSCoordinates(self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1], self.glob_msg.locations[el][0], self.glob_msg.locations[el][1])
@@ -204,10 +204,10 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         
         cartesian_dict = {}
         
-        if sm_config.get("run_in_order"):
-            cartesian_list = sm_config.get("States_run_in_order")
+        if sm_config.get("run_in_order"): #If indicated, we assign the path same as the one in the yaml file
+            cartesian_list = sm_config.get("States_run_in_order") 
         else: 
-            cartesian_list = shortest_path('start', cartesian) 
+            cartesian_list = shortest_path('start', cartesian) #Else create optimal path
     
         for cart in cartesian_list:
             cartesian_dict[cart] = cartesian[cart]
@@ -219,7 +219,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         gps_to_pose.GPSToPose(self.glob_msg.locations['start'], tuple(sm_config.get("origin_pose", [0.0,0.0])), tuple(sm_config.get("heading_vector", [1.0, 0.0]))) #creates an instance of GPSToPose to start publishing pose
     
     def execute(self, userdata): 
-        self.glob_msg.pub_led_light("auto")
+        self.glob_msg.pub_led_light("auto") #Initializes red led light
         self.glob_msg.pub_state("Initializing Autonomous Navigation")
         self.initialize(userdata)
         return "Tasks Execute"
@@ -247,10 +247,9 @@ class LocationSelection(smach.State): #State for determining which mission/state
             userdata.start_location = (0, 0)
             
         path = userdata.rem_loc_dict
-        if path != {}: 
+        if path != {}: #Checks if all locations are visited
             
             try:
-                self.glob_msg.pub_state(f"Locations remaining: {userdata.start_location}")
                 self.glob_msg.pub_state(f"Navigating to {list(path.items())[0][0]}") 
                 self.glob_msg.pub_state(f"Navigating to {self.glob_msg.cartesian[list(path.items())[0][0]]}") 
                 target = path[list(path.items())[0][0]]
@@ -261,11 +260,11 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     sla = AstarObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                   
                 else:
-                    print("NOT DOING OBStalce Avoidance")
+                    print("Not Doing Obstalce Avoidance")
                     #sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                     sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                 sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
-                if self.glob_msg.abort_check:
+                if self.glob_msg.abort_check: #Checks if abort button is pressed
                     userdata.aborted_state = list(path.items())[0][0]
                     return "ABORT"
             except rospy.ROSInterruptException:
@@ -274,8 +273,8 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     userdata.aborted_state = list(path.items())[0][0]
                     return "ABORT"
             return list(path.items())[0][0]
-        else: #all mission have been done
-            print("going to tasks ended", path)
+        else: #all tasks have been done
+            self.glob_msg.pub_state("Going to tasks ended")
             return "Tasks Ended"  
 
 class GNSS1(smach.State): #State for GNSS1
@@ -319,6 +318,7 @@ class GNSS1(smach.State): #State for GNSS1
         userdata.rem_loc_dict.pop(self.__class__.__name__) #Removing state from location list
 
         while(self.glob_msg.get_next_task_check() is not True):
+            self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
         return "Location Selection"
@@ -367,8 +367,8 @@ class GNSS2(smach.State): #State for GNSS1
         userdata.rem_loc_dict.pop(self.__class__.__name__) #Removing state from location list
 
         while(self.glob_msg.get_next_task_check() is not True):
+            self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
-            self.glob_msg.pub_state("Waiting for next state button")
         self.glob_msg.next_task_check = False
         return "Location Selection"
 
@@ -404,14 +404,14 @@ class AR1(smach.State): #State for AR1
             self.glob_msg.pub_state("Reached AR1 GNSS")
             self.glob_msg.pub_state_name("AR1") 
 
-            # rospy.init_node('aruco_tag1_detector', anonymous=True)
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
             targets = gs.square_target() #Generates multiple points for grid search
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR1") #Starts grid search traversal
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback) #Subscribes to aruco found to determine whether its found or not
-            self.glob_msg.pub_state("Starting A1 grid search")
-            ar_in_correct_loc = gs_traversal_object.navigate() #Should check for abort in GS file
+            self.glob_msg.pub_state("Starting AR1 grid search")
+            ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the generated grid search targets
+            self.glob_msg.pub_state("End of AR1 grid search")
             if self.glob_msg.abort_check:
                     self.glob_msg.pub_state("Aborting for state AR1")
                     userdata.aborted_state = "AR1"
@@ -448,12 +448,13 @@ class AR1(smach.State): #State for AR1
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
 
         while(self.glob_msg.get_next_task_check() is not True):
+            self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
         return "Location Selection"
                     
 
-class AR2(smach.State):
+class AR2(smach.State): #State for AR2
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
@@ -482,16 +483,17 @@ class AR2(smach.State):
         if current_distance < 5:
             # print("Successful cruise")
             self.glob_msg.pub_state("Reached AR2 GNSS")
-            self.glob_msg.pub_state_name("AR2") #Will it keep on publishing?
+            self.glob_msg.pub_state_name("AR2") 
 
-            # rospy.init_node('aruco_tag1_detector', anonymous=True)
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
-            targets = gs.square_target() #generates multiple targets 
+            targets = gs.square_target() #generates multiple grid search targets 
            
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
-            ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+            self.glob_msg.pub_state("Starting AR2 grid search")
+            ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
+            self.glob_msg.pub_state("End of AR2 grid search")
             if self.glob_msg.abort_check:
                     self.glob_msg.pub_state("Aborting for state AR2")
                     userdata.aborted_state = "AR2"
@@ -527,11 +529,12 @@ class AR2(smach.State):
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
 
         while(self.glob_msg.get_next_task_check() is not True):
+            self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
         return "Location Selection"
 
-class AR3(smach.State):
+class AR3(smach.State): #State for AR3
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
@@ -560,16 +563,17 @@ class AR3(smach.State):
         if current_distance < 5:
             # print("Successful cruise")
             self.glob_msg.pub_state("Reached AR3 GNSS")
-            self.glob_msg.pub_state_name("AR3") #Will it keep on publishing?
+            self.glob_msg.pub_state_name("AR3") 
 
-            # rospy.init_node('aruco_tag1_detector', anonymous=True)
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs =  astar_obstacle_avoidance_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
             gs =  astar_obstacle_avoidance_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
             targets = gs.square_target() #generates multiple targets 
             gs_traversal_object = astar_obstacle_avoidance_grid_search.AstarObstacleAvoidance_GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR3")
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
-            ar_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+            self.glob_msg.pub_state("Starting AR3 grid search")
+            ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
+            self.glob_msg.pub_state("End of AR3 grid search")
             if self.glob_msg.abort_check:
                     self.glob_msg.pub_state("Aborting for state AR3")
                     userdata.aborted_state = "AR3"
@@ -605,11 +609,12 @@ class AR3(smach.State):
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
 
         while(self.glob_msg.get_next_task_check() is not True):
+            self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
         return "Location Selection"
 
-class OBJ1(smach.State): #mallet
+class OBJ1(smach.State): #State for mallet
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
@@ -644,14 +649,15 @@ class OBJ1(smach.State): #mallet
             self.glob_msg.pub_state("Reached Object1 GNSS")
             self.glob_msg.pub_state_name("OBJ1")
 
-            # rospy.init_node('object1_detector', anonymous=True) 
             gs = sm_grid_search.GridSearch(sm_config.get("OBJ_grid_search_w"), sm_config.get("OBJ_grid_search_h"), sm_config.get("OBJ_grid_search_tol"), userdata.rem_loc_dict["OBJ1"][0], userdata.rem_loc_dict["OBJ1"][1])  # define multiple target points here: cartesian
-            targets = gs.square_target()
+            targets = gs.square_target() #Generates grid search targets
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ1")
             rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
 
-            obj1_in_correct_loc = gs_traversal_object.navigate() #should check for abort in the GS file
+            self.glob_msg.pub_state("Starting OBJ1 grid search")
+            obj1_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
+            self.glob_msg.pub_state("Starting OBJ1 grid search")
             if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state OBJ1")
                 userdata.aborted_state = "OBJ1"
@@ -691,12 +697,12 @@ class OBJ1(smach.State): #mallet
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
 
         while(self.glob_msg.get_next_task_check() is not True):
+            self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
-            self.glob_msg.pub_state("Waiting for next state button")
         self.glob_msg.next_task_check = False
         return "Location Selection"
     
-class OBJ2(smach.State): #waterbottle
+class OBJ2(smach.State): #State for waterbottle
     def __init__(self):
         smach.State.__init__(self, outcomes = ["Location Selection", "ABORT"],
                             input_keys = ["rem_loc_dict"],
@@ -730,7 +736,6 @@ class OBJ2(smach.State): #waterbottle
             self.glob_msg.pub_state("Reached Object2 GNSS")
             self.glob_msg.pub_state_name("OBJ2")
 
-            # rospy.init_node('object1_detector', anonymous=True) 
             gs = astar_obstacle_avoidance_grid_search.GridSearch(sm_config.get("OBJ_grid_search_w"), sm_config.get("OBJ_grid_search_h"), sm_config.get("OBJ_grid_search_tol"), userdata.rem_loc_dict["OBJ2"][0], userdata.rem_loc_dict["OBJ2"][1])  # define multiple target points here: cartesian
             gs = astar_obstacle_avoidance_grid_search.GridSearch(sm_config.get("OBJ_grid_search_w"), sm_config.get("OBJ_grid_search_h"), sm_config.get("OBJ_grid_search_tol"), userdata.rem_loc_dict["OBJ2"][0], userdata.rem_loc_dict["OBJ2"][1])  # define multiple target points here: cartesian
             targets = gs.square_target()
@@ -739,7 +744,9 @@ class OBJ2(smach.State): #waterbottle
             rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
             rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
 
-            obj1_in_correct_loc = gs_traversal_object.navigate() #publishing messages?
+            self.glob_msg.pub_state("Starting OBJ2 grid search")
+            obj1_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
+            self.glob_msg.pub_state("End of OBJ2 grid search")
             if self.glob_msg.abort_check:
                 self.glob_msg.pub_state("Aborting for state OBJ2")
                 userdata.aborted_state = "OBJ2"
@@ -780,6 +787,7 @@ class OBJ2(smach.State): #waterbottle
         userdata.rem_loc_dict.pop(self.__class__.__name__) #remove state from location list
 
         while(self.glob_msg.get_next_task_check() is not True):
+            self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
         return "Location Selection"
@@ -821,7 +829,9 @@ class ABORT(smach.State):  # Assuming it won't be called before we try to go to 
         try:
             # Perform straight-line traversal back to the determined location
             sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [return_location])
+            self.glob_msg.pub_state("Navigating to Abort location")
             sla.navigate()
+            rospy.sleep(2) #For waiting after the abort location is reached
             # Check final distance to the target location
             current_pose = self.glob_msg.get_pose()
             distance = math.sqrt(

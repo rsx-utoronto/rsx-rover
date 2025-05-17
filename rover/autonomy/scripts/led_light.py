@@ -12,6 +12,7 @@ class LedLight():
     def __init__(self):
       self.led_sub = rospy.Subscriber("led_light", String, self.state_callback)
       self.board = None
+      self.init_board()
 
     def list_all_ports(self):
       ports = [port.device for port in serial.tools.list_ports.comports()]
@@ -142,7 +143,6 @@ if __name__ == "__main__":
     rospy.init_node('led_listener', anonymous=True)
     try:
         led = LedLight()
-        led.init_board()
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
