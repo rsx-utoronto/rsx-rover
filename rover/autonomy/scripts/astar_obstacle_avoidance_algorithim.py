@@ -41,10 +41,23 @@ from threading import Lock
 from geometry_msgs.msg import Point
 from std_msgs.msg import Float32MultiArray, String, Bool
 from nav_msgs.msg import Path
+import os
+import yaml
+
+
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+
+with open(file_path, "r") as f:
+    sm_config = yaml.safe_load(f)
 
 
 class AstarObstacleAvoidance():
     def __init__(self, lin_vel = 0.3, ang_vel= 0.3, goal=(5,0)):
+        
+        if sm_config.get("realsense_detection"):
+            self.pointcloud_topic = rospy.get_param("~pointcloud_topic", sm_config.get("realsense_pointcloud"))
+        else:
+            self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed_node/point_cloud/cloud_registered")
           
         # Parameters
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
@@ -53,7 +66,6 @@ class AstarObstacleAvoidance():
         self.vel_topic = rospy.get_param("~vel_topic", "/cmd_vel")  # Velocity command
         self.height_min = rospy.get_param("~height_min", 0.2)  # Min height for obstacles
         self.height_max = rospy.get_param("~height_max", 15)  # Max height for obstacles
-        self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed_node/point_cloud/cloud_registered")
         self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
         self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
         self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")

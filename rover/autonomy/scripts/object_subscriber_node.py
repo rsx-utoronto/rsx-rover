@@ -8,13 +8,23 @@ from std_msgs.msg import Float64MultiArray, Bool
 import numpy as np
 from ultralytics import YOLO
 import os
+import yaml
 from std_msgs.msg import String
+
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+
+with open(file_path, "r") as f:
+    sm_config = yaml.safe_load(f)
 
 
 class ObjectDetectionNode():
     def __init__(self):
-        self.image_topic = "/zed_node/rgb/image_rect_color"
-        self.info_topic = "/zed_node/rgb/camera_info"
+        if sm_config.get("realsense_detection"):
+            self.image_topic = sm_config.get("realsense_detection_image_topic") 
+            self.info_topic = sm_config.get("realsense_detection_info_topic")
+        else:
+            self.image_topic = sm_config.get("zed_detection_image_topic") 
+            self.info_topic = sm_config.get("zed_detection_info_topic")    
         self.state_topic = "state"
         self.curr_state = "Start"
         t = time.time()

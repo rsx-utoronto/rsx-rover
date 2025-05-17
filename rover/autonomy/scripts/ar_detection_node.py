@@ -8,9 +8,15 @@ from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 import os
+import yaml
 from std_msgs.msg import Float64MultiArray
 from std_msgs.msg import Bool
 from std_msgs.msg import String
+
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+
+with open(file_path, "r") as f:
+    sm_config = yaml.safe_load(f)
 
 bridge = CvBridge()
 
@@ -20,8 +26,13 @@ class ARucoTagDetectionNode():
         self.bridge = CvBridge()
         self.curr_state = None
         # self.image_topic = "/camera/color/image_raw"
-        self.image_topic = "/zed_node/rgb/image_rect_color"
-        self.info_topic = "/zed_node/rgb/camera_info"
+        if sm_config.get("realsense_detection"):
+            self.image_topic = sm_config.get("realsense_detection_image_topic") 
+            self.info_topic = sm_config.get("realsense_detection_info_topic")
+        else:
+            self.image_topic = sm_config.get("zed_detection_image_topic") 
+            self.info_topic = sm_config.get("zed_detection_info_topic")
+            
         self.state_topic = "state"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
