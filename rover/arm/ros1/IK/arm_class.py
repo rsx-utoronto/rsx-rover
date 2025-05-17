@@ -14,7 +14,7 @@ class Arm():
             the arms dh-table
 
         '''
-
+        self.isHomed = False
         self.numJoints:int = numJoints
         self.curAngles = [0]*numJoints
         self.goalAngles = [0]*numJoints 
@@ -70,6 +70,9 @@ class Arm():
     def iterateMode(self):
         ''' Iterate the Kinematics Mode of the Arm
         '''
+        if not self.isHomed:
+            return
+
         nextIndex = self.modes.index(self.curMode) + 1
         if nextIndex > self.numModes:
             nextIndex = 0
@@ -173,6 +176,7 @@ class Arm():
         homeAngles[1] -= pi/2
         self.storeSparkMaxOffsets(homeAngles)
         self.goalAngles = deepcopy(self.startingAngles)
+        self.isHomed = True
         print(f'---- {self.startingAngles} -----')
         print(f'---- {self.goalAngles} -----')
 
