@@ -53,9 +53,14 @@ class ScienceArduino():
 
 def main():
     try:
+        rospy.init_node("science_arduino_node", anonymous=True)
         science_arduino = ScienceArduino(board_name)
-        science_arduino.board_read()
-        rospy.spin()
+        # Set the rate to 10 Hz
+        rate = rospy.Rate(10)  # 10 Hz
+        while not rospy.is_shutdown():
+            science_arduino.board_read()
+            rate.sleep()
+        # rospy.spin()
         
     except rospy.ROSInterruptException:
         pass

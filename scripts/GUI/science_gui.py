@@ -1062,6 +1062,7 @@ class CameraFeed:
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
     statusSignal = pyqtSignal(str)
+    probeUpdateSignal = pyqtSignal(bool)
     def __init__(self):
         super().__init__()
         self.statusTerminal = statusTerminal()
@@ -1075,7 +1076,7 @@ class RoverGUI(QMainWindow):
         # self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
         # self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
         self.science_serial_controller = rospy.Publisher('/science_serial_control', String, queue_size=5)
-        self.science_serial_data = rospy.Subscriber('/science_serial_data', String, self.science_callback)
+        self.science_serial_data = rospy.Subscriber('/science_serial_data', String, self.get_probe_data_callback)
         self.reached_state = None
         self.ph1_plot_data = []
         self.ph2_plot_data = []
@@ -1106,6 +1107,7 @@ class RoverGUI(QMainWindow):
         self.tabs.currentChanged.connect(self.on_tab_changed)
         
         self.statusSignal.connect(self.string_signal_receive)
+        self.probeUpdateSignal.connect(self.update_science_plot)
 
     def string_callback(self, msg):
         self.statusTerminal.string_callback(msg)
@@ -1324,6 +1326,8 @@ class RoverGUI(QMainWindow):
         left_bottom_layout = QVBoxLayout()
         left_bottom_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins
         left_bottom_layout.setSpacing(0)  # Remove spacing
+        self.science_plot = pg.PlotWidget() #self.science_plot is the PlotWidget object that is going to be displayed in the data display section
+        left_bottom_layout.addWidget(self.science_plot)
         left_bottom_widget.setLayout(left_bottom_layout)
         
         # Remove title margins from all group boxes
@@ -1508,7 +1512,7 @@ class RoverGUI(QMainWindow):
     
         # Format example: A0: xx.xx A1: xx.xx Signal Voltage (A0 - A1): xx.xx
     def get_probe_data_callback(self, data):
-        msg = data.data.split(" ")
+        msg = data.data.split(";")
         if self.ph1_button: #Arbitrary Button Name
             if self.ph1_time == 1:
                 ph1_time_buffer = []
@@ -1578,15 +1582,30 @@ class RoverGUI(QMainWindow):
             self.pmt_time = 1
             pmt_data_buffer.clear()
             pmt_time_buffer.clear()
+        
+        self.probeUpdateSignal.emit(True)  
          
     def plot_science_data(self, data_buffer, time_buffer, dataType): #dataType is a string to indicated what kind of data is plotted
-        self.science_plot = pg.PlotWidget() #self.science_plot is the PlotWidget object that is going to be displayed in the data display section
-        self.setCentralWidget(self.science_plot)
         self.science_plot.setBackground("w")
         pen = pg.mkPen(color=(255, 0, 0))
-        self.plot_graph.setLabel("left", dataType)
-        self.plot_graph.setLabel("bottom", "Time")
+        self.science_plot.setLabel("left", dataType)
+        self.science_plot.setLabel("bottom", "Time")
         self.science_plot.plot(time_buffer, data_buffer, pen=pen, symbol="+",symbolSize=10, symbolBrush="b")
+
+    def clear_science_plot(self):
+        self.science_plot.clear()
+        
+    def update_science_plot(self, update: bool):
+        if update:
+            if self.ph1_plot_data != []:
+                self.plot_science_data(self.ph1_plot_data[0], self.ph1_plot_data[1], "pH 1")
+            if self.ph2_plot_data != []:
+                self.plot_science_data(self.ph2_plot_data[0], self.ph2_plot_data[1], "pH 2")
+            if self.hum_plot_data != []:
+                self.plot_science_data(self.hum_plot_data[0], self.hum_plot_data[1], "Humidity")
+                self.plot_science_data(self.temp_plot_data[0], self.temp_plot_data[1], "Temperature")
+            if self.pmt_plot_data != []:
+                self.plot_science_data(self.pmt_plot_data[0], self.pmt_plot_data[1], "PMT")
         
 
 class SensorBlock(QWidget):
@@ -1653,15 +1672,15 @@ class SensorBlock(QWidget):
         print("Data Sensor")
     
     def fad_main(self):
-        self.ui.science_serial_controller.publish("Y")
+        self.ui.science_serial_controller.publish("<Y>")
         print("FAD Main")
 
     def fad_1(self):
-        self.ui.science_serial_controller.publish("X")
+        self.ui.science_serial_controller.publish("<X>")
         print("FAD 1")
     
     def fad_2(self):
-        self.ui.science_serial_controller.publish("Z")
+        self.ui.science_serial_controller.publish("<Z>")
         print("FAD 2")
         
 
@@ -1709,19 +1728,27 @@ class SampleBlock(QWidget):
         self.layout.setSpacing(0)
         self.setLayout(self.layout)
 
+        self.display = False
+
     def switch(self):
         if self.chem:
-            self.ui.science_serial_controller.publish("N")
+            self.ui.science_serial_controller.publish("<N>")
             print("Ninhydrin")
         else:
-            self.ui.science_serial_controller.publish("S")
+            self.ui.science_serial_controller.publish("<S>")
             print("Switch PMT")
     
     def data(self):
+        self.display = not self.display
         if self.chem:
             print("Data Chem")
         else:
             print("Data Soil")
+        
+        if self.display:
+            self.data_button.setStyleSheet("background-color: #FF0000;")
+        else:
+            self.data_button.setStyleSheet("background-color: #FFFFFF;")
 
 class SampleSubBlock(QWidget):
     def __init__(self, chem: bool, site1: bool):
@@ -1782,27 +1809,37 @@ class SampleSubBlock(QWidget):
         self.layout.addLayout(hLayout)
         self.setLayout(self.layout)
 
+        self.reading = False
+
     def sample(self):
         if self.chem:
             if self.site1:
-                self.ui.science_serial_controller.publish("A")
+                self.ui.science_serial_controller.publish("<A>")
                 print("Sampled Chem Site 1")
             else:
-                self.ui.science_serial_controller.publish("B")
+                self.ui.science_serial_controller.publish("<B>")
                 print("Sampled Chem Site 2")
         else:
             if self.site1:
-                self.ui.science_serial_controller.publish("D")
+                self.ui.science_serial_controller.publish("<D>")
                 print("Sampled FAM Site 1")
             else:
-                self.ui.science_serial_controller.publish("E")
+                self.ui.science_serial_controller.publish("<E>")
                 print("Sampled FAM Site 2")
     
     def read(self):
+        self.reading = not self.reading
         if self.chem:
             print("Read Chem")
         else:
             print("Read FAM")
+
+        if self.reading:
+            self.read_button.setText("Stop Reading Site 1" if self.site1 else "Stop Reading Site 2")
+            self.read_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
+        else:
+            self.read_button.setText("Read Site 1" if self.site1 else "Read Site 2")
+            self.read_button.setStyleSheet("background-color: #FFFFFF; padding: 4px; min-height: 20px;")
 
     def save(self):
         if self.chem:
@@ -1851,6 +1888,7 @@ class GenieControl(QWidget):
         self.microscope_zoom_in_button.setFixedSize(30, 30)
         self.microscope_zoom_out_button.setFixedSize(30, 30)
         self.micro_slider_splitter.setFixedSize(500, 30)
+        self.micro_slider_splitter.valueUpdated.connect(self.change_microscope_zoom_magnitude)
 
         # Connect button signals to slots
         self.take_pano_button.clicked.connect(self.take_pano)
@@ -1883,6 +1921,8 @@ class GenieControl(QWidget):
         # Apply the layout to the widget
         self.setLayout(self.layout)
 
+        self.zoom_mag = 0
+
         self.show_pano_button(False)
         # self.show_genie_button(False)
         self.show_zoom_controls(False)
@@ -1907,18 +1947,21 @@ class GenieControl(QWidget):
     
     def toggle_genie(self):
         # Implement the logic to toggle the genie lens
-        self.ui.science_serial_controller.publish("M")
+        self.ui.science_serial_controller.publish("<M>")
         print("Toggling genie filter...")
     
     def zoom_in_microscope(self):
         # Implement the logic to zoom in on the microscope
-        self.ui.science_serial_controller.publish("I")
+        self.ui.science_serial_controller.publish("<I," + self.zoom_mag + ">")
         print("Zooming in on microscope...")
 
     def zoom_out_microscope(self):
         # Implement the logic to zoom out on the microscope
-        self.ui.science_serial_controller.publish("O")
+        self.ui.science_serial_controller.publish("<O," + self.zoom_mag + ">")
         print("Zooming out on microscope...")
+
+    def change_microscope_zoom_magnitude(self, value):
+        self.zoom_mag = value
 
 class CheckableComboBox(QComboBox):
     def __init__(self, title = '', parent=None):
