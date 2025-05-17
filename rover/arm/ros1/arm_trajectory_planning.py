@@ -8,10 +8,20 @@ from std_msgs.msg import Float32MultiArray
 '''path[] saves incoming positions from path planning. path[0] is the first position the arm moves to.
 when the rover starts moving to path[0], path[0] is deleted and replaced by the next in queue.
 
-pathHistory[] saves all positions from path planning without deleting anything.'''
+pathHistory[] saves all positions from path planning without deleting anything.
+
+Mark's note:
+Input: 'path' variable from subscribing to /PATH_PLANNING
+Output: 'simAngles' publishing to /arm_goal_pos
+
+'''
+
+NUM_JOINTS = 5
 
 path = []
 pathHistory = []
+
+received_curr_angles = False # Check if angles were initialized with curr_angles
 
 # used in initializeTrajectory to check if the arm is already trying to change positions
 armMoving = False
@@ -19,10 +29,10 @@ armMoving = False
 # maximum average speed in deg/sec
 speedMax = 15.0
 
-simAngles = [0,-90,0,0,0,0,0]
-actualAngles = [0,-90,0,0,0,0,0]
-staticAngles = [0,-90,0,0,0,0,0]
-staticPID = [None] * 7
+simAngles = [0]*NUM_JOINTS
+actualAngles = [0]*NUM_JOINTS
+staticAngles = [0]*NUM_JOINTS
+staticPID = [None] * NUM_JOINTS
 
 KP_STATIC = 0
 KI_STATIC = 0
@@ -56,7 +66,7 @@ class PIDcontroller:
         return
 
 # create staticPID controller
-for i in range(7):
+for i in range(NUM_JOINTS):
     staticPID[i] = PIDcontroller(KP_STATIC, KI_STATIC, KD_STATIC)
 
 class quinticPolynomial:
@@ -137,13 +147,13 @@ def moveToPosition(posI, posF, endTime):
     time = 0 # time elapsed
     compFactor = 1 # factor that quintic polynomials are compressed by
 
-    polyAngles = [None] * 7 # array of angles calculated from polynomials
-    pid = [None] * 7 # array of pid output for each angle
+    polyAngles = [None] * NUM_JOINTS # array of angles calculated from polynomials
+    pid = [None] * NUM_JOINTS # array of pid output for each angle
 
-    for angleNum in range(7):
+    for angleNum in range(NUM_JOINTS):
         # by default, initial/final velocities/accelerations are 0
         polyAngles[angleNum] = quinticPolynomial(posI[angleNum], posF[angleNum], 0, 0, 0, 0, endTime)
-        # Kp Ki Kd can be adjusted for each individual angle, but for now they are uniform for all 7 angles
+        # Kp Ki Kd can be adjusted for each individual angle, but for now they are uniform for all NUM_JOINTS angles
         pid[angleNum] = PIDcontroller(Kp, Ki, Kd)
         pid[angleNum].reset()
 
@@ -152,7 +162,7 @@ def moveToPosition(posI, posF, endTime):
 
         pidOutLargest = 0
         
-        for angleNum in range(7):
+        for angleNum in range(NUM_JOINTS):
             pidOut = pid[angleNum].calculate(simAngles[angleNum] - actualAngles[angleNum], polyAngles[angleNum].direction)
             if (pidOut > pidOutLargest):
                 pidOutLargest = pidOut
@@ -163,7 +173,7 @@ def moveToPosition(posI, posF, endTime):
 
         time = time / currCompFactor
 
-        for angleNum in range(7):
+        for angleNum in range(NUM_JOINTS):
             polyAngles[angleNum].changeEndTime(compFactor)
             posI[angleNum] = polyAngles[angleNum].calculatePoint(time)
 
@@ -185,7 +195,7 @@ def holdStaticPosition():
     global staticPID
     publishPos = Float32MultiArray()
 
-    for angleNum in range(7):
+    for angleNum in range(NUM_JOINTS):
         simAngles[angleNum] -= staticPID[angleNum].calculate(staticAngles[angleNum]
                                                             - actualAngles[angleNum], 1)
 
@@ -219,6 +229,7 @@ def controlArm():
 
     posI = simAngles
     posF = path.pop(0)
+    print(posF)
     
     # when the arm reaches posF, we want it to stay there
     # save that position for later in staticAngles
@@ -226,7 +237,7 @@ def controlArm():
     distanceMax = 0
 
     # find the largest angle difference, then use that difference to calculate speed
-    for angleNum in range(7):
+    for angleNum in range(NUM_JOINTS):
         if (abs(posF[angleNum] - posI[angleNum]) > distanceMax):
             distanceMax = abs(posF[angleNum] - posI[angleNum])
 
@@ -253,22 +264,29 @@ def updateSimAngles(simAngles_):
     simAngles = list(simAngles_.data)
     print("curr angles: ", simAngles)
 
-    # -----------------------------------------------------
-    fakeAngles = [] #placeholder begins
+    # # -----------------------------------------------------
+    # fakeAngles = [] #placeholder begins
 
-    for i in range(7):
-        fakeAngles.append(simAngles[i] + random.randint(0,6) - 3)
+    # for i in range(NUM_JOINTS):
+    #     fakeAngles.append(simAngles[i] + random.randint(0,6) - 3)
 
-    fakeAnglesPosition = Float32MultiArray()
-    fakeAnglesPosition.data = fakeAngles
+    # fakeAnglesPosition = Float32MultiArray()
+    # fakeAnglesPosition.data = fakeAngles
 
-    pubActualAngles.publish(fakeAnglesPosition) #placeholder ends
-    # -----------------------------------------------------
+    # pubActualAngles.publish(fakeAnglesPosition) #placeholder ends
+    # # -----------------------------------------------------
     return
 
 def updateActualAngles(actualAngles_):
     global actualAngles
+    global simAngles
+    global staticAngles
+    global received_curr_angles
     actualAngles = list(actualAngles_.data)
+    if not received_curr_angles:
+        received_curr_angles = True
+        simAngles = list(actualAngles_.data)
+        staticAngles = list(actualAngles_.data)
     return
 
 
@@ -281,18 +299,21 @@ def getAngles():
     pubArmAngles = rospy.Publisher("/arm_goal_pos", Float32MultiArray, queue_size=10)
     rate = rospy.Rate(10)
 
-    # -----------------------------------------------------
-    pubActualAngles = rospy.Publisher("/ARM_ACTUAL_POSITION", Float32MultiArray, queue_size=10)
-    # -----------------------------------------------------
+    # # -----------------------------------------------------
+    # pubActualAngles = rospy.Publisher("/ARM_ACTUAL_POSITION", Float32MultiArray, queue_size=10)
+    # # -----------------------------------------------------
 
     rospy.Subscriber("/PATH_PLANNING", Float32MultiArray, savePathPlanning, queue_size=10)
     rospy.Subscriber("/arm_goal_pos", Float32MultiArray, updateSimAngles, queue_size=1000000000)
     
     # -----------------------------------------------------
-    rospy.Subscriber("/ARM_ACTUAL_POSITION", Float32MultiArray, updateActualAngles, queue_size=10)
+    rospy.Subscriber("/arm_curr_pos", Float32MultiArray, updateActualAngles, queue_size=10)
     # -----------------------------------------------------
     
     # ARM_ACTUAL_POSITION is also a placeholder for sensor data
+    while not received_curr_angles:
+        rate.sleep()
+    # if received_curr_angles:
     controlArm()
     rospy.spin()
 
