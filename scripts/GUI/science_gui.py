@@ -1819,17 +1819,17 @@ class SensorBlock(QWidget):
         """Save temperature and humidity data to CSV and graphs to PNG"""
         print("Saving sensor data...")
         
+        # Create directory if it doesn't exist
+        csv_dir = os.path.join(os.path.expanduser("~"), "rover-ws/src/rsx-rover/science_data")
+        if not os.path.exists(csv_dir):
+            os.makedirs(csv_dir)
+        
         # Create a timestamp for unique filenames
         timestamp = rospy.Time.now().to_sec()
         timestr = time.strftime("%Y%m%d-%H%M%S")
         
         # Save temperature data to CSV if available
         if self.ui.temp_plot_data:
-            # Create directory if it doesn't exist
-            csv_dir = os.path.join(os.path.expanduser("~"), "rover_data")
-            if not os.path.exists(csv_dir):
-                os.makedirs(csv_dir)
-                
             # Save temperature data to CSV
             temp_csv_path = os.path.join(csv_dir, f"temperature_data_{timestr}.csv")
             with open(temp_csv_path, 'w') as f:
@@ -1848,11 +1848,6 @@ class SensorBlock(QWidget):
         
         # Save humidity data to CSV if available
         if self.ui.hum_plot_data:
-            # Create directory if it doesn't exist
-            csv_dir = os.path.join(os.path.expanduser("~"), "rover_data")
-            if not os.path.exists(csv_dir):
-                os.makedirs(csv_dir)
-                
             # Save humidity data to CSV
             hum_csv_path = os.path.join(csv_dir, f"humidity_data_{timestr}.csv")
             with open(hum_csv_path, 'w') as f:
@@ -2094,14 +2089,14 @@ class SampleSubBlock(QWidget):
         """Save sample data to CSV and graphs to PNG"""
         print(f"Saving {'chemistry' if self.chem else 'FAM'} data...")
         
+        # Create directory if it doesn't exist
+        csv_dir = os.path.join(os.path.expanduser("~"), "rover-ws/src/rsx-rover/science_data")
+        if not os.path.exists(csv_dir):
+            os.makedirs(csv_dir)
+        
         # Create a timestamp for unique filenames
         timestamp = rospy.Time.now().to_sec()
         timestr = time.strftime("%Y%m%d-%H%M%S")
-        
-        # Create directory if it doesn't exist
-        csv_dir = os.path.join(os.path.expanduser("~"), "rover_data")
-        if not os.path.exists(csv_dir):
-            os.makedirs(csv_dir)
         
         # Determine which data to save based on chemistry/FAM and site
         if self.chem:
@@ -2227,6 +2222,9 @@ class GenieControl(QWidget):
 
         self.zoom_mag = 0
 
+        self.pano_control = rospy.Publisher('/pano_control', Bool, queue_size=10)
+        self.pano_result = rospy.Subscriber('/pano_result', Image, self.pano_callback)
+
         self.show_pano_button(False)
         # self.show_genie_button(False)
         self.show_zoom_controls(False)
@@ -2248,6 +2246,7 @@ class GenieControl(QWidget):
     def take_pano(self):
         # Implement the logic to take a panorama
         print("Taking panorama...")
+        self.pano_control.publish(True)
     
     def toggle_genie(self):
         # Implement the logic to toggle the genie lens
@@ -2266,6 +2265,41 @@ class GenieControl(QWidget):
 
     def change_microscope_zoom_magnitude(self, value):
         self.zoom_mag = value
+
+    def pano_callback(self, msg):
+        """Save the panorama image when received"""
+        try:
+            # Create bridge to convert ROS Image to OpenCV image
+            bridge = CvBridge()
+            cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+            
+            # Create directory if it doesn't exist
+            pano_dir = os.path.join(os.path.expanduser("~"), "rover-ws/src/rsx-rover/science_data", "panoramas")
+            if not os.path.exists(pano_dir):
+                os.makedirs(pano_dir)
+            
+            # Create a timestamp for a unique filename
+            timestr = time.strftime("%Y%m%d-%H%M%S")
+            filename = os.path.join(pano_dir, f"panorama_{timestr}.png")
+            
+            # Save the image
+            cv2.imwrite(filename, cv_image)
+            
+            # Notify user
+            print(f"Panorama saved to {filename}")
+            
+            # Flash the button to indicate successful save
+            original_style = self.take_pano_button.styleSheet()
+            self.take_pano_button.setStyleSheet("background-color: #00FF00; padding: 4px; min-height: 20px;")
+            QTimer.singleShot(1000, lambda: self.take_pano_button.setStyleSheet(original_style))
+            
+        except Exception as e:
+            print(f"Error saving panorama: {e}")
+            # Flash the button red to indicate failure
+            original_style = self.take_pano_button.styleSheet()
+            self.take_pano_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
+            QTimer.singleShot(1000, lambda: self.take_pano_button.setStyleSheet(original_style))
+
 
 class CheckableComboBox(QComboBox):
     def __init__(self, title = '', parent=None):
