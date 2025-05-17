@@ -17,6 +17,10 @@ Reim Notes Documentary:
 - OctoMap is one way to turn that into a map (an octree of occupied vs. free space). - OctoMap needs 3D points + ray‐casts to build its occupancy tree.
 - Octree: What it is: A data structure used to partition 3D space hierarchically. Each node in an octree can have up to 8 children, subdividing space into smaller cubes (voxels).
 - OctoMapWhat it is: A library built on octrees, designed for robotic mapping and navigation.
+
+Notes: 
+- Increase the threhsold. Add heading threshold too!
+- Do same for grid search
 """
 
 import rospy
