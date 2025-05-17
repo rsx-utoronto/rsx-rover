@@ -882,7 +882,7 @@ class CameraFeed:
 
     def register_subscriber2(self):
         if self.image_sub2 is None:
-            self.image_sub2 = rospy.Subscriber("/camera/color/image_raw/compressed", CompressedImage, self.callback2)
+            self.image_sub2 = rospy.Subscriber("/camera2/camera/color/image_raw/compressed" , CompressedImage, self.callback2)
 
     def unregister_subscriber2(self):
         if self.image_sub2:
