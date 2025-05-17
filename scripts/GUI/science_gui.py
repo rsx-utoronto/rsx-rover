@@ -7,6 +7,8 @@ import rospy
 import map_viewer as map_viewer
 from pathlib import Path
 import numpy as np
+import os
+import time
 
 
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, \
@@ -1285,6 +1287,12 @@ class RoverGUI(QMainWindow):
         # add more joystick instances here to sync
 
     def setup_science_tab(self):
+        self.ph1_start = 0
+        self.ph2_start = 0
+        self.hum_start = 0
+        self.temp_start = 0
+        self.pmt_start = 0
+
         button_style = "padding: 4px; min-height: 20px;"
         # Create main tab
         self.scienceTab = QWidget()
@@ -1297,8 +1305,8 @@ class RoverGUI(QMainWindow):
         left_vertical_splitter.setHandleWidth(1)  # Minimize the splitter handle width
         
         # First item in left vertical splitter
-        left_top_widget = SensorBlock(self)
-        left_top_widget.setMinimumHeight(40)  # Ensure minimum height
+        self.left_top_widget = SensorBlock(self)
+        self.left_top_widget.setMinimumHeight(40)  # Ensure minimum height
         
         # Second item in left vertical splitter with horizontal splitter
         left_middle_widget = QGroupBox("")
@@ -1307,14 +1315,14 @@ class RoverGUI(QMainWindow):
         left_middle_splitter.setHandleWidth(1)  # Minimize the splitter handle width
         
         # Add 2 items to the horizontal splitter with reduced height
-        left_middle_item1 = SampleBlock(True, self)
-        left_middle_item1.setMaximumHeight(180)  # Limit SampleBlock height
+        self.left_middle_item1 = SampleBlock(True, self)
+        self.left_middle_item1.setMaximumHeight(180)  # Limit SampleBlock height
         
-        left_middle_item2 = SampleBlock(False, self)
-        left_middle_item2.setMaximumHeight(180)  # Limit SampleBlock height
+        self.left_middle_item2 = SampleBlock(False, self)
+        self.left_middle_item2.setMaximumHeight(180)  # Limit SampleBlock height
         
-        left_middle_splitter.addWidget(left_middle_item1)
-        left_middle_splitter.addWidget(left_middle_item2)
+        left_middle_splitter.addWidget(self.left_middle_item1)
+        left_middle_splitter.addWidget(self.left_middle_item2)
         
         left_middle_layout = QVBoxLayout()
         left_middle_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins
@@ -1326,19 +1334,59 @@ class RoverGUI(QMainWindow):
         left_bottom_layout = QVBoxLayout()
         left_bottom_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins
         left_bottom_layout.setSpacing(0)  # Remove spacing
-        self.science_plot = pg.PlotWidget() #self.science_plot is the PlotWidget object that is going to be displayed in the data display section
-        left_bottom_layout.addWidget(self.science_plot)
+        
+        # Create a vertical splitter for the plots
+        self.science_plots_splitter = QSplitter(Qt.Vertical)
+        self.science_plots_splitter.setHandleWidth(1)  # Minimize the splitter handle width
+        
+        # Create separate plot widgets for each data type
+        self.science_temperature_plot = pg.PlotWidget()
+        self.science_humidity_plot = pg.PlotWidget()
+        self.science_ph1_plot = pg.PlotWidget()
+        self.science_ph2_plot = pg.PlotWidget()
+        self.science_pmt_plot = pg.PlotWidget()
+        
+        # Set initial background and styling for all plots
+        for plot in [self.science_temperature_plot, self.science_humidity_plot, 
+                    self.science_ph1_plot, self.science_ph2_plot, self.science_pmt_plot]:
+            plot.setBackground("w")
+            plot.showGrid(x=True, y=True, alpha=0.3)
+            plot.setLabel("bottom", "Time")
+        
+        self.science_temperature_plot.setLabel("left", "Temperature (°C)")
+        self.science_humidity_plot.setLabel("left", "Humidity (%)")
+        self.science_ph1_plot.setLabel("left", "Site 1 pH")
+        self.science_ph2_plot.setLabel("left", "Site 2 pH")
+        self.science_pmt_plot.setLabel("left", "PMT (V)")
+
+        
+        # Add plot widgets to splitter
+        self.science_plots_splitter.addWidget(self.science_temperature_plot)
+        self.science_plots_splitter.addWidget(self.science_humidity_plot)
+        self.science_plots_splitter.addWidget(self.science_ph1_plot)
+        self.science_plots_splitter.addWidget(self.science_ph2_plot)
+        self.science_plots_splitter.addWidget(self.science_pmt_plot)
+        
+        # By default, hide all plots initially
+        self.science_temperature_plot.hide()
+        self.science_humidity_plot.hide()
+        self.science_ph1_plot.hide()
+        self.science_ph2_plot.hide()
+        self.science_pmt_plot.hide()
+        
+        # Add splitter to layout
+        left_bottom_layout.addWidget(self.science_plots_splitter)
         left_bottom_widget.setLayout(left_bottom_layout)
         
         # Remove title margins from all group boxes
-        left_top_widget.setStyleSheet("QGroupBox { margin-top: 0px; }")
+        self.left_top_widget.setStyleSheet("QGroupBox { margin-top: 0px; }")
         left_middle_widget.setStyleSheet("QGroupBox { margin-top: 0px; }")
         left_bottom_widget.setStyleSheet("QGroupBox { margin-top: 0px; }")
-        left_middle_item1.setStyleSheet("QGroupBox { margin-top: 0px; }")
-        left_middle_item2.setStyleSheet("QGroupBox { margin-top: 0px; }")
+        self.left_middle_item1.setStyleSheet("QGroupBox { margin-top: 0px; }")
+        self.left_middle_item2.setStyleSheet("QGroupBox { margin-top: 0px; }")
         
         # Add widgets to left vertical splitter
-        left_vertical_splitter.addWidget(left_top_widget)
+        left_vertical_splitter.addWidget(self.left_top_widget)
         left_vertical_splitter.addWidget(left_middle_widget)
         left_vertical_splitter.addWidget(left_bottom_widget)
         
@@ -1510,103 +1558,196 @@ class RoverGUI(QMainWindow):
     #     self.setStyleSheet("background-color: #FFFFFF")
     #     self.status_label.setText("")
     
-        # Format example: A0: xx.xx A1: xx.xx Signal Voltage (A0 - A1): xx.xx
     def get_probe_data_callback(self, data):
-        msg = data.data.split(";")
-        if self.ph1_button: #Arbitrary Button Name
+        msgs = data.data.split(";")
+        msg = []
+        for i in msgs:
+            if i == "":
+                continue
+            msg.append(i.split(":"))
+
+        # PH1 block (no changes needed - this is already correct)
+        if self.left_middle_item1.display or self.left_middle_item1.site1_block.reading:
             if self.ph1_time == 1:
                 ph1_time_buffer = []
                 ph1_data_buffer = []
             ph1_time_buffer.append(self.ph1_time)
-            ph1_graph_data = msg[0][4:]
+            ph1_graph_data = float(msg[0][1])
             ph1_data_buffer.append(ph1_graph_data)
             self.ph1_time += 1
-        if self.ph1_save_button and ph1_data_buffer != [] and ph1_time_buffer != []: #Arbitrary Button Name
-            self.ph1_plot_data = [ph1_data_buffer, ph1_time_buffer]
+        if self.left_middle_item1.site1_block.start_read:
+            self.ph1_start = len(ph1_data_buffer)
+            self.left_middle_item1.site1_block.start_read = False
+        if not (self.left_middle_item1.site1_block.start_read or self.left_middle_item1.site1_block.reading):
+            self.ph1_plot_data = [ph1_data_buffer[self.ph1_start:-1], ph1_time_buffer[self.ph1_start:-1]]
+            self.ph1_plot_avg = sum(self.ph1_plot_data[0]) / len(self.ph1_plot_data[0])
+            self.ph1_plot_data[0].insert(0, self.ph1_plot_avg)
+            self.ph1_plot_data[1].insert(0, -1)
             self.ph1_time = 1
             ph1_data_buffer.clear()
             ph1_time_buffer.clear()
 
-        if self.ph2_button: #Arbitrary Button Name
+        # PH2 block - updated to match ph1 pattern
+        if self.left_middle_item1.display or self.left_middle_item1.site2_block.reading:
             if self.ph2_time == 1:
                 ph2_time_buffer = []
                 ph2_data_buffer = []
             ph2_time_buffer.append(self.ph2_time)
-            ph2_graph_data = msg[1][4:]
+            ph2_graph_data = float(msg[1][1])
             ph2_data_buffer.append(ph2_graph_data)
             self.ph2_time += 1
-        if self.ph2_save_button and ph2_data_buffer != [] and ph2_time_buffer != []: #Arbitrary Button Name
-            self.ph2_plot_data = [ph2_data_buffer, ph2_time_buffer]
+        if self.left_middle_item1.site2_block.start_read:
+            self.ph2_start = len(ph2_data_buffer)
+            self.left_middle_item1.site2_block.start_read = False
+        if not (self.left_middle_item1.site2_block.start_read or self.left_middle_item1.site2_block.reading):
+            self.ph2_plot_data = [ph2_data_buffer[self.ph2_start:-1], ph2_time_buffer[self.ph2_start:-1]]
+            self.ph2_plot_avg = sum(self.ph2_plot_data[0]) / len(self.ph2_plot_data[0])
+            self.ph2_plot_data[0].insert(0, self.ph2_plot_avg)
+            self.ph2_plot_data[1].insert(0, -1)
             self.ph2_time = 1
             ph2_data_buffer.clear()
             ph2_time_buffer.clear()
         
-        if self.hum_button: #Arbitrary Button Name
+        # HUM block - updated to match ph1 pattern
+        if self.left_top_widget.display or self.left_top_widget.site1_block.reading:
             if self.hum_time == 1:
                 hum_time_buffer = []
                 hum_data_buffer = []
             hum_time_buffer.append(self.hum_time)
-            hum_graph_data = msg[2][4:]
+            hum_graph_data = float(msg[2][1])
             hum_data_buffer.append(hum_graph_data)
             self.hum_time += 1
-        if self.hum_save_button and hum_data_buffer != [] and hum_time_buffer != []: #Arbitrary Button Name
-            self.hum_plot_data = [hum_data_buffer, hum_time_buffer]
+        if self.left_top_widget.site1_block.start_read:
+            self.hum_start = len(hum_data_buffer)
+            self.left_top_widget.site1_block.start_read = False
+        if not (self.left_top_widget.site1_block.start_read or self.left_top_widget.site1_block.reading):
+            self.hum_plot_data = [hum_data_buffer[self.hum_start:-1], hum_time_buffer[self.hum_start:-1]]
+            self.hum_plot_avg = sum(self.hum_plot_data[0]) / len(self.hum_plot_data[0])
+            self.hum_plot_data[0].insert(0, self.hum_plot_avg)
+            self.hum_plot_data[1].insert(0, -1)
             self.hum_time = 1
             hum_data_buffer.clear()
             hum_time_buffer.clear()
         
-        if self.temp_button: #Arbitrary Button Name
+        # TEMP block - updated to match ph1 pattern
+        if self.left_top_widget.display or self.left_top_widget.site2_block.reading:
             if self.temp_time == 1:
                 temp_time_buffer = []
                 temp_data_buffer = []
             temp_time_buffer.append(self.temp_time)
-            temp_graph_data = msg[3][5:]
+            temp_graph_data = float(msg[3][1])
             temp_data_buffer.append(temp_graph_data)
             self.temp_time += 1
-        if self.temp_save_button and temp_data_buffer != [] and temp_time_buffer != []: #Arbitrary Button Name
-            self.temp_plot_data = [temp_data_buffer, temp_time_buffer]
+        if self.left_top_widget.site2_block.start_read:
+            self.temp_start = len(temp_data_buffer)
+            self.left_top_widget.site2_block.start_read = False
+        if not (self.left_top_widget.site2_block.start_read or self.left_top_widget.site2_block.reading):
+            self.temp_plot_data = [temp_data_buffer[self.temp_start:-1], temp_time_buffer[self.temp_start:-1]]
+            self.temp_plot_avg = sum(self.temp_plot_data[0]) / len(self.temp_plot_data[0])
+            self.temp_plot_data[0].insert(0, self.temp_plot_avg)
+            self.temp_plot_data[1].insert(0, -1)
             self.temp_time = 1
             temp_data_buffer.clear()
             temp_time_buffer.clear()
 
-        if self.pmt_button: #Arbitrary Button Name
+        # PMT block - updated to match ph1 pattern
+        if self.left_middle_item2.display or self.left_middle_item2.site1_block.reading:
             if self.pmt_time == 1:
                 pmt_time_buffer = []
                 pmt_data_buffer = []
             pmt_time_buffer.append(self.pmt_time)
-            pmt_graph_data = msg[2][4:]
+            pmt_graph_data = float(msg[4][1])
             pmt_data_buffer.append(pmt_graph_data)
             self.pmt_time += 1
-        if self.pmt_save_button and pmt_data_buffer != [] and pmt_time_buffer != []: #Arbitrary Button Name
-            self.pmt_plot_data = [pmt_data_buffer, pmt_time_buffer]
+        if self.left_middle_item2.site1_block.start_read:
+            self.pmt_start = len(pmt_data_buffer)
+            self.left_middle_item2.site1_block.start_read = False
+        if not (self.left_middle_item2.site1_block.start_read or self.left_middle_item2.site1_block.reading):
+            self.pmt_plot_data = [pmt_data_buffer[self.pmt_start:-1], pmt_time_buffer[self.pmt_start:-1]]
+            self.pmt_plot_avg = sum(self.pmt_plot_data[0]) / len(self.pmt_plot_data[0])
+            self.pmt_plot_data[0].insert(0, self.pmt_plot_avg)
+            self.pmt_plot_data[1].insert(0, -1)
             self.pmt_time = 1
             pmt_data_buffer.clear()
             pmt_time_buffer.clear()
         
-        self.probeUpdateSignal.emit(True)  
-         
-    def plot_science_data(self, data_buffer, time_buffer, dataType): #dataType is a string to indicated what kind of data is plotted
-        self.science_plot.setBackground("w")
-        pen = pg.mkPen(color=(255, 0, 0))
-        self.science_plot.setLabel("left", dataType)
-        self.science_plot.setLabel("bottom", "Time")
-        self.science_plot.plot(time_buffer, data_buffer, pen=pen, symbol="+",symbolSize=10, symbolBrush="b")
+        self.pmt_switch = msg[5][1]
+        self.left_middle_item2.site1_block.pmtWidget.setText(f"PMT: {self.pmt_switch}")
 
-    def clear_science_plot(self):
-        self.science_plot.clear()
+        self.probeUpdateSignal.emit(True)
+
+    def plot_science_temperature_data(self, data_buffer, time_buffer):
+        pen = pg.mkPen(color=(255, 0, 0))
+        self.science_temperature_plot.plot(time_buffer, data_buffer, pen=pen, symbol="+",symbolSize=10, symbolBrush="b")
+    
+    def plot_science_humidity_data(self, data_buffer, time_buffer):
+        pen = pg.mkPen(color=(0, 0, 255))
+        self.science_humidity_plot.plot(time_buffer, data_buffer, pen=pen, symbol="+",symbolSize=10, symbolBrush="g")
+
+    def plot_science_ph1_data(self, data_buffer, time_buffer):
+        pen = pg.mkPen(color=(255, 0, 0))
+        self.science_ph1_plot.plot(time_buffer, data_buffer, pen=pen, symbol="+",symbolSize=10, symbolBrush="b")
+
+    def plot_science_ph2_data(self, data_buffer, time_buffer):
+        pen = pg.mkPen(color=(255, 0, 0))
+        self.science_ph2_plot.plot(time_buffer, data_buffer, pen=pen, symbol="+",symbolSize=10, symbolBrush="b")
+
+    def plot_science_pmt_data(self, data_buffer, time_buffer):
+        pen = pg.mkPen(color=(0, 255, 0))
+        self.science_pmt_plot.plot(time_buffer, data_buffer, pen=pen, symbol="+",symbolSize=10, symbolBrush="r")
         
     def update_science_plot(self, update: bool):
         if update:
+            # Update pH1 plot
             if self.ph1_plot_data != []:
-                self.plot_science_data(self.ph1_plot_data[0], self.ph1_plot_data[1], "pH 1")
+                self.science_ph1_plot.show()  # Show the plot
+                self.science_ph1_plot.clear()
+                pen = pg.mkPen(color=(255, 0, 0))
+                self.science_ph1_plot.setLabel("left", "pH 1")
+                self.science_ph1_plot.setLabel("bottom", "Time")
+                self.science_ph1_plot.plot(self.ph1_plot_data[1], self.ph1_plot_data[0], 
+                                          pen=pen, symbol="+", symbolSize=10, symbolBrush="b")
+            
+            # Update pH2 plot
             if self.ph2_plot_data != []:
-                self.plot_science_data(self.ph2_plot_data[0], self.ph2_plot_data[1], "pH 2")
+                self.science_ph2_plot.show()  # Show the plot
+                self.science_ph2_plot.clear()
+                pen = pg.mkPen(color=(255, 0, 0))
+                self.science_ph2_plot.setLabel("left", "pH 2")
+                self.science_ph2_plot.setLabel("bottom", "Time")
+                self.science_ph2_plot.plot(self.ph2_plot_data[1], self.ph2_plot_data[0], 
+                                          pen=pen, symbol="+", symbolSize=10, symbolBrush="b")
+            
+            # Update humidity plot
             if self.hum_plot_data != []:
-                self.plot_science_data(self.hum_plot_data[0], self.hum_plot_data[1], "Humidity")
-                self.plot_science_data(self.temp_plot_data[0], self.temp_plot_data[1], "Temperature")
+                self.science_humidity_plot.show()  # Show the plot
+                self.science_humidity_plot.clear()
+                pen = pg.mkPen(color=(0, 0, 255))
+                self.science_humidity_plot.setLabel("left", "Humidity")
+                self.science_humidity_plot.setLabel("bottom", "Time")
+                self.science_humidity_plot.plot(self.hum_plot_data[1], self.hum_plot_data[0], 
+                                              pen=pen, symbol="+", symbolSize=10, symbolBrush="g")
+            
+            # Update temperature plot
+            if self.temp_plot_data != []:
+                self.science_temperature_plot.show()  # Show the plot
+                self.science_temperature_plot.clear()
+                pen = pg.mkPen(color=(255, 0, 0))
+                self.science_temperature_plot.setLabel("left", "Temperature")
+                self.science_temperature_plot.setLabel("bottom", "Time")
+                self.science_temperature_plot.plot(self.temp_plot_data[1], self.temp_plot_data[0], 
+                                                 pen=pen, symbol="+", symbolSize=10, symbolBrush="b")
+            
+            # Update PMT plot
             if self.pmt_plot_data != []:
-                self.plot_science_data(self.pmt_plot_data[0], self.pmt_plot_data[1], "PMT")
-        
+                self.science_pmt_plot.show()  # Show the plot
+                self.science_pmt_plot.clear()
+                pen = pg.mkPen(color=(0, 255, 0))
+                self.science_pmt_plot.setLabel("left", "PMT")
+                self.science_pmt_plot.setLabel("bottom", "Time")
+                self.science_pmt_plot.plot(self.pmt_plot_data[1], self.pmt_plot_data[0], 
+                                          pen=pen, symbol="+", symbolSize=10, symbolBrush="r")
+
 
 class SensorBlock(QWidget):
     def __init__(self, ui: RoverGUI):
@@ -1661,15 +1802,97 @@ class SensorBlock(QWidget):
         
         self.setLayout(self.layout)
         self.setFixedHeight(40)
+        self.reading = False
+        self.start_read = False
+        self.display = False
 
     def read(self):
         print("Read Sensor")
+        self.reading = not self.reading
+        self.start_read = self.reading
+        if self.reading:
+            self.read_button.setStyleSheet("background-color: #FF0000;")
+        else:
+            self.read_button.setStyleSheet("background-color: #FFFFFF;")
     
     def save(self):
-        print("Save Sensor")
+        """Save temperature and humidity data to CSV and graphs to PNG"""
+        print("Saving sensor data...")
+        
+        # Create a timestamp for unique filenames
+        timestamp = rospy.Time.now().to_sec()
+        timestr = time.strftime("%Y%m%d-%H%M%S")
+        
+        # Save temperature data to CSV if available
+        if self.ui.temp_plot_data:
+            # Create directory if it doesn't exist
+            csv_dir = os.path.join(os.path.expanduser("~"), "rover_data")
+            if not os.path.exists(csv_dir):
+                os.makedirs(csv_dir)
+                
+            # Save temperature data to CSV
+            temp_csv_path = os.path.join(csv_dir, f"temperature_data_{timestr}.csv")
+            with open(temp_csv_path, 'w') as f:
+                writer = csv.writer(f)
+                writer.writerow(["Time", "Temperature (°C)"])
+                for i in range(len(self.ui.temp_plot_data[0])):
+                    writer.writerow([self.ui.temp_plot_data[1][i], self.ui.temp_plot_data[0][i]])
+            
+            # Save temperature graph as PNG
+            temp_png_path = os.path.join(csv_dir, f"temperature_graph_{timestr}.png")
+            exporter = pg.exporters.ImageExporter(self.ui.science_temperature_plot.plotItem)
+            exporter.export(temp_png_path)
+            
+            print(f"Temperature data saved to {temp_csv_path}")
+            print(f"Temperature graph saved to {temp_png_path}")
+        
+        # Save humidity data to CSV if available
+        if self.ui.hum_plot_data:
+            # Create directory if it doesn't exist
+            csv_dir = os.path.join(os.path.expanduser("~"), "rover_data")
+            if not os.path.exists(csv_dir):
+                os.makedirs(csv_dir)
+                
+            # Save humidity data to CSV
+            hum_csv_path = os.path.join(csv_dir, f"humidity_data_{timestr}.csv")
+            with open(hum_csv_path, 'w') as f:
+                writer = csv.writer(f)
+                writer.writerow(["Time", "Humidity (%)"])
+                for i in range(len(self.ui.hum_plot_data[0])):
+                    writer.writerow([self.ui.hum_plot_data[1][i], self.ui.hum_plot_data[0][i]])
+            
+            # Save humidity graph as PNG
+            hum_png_path = os.path.join(csv_dir, f"humidity_graph_{timestr}.png")
+            exporter = pg.exporters.ImageExporter(self.ui.science_humidity_plot.plotItem)
+            exporter.export(hum_png_path)
+            
+            print(f"Humidity data saved to {hum_csv_path}")
+            print(f"Humidity graph saved to {hum_png_path}")
+        
+        # Show a confirmation message
+        if self.ui.temp_plot_data or self.ui.hum_plot_data:
+            # Flash the button to indicate successful save
+            original_style = self.save_button.styleSheet()
+            self.save_button.setStyleSheet("background-color: #00FF00; padding: 4px; min-height: 20px;")
+            QTimer.singleShot(1000, lambda: self.save_button.setStyleSheet(original_style))
+        else:
+            # Flash the button red to indicate no data to save
+            original_style = self.save_button.styleSheet()
+            self.save_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
+            QTimer.singleShot(1000, lambda: self.save_button.setStyleSheet(original_style))
+            print("No data available to save")
 
     def data(self):
         print("Data Sensor")
+        self.display = not self.display
+        if self.display:
+            self.ui.science_temperature_plot.show()  # Show the plot
+            self.ui.science_humidity_plot.show()  # Show the plot
+            self.data_button.setStyleSheet("background-color: #FF0000;")
+        else:
+            self.ui.science_temperature_plot.hide()  # Hide the plot
+            self.ui.science_humidity_plot.hide()  # Hide the plot
+            self.data_button.setStyleSheet("background-color: #FFFFFF;")
     
     def fad_main(self):
         self.ui.science_serial_controller.publish("<Y>")
@@ -1690,8 +1913,9 @@ class SampleBlock(QWidget):
         self.ui = ui
         self.setMinimumSize(100, 100)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Change to Expanding
-        self.site1_block = SampleSubBlock(chem, True)
-        self.site2_block = SampleSubBlock(chem, False)
+        self.site1_block = SampleSubBlock(chem, True, ui)
+        if chem:
+            self.site2_block = SampleSubBlock(chem, False, ui)
 
         self.chem = chem
 
@@ -1700,7 +1924,8 @@ class SampleBlock(QWidget):
             self.top_bar_layout.addWidget(QLabel("Chem"))
             self.mid_button = QPushButton("Ninhydrin")
         else:
-            self.top_bar_layout.addWidget(QLabel("FAM"))
+            self.pmtWidget = QLabel("PMT")
+            self.top_bar_layout.addWidget(self.pmtWidget)
             self.mid_button = QPushButton("Switch")
         self.data_button = QPushButton("Data")
         
@@ -1723,7 +1948,8 @@ class SampleBlock(QWidget):
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.top_bar)
         self.layout.addWidget(self.site1_block)
-        self.layout.addWidget(self.site2_block)
+        if chem:
+            self.layout.addWidget(self.site2_block)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
         self.setLayout(self.layout)
@@ -1747,12 +1973,23 @@ class SampleBlock(QWidget):
         
         if self.display:
             self.data_button.setStyleSheet("background-color: #FF0000;")
+            if self.chem:
+                self.ui.science_ph1_plot.show()
+                self.ui.science_ph2_plot.show()
+            else:
+                self.ui.science_pmt_plot.show()
         else:
             self.data_button.setStyleSheet("background-color: #FFFFFF;")
+            if self.chem:
+                self.ui.science_ph1_plot.hide()
+                self.ui.science_ph2_plot.hide()
+            else:
+                self.ui.science_pmt_plot.hide()
 
 class SampleSubBlock(QWidget):
-    def __init__(self, chem: bool, site1: bool):
+    def __init__(self, chem: bool, site1: bool, ui: RoverGUI):
         super().__init__()
+        self.ui = ui
         self.setMinimumSize(100, 40)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Change to Expanding
         
@@ -1763,7 +2000,11 @@ class SampleSubBlock(QWidget):
         self.chem = chem
         self.site1 = site1
         
-        if self.site1:
+        if not chem:
+            self.smaple_button = QPushButton("Sample")
+            self.read_button = QPushButton("Read")
+            self.save_button = QPushButton("Save")
+        elif self.site1:
             self.smaple_button = QPushButton("Site 1 Sample")
             self.read_button = QPushButton("Read Site 1")
             self.save_button = QPushButton("Save Site 1")
@@ -1810,6 +2051,7 @@ class SampleSubBlock(QWidget):
         self.setLayout(self.layout)
 
         self.reading = False
+        self.start_read = False
 
     def sample(self):
         if self.chem:
@@ -1829,23 +2071,85 @@ class SampleSubBlock(QWidget):
     
     def read(self):
         self.reading = not self.reading
+        self.start_read = self.reading
         if self.chem:
             print("Read Chem")
         else:
             print("Read FAM")
 
         if self.reading:
-            self.read_button.setText("Stop Reading Site 1" if self.site1 else "Stop Reading Site 2")
+            if self.chem:
+                self.read_button.setText("Stop Reading Site 1" if self.site1 else "Stop Reading Site 2")
+            else:
+                self.read_button.setText("Stop Reading")
             self.read_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
         else:
-            self.read_button.setText("Read Site 1" if self.site1 else "Read Site 2")
+            if self.chem:
+                self.read_button.setText("Read Site 1" if self.site1 else "Read Site 2")
+            else:
+                self.read_button.setText("Read")
             self.read_button.setStyleSheet("background-color: #FFFFFF; padding: 4px; min-height: 20px;")
 
     def save(self):
+        """Save sample data to CSV and graphs to PNG"""
+        print(f"Saving {'chemistry' if self.chem else 'FAM'} data...")
+        
+        # Create a timestamp for unique filenames
+        timestamp = rospy.Time.now().to_sec()
+        timestr = time.strftime("%Y%m%d-%H%M%S")
+        
+        # Create directory if it doesn't exist
+        csv_dir = os.path.join(os.path.expanduser("~"), "rover_data")
+        if not os.path.exists(csv_dir):
+            os.makedirs(csv_dir)
+        
+        # Determine which data to save based on chemistry/FAM and site
         if self.chem:
-            print("Saved Chem")
+            if self.site1:
+                data = self.ui.ph1_plot_data
+                plot_widget = self.ui.science_ph1_plot
+                data_type = "ph1"
+                title = "Site 1 pH"
+            else:
+                data = self.ui.ph2_plot_data
+                plot_widget = self.ui.science_ph2_plot
+                data_type = "ph2"
+                title = "Site 2 pH"
         else:
-            print("Saved FAM")
+            # FAM/Soil data (PMT)
+            data = self.ui.pmt_plot_data
+            plot_widget = self.ui.science_pmt_plot
+            data_type = "pmt"
+            title = "Site " + self.ui.pmt_switch + " PMT"
+        
+        # Save data to CSV if available
+        if data:
+            # Save data to CSV
+            csv_path = os.path.join(csv_dir, f"{data_type}_data_{timestr}.csv")
+            with open(csv_path, 'w') as f:
+                writer = csv.writer(f)
+                writer.writerow(["Time", f"{title} Value"])
+                for i in range(len(data[0])):
+                    writer.writerow([data[1][i], data[0][i]])
+            
+            # Save graph as PNG
+            png_path = os.path.join(csv_dir, f"{data_type}_graph_{timestr}.png")
+            exporter = pg.exporters.ImageExporter(plot_widget.plotItem)
+            exporter.export(png_path)
+            
+            print(f"{title} data saved to {csv_path}")
+            print(f"{title} graph saved to {png_path}")
+            
+            # Give visual feedback - briefly change button color to green
+            original_style = self.save_button.styleSheet()
+            self.save_button.setStyleSheet("background-color: #00FF00; padding: 4px; min-height: 20px;")
+            QTimer.singleShot(1000, lambda: self.save_button.setStyleSheet(original_style))
+        else:
+            # No data to save - briefly change button color to red
+            original_style = self.save_button.styleSheet()
+            self.save_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
+            QTimer.singleShot(1000, lambda: self.save_button.setStyleSheet(original_style))
+            print(f"No {title} data available to save")
 
 class GenieControl(QWidget):
     def __init__(self, ui: RoverGUI):
