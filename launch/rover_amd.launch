@@ -7,7 +7,7 @@
     <node pkg="rover" type="manual_control" name="rover_manual_control" output="screen"/>
 
     <!-- Launch the realsense camera -->
-    <include file="$(find rover)/launch/realsense.launch"/>
+    <include file="$(find rover)/launch/rs_multiple_devices.launch"/>
 
     <!-- Launch the GPS -->
 
@@ -18,6 +18,6 @@
 
     <!-- ZED check -->
 
-    <node pkg="rover" type="check_zed.py" name="check_zed" output="screen" />
+    <!-- <node pkg="rover" type="check_zed.py" name="check_zed" output="screen" /> -->
     
 </launch>
