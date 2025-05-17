@@ -17,11 +17,17 @@ Reim Notes Documentary:
 - OctoMap is one way to turn that into a map (an octree of occupied vs. free space). - OctoMap needs 3D points + ray‐casts to build its occupancy tree.
 - Octree: What it is: A data structure used to partition 3D space hierarchically. Each node in an octree can have up to 8 children, subdividing space into smaller cubes (voxels).
 - OctoMapWhat it is: A library built on octrees, designed for robotic mapping and navigation.
+
+Notes: 
+- Increase the threhsold. Add heading threshold too!
+- Do same for grid search
 """
 
 import rospy
 import numpy as np
 np.float = float
+import time
+import time
 import ros_numpy
 from nav_msgs.msg import Odometry, OccupancyGrid
 from octomap_msgs.msg import Octomap
@@ -30,34 +36,40 @@ from sensor_msgs.msg import PointCloud2
 #from octree import OctreeNode
 #from Octomap import Octree
 from queue import PriorityQueue
-from std_msgs.msg import Header, Float32MultiArray
+from std_msgs.msg import Header, Float32MultiArray, Float64MultiArray
+from std_msgs.msg import Header, Float32MultiArray, Float64MultiArray
 import math
 from visualization_msgs.msg import Marker,MarkerArray
 import tf.transformations as tf
 from tf.transformations import quaternion_from_euler
 import threading
 from threading import Lock
+import aruco_homing as aruco_homing
+import ar_detection_node as ar_detect
+import aruco_homing as aruco_homing
+import ar_detection_node as ar_detect
 
 from geometry_msgs.msg import Point
 from std_msgs.msg import Float32MultiArray, String, Bool
+from std_msgs.msg import Float32MultiArray, String, Bool
 from nav_msgs.msg import Path
-import os
-import yaml
 
+import yaml
+import os
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
 
+class AstarObstacleAvoidance_GS_Traversal():
+    def __init__(self, lin_vel = 0.3, ang_vel= 0.3, targets=[(1,0), (1,1)], state="AR3"):
 
-class AstarObstacleAvoidance():
-    def __init__(self, lin_vel = 0.3, ang_vel= 0.3, goal=(5,0)):
-        
         if sm_config.get("realsense_detection"):
             self.pointcloud_topic = rospy.get_param("~pointcloud_topic", sm_config.get("realsense_pointcloud"))
         else:
             self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed_node/point_cloud/cloud_registered")
+          
           
         # Parameters
         self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
@@ -76,39 +88,72 @@ class AstarObstacleAvoidance():
         self.occupancy_grid = None
         self.grid_resolution = 0.1 # Resolution of 2D grid (meters per cell)
         #self.grid_origin=(0.0,0.0)
-        self.goal = goal
+        self.goal = (1,0)
+        self.targets=targets
+        self.state=state
+        self.goal = (1,0)
+        self.targets=targets
+        self.state=state
         self.obstacle_threshold = 100
         self.grid_size=(10000,10000)
-        self.grid_origin_starter = (
+        self.grid_origin = (
             -(self.grid_size[0]* self.grid_resolution)/2,  # -100.0 meters (for 0.1m resolution)
             -(self.grid_size[1]* self.grid_resolution)/2  # -100.0 meters
         )
-        self.grid_origin=None
         # self.grid_origin = (0.0, 0.0)
         self.rate = rospy.Rate(self.update_rate)
         # self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
-        self.current_position_y=0
+        self.current_position_y=0 
         self.current_position_z=0
         self.current_orientation_x=0
         self.current_orientation_y=0
         self.current_orientation_z=0
-        self.got_callback=False
         self.abort_check = False
         self.heading=0
         self.current_corner_array = [
-            Point(x=0.70, y=0.55, z=0),
-            Point(x=0.70, y=-0.55, z=0),
-            Point(x=-0.70, y=-0.55, z=0), # with 0.5, it produces green blocks!
-            Point(x=-0.70, y=0.55, z=0) ]
+            Point(x=0.55, y=0.55, z=0),
+            Point(x=0.55, y=-0.55, z=0),
+            Point(x=-0.55, y=-0.55, z=0), # with 0.5, it produces green blocks!
+            Point(x=-0.55, y=0.55, z=0) ]
+        
+        
         self.z_min = -0.25
         self.z_max = 3
         self.yaw = 0
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
+
+        self.found = False #Do we need?
+        self.count = 0
+        
+        self.aruco_found = False
+        self.mallet_found = False
+        self.waterbottle_found = False
+
+        # modified code: add dictionary to manage detection flags for multiple objects
+        self.found_objects = {"AR1":False, 
+                   "AR2":False,
+                   "AR3":False,
+                   "OBJ1":False,
+                   "OBJ2":False}
+
+        self.found = False #Do we need?
+        self.count = 0
+        
+        self.aruco_found = False
+        self.mallet_found = False
+        self.waterbottle_found = False
+
+        # modified code: add dictionary to manage detection flags for multiple objects
+        self.found_objects = {"AR1":False, 
+                   "AR2":False,
+                   "AR3":False,
+                   "OBJ1":False,
+                   "OBJ2":False}
         
         # Publishers and Subscribers
-        #self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+     #   self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.bounding_box_pub = rospy.Publisher("/rover_bounding_box", Marker, queue_size=10)
         self.invaliid_pose_sub=rospy.Publisher('/invalid_pose_markers', Marker, queue_size=10)
         # self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
@@ -122,10 +167,61 @@ class AstarObstacleAvoidance():
         self.footprint_pub = rospy.Publisher('/robot_footprint', Marker, queue_size=1)
         self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
         self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
+        
+        self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
+        self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
+        self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
+        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
 
     def abort_callback(self,msg):
         self.abort_check = msg.data
+        
+    def aruco_detection_callback(self, data):
+        # print("sm grid search_ data.data", data.data)
+        if data.data:
+            if self.count <= 2:
+                self.count +=1
+            else:
+                self.aruco_found = data.data
+                self.found_objects[self.state] = data.data
+                self.count += 1
+    
+    def mallet_detection_callback(self, data):
+        if data.data:
+            if self.count <= 2:
+                self.count += 1
+            else:
+                self.mallet_found = data.data
+                self.found_objects[self.state] = data.data
+                self.count += 1
 
+    def waterbottle_detection_callback(self, data):
+        if data.data:
+            if self.count <= 2:
+                self.count += 1
+            else:
+                    
+                self.waterbottle_found = data.data
+                self.found_objects[self.state] = data.data
+                self.count += 1  
+    
+    def pose_callback(self, msg):
+        self.current_position_x = msg.pose.position.x
+        self.current_position_y = msg.pose.position.y
+        self.current_orientation_w=msg.pose.orientation.w
+        self.current_orientation_z=msg.pose.orientation.z
+        self.current_orientation_x=msg.pose.orientation.x
+        self.current_orientation_y=msg.pose.orientation.y
+        self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
+                                            msg.pose.orientation.y, msg.pose.orientation.z)[2]
+        
+        (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
+                self.current_orientation_x,
+                self.current_orientation_y,
+                self.current_orientation_z,
+                self.current_orientation_w
+            ])
+        
     def pointcloud_callback(self, msg):
         """
         Take ZED PointCloud2 → update OcTree with both occupied + free voxels → publish OctoMap.
@@ -178,24 +274,6 @@ class AstarObstacleAvoidance():
         self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
                                             msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
         self.publish_bounding_box()
-    
-    def pose_callback(self, msg):
-        self.got_callback=True
-        self.current_position_x = msg.pose.position.x
-        self.current_position_y = msg.pose.position.y
-        self.current_orientation_w=msg.pose.orientation.w
-        self.current_orientation_z=msg.pose.orientation.z
-        self.current_orientation_x=msg.pose.orientation.x
-        self.current_orientation_y=msg.pose.orientation.y
-        self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
-                                            msg.pose.orientation.y, msg.pose.orientation.z)[2]
-        
-        (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
-                self.current_orientation_x,
-                self.current_orientation_y,
-                self.current_orientation_z,
-                self.current_orientation_w
-            ])
     
     def to_euler_angles(self, w, x, y, z):
         angles = [0, 0, 0]  # [roll, pitch, yaw]
@@ -340,13 +418,13 @@ class AstarObstacleAvoidance():
         self.bounding_box_pub.publish(marker)
     
     def world_to_grid(self, x, y):
-        gx = int(round((x - self.grid_origin_starter[0]) / self.grid_resolution))
-        gy = int(round((y - self.grid_origin_starter[1]) / self.grid_resolution))
+        gx = int(round((x - self.grid_origin[0]) / self.grid_resolution))
+        gy = int(round((y - self.grid_origin[1]) / self.grid_resolution))
         return gx, gy
 
     def grid_to_world(self, gx, gy):
-        x = gx * self.grid_resolution + self.grid_origin_starter[0]
-        y = gy * self.grid_resolution + self.grid_origin_starter[1]
+        x = gx * self.grid_resolution + self.grid_origin[0]
+        y = gy * self.grid_resolution + self.grid_origin[1]
         return x, y
    
 ### A* start 
@@ -369,9 +447,9 @@ class AstarObstacleAvoidance():
         return np.linalg.norm(np.array(node) - np.array(goal))
 
     def reconstruct_path(self, came_from, current):
-      #  print("in recpnstruct path", current)
+     #   print("in recpnstruct path", current)
         path = [current]  # Start with the goal node
-       # print("came_from", came_from)
+      #  print("came_from", came_from)
         while current in came_from:
             current = came_from[current]
             path.append(current)  # Append predecessors
@@ -396,11 +474,13 @@ class AstarObstacleAvoidance():
             closed.add(current)
 
             if current == goal:
-                #print("in a*, open set is closed", current)
+             #   print("in a*, open set is closed", current)
+             #   print("in a*, open set is closed", current)
                 return self.reconstruct_path(came_from, current)
           #  print("in get neighbors in astar", current)
             for neighbor in self.get_neighbors(current):
-               # print("going to get neighbors", neighbor)
+             #   print("going to get neighbors", neighbor)
+             #   print("going to get neighbors", neighbor)
                 if neighbor in closed:
                     continue  # Skip closed nodes
 
@@ -545,7 +625,7 @@ class AstarObstacleAvoidance():
             angle += 2 * math.pi
         return angle
     
-    def navigate(self):
+    def move_to_target(self, target_x, target_y, state):
         need_replan = True
         last_position = (0, 0)
         self.current_path = []
@@ -553,121 +633,343 @@ class AstarObstacleAvoidance():
         replan_interval = rospy.Duration(1.0)
         path_available = False
         first_time = True
-        goal = self.world_to_grid(self.goal[0][0], self.goal[0][1])
+        goal = self.world_to_grid(target_x, target_y)
+        goal = self.world_to_grid(target_x, target_y)
         rate = rospy.Rate(50)
         threshold = 0.5  # meters
-        threshold_goal = 1.5
         angle_threshold = 0.5  # radians
         kp = 0.5  # Angular proportional gain
-        target_reached_flag=False
-       
-        print("grid origin", self.grid_origin)
-        while not self.got_callback:
-            rate.sleep()
-        self.grid_origin=(self.current_position_x, self.current_position_y)
-        while not rospy.is_shutdown() and not target_reached_flag:
-            msg = Twist()
+        
+        obj = self.mallet_found or self.waterbottle_found
+        
+        mapping = {"AR1":self.aruco_found, 
+                   "AR2":self.aruco_found,
+                   "AR3":self.aruco_found,
+                   "OBJ1":obj,
+                   "OBJ2":obj}
+        
+        obj = self.mallet_found or self.waterbottle_found
+        
+        mapping = {"AR1":self.aruco_found, 
+                   "AR2":self.aruco_found,
+                   "AR3":self.aruco_found,
+                   "OBJ1":obj,
+                   "OBJ2":obj}
+
+        while not rospy.is_shutdown():
             if self.occupancy_grid is None:
                 print("self.occupancy_grid is None")
                 rate.sleep()
                 continue
             
-            current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
-            final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
-            if final_goal_target_distance < threshold_goal or target_reached_flag:
-                
-                target_reached_flag=True
-                msg.linear.x = 0
-                msg.angular.z = 0
-                self.drive_publisher.publish(msg)
-                print(f"Reached target: ({target_x}, {target_y})")
-                break
+            obj = self.mallet_found or self.waterbottle_found
+        
+            mapping = {"AR1":self.aruco_found, 
+                    "AR2":self.aruco_found,
+                    "AR3":self.aruco_found,
+                    "OBJ1":obj,
+                    "OBJ2":obj}
             
-            start = self.world_to_grid(self.current_position_x, self.current_position_y)
-            print("start!", start)
-            need_replan = False
-            if rospy.Time.now() - last_plan_time > replan_interval:
-                need_replan = True
-
-            if last_position:
-                dx = start[0] - last_position[0]
-                dy = start[1] - last_position[1]
-                if abs(dx) > 0.5 or abs(dy) > 0.5:
+            if mapping[self.state] is False: #while not detected
+                # normal operations
+                if target_x is None or target_y is None or self.current_position_x is None or self.current_position_y is None:
+                    continue   
+                 
+                start = self.world_to_grid(self.current_position_x, self.current_position_y)
+                need_replan = False
+                if rospy.Time.now() - last_plan_time > replan_interval:
+                    need_replan = True
+                continue
+            
+            obj = self.mallet_found or self.waterbottle_found
+        
+            mapping = {"AR1":self.aruco_found, 
+                    "AR2":self.aruco_found,
+                    "AR3":self.aruco_found,
+                    "OBJ1":obj,
+                    "OBJ2":obj}
+            
+            if mapping[self.state] is False: #while not detected
+                # normal operations
+                if target_x is None or target_y is None or self.current_position_x is None or self.current_position_y is None:
+                    continue   
+                 
+                start = self.world_to_grid(self.current_position_x, self.current_position_y)
+                need_replan = False
+                if rospy.Time.now() - last_plan_time > replan_interval:
                     need_replan = True
 
-            if (need_replan or first_time) and not target_reached_flag:
-                print("attempting to replan", need_replan, path_available)
-                need_replan = False
-                first_time = False
-                path = self.a_star(start, goal)
-                if path:
-                    print("path found",path)
-                    self.current_path = path
-                    last_position = start
-                    path_available = True
-                    self.publish_waypoints(path)
-            
-            
-            
+                if last_position:
+                    dx = start[0] - last_position[0]
+                    dy = start[1] - last_position[1]
+                    if abs(dx) > 0.5 or abs(dy) > 0.5:
+                        need_replan = True
+                if last_position:
+                    dx = start[0] - last_position[0]
+                    dy = start[1] - last_position[1]
+                    if abs(dx) > 0.5 or abs(dy) > 0.5:
+                        need_replan = True
 
-            # Follow waypoints
-            while path_available and self.current_path and not self.abort_check:
-                current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
-                final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
-                msg = Twist()
-                if final_goal_target_distance < threshold_goal or target_reached_flag:
-                    target_reached_flag=True
-                    msg.linear.x = 0
-                    msg.angular.z = 0
-                    self.drive_publisher.publish(msg)
-                    print(f"Reached target: ({target_x}, {target_y})")
-                    break
-                
-                gx, gy = self.current_path[0]
-                
-                target_x, target_y = self.grid_to_world(gx, gy)        
-                dx = target_x - self.current_position_x
-                dy = target_y - self.current_position_y
-                target_distance = math.sqrt((dx) ** 2 + (dy) ** 2)
-                target_heading = math.atan2(dy, dx)
-                print("trying to get to target:", target_x, target_y, self.current_position_x, self.current_position_y)
-                
-                angle_diff = target_heading - self.heading
-                
+                if need_replan or first_time:
+                    print("attempting to replan", need_replan, path_available)
+                    need_replan = False
+                    first_time = False
+                    path = self.a_star(start, goal)
+                    if path:
+                        print("path found",path)
+                        self.current_path = path
+                        last_position = start
+                        path_available = True
+                        self.publish_waypoints(path)
+                        
+                if need_replan or first_time:
+                    print("attempting to replan", need_replan, path_available)
+                    need_replan = False
+                    first_time = False
+                    path = self.a_star(start, goal)
+                    if path:
+                        print("path found",path)
+                        self.current_path = path
+                        last_position = start
+                        path_available = True
+                        self.publish_waypoints(path)
+                        
 
-                if angle_diff > math.pi:
-                    angle_diff -= 2 * math.pi
-                elif angle_diff < -math.pi:
-                    angle_diff += 2 * math.pi
+                # Follow waypoints
+                while path_available and self.current_path and not self.abort_check:
+
+                    gx, gy = self.current_path[0]
+                    target_x, target_y = self.grid_to_world(gx, gy)        
+                    dx = target_x - self.current_position_x
+                    dy = target_y - self.current_position_y
+                    target_distance = math.sqrt((dx) ** 2 + (dy) ** 2)
+                    target_heading = math.atan2(dy, dx)
                     
-                if target_distance < threshold:
-                    #print("target distance", target_distance)
-                    self.current_path.pop(0)
-                    msg.linear.x = 0
-                    msg.angular.z = 0
+                    angle_diff = target_heading - self.heading
+                    msg = Twist()
+                # Follow waypoints
+                while path_available and self.current_path and not self.abort_check:
+
+                    gx, gy = self.current_path[0]
+                    target_x, target_y = self.grid_to_world(gx, gy)        
+                    dx = target_x - self.current_position_x
+                    dy = target_y - self.current_position_y
+                    target_distance = math.sqrt((dx) ** 2 + (dy) ** 2)
+                    target_heading = math.atan2(dy, dx)
+                    
+                    angle_diff = target_heading - self.heading
+                    msg = Twist()
+
+                    if angle_diff > math.pi:
+                        angle_diff -= 2 * math.pi
+                    elif angle_diff < -math.pi:
+                        angle_diff += 2 * math.pi
+                        
+                    if target_distance < threshold:
+                        print("target distance", target_distance)
+                        self.current_path.pop(0)
+                        msg.linear.x = 0
+                        msg.angular.z = 0
+                        self.drive_publisher.publish(msg)
+                        rospy.loginfo("Reached waypoint. Proceeding to next.")
+                        continue
+                    if angle_diff > math.pi:
+                        angle_diff -= 2 * math.pi
+                    elif angle_diff < -math.pi:
+                        angle_diff += 2 * math.pi
+                        
+                    if target_distance < threshold:
+                        print("target distance", target_distance)
+                        self.current_path.pop(0)
+                        msg.linear.x = 0
+                        msg.angular.z = 0
+                        self.drive_publisher.publish(msg)
+                        rospy.loginfo("Reached waypoint. Proceeding to next.")
+                        continue
+
+                    if abs(angle_diff) <= angle_threshold:
+                      #  print("trying to move forward", target_distance, self.current_position_x, target_x)
+                        msg.linear.x = self.lin_vel
+                        msg.angular.z = 0
+                    else:
+                       # print("rotating", angle_diff)
+                        msg.linear.x = 0
+                        msg.angular.z = angle_diff * kp
+                        if abs(msg.angular.z) < 0.3:
+                            msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
+
                     self.drive_publisher.publish(msg)
-                    rospy.loginfo("Reached waypoint. Proceeding to next.")
-                    continue
+                    rate.sleep()
+                    
+            else: #HOMING!
+                print("mapping state is true!")
+                print("IN HOMING")
+                # call homing
+                # should publish that it is found
+                # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
+                pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
+                if self.state == "AR1" or self.state == "AR2" or self.state == "AR3":
+                    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+                    rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+                    print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
+                elif self.state == "OBJ1" or self.state == "OBJ2":
+                    aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
+                    rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
+                    print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
+                rate = rospy.Rate(10) #this code needs to be adjusted
+                
+                # Wait a bit for initial detection
+                for i in range(50):
+                    rate.sleep()
+                
+                # Add variables for tracking detection memory
+                last_detection_time = time.time()
+                detection_memory_duration = 2.0  # 2 seconds of memory
+                detection_active = False
+                
+                while (not rospy.is_shutdown()) and (self.abort_check is False):
+                    twist = Twist()
+                    
+                    # Check if we have valid values from the aimer
+                    if aimer.linear_v is not None and aimer.angular_v is not None:
+                        # We have a detection, update the timer
+                        last_detection_time = time.time()
+                        detection_active = True
+                        
+                        # Check if we've reached the target
+                        if aimer.linear_v == 0 and aimer.angular_v == 0:
+                            print ("at weird", aimer.linear_v, aimer.angular_v)
+                            twist.linear.x = 0.0
+                            twist.angular.z = 0.0
+                            pub.publish(twist)
+                            return
+                            
+                        # Normal homing behavior
+                        if aimer.angular_v == 1:
+                            twist.angular.z = float(aimer.max_angular_v)
+                          #  print ("first if",aimer.max_angular_v)
+                            twist.linear.x = 0.0
+                        elif aimer.angular_v == -1:
+                            twist.angular.z = float(-aimer.max_angular_v)
+                            twist.linear.x = 0.0
+                        elif aimer.linear_v == 1:
+                           # print ("second check",aimer.max_linear_v)
+                            twist.linear.x = float(aimer.max_linear_v)
+                            twist.angular.z = 0.0
+                    else:
+                        # No detection, check if we're within memory duration
+                        if detection_active and time.time() - last_detection_time < detection_memory_duration:
+                            print("Using last movement commands from memory")
+                            # Continue with last valid movement
+                            # (twist values are already set from previous iteration)
+                        else:
+                            # Memory expired, go back to grid search
+                            print("Detection lost and memory expired, returning to grid search")
+                            detection_active = False
+                            break
+                    
+                    pub.publish(twist)
+                    rate.sleep()
 
-                if abs(angle_diff) <= angle_threshold:
-                   # print("trying to move forward", target_distance, self.current_position_x, target_x)
-                    msg.linear.x = self.lin_vel
-                    msg.angular.z = 0
-                else:
-                    #print("rotating", angle_diff)
-                    msg.linear.x = 0
-                    msg.angular.z = angle_diff * kp
-                    if abs(msg.angular.z) < 0.3:
-                        msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
-
-                self.drive_publisher.publish(msg)
-                rate.sleep()
+                break
+            # print("publishing grid search velocity")
+            self.drive_publisher.publish(msg)
             rate.sleep()
-                      
+            
+    def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
+        for target_x, target_y in self.targets:
+            if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
+                print(f"Object detected during navigation: {self.state}")
+                return True
+            
+            print("Going to target", target_x, target_y)
+            self.move_to_target(target_x, target_y, self.state) #changed from navigate_to_target
+            if self.abort_check:
+                break
+
+            rospy.sleep(1)
+
+        if self.found_objects[self.state]:
+            return True
+        return False #Signalling that grid search has been done
+
+
+class GridSearch():
+    '''
+    All values here should be treated as doubles
+    w, h - refers to grid dimensions, ie. if comp tells us that it is within radius of 20 then our grid would be square with 40 by 40
+    tolerance   - this is the limitation of our own equipment, ie. from camera, aruco only detected left right and dist of 3 m
+                - if this is unequal, take the smallest tolerance
+    '''
+    def __init__(self, w, h, tolerance, start_x, start_y): # AR1, OR AR2 (cartesian - fixed)
+        self.x = w 
+        self.y = h
+        self.tol = tolerance 
+        # print(self.tol)
+        self.start_x = start_x
+        self.start_y = start_y
+        # rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) # change topic name
+
+    '''
+    Generates a list of targets for square straight line approach.
+    '''
+    def square_target(self):
+        # dx, dy indicates direction (goes "up" first)
+        dx, dy = 0, 1
+        # while self.start_x == None:
+        #     # print("Waiting for odom...")
+        #     # rospy.loginfo("Waiting for odom...")
+        #     continue
+        targets = [(self.start_x,self.start_y)]
+        step = 1
+
+        while len(targets) < self.x:
+            for i in range(2):  # 1, 1, 2, 2, 3, 3... etc
+                for j in range(step):
+                    if step*self.tol > self.x: 
+                        print ("step is outside of accepted width: step*tol=", step*self.tol, "\tself.x=",self.x)
+                        break
+                    self.start_x, self.start_y = self.start_x + (self.tol*dx), self.start_y + (self.tol*dy)
+                    targets.append((self.start_x, self.start_y))
+                dx, dy = -dy, dx
+            step += 1 
+        print ("these are the final targets", targets) 
+        return targets
+
+    #Which function should be used?
+    def alt_gs(self):
+        dx, dy = 0, 1
+        # while self.start_x == None:
+        #     # print("Waiting for odom...")
+        #     # rospy.loginfo("Waiting for odom...")
+        #     continue
+        targets = [(self.start_x,self.start_y)]
+        step = 1
+        # notice, up/down is odd amount, left/right is even amount        
+        while len(targets) < self.x: # 1, 2, 3, 4, 5... sol 
+            if step%2==1: # moving up/down
+                for i in range (step):
+                    # move up if %4==1, down if %4 ==3 from the pattern
+                    self.start_y+=1 if step%4 ==1 else -1
+                    targets.append((self.start_x,self.start_y))
+                    if len(targets)==self.x:
+                        return targets
+            else: 
+                for i in range (step):
+                # move right if %4==2, left if %4 ==0 
+                    self.start_x+=1 if step%4==2 else -1
+                    targets.append((self.start_x,self.start_y))
+                    if len(targets)==self.x:
+                        return targets
+            step += 1  # Increase step size after two edges
+        return targets
+
+                     
 if __name__ == "__main__":
     rospy.init_node("octomap_a_star_planner", anonymous=True)
     try:
-        planner = AstarObstacleAvoidance()
-        planner.navigate()
+        planner = AstarObstacleAvoidance_GS_Traversal()
+        planner = AstarObstacleAvoidance_GS_Traversal()
+        planner.grid_search()
     except rospy.ROSInterruptException:
         pass
