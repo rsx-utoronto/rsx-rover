@@ -163,7 +163,12 @@ if __name__ == "__main__":
 
         g = GenieCameraPublisher()
 
+        while not rospy.is_shutdown() and not g.camera_found:
+            print("Waiting for genie camera...")
+            rospy.sleep(2)
+
         if g.camera_found:
+            print("Genie camera found!")
             g.publish_ros_topic()
             # g.capture_image("captured_image.jpg")  
         else:
