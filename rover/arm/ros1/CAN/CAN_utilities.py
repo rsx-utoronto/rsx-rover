@@ -107,6 +107,27 @@ def pos_to_sparkdata(f : float) -> list:
             eval('0x'+input_hex[-6:-4]), eval('0x'+input_hex[-8:-6]),
             0x00, 0x00, 0x00, 0x00]
 
+def power_to_sparkdata(f : float) -> list:
+    """
+    float -> list(int)
+
+    Takes in a float duty cycle value (power percentage) and returns the data packet in the form that
+    SparkMAX requires: 8-byte CAN payload consists of the converted value in a 4-byte IEEE 754 float 
+    and 4 zero bytes appended at the end.
+
+    @parameters:
+
+    f (float): Float value that needs to be converted
+    """
+    f = max(-1.0, min(1.0, f)) # Clamping the value for power to make sure it's a percentage 
+
+    input_hex =  hex(struct.unpack('<I', struct.pack('<f', f))[0])
+    if len(input_hex) != 10:
+        input_hex = input_hex[:2] + input_hex[2:] + (10-len(input_hex))*'0'
+    
+    return [eval('0x'+input_hex[-2:]), eval('0x'+input_hex[-4:-2]),
+            eval('0x'+input_hex[-6:-4]), eval('0x'+input_hex[-8:-6]),
+            0x00, 0x00, 0x00, 0x00]
 
 def sparkfixed_to_float(fixed : int, frac : int = 5) -> float:
     """
