@@ -56,7 +56,7 @@ CMD_API_ALT_ENC_POS     = 0x0A4
 CMD_API_PARAM_ACCESS    = 0x300
 
 # REDUCTION Ratios
-REDUCTION               = [160, 100, 100, 100, 120, 120, 1] # 7th Motor is a DC motor without a gearbox
+REDUCTION               = [160, 100, 100, 100, 100, 100, 1] # 7th Motor is a DC motor without a gearbox
 WRIST_RATIO             = 5/4
 
 ########## SHARED FUNCTIONS ##########
@@ -308,7 +308,7 @@ def generate_data_packet(data_list : list) -> list:
     # Assuming the last two angles specify the angle of the differential system,
     # convert those two values to the required angles for motors 5 and 6
     # wrist_motor1, wrist_motor2, gripper_correction = calc_differential(data_list[-3], data_list[-2])
-    wrist_motor1, wrist_motor2 = calc_differential(data_list[-2], data_list[-1])
+    wrist_motor1, wrist_motor2 = calc_differential(data_list[-3], data_list[-2])
     
     # Sparkmax Data list
     spark_data = []

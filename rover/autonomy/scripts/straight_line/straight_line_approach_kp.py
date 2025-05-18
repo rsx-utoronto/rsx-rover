@@ -5,6 +5,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray
 import math
+from sm_grid_search import GridSearch
 
 def ToEulerAngles(w, x, y, z):
     angles = [0, 0, 0] # [roll, pitch, yaw]
@@ -32,7 +33,7 @@ def odom_callback(msg):
     x = msg.pose.pose.position.x
     y = msg.pose.pose.position.y
     heading = ToEulerAngles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
-    print("XXX",x,y)
+    # print("XXX",x,y)
     # heading is in radians
 
 def target_callback(msg):
@@ -93,8 +94,12 @@ if __name__ == '__main__':
     x = 0
     y = 0
     heading = 0
-    targets = [(9, 0), (9, 2)]  # define multiple target points here
+
+    
+    gs = GridSearch(4, 4, 1, x, y)  # define multiple target points here
+    target = gs.square_target()
+    print(target)
     try:
-        straight_line_approach(1.5, 0.5, targets)
+        straight_line_approach(1, 0.5, target)
     except rospy.ROSInterruptException:
         pass
