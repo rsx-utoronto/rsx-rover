@@ -156,6 +156,7 @@ arm_keyboard_controller.py file to see what each keyboard button mimics.
 rosrun rover arm_keyboard_controller.py
 roslaunch rover arm_rviz.launch # or use gazebo
 ```
+
 ### GUI Control
 The GUI control uses a graphical interface to mimic the robots inputs. The setup process is kind of tedious, but doing these commands ensures everything will go well:
 ```
@@ -163,3 +164,14 @@ roscore
 roslaunch arm_gui_run.launch
 ```
 After these, be sure to set the arm into manual on the gui for the arm adjustment to work. 
+
+# Rover Instructions
+
+**ON AMD**
+```
+rosrun rover manual_control
+```
+**ON BASE**
+```
+roslaunch rover joy.launch
+```

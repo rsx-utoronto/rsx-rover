@@ -92,7 +92,7 @@ class CAN_Send():
 
 				#print(spark_input)
 				if motor_num > 10 and motor_num < 18:
-					id = generate_can_id(dev_id= motor_num, api= CMD_API_POS_SET)
+					id = generate_can_id(dev_id= motor_num, api= CMD_API_POS_SET) # API WILL BE CHANGED WHEN USING THE POWER (DC) SETTING
 					send_can_message(can_id= id, data= spark_input[i - 1])
 				
 				else:

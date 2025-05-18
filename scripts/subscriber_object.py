@@ -2,6 +2,7 @@
 
 import rospy
 import cv2
+import os
 import time
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
@@ -25,7 +26,9 @@ class ObjectDetectionNode():
 
         self.K = None
         self.D = None
-        self.model = YOLO('taskModel.pt')  # Load YOLO model
+        script_dir=os.path.dirname(os.path.abspath(__file__))
+        model_path=os.path.join(script_dir, 'best.pt')
+        self.model = YOLO(model_path)  # Load YOLO model
         self.model.conf = 0.5  # Set confidence threshold
 
         # Mapping class indices to object names (update as per your model's training labels)
@@ -41,13 +44,12 @@ class ObjectDetectionNode():
         except CvBridgeError as e:
             rospy.logerr(f"Failed to convert ROS image to CV2: {e}")
             return
-
         self.detect_objects(cv_image)
 
     def detect_objects(self, img):
         results = self.model(img)  # Run YOLO detection
-        detections = results.xyxy[0].cpu().numpy()  # Get detections in xyxy format
-
+      #  print("RESULTS: ", results)
+        detections = results[0].boxes.xyxy.cpu().numpy()  
         mallet_found = False
         waterbottle_found = False
 
@@ -72,8 +74,10 @@ class ObjectDetectionNode():
 
             # Mark objects as found
             if obj_name == "mallet":
+                print("MALLET FOUND")
                 mallet_found = True
             elif obj_name == "waterbottle":
+                print("WATERBOTTLE FOUND")
                 waterbottle_found = True
 
         # Publish detection status
