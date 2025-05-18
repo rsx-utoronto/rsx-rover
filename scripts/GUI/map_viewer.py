@@ -292,7 +292,7 @@ class MapViewer(QWidget):
 				self.draw_line_through_points(layer, points)
 
 	def set_robot_rotation(self, angle: float):
-		# angle is in degrees (0 - 360). 0 is right
+		angle = angle - 90
 		self.robot.setRotationAngle((angle) % 360)
 
 	def clear_lines(self):
