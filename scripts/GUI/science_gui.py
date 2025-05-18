@@ -958,7 +958,7 @@ class CameraFeed:
 
     def callback4(self, data):
         if self.active_cameras["Genie camera"]:
-            self.update_image(data, self.label4)
+            self.update_genie_image(data, self.label4)
 
     def callback5(self, data):
         if self.active_cameras["webcam"]:
@@ -996,6 +996,50 @@ class CameraFeed:
 
         QMetaObject.invokeMethod(label, "setPixmap", Qt.QueuedConnection, Q_ARG(QPixmap, scaled_pixmap))
 
+    def update_genie_image(self, data, label):
+        """Decode and update a grayscale ROS Image message."""
+        try:
+            # Let CvBridge detect the encoding automatically instead of forcing mono8
+            cv_image = self.bridge.imgmsg_to_cv2(data)
+            if cv_image is None:
+                print("Failed to convert image from topic")
+                return
+            
+            # Check the image shape to determine format
+            if len(cv_image.shape) == 2:
+                # It's already grayscale (single channel)
+                # Apply exposure/brightness adjustments
+                alpha = self.exposure_value / 50.0   # contrast: 0.02 to 2.0
+                beta = (self.exposure_value - 50) * 2  # brightness: -98 to +100
+                cv_image = cv2.convertScaleAbs(cv_image, alpha=alpha, beta=beta)
+                
+                # Convert grayscale to BGR for display
+                cv_image_rgb = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
+            else:
+                # It's already a color image
+                # Apply exposure/brightness adjustments
+                alpha = self.exposure_value / 50.0
+                beta = (self.exposure_value - 50) * 2
+                cv_image = cv2.convertScaleAbs(cv_image, alpha=alpha, beta=beta)
+                
+                # Ensure it's in BGR format for OpenCV
+                cv_image_rgb = cv_image
+            
+            # Convert to QImage - always use RGB format for Qt
+            height, width = cv_image_rgb.shape[:2]
+            bytes_per_line = 3 * width
+            cv_image_rgb = cv2.cvtColor(cv_image_rgb, cv2.COLOR_BGR2RGB)
+            qimg = QImage(cv_image_rgb.data, width, height, bytes_per_line, QImage.Format_RGB888)
+            pixmap = QPixmap.fromImage(qimg)
+            
+            # Scale pixmap to fit label while maintaining aspect ratio
+            scaled_pixmap = pixmap.scaled(label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            
+            # Update label with new pixmap
+            QMetaObject.invokeMethod(label, "setPixmap", Qt.QueuedConnection, Q_ARG(QPixmap, scaled_pixmap))
+            
+        except Exception as e:
+            print(f"Error updating genie image: {e}")
 
     def update_active_cameras(self, active_cameras):
         self.active_cameras = active_cameras
