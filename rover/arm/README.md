@@ -23,6 +23,7 @@ To read CAN messages on the bus, type the following on terminal:
 ```
 candump can0
 ```
+If CAN is recieving CAN packets already, turn off and on the power supply again. 
 
 #### Terminal 3 (for debugging)
 If the above command does not work, try sending a singular CAN packet on another terminal:
@@ -50,20 +51,16 @@ To check whether joy node is receiving inputs properly, run the following comman
 ```
 rostopic echo /arm/joy
 ```
+Press any button on the controller to see if inputs are received properly.  
 
 ### Terminal 3/4
 Launch arm_controlller, manual and safety nodes
 ```
 roslaunch rover arm_basics.launch
 ```
+Press all arrow buttons to check if every mode can be activated.
 
 ### Terminal 4/5
-For gripper control, run gripper code
-```
-python3 ~/rover_ws/src/rsx-rover/rover/arm/scripts/gripper/gripper_controller.py
-```
-
-### Terminal 5/6
 Run CAN_recv node (before CAN_send)
 ```
 rosrun rover CAN_recv.py
@@ -74,7 +71,7 @@ Before proceeding further, make sure that all the angles that the arm thinks it 
 rostopic echo /arm_curr_pos
 ```
 
-### Terminal 6/7
+### Terminal 5/6
 Run CAN_send node
 ```
 rosrun rover CAN_send.py
@@ -159,6 +156,7 @@ arm_keyboard_controller.py file to see what each keyboard button mimics.
 rosrun rover arm_keyboard_controller.py
 roslaunch rover arm_rviz.launch # or use gazebo
 ```
+
 ### GUI Control
 The GUI control uses a graphical interface to mimic the robots inputs. The setup process is kind of tedious, but doing these commands ensures everything will go well:
 ```
@@ -166,3 +164,14 @@ roscore
 roslaunch arm_gui_run.launch
 ```
 After these, be sure to set the arm into manual on the gui for the arm adjustment to work. 
+
+# Rover Instructions
+
+**ON AMD**
+```
+rosrun rover manual_control
+```
+**ON BASE**
+```
+roslaunch rover joy.launch
+```

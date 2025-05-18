@@ -837,8 +837,6 @@ class CameraFeed:
         self.bridge = CvBridge()
         self.image_sub1 = None
         self.image_sub2 = None
-        self.image_sub3 = None
-        self.image_sub4 = None
         self.state_sub = rospy.Subscriber("state", String, self.state_callback)
 
         self.obj_bbox = rospy.Subscriber("object/bbox", Float64MultiArray, self.bbox_callback)
@@ -846,8 +844,8 @@ class CameraFeed:
 
         self.label1 = label1
         self.label2 = label2
-        self.label3 = label3
-        self.label4 = label4
+        self.label3 = label3  # Keep these for now to avoid breaking layout
+        self.label4 = label4  # Keep these for now to avoid breaking layout
         self.splitter = splitter
 
         # Set size policies correctly
@@ -861,7 +859,8 @@ class CameraFeed:
         self.label4.setMinimumSize(300, 200)
         self.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        self.active_cameras = {"Zed (front) camera": False, "Butt camera": False, "Microscope camera": False, "Genie camera": False}
+        # Remove the microscope and genie from active cameras
+        self.active_cameras = {"Zed (front) camera": False, "Butt camera": False}
         self.bbox = None  
 
         self.bbox_timer = QTimer()
@@ -882,30 +881,12 @@ class CameraFeed:
 
     def register_subscriber2(self):
         if self.image_sub2 is None:
-            self.image_sub2 = rospy.Subscriber("/camera2/camera/color/image_raw/compressed" , CompressedImage, self.callback2)
+            self.image_sub2 = rospy.Subscriber("/camera2/camera/color/image_raw/compressed", CompressedImage, self.callback2)
 
     def unregister_subscriber2(self):
         if self.image_sub2:
             self.image_sub2.unregister()
             self.image_sub2 = None
-
-    def register_subscriber3(self):
-        if self.image_sub3 is None:
-            self.image_sub3 = rospy.Subscriber("/microscope", Image, self.callback3)
-
-    def unregister_subscriber3(self):
-        if self.image_sub3:
-            self.image_sub3.unregister()
-            self.image_sub3 = None
-        
-    def register_subscriber4(self):
-        if self.image_sub4 is None:
-            self.image_sub4 = rospy.Subscriber("/geniecam", Image, self.callback4)
-    
-    def unregister_subscriber4(self):
-        if self.image_sub4:
-            self.image_sub4.unregister()
-            self.image_sub4 = None
 
     def state_callback(self, msg):
         self.state = msg.data
@@ -930,14 +911,6 @@ class CameraFeed:
     def callback2(self, data):
         if self.active_cameras["Butt camera"]:
             self.update_image(data, self.label2)
-    
-    def callback3(self, data):
-        if self.active_cameras["Microscope camera"]:
-            self.update_image(data, self.label3)
-
-    def callback4(self, data):
-        if self.active_cameras["Genie camera"]:
-            self.update_image(data, self.label4)
 
     def update_image(self, data, label):
         """Decode and update the camera image with bounding box."""
@@ -988,16 +961,6 @@ class CameraFeed:
         else:
             self.unregister_subscriber2()
 
-        if self.active_cameras["Microscope camera"]:
-            self.register_subscriber3()
-        else:
-            self.unregister_subscriber3()
-
-        if self.active_cameras["Genie camera"]:
-            self.register_subscriber4()
-        else:
-            self.unregister_subscriber4()
-
     def update_visibility(self):
         active_count = sum(self.active_cameras.values())
         if self.active_cameras["Zed (front) camera"]:
@@ -1012,18 +975,12 @@ class CameraFeed:
         else:
             self.label2.hide()
             self.splitter.setStretchFactor(1, 0)
-        if self.active_cameras["Microscope camera"]:
-            self.label3.show()
-            self.splitter.setStretchFactor(2, 1)
-        else:
-            self.label3.hide()
-            self.splitter.setStretchFactor(2, 0)
-        if self.active_cameras["Genie camera"]:
-            self.label4.show()
-            self.splitter.setStretchFactor(3, 1)
-        else:
-            self.label4.hide()
-            self.splitter.setStretchFactor(3, 0)
+        
+        # Always hide the other labels since cameras are removed
+        self.label3.hide()
+        self.splitter.setStretchFactor(2, 0)
+        self.label4.hide()
+        self.splitter.setStretchFactor(3, 0)
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
@@ -1382,8 +1339,10 @@ class RoverGUI(QMainWindow):
         camera_layout.addWidget(self.camera_selector)
         self.camerasplitter.addWidget(self.camera_label1)
         self.camerasplitter.addWidget(self.camera_label2)
-        self.camerasplitter.addWidget(self.camera_label3)
+        self.camerasplitter.addWidget(self.camera_label3) 
         self.camerasplitter.addWidget(self.camera_label4)
+        self.camera_label3.hide()  # Hide these initially
+        self.camera_label4.hide()
         camera_layout.addWidget(self.camerasplitter)
 
         # camera_layout.addWidget(self.camera_label_splitter)
@@ -1526,7 +1485,8 @@ class CameraSelect(QWidget):
         self.toolButton.setText("Cameras List")
         self.toolMenu = QMenu(self)
 
-        self.cameras = ["Zed (front) camera", "Butt camera", "Genie camera", "Microscope camera"]
+        # Remove microscope and genie camera from the list
+        self.cameras = ["Zed (front) camera", "Butt camera"]
         self.selected_cameras = {camera: False for camera in self.cameras}
 
         for camera in self.cameras:

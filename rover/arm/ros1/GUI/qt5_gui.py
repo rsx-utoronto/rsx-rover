@@ -25,43 +25,45 @@ class RobotControlGUI(QWidget):
         screen = QApplication.primaryScreen()  # Get primary screen (default monitor)
 
         screen_size = screen.size()
+
+        # Set the window size and maximum size to 90% of the screen width and 2/3 of the screen height
         self.setGeometry(100, 100, int(screen_size.width()*9/10), int(screen_size.height()*2/3))
-        
         self.setMaximumSize(int(screen_size.width()*9/10), int(screen_size.height()*2/3)) 
 
-        self.setWindowIcon(QIcon("RsxLogo.png"));
+        # The icon for the GUI!
+        self.setWindowIcon(QIcon("RsxLogo.png"))
 
         # Load the YAML file
         with open('config.yaml', 'r') as file:
             config = yaml.safe_load(file)
 
+        # Load the camera topics from the YAML file
         self.camera_topics = config['camera_topics']
         self.camera_topic_name = [camera['topic'] for camera in self.camera_topics]
-        # self.camera_topic_name = ["/camera/color/image_king", "/camera/color/image_raw"]
+        self.camera_compressed = [camera['compressed'] for camera in self.camera_topics]
+        self.camera_aspect_ratio = eval(config['camera_aspect_ratio'])
 
-
+        # Initialize all of the buttons, labels, and other widgets
         self.initUI()
 
+        # If science mode is on, bottom 3 joints and gripper 
         self.scienceOn = False
 
         self.controller = GuiControllerNode()  # Initialize controller
         
-        # look at function at line 150 & 835
+        # Get the arm effector positions
         self.end_effector_coords = rospy.Subscriber("arm_end_effector_pos", Float32MultiArray, self.update_end_effector_coords) 
 
-        # update the joint display values
+        # Update the joint display values
         self.joint_display_values = rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.set_joint_display)
 
+        # The default mode when you start the GUI is Idle
         self.mode_buttons["Idle"].click()
 
     def resizeEvent(self, event):
-        #new_size = event.size().width()  # Get new window size
         camera_width = self.power_on.width() + self.power_off.width() + self.move_origin.width()
-        #print(camera_width)
-        # print(f"Window resized to: {new_size.width()}x{new_size.height()}")
-        #self.coord_view_label.resize()
         self.coord_view_label.setFixedWidth(int(camera_width))
-        self.coord_view_label.setFixedHeight(int(camera_width*9/16))
+        self.coord_view_label.setFixedHeight(int(camera_width*self.camera_aspect_ratio))
         super().resizeEvent(event)  # Call parent class method
         
 
@@ -94,6 +96,9 @@ class RobotControlGUI(QWidget):
             for button in self.joint_buttons:
                 button.setEnabled(False)
         
+        # Currently toggles between manual and science mode whenever you press any of the module buttons
+        # Intended use is to eventually move ot a certain position with each module.
+        # Since no additional information was given, this is the current implementation.
         if command in ["Module 1", "Module 2", "Module 3", "Module 4"]:
             # gray out only 4 - 6 in forward kinematics
             self.scienceOn = not self.scienceOn
@@ -174,28 +179,17 @@ class RobotControlGUI(QWidget):
         # Update the QLabel with the latest frame
         pixmap = QPixmap.fromImage(qt_image)
         self.coord_view_label.setPixmap(pixmap)
-        self.coord_view_label.setScaledContents(True)  # Optional: scales the image to fit the label size
+        self.coord_view_label.setScaledContents(True)  # scales the image to fit the label size
 
     # Switch camera feeds
     def on_view_selected(self, index):
         self.video_subscriber.sub.unregister()
-        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[index])
+        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[index], self.camera_compressed[index])
         self.video_subscriber.frame_received.connect(self.update_image)
 
+    # Update the end effector coordinate section
     def update_end_effector_coords(self, data):
-        # # have to import ik_library.py
-        # deg2rad(data.data)
-
-        # dh_table = createDHTable([-data.data[0], data.data[1] + pi/2, -data.data[2], data.data[3], data.data[5], -data.data[4]])
-        # print('random')
-
-        # # see the calculateRotationAngles for how the transformation matrix looks
-        # transformation_matrix = calculateTransformToLink(dh_table, 6)
-        # print(transformation_matrix)
-
-        # # returns [rx, ry, rz]
-        # rotation_angles = calculateRotationAngles(transformation_matrix)
-
+        # Get the data from the right rostopic
         x = data.data[3]
         y = data.data[4]
         z = data.data[5]
@@ -203,6 +197,7 @@ class RobotControlGUI(QWidget):
         ry = data.data[1]
         rz = data.data[2]
 
+        # Actually change the text within the GUI
         self.x_coord.setText(f"X: {x:.2f} mm")
         self.y_coord.setText(f"Y: {y:.2f} mm")
         self.z_coord.setText(f"Z: {z:.2f} mm")
@@ -210,8 +205,23 @@ class RobotControlGUI(QWidget):
         self.ry_coord.setText(f"Ry: {ry:.2f}°")
         self.rz_coord.setText(f"Rz: {rz:.2f}°")
 
-        # return [x, y, z] + rotation_angles
+    # Update the publishing rate multiplier
+    def update_publish_multiplier(self, increment):
+        # Set the frequency multiplier and make sure it doesn't go to 0
+        self.frequencyMultiplier += increment 
+        self.frequencyMultiplier = max(self.frequencyMultiplier, 0.1)
+        # TODO: add maximum value
+        # Change the text box within the GUI
+        self.freq_display.setText(str(round(self.frequencyMultiplier, 1)))
 
+        # Actually change the frequencies for the required buttons (joints, then IK)
+        for button in self.joint_buttons:
+            button.setAutoRepeatInterval(int(100/self.frequencyMultiplier))
+        
+        for direction, button in self.arrow_buttons.items():
+            button.setAutoRepeatInterval(int(100/self.frequencyMultiplier))
+
+    
     # Main GUI code
     def initUI(self):
         # Main Layout
@@ -228,6 +238,8 @@ class RobotControlGUI(QWidget):
 
         for direction, button in self.arrow_buttons.items():
             button.clicked.connect(lambda _, d=direction: self.button_is_clicked(d))
+            # Allow each button to be held down and continuously input
+            button.setAutoRepeat(True)
             
         coord_layout.addWidget(self.arrow_buttons["Up"], 1, 1)
         coord_layout.addWidget(self.arrow_buttons["Down"], 3, 1)
@@ -247,7 +259,7 @@ class RobotControlGUI(QWidget):
         # Grip Control
         coord_layout.addWidget(self.arrow_buttons["Open Grip"], 5, 2)
         coord_layout.addWidget(self.arrow_buttons["Close Grip"], 6, 2)
-        
+
         coordinates_group.setLayout(coord_layout)
 
         # 3D View Section
@@ -256,19 +268,17 @@ class RobotControlGUI(QWidget):
 
         self.camera_view_box  = QComboBox()
         camera_names = [camera['name'] for camera in self.camera_topics]
-        self.camera_view_box .addItems(camera_names)
-        view_layout.addWidget(self.camera_view_box )
+        self.camera_view_box.addItems(camera_names)
+        view_layout.addWidget(self.camera_view_box)
 
         view_layout.addStretch(1)
         
         self.coord_view_label = QLabel("Cameras Goes Here")
         #self.coord_view_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        #self.coord_view_label.setMaximumWidth(480)
-        #self.coord_view_label.setMaximumHeight(270)
         view_layout.addWidget(self.coord_view_label)
 
         # Initialize the ROS video subscriber
-        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[0])
+        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[0],self.camera_compressed[0])
         self.video_subscriber.frame_received.connect(self.update_image)
 
         self.camera_view_box.currentIndexChanged.connect(self.on_view_selected)
@@ -349,6 +359,10 @@ class RobotControlGUI(QWidget):
             inc_button.clicked.connect(lambda _, idx=i: self.update_joint_value(idx, 1))
             dec_button.clicked.connect(lambda _, idx=i: self.update_joint_value(idx, -1))
 
+            # Allow each button to be held and continuously move joint
+            inc_button.setAutoRepeat(True)
+            dec_button.setAutoRepeat(True)
+
             # Store the joint displays
             self.joint_displays.append(joint_display)
 
@@ -392,6 +406,7 @@ class RobotControlGUI(QWidget):
 
         coords_group.setLayout(coords_layout)
 
+        # Create the box in the GUI for each of the arm's modes
         modes_group = QGroupBox("Modes")
         modes_layout = QGridLayout()
 
@@ -407,34 +422,56 @@ class RobotControlGUI(QWidget):
         modes_layout.addWidget(self.mode_buttons["Custom 1"], 3, 0)
         modes_layout.addWidget(self.mode_buttons["Custom 2"], 3, 1)
 
+        # Add callback to each of the modes
         for modes, button in self.mode_buttons.items():
             button.clicked.connect(lambda _, m=modes: self.button_is_clicked(m))
             
         modes_group.setLayout(modes_layout)
 
+        # Movement rate box
+        frequency_group = QGroupBox("Movement rate")
+
+        joint_pub_freq = QHBoxLayout()
+
+        self.frequencyButtons= {}
+
+        # Add one of the buttons to change the frequency, as well as callback function
+        self.frequencyButtons["Manualminus"] = QPushButton("-")
+        self.frequencyButtons["Manualminus"].clicked.connect(lambda: self.update_publish_multiplier(-0.1))
+
+        # Label to display the rate
+        self.frequencyMultiplier = 1 
+        self.freq_display = QLabel("1")
+        self.freq_display.setStyleSheet("border: 1px solid black; padding: 5px;")
+        self.freq_display.setFixedWidth(50)
+        self.freq_display.setFixedHeight(30)
+        self.freq_display.setAlignment(Qt.AlignmentFlag.AlignCenter)  
+
+        # Add one of the buttons to change the frequency, as well as callback function
+        self.frequencyButtons["Manualplus"] = QPushButton("+")
+        self.frequencyButtons["Manualplus"].clicked.connect(lambda: self.update_publish_multiplier(0.1))
+
+        # Add widgets to layout
+        joint_pub_freq.addWidget(self.frequencyButtons["Manualminus"])
+        joint_pub_freq.addWidget(self.freq_display)
+        joint_pub_freq.addWidget(self.frequencyButtons["Manualplus"])
+
+        frequency_group.setLayout(joint_pub_freq)
+
+        # Try to make the buttons take up the minimum size possible
+        frequency_group.adjustSize()
+
+        # Add all the stuff to the right side layout
         coords_layout.addWidget(modes_group)
         coords_layout.addWidget(science_modules)
+        coords_layout.addWidget(frequency_group)
         coords_group.setLayout(coords_layout)
-
 
         # Adding sections to the main layout
         main_layout.addWidget(coordinates_group)
         main_layout.addWidget(view_group, stretch=3)
         main_layout.addWidget(joints_group)
         main_layout.addWidget(coords_group)
-
-        # Bottom Buttons
-        # bottom_layout = QHBoxLayout()
-        # self.move_home = QPushButton("Move to Home")
-        # self.move_home.clicked.connect(lambda _: self.button_is_clicked("Move to Home"))         
-        # self.move_origin = QPushButton("Move to Origin")
-        # self.move_origin.clicked.connect(lambda _: self.button_is_clicked("Move to Origin"))         
-        # self.freemove = QPushButton("Freemove")
-        # self.freemove.clicked.connect(lambda _: self.button_is_clicked("Freemove"))         
-
-        # bottom_layout.addWidget(self.move_home)
-        # bottom_layout.addWidget(self.move_origin)
-        # bottom_layout.addWidget(self.freemove)
 
         # Main Vertical Layout
         main_vertical_layout = QVBoxLayout(self)
