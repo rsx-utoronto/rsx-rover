@@ -1,9 +1,9 @@
 import numpy as np
-from math import sin, cos, atan2, sqrt
+from math import pi, sin, cos, atan2, sqrt
 from copy import deepcopy
 
 class Arm():
-    def __init__(self, numJoints:int, dhTable):
+    def __init__(self, numJoints:int, dhTable, offsets, angleOrientation, startingAngles):
         ''' Object That represents a robot arm config with common functions
 
         Parameters
@@ -14,23 +14,43 @@ class Arm():
             the arms dh-table
 
         '''
-
+        self.isHomed = False
         self.numJoints:int = numJoints
         self.curAngles = [0]*numJoints
         self.goalAngles = [0]*numJoints 
+        self.prevGoalAngles = [0]*numJoints
+        self.sparkMaxOffsets = [0]*self.numJoints
+        self.trueStartingAngles = [0]*self.numJoints
+        self.publishingAngles = [0]*self.numJoints
+
+        if len(startingAngles) != numJoints:
+            print("The number of joints in the starting angles liss")
+        self.startingAngles = startingAngles
+        self.goalAngles = deepcopy(startingAngles)
 
         if len(dhTable) != numJoints:
-            print("The number of joints in the DH table is less than the value specified!")
+            print("The number of joints in the DH table does not match the nuber specified")
             raise TypeError
         self.dhTable = np.array(dhTable) # pass [d, Theta, r, alpha]
 
+        if len(offsets) != numJoints:
+            print("The number of joints in the offsets list does not match the nuber specified")
+            raise TypeError
+        self.offsets = offsets
+
+        if len(angleOrientation) != numJoints:
+            print("The number of joints in the angle orientation does not match the nuber specified")
+            raise TypeError
+        self.angleOrientation = angleOrientation
+
         self.target = [0]*6 # [x, y, z, roll , pitch, yaw]
+        self.prevTarget = [0]*6 # [x, y, z, roll , pitch, yaw]
         self.modes = ["Forward"]
         self.curMode = self.modes[0] # makes this a data structure function callback
         self.numModes = len(self.modes)
-        self.CONTROL_SPEED = 0.01 
+        self.CONTROL_SPEED = 0.003 
     
-    def updateDHTable(self):
+    def updateDHTable(self, newAngles):
         ''' Updates to the DH Table to have the current joint angles
         
         Update the theta values of the DH table. Will only succesfully run if the
@@ -42,15 +62,17 @@ class Arm():
             list of angles for each joint
 
         '''
-        self.dhTable[:, 1] = self.curAngles
+        self.dhTable[:, 1] = newAngles 
 
     def getDHTable(self):
-        self.updateDHTable()
         return self.dhTable
 
     def iterateMode(self):
         ''' Iterate the Kinematics Mode of the Arm
         '''
+        if not self.isHomed:
+            return
+
         nextIndex = self.modes.index(self.curMode) + 1
         if nextIndex > self.numModes:
             nextIndex = 0
@@ -89,13 +111,76 @@ class Arm():
     def controlTarget(self, isButtonPressed, joystickStatus):
         pass
 
+    def controlEndEffector(self, goalPos):
+        pass
+
     def setCurAngles(self, angles:np.ndarray):
         self.curAngles = angles
 
     def getGoalAngles(self):
         return deepcopy(self.goalAngles)
 
-    def calculateRotationAngles(transformationMatrix):
+    def getOffsetGoalAngles(self):
+        angles = self.getGoalAngles()
+        offsetAngles = [0]*self.numJoints
+        for i in range(len(angles)): 
+            offsetAngles[i] = angles[i] + self.offsets[i] 
+        return deepcopy(offsetAngles) 
+
+    def removeOffsets(self, angles):
+        correctedAngles = [0]*self.numJoints
+        for i in range(len(angles)):
+            correctedAngles[i] = angles[i] - self.offsets[i] 
+        return deepcopy(correctedAngles)
+
+    def getPublishingAngles(self):
+        angles = self.getOffsetGoalAngles()
+        for i in range(self.numJoints):
+            self.publishingAngles[i] = angles[i] - self.trueStartingAngles[i]
+        return deepcopy(self.publishingAngles)
+
+    def correctAngleDirection(self, angles):
+        correctedDirection = [0]*self.numJoints
+        for i in range(len(angles)):
+            correctedDirection[i] = angles[i]*self.angleOrientation[i]
+        return deepcopy(correctedDirection)
+
+    def removeSparkMaxOffsets(self, angles):
+        offsetAngles = deepcopy(angles)
+        if len(angles) != self.numJoints:
+            return angles
+        for i in range(self.numJoints):
+            offsetAngles[i] -= self.sparkMaxOffsets[i]
+        return offsetAngles
+
+    def addSparkMaxOffsets(self, angles):
+        offsetAngles = deepcopy(angles)
+        # offsetAngles[1] += pi/2
+        if len(angles) != self.numJoints:
+            return angles
+        for i in range(self.numJoints):
+            offsetAngles[i] += self.sparkMaxOffsets[i] #- self.trueStartingAngles[i] 
+            # offsetAngles[i] +=  - self.trueStartingAngles[i] 
+        return offsetAngles
+
+    def storeSparkMaxOffsets(self, sparkMaxAngles):
+        if len(sparkMaxAngles) != self.numJoints:
+            return False
+        sparkMaxAngles[3] = -sparkMaxAngles[3]
+        self.sparkMaxOffsets = sparkMaxAngles
+        self.goalAngles = self.removeSparkMaxOffsets(self.goalAngles)
+        return True
+
+    def homeArm(self):
+        homeAngles = self.getOffsetGoalAngles()
+        homeAngles[1] -= pi/2
+        self.storeSparkMaxOffsets(homeAngles)
+        self.goalAngles = deepcopy(self.startingAngles)
+        self.isHomed = True
+        print(f'---- {self.startingAngles} -----')
+        print(f'---- {self.goalAngles} -----')
+
+    def calculateRotationAngles(self, transformationMatrix):
         ''' Returns the roll, pitch, and yaw angles of a transformation matrix
 
         The function will also work with a rotation matrix since it is embeded within 
@@ -187,6 +272,8 @@ class Arm():
             the multiplied matrix
         '''
         dhTable = self.getDHTable() 
+        # dhTable[3, 1] += atan2(92,67) 
+        # print(dhTable)
         transformToLink = np.eye(4)
 
         for i in range(0, linkNumber):
@@ -199,6 +286,12 @@ class Arm():
         self.goalAngles = self.curAngles
         # self.updateDHTable(self.curAngles)
         # print(self.goalAngles)
+
+    def activeForwardKinematics(self):
+        pass
+
+    def passiveForwardKinematics(self):
+        pass
 
     def inverseKinematics(self, dhTable, target):
         ''' Defined in each arm class

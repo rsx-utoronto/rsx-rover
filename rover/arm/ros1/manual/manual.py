@@ -52,7 +52,7 @@ class Manual():
 
         ## Constant Speed limits, values are chosen by trial and error #TODO Find value for 7th motor
 
-        self.SPEED_LIMIT         = [-0.01, 0.009, 0.015, 0.075, 0.12, 0.12, 0.3]
+        self.SPEED_LIMIT         = [0.2, 0.2, 0.5, 0.75, 0.12, 0.8, 400]
 
         ## Variable for the status, start at idle
         self.status              = "Idle"
