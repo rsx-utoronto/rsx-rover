@@ -11,12 +11,12 @@ the real arm isn't plugged in an manual is needed
 class FakeManualNode():
     def __init__(self) -> None:
         rospy.init_node("fake_manual")
-        self.armAngles = [0, 0, 0, 0, 0, 0]
+        self.armAngles = [0, 0, 0, 0, 0, 0, 0]
 
         self.jointPublisher = rospy.Publisher("arm_goal_pos", Float32MultiArray, queue_size=10)
         self.realJointPublisher = rospy.Publisher("arm_curr_pos", Float32MultiArray, queue_size=10)
         self.curState = "Idle"
-        self.scale = 0.0001
+        self.scale = 1
 
         rospy.Subscriber("arm_state", String, self.updateStates)
         rospy.Subscriber("arm_goal_pos", Float32MultiArray, self.updateRealAngles)

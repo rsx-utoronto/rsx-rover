@@ -13,8 +13,8 @@ class GuiControllerNode():
 
         self.speedMultiplier = 1
 
-        self.inputPublisher = rospy.Publisher("arm_inputs", ArmInputs, queue_size=10)
-        self.statePublisher = rospy.Publisher("arm_state", String, queue_size=10)
+        self.inputPublisher = rospy.Publisher("ignored_arm_inputs", ArmInputs, queue_size=10)
+        self.statePublisher = rospy.Publisher("ignored_arm_state", String, queue_size=10)
         
     def on_press(self, command):
         GuiToController = ArmInputs()

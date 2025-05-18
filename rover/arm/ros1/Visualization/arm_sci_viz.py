@@ -252,7 +252,7 @@ class ArmVisualizationNode():
             self.jointPublisher = startJointPublisher()
 
         rospy.Subscriber("arm_state", String, self.updateState)
-        rospy.Subscriber("arm_goal_pos", Float32MultiArray, self.displayArmGoalPos)
+        rospy.Subscriber("arm_viz_pos", Float32MultiArray, self.displayArmGoalPos)
         # rospy.Subscriber("arm_curr_pos", Float32MultiArray, self.displayArmLivePos)
     
     def updateState(self, data):
@@ -269,7 +269,6 @@ class ArmVisualizationNode():
         if data.data == "IK":
             if not self.ikEntered:
                 self.savedCanAngles = deepcopy(self.liveArmAngles)
-                print(f'saved can {self.savedCanAngles}')
 
             self.ikEntered = True
 
@@ -287,19 +286,20 @@ class ArmVisualizationNode():
         tempAngles = list(deg2rad(list(data.data)))
         print(tempAngles)
         # tempAngles = list(subtract(array(tempAngles), -1*array(self.savedCanAngles)))
-        tempAngles = list(subtract(array(tempAngles), -1*array(self.savedCanAngles)))
+        tempAngles = list(subtract(array(tempAngles), -1*array(self.savedSciCanAngles)))
         # tempAngles.append(tempAngles[6]) # make gripper angles equal
         # tempAngles.append(tempAngles[6]) # make gripper angles equal
 
         # unswap angles to match with joint order
-        temp = tempAngles[5]
-        tempAngles[5] = tempAngles[4]
-        tempAngles[4] = temp
+        if False:
+            temp = tempAngles[5]
+            tempAngles[5] = tempAngles[4]
+            tempAngles[4] = temp
 
-        # undo sign inversion for motors 
-        tempAngles[0] = -tempAngles[0]
-        tempAngles[1] = tempAngles[1]
-        tempAngles[5] = tempAngles[5]
+            # undo sign inversion for motors 
+            tempAngles[0] = -tempAngles[0]
+            tempAngles[1] = tempAngles[1]
+            tempAngles[5] = tempAngles[5]
             
         if self.gazebo_on:
             tempAngles.append(0)
@@ -307,11 +307,11 @@ class ArmVisualizationNode():
             tempAngles.append(0)
             moveInGazebo(self.gazeboPublisher, tempAngles)
         else:
-            if True:
+            if False:
                 tempAngles.append(tempAngles[6])
                 tempAngles.append(0)
             # runNewDesiredJointState(self.jointPublisher, tempAngles)
-            runNewDesiredJointState(self.jointPublisher, tempAngles)
+            runNewSciJointState(self.jointPublisher, tempAngles)
 
     def displayArmLivePos(self, data):
         ''' Callback function for the /arm_curr_pos topic
@@ -344,7 +344,6 @@ class ArmVisualizationNode():
             tempAngles.append(0)
 
             runNewRealJointState(self.jointPublisher, tempAngles)
-
 if __name__ == "__main__":  # if used rosrun on this script then ...
     try:
         ArmVizNode = ArmVisualizationNode()
