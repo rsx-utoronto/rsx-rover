@@ -6,6 +6,7 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
 import time
 
 # ros subscriber
@@ -52,9 +53,11 @@ class Publisher:
 
 
 class Panorama:
-    def __init__(self, sub: Subscriber, pub: Publisher):
-        self.sub:Subscriber = sub
-        self.pub:Publisher = pub
+    def __init__(self):
+        self.sub:Subscriber = Subscriber()
+        self.pub:Publisher = Publisher()
+        self.receive_control = rospy.Subscriber("/pano_control", Bool, self.callback)
+        self.result_pub = rospy.Publisher("/pano_result", Image, queue_size=100)
         self.stitcher = stitcher.Stitcher()
 
     def start(self, num_images):
@@ -75,16 +78,40 @@ class Panorama:
             time.sleep(1)
         #exit out of loop by not saving photos
         self.sub.stop()
+        
         #pass stitcher class the list of images to stitch together
-        self.stitcher.stitch(self.sub.imgfiles)
+        res = self.stitcher.stitch(self.sub.imgfiles)
+        if res is None:
+            print("Stitching failed")
+            return
+        else:
+            print("Stitching succeeded")
+            
+            stitched_image = res
+            
+            # Convert OpenCV image to ROS Image message
+            bridge = CvBridge()
+            try:
+                # Convert the stitched image to a ROS Image message
+                ros_image = bridge.cv2_to_imgmsg(stitched_image, "bgr8")
+                # Publish the ROS Image message
+                self.result_pub.publish(ros_image)
+            except CvBridgeError as e:
+                print(e)
+                
         print('Panorama completed')
+    
+    def callback(self, data):
+        if data.data:
+            print('Received control')
+            self.start(10)
 
 def main():
     rospy.init_node('panorama')
-    sub = Subscriber()
-    pub = Publisher()
-    pan = Panorama(sub, pub)
-    pan.start(10)
+    # sub = Subscriber()
+    # pub = Publisher()
+    pan = Panorama()
+    rospy.spin()
 
 if __name__ == '__main__':
     main()

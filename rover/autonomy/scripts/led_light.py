@@ -94,7 +94,7 @@ class LedLight():
     def init_board(self):
       serial_port =  self.linux_get_led_port().strip() #only works when accessing with sudo
       print("Serial Port:", serial_port)
-      #serial_port = "/dev/ttyUSB0" #Find out the seriel_port
+      serial_port = "/dev/ttyUSB4" #Find out the seriel_port
       self.board = serial.Serial(port=serial_port, baudrate=115200, timeout=1)
       rospy.sleep(2)
       self.board.write(bytes('blue\n', 'utf-8'))
