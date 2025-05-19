@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
         while not rospy.is_shutdown() and not g.camera_found:
             print("Waiting for genie camera...")
-            rospy.sleep(2)
+            rospy.sleep(2)+
 
         if g.camera_found:
             print("Genie camera found!")
