@@ -8,18 +8,31 @@ from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 import os
+import yaml
 from std_msgs.msg import Float64MultiArray
 from std_msgs.msg import Bool
 from std_msgs.msg import String
+
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+
+with open(file_path, "r") as f:
+    sm_config = yaml.safe_load(f)
 
 bridge = CvBridge()
 
 class ARucoTagDetectionNode():
 
     def __init__(self):
+        self.bridge = CvBridge()
+        self.curr_state = None
         # self.image_topic = "/camera/color/image_raw"
-        self.image_topic = "/zed_node/rgb/image_rect_color"
-        self.info_topic = "/zed_node/rgb/camera_info"
+        if sm_config.get("realsense_detection"):
+            self.image_topic = sm_config.get("realsense_detection_image_topic") 
+            self.info_topic = sm_config.get("realsense_detection_info_topic")
+        else:
+            self.image_topic = sm_config.get("zed_detection_image_topic") 
+            self.info_topic = sm_config.get("zed_detection_info_topic")
+            
         self.state_topic = "state"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
@@ -34,7 +47,6 @@ class ARucoTagDetectionNode():
         while (time.time() - t) < 2:
             #print("Passing time") 
             pass
-        self.bridge = CvBridge()
         #self.current_state = StateMsg()
         self.curr_aruco_detections = {}
         self.detected_aruco_ids = []
@@ -46,7 +58,6 @@ class ARucoTagDetectionNode():
         #self.updated_state_msg = StateMsg()
         #self.scanned_state_smg = StateMsg()
         self.found = False
-        self.curr_state = None
 
     def image_callback(self, ros_image):
         try:
@@ -54,7 +65,8 @@ class ARucoTagDetectionNode():
         except CvBridgeError as e:
             print(e)
         else:
-            # Do we need to undistort?
+            # Do we need to undistort?    
+         
             if self.curr_state == "AR1" or self.curr_state == "AR2" or self.curr_state == "AR3":
                 self.findArucoMarkers(cv_image)
     
@@ -76,7 +88,7 @@ class ARucoTagDetectionNode():
     # https://circ.cstag.ca/2022/rules/#autonomy-guidelines:~:text=All%20ArUco%20markers%20will%20be%20from%20the%204x4_50%20dictionary.%20They%20range%20from%20marker%200%20to%2049.
 
     def findArucoMarkers(self, img, markerSize=4, totalMarkers=100, draw=True):
-        print("Finding Aruco Markers")
+        print("ar_detection_node: Finding Aruco Markers")
         imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         key = getattr(aruco, 'DICT_' + str(markerSize) + 'X' + str(markerSize) + "_" + str(totalMarkers))
         arucoDict = aruco.getPredefinedDictionary(key)
@@ -86,7 +98,7 @@ class ARucoTagDetectionNode():
         # bboxs, ids, rejected = aruco.detectMarkers(imgGray,arucoDict,parameters=arucoParam)
         # print("bbox", bboxs)
         if ids is not None:
-            print("AR detected!")
+            print("ar_detection_node: AR detected!")
             print(ids)
             for i, id in enumerate(ids):
                 id = id[0]
@@ -101,7 +113,7 @@ class ARucoTagDetectionNode():
 
 
             best_detection = ids[0][0]
-            rospy.loginfo(f"An AR tag was detected with the ID {best_detection}")
+            rospy.loginfo(f"ar_detection_node: An AR tag was detected with the ID {best_detection}")
             #self.scanned_state_smg.AR_SCANNED = True
             bboxs = bboxs[0]
             
@@ -119,7 +131,7 @@ class ARucoTagDetectionNode():
                     self.bbox_pub.publish(data)
                     
                     # first two numbers are top left corner, second two are bottom right corner
-                    print("here are the coords from jack's code", self.array[0], self.array[1], self.array[6], self.array[7])
+                    print("ar_detection_node: here are the coords from jack's code", self.array[0], self.array[1], self.array[6], self.array[7])
                     print((self.array[6]-self.array[0])*(self.array[7]-self.array[1]))
                     
                     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -130,7 +142,7 @@ class ARucoTagDetectionNode():
                     img = cv2.putText(img, f"ID: {int(id)}", org, font, 
                                     fontScale, color, thickness, cv2.LINE_AA)
             
-            img_msg = bridge.cv2_to_imgmsg(img, encoding="passthrough")
+            img_msg = self.bridge.cv2_to_imgmsg(img, encoding="passthrough")
             self.vis_pub.publish(img_msg)
             
         #self.updated_state_msg = self.current_state

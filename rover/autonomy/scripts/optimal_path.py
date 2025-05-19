@@ -4,6 +4,26 @@ import math
 from collections import deque
 import matplotlib.pyplot as plt
 
+import yaml
+import os
+
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+
+with open(file_path, "r") as f:
+    sm_config = yaml.safe_load(f)
+
+DEFAULT_DIFFICULTY = {
+    "GNSS1": 1,
+    "GNSS2": 1,
+    "AR1": 1,
+    "AR2": 1,
+    "AR3": 1,
+    "OBJ1": 1,
+    "OBJ2": 1
+}
+
+difficulty = sm_config.get("difficulty", DEFAULT_DIFFICULTY)
+
 def get_loc_name(locations):
     locName = []
     for location in locations.keys():
@@ -50,7 +70,7 @@ def calculate_distance_cart(point1: tuple, point2: tuple) -> float:
 # 0-1 scale, GNSS -> 1, 1
 # AR --> 0.8 for without obstacles, 0.5 for obstacles
 def calculate_location_weight(current: str, loc: str, locName: list, locations: dict, visited: set) -> float: #init: {"GNSS1": 0.5, "GNSS2": 0.5, "AR1": 0.8, "AR2": 0.8, "AR3": 1,  "OBJ1": 0.8, "OBJ2": 1}
-    difficulty = {"GNSS1": 1, "GNSS2": 1, "AR1": 1, "AR2": 1, "AR3": 1,  "OBJ1": 1, "OBJ2": 1}
+    #difficulty = {"GNSS1": 1, "GNSS2": 1, "AR1": 1, "AR2": 1, "AR3": 1,  "OBJ1": 1, "OBJ2": 1}
 
     distance = calculate_distance_cart(locations[current], locations[loc]) #/2 (for scaling actual locations)
     proximity_weight = sum(calculate_distance_cart(locations[loc], locations[other]) for other in locName if other != loc and other not in visited) #/8.5 (worst case scenario - assuming all the points are on the opposite end)(open for change, for scaling actual locations)

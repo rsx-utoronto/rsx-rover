@@ -8,23 +8,43 @@ from std_msgs.msg import Float64MultiArray, Bool
 import math
 import ar_detection_node as adn
 
+import yaml
+import os
+
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+
+with open(file_path, "r") as f:
+    sm_config = yaml.safe_load(f)
+
+# File for the straight line traversal class for the state machine. The class is initialized with linear, angular velocities, and target passed
+# through the state machine. When navigate function is called, it calls the move_to_target function which continuously calculates the target distance
+# and heading to determine the angular and linear velocities. When the target distance is within the threshold it breaks out of the loop to return.
+    
 class StraightLineApproach:
     def __init__(self, lin_vel, ang_vel, targets):
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
         self.targets = targets
         self.found = False
-        self.x = 0
-        self.y = 0
+        self.abort_check = False
+        self.x = -100000
+        self.y = -100000
         self.heading = 0
         self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        self.drive_publisher = rospy.Publisher('drive', Twist, queue_size=10)
-
+        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.aruco_found = False
+        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        self.aruco_found = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
+        self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
         # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+
+        #new additions
+        # self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
+        # self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
+        # self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
+
     
     def pose_callback(self, msg):
         self.x = msg.pose.position.x
@@ -32,7 +52,9 @@ class StraightLineApproach:
         self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
                                             msg.pose.orientation.y, msg.pose.orientation.z)[2]
 
-    
+    def abort_callback(self,msg):
+        self.abort_check = msg.data
+        
     def odom_callback(self, msg):
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
@@ -69,22 +91,27 @@ class StraightLineApproach:
         rate = rospy.Rate(50)
         kp = 0.5
         threshold = 0.5
+        angle_threshold = 0.2
 
-        while not rospy.is_shutdown():
+        while (not rospy.is_shutdown()) and (self.abort_check is False):
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
 
             target_heading = math.atan2(target_y - self.y, target_x - self.x)
             target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
+            # print(f"Current Position: ({self.x}, {self.y})")
+            print("Target Heading:", math.degrees(target_heading), " Target Distance:", target_distance)
             angle_diff = target_heading - self.heading
-            print (f"target heading: {target_heading}", f"target_distance: {target_distance}")
+            
             # print ( f"angle_diff: {angle_diff}")
 
             if angle_diff > math.pi:
                 angle_diff -= 2 * math.pi
             elif angle_diff < -math.pi:
                 angle_diff += 2 * math.pi
+                
+            # print (f"diff in heading: {angle_diff}", f"target_distance: {target_distance}")
 
             if target_distance < threshold:
                 msg.linear.x = 0
@@ -93,7 +120,7 @@ class StraightLineApproach:
                 print(f"Reached target: ({target_x}, {target_y})")
                 break
 
-            if abs(angle_diff) <= threshold:
+            if abs(angle_diff) <= angle_threshold:
                 msg.linear.x = self.lin_vel
                 msg.angular.z = 0
             else:
@@ -109,6 +136,9 @@ class StraightLineApproach:
         for target_x, target_y in self.targets:
             print(f"Moving towards target: ({target_x}, {target_y})")
             self.move_to_target(target_x, target_y)
+            if self.abort_check:
+                self.abort_check = False
+                break
             rospy.sleep(1)
 
 if __name__ == '__main__':

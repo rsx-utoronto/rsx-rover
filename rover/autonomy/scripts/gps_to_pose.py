@@ -80,7 +80,7 @@ class GPSToPose:
         """
         
         # let's first transform our heading (also changing it to anti-clockwise being positive, east is 0.0)
-        heading = 2*pi - radians(gps1.heading) + pi/2
+        heading = 2*pi - radians(gps1.heading) + pi
         
         rover_heading = self.transform_heading(heading)
         qx,qy,qz,qw = functions.eulerToQuaternion(0.0, 0.0, rover_heading)        

@@ -16,11 +16,12 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayou
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import NavSatFix, CompressedImage
+from sensor_msgs.msg import NavSatFix, CompressedImage, Image
 from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
+from calian_gnss_ros2_msg.msg import GnssSignalStatus
 
 #cache folder of map tiles generated from tile_scraper.py
 CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
@@ -40,6 +41,7 @@ class mapOverlay(QWidget):
         
         # ROS Subscriber for GPS coordinates
         rospy.Subscriber('/calian_gnss/gps', NavSatFix, self.update_gps_coordinates)
+        rospy.Subscriber('/calian_gnss/gps_extended', GnssSignalStatus, self.update_gps_heading)
     
     #initialize overall layout
     def initOverlayout(self):
@@ -54,7 +56,11 @@ class mapOverlay(QWidget):
         if self.centreOnRover == True:
             self.viewer.center_on_gps( gps_point) 
 
+    def update_gps_heading(self, msg):
+        self.viewer.headingSignal.emit(msg.heading)
 
+    def clear_map(self):
+        self.viewer.clear_lines()
 
 
 #object type for direction of rover
@@ -71,8 +77,9 @@ class statusTerminal(QWidget):
 
         # Connect signals to the corresponding update methods
         self.update_status_signal.connect(self.update_string_list)
-        rospy.Subscriber('gui_status', String, self.string_callback)
+        # rospy.Subscriber('gui_status', String, self.string_callback)
         self.received_strings = []
+        self.strlength = -1
     def init_ui(self):
         
         # Create a scrollable box for received strings
@@ -85,18 +92,40 @@ class statusTerminal(QWidget):
             padding: 5px; 
         """)
 
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.clicked.connect(self.clear_text)
+        self.clear_button.setStyleSheet("""
+            background-color: #FF5252;
+            color: white;
+            border: 2px solid black;
+            border-radius: 10px;
+            padding: 10px;
+        """)
+
         # Layout
         layout = QVBoxLayout()
+        layout.addWidget(self.clear_button)
         layout.addWidget(self.string_list)
         self.setLayout(layout)
+
+    def clear_text(self):
+        self.string_list.clear()
+        self.received_strings = []
+        self.strlength = -1
+        self.string_list.setPlainText("")
+        self.string_list.moveCursor(QTextCursor.Start)
     
     def string_callback(self, msg):
         self.update_status_signal.emit(msg.data.strip())  
 
     def update_string_list(self, new_string):
         self.received_strings.append(new_string)
-        self.string_list.setPlainText("\n".join(self.received_strings))
-        self.string_list.moveCursor(QTextCursor.End)
+        cursor_pos = self.string_list.textCursor().position()
+        # self.string_list.setPlainText("\n".join(self.received_strings))
+        self.string_list.append(new_string)
+        if cursor_pos < self.strlength - self.received_strings[-1].__len__():
+            self.string_list.moveCursor(QTextCursor.End)
+        self.strlength += len(new_string) + 1
 
 class ArucoWidget(QWidget):
     # Define signals to communicate with the main thread
@@ -128,7 +157,7 @@ class ArucoWidget(QWidget):
             border-radius: 10px; 
             padding: 10px; 
         """)
-        self.label.setFont(QFont("Arial", 16, QFont.Bold))
+        self.label.setFont(QFont("Arial", 72, QFont.Bold))
 
         # Create a scrollable box for received strings
         self.string_list = QTextEdit(self)
@@ -181,6 +210,174 @@ class ArucoWidget(QWidget):
         self.string_list.setPlainText("\n".join(self.received_strings))
         self.string_list.moveCursor(QTextCursor.End)
 
+class ArucoBar(QWidget):
+    # Define signals to communicate with the main thread
+    update_label_signal = pyqtSignal(bool)
+    update_list_signal = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+        # Connect signals to the corresponding update methods
+        self.update_label_signal.connect(self.update_label)
+        self.update_list_signal.connect(self.update_string_list)
+
+        # Initialize ROS subscribers
+        rospy.Subscriber('aruco_found', Bool, self.bool_callback)
+        rospy.Subscriber('aruco_name', String, self.string_callback)
+
+        self.received_string = ""
+
+    def init_ui(self):
+        # Create a label
+        self.label = QLabel("Aruco not found", self)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black;  
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label.setFont(QFont("Arial", 72, QFont.Bold))
+
+        # Layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.label)
+        self.setLayout(layout)
+
+    def bool_callback(self, msg):
+        # Emit signal to update the label in the main thread
+        self.update_label_signal.emit(msg.data)
+
+    def string_callback(self, msg):
+        # Emit signal to update the list in the main thread
+        self.update_list_signal.emit(msg.data.strip())
+
+    def update_label(self, found):
+        # Update the label in the main thread
+        if found:
+            self.label.setText("Aruco Found: " + self.received_string)
+            self.label.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label.setText("Aruco not found")
+            self.label.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
+
+    def update_string_list(self, new_string):
+        # Append the string to the list in the main thread
+        self.received_string = new_string
+
+class ObjectBar(QWidget):
+    # Define signals to communicate with the main thread
+    update_mallet_signal = pyqtSignal(bool)
+    update_bottle_signal = pyqtSignal(bool)
+
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+        # Connect signals to the corresponding update methods
+        self.update_mallet_signal.connect(self.update_mallet)
+        self.update_bottle_signal.connect(self.update_bottle)
+
+        # Initialize ROS subscribers
+        rospy.Subscriber('mallet_detected', Bool, self.mallet_callback)
+        rospy.Subscriber('waterbottle_detected', Bool, self.bottle_callback)
+
+        self.received_strings = []
+
+    def init_ui(self):
+        # Create a label
+        self.label_mallet = QLabel("Mallet not found", self)
+        self.label_mallet.setAlignment(Qt.AlignCenter)
+        self.label_mallet.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black;  
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label_mallet.setFont(QFont("Arial", 72, QFont.Bold))
+
+        # Create a scrollable box for received strings
+        self.label_bottle = QLabel("Waterbottle not found", self)
+        self.label_bottle.setAlignment(Qt.AlignCenter)
+        self.label_bottle.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black;  
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label_bottle.setFont(QFont("Arial", 72, QFont.Bold))
+
+        # Layout
+        layout = QHBoxLayout()
+        layout.addWidget(self.label_mallet)
+        layout.addWidget(self.label_bottle)
+        self.setLayout(layout)
+
+    def mallet_callback(self, msg):
+        # Emit signal to update the label in the main thread
+        self.update_mallet_signal.emit(msg.data)
+
+    def bottle_callback(self, msg):
+        # Emit signal to update the list in the main thread
+        self.update_bottle_signal.emit(msg.data)
+
+    def update_mallet(self, found):
+        # Update the label in the main thread
+        if found:
+            self.label_mallet.setText("Mallet Found")
+            self.label_mallet.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label_mallet.setText("Mallet not found")
+            self.label_mallet.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
+
+    def update_bottle(self, found):
+        if found:
+            self.label_bottle.setText("Waterbottle Found")
+            self.label_bottle.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label_bottle.setText("Waterbottle not found")
+            self.label_bottle.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
 
 class StateMachineStatus(QWidget):
     # Define signal to update the label
@@ -302,7 +499,7 @@ class EditableComboBox(QComboBox):
         return data
 
 class LngLatEntryBar(QWidget):
-    def __init__(self):
+    def __init__(self, map_overlay):
         super().__init__()
         self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
         self.array = Float32MultiArray()
@@ -314,9 +511,13 @@ class LngLatEntryBar(QWidget):
         # Add button to collect data
         self.submit_button = QPushButton("Get Data")
         self.submit_button.clicked.connect(self.collect_data)
+        self.submit_button.clicked.connect(self.plot_points)
         layout.addWidget(self.submit_button)
 
         self.setLayout(layout)
+        self.viewer = map_overlay
+
+        self.viewer.viewer.add_point_layer('gps_points', 'green', 'green', 'yellow')
 
     def collect_data(self):
         data = self.combo.get_all_data()
@@ -326,8 +527,116 @@ class LngLatEntryBar(QWidget):
         for item in data:
             print(item)  # Prints each row's values
 
+    def plot_points(self):
+        data = self.combo.get_all_data()
+        print("Collected Data:")
+        
+        # Create MapPoint objects from the data (pairs of lat, lng values)
+        for i in range(0, len(data), 2):
+            if i + 1 < len(data):  # Ensure we have both lat and lng and they're not zero
+                lat = data[i]
+                lng = data[i+1]
+                # Create a MapPoint with a radius of 5 and a name based on index
+                point_name = f"Point {i//2 + 1}"
+                print(f"{point_name}: {lat}, {lng}")
+                self.viewer.viewer.goal_points[i//2].setLatLng([lat, lng])
+
+        
+
+class LngLatEntryFromFile(QWidget):
+    def __init__(self, map_overlay):
+        super().__init__()
+        self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
+        self.array = Float32MultiArray()
+        layout = QVBoxLayout(self)
+
+        self.submit_button = QPushButton("Get Data From File")
+        self.submit_button.clicked.connect(self.collect_data)
+        self.submit_button.clicked.connect(self.plot_points)
+        layout.addWidget(self.submit_button)
+        self.setLayout(layout)
+
+        self.viewer = map_overlay
+
+        self.viewer.viewer.add_point_layer('gps_points', 'green', 'green', 'yellow')
+
+    def collect_data(self):
+        # Read data from the file
+        file_path = Path(__file__).parent.parent.parent.resolve() / "long_lat_goal.csv"
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+
+        # Process each line and publish
+        data = []
+        for line in lines:
+            t = list(map(float, line.strip().split(',')[1:3]))
+            for i in t:
+                data.append(i)
+        self.array.data = data
+        self.longLat_pub.publish(self.array)
+        print("Published Data:", data)
+
+    def plot_points(self):
+        data = self.array.data
+        print("Plotting points from file data")
+        
+        # Create MapPoint objects from the data (pairs of lat, lng values)
+        # map_points = []
+        for i in range(0, len(data), 2):
+            if i + 1 < len(data):  # Ensure we have both lat and lng and they're not zero
+                lat = data[i]
+                lng = data[i+1]
+                # Create a MapPoint with a radius of 5 and a name based on index
+                point_name = f"Point {i//2 + 1}"
+                # map_points.append((lat, lng, 5, point_name))
+                print(f"{point_name}: {lat}, {lng}")
+                self.viewer.viewer.goal_points[i//2].setLatLng([lat, lng])
 
 
+class LngLatDeliveryEntryFromFile(QWidget):
+    def __init__(self, map_overlay):
+        super().__init__()
+        self.array = Float32MultiArray()
+        layout = QVBoxLayout(self)
+
+        self.submit_button = QPushButton("Get Delivery Data From File")
+        self.submit_button.clicked.connect(self.collect_data)
+        layout.addWidget(self.submit_button)
+        self.setLayout(layout)
+
+        self.viewer = map_overlay
+
+        self.viewer.viewer.add_point_layer('gps_points', 'green', 'green', 'yellow')
+
+    def collect_data(self):
+        # Read data from the file
+        file_path = Path(__file__).parent.parent.parent.resolve() / "delivery_lat_lon_goal.csv"
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+
+        # Process each line and publish
+        data = []
+        for line in lines:
+            t = list(map(float, line.strip().split(',')[1:3]))
+            n = line.strip().split(',')[0]
+            data.append(n)
+            for i in t:
+                data.append(i)
+        print("Plotting points from file data")
+        print(data)
+        
+        # Create MapPoint objects from the data (pairs of lat, lng values)
+        # map_points = []
+        for i in range(0, len(data), 3):
+            if i + 1 < len(data):  # Ensure we have both lat and lng and they're not zero
+                lat = data[i+1]
+                lng = data[i+2]
+                # Create a MapPoint with a radius of 5 and a name based on index
+                point_name = data[i]
+                # map_points.append((lat, lng, 5, point_name))
+                print(f"{point_name}: {lat}, {lng}")
+                self.viewer.viewer.add_goal(point_name, lat, lng)
+           
 
 class VelocityControl:
     def __init__(self):
@@ -524,23 +833,33 @@ class ResizableLabel(QLabel):
 
 
 class CameraFeed:
-    def __init__(self, label1, label2, splitter):
+    def __init__(self, label1, label2, label3, label4, splitter):
         self.bridge = CvBridge()
         self.image_sub1 = None
         self.image_sub2 = None
+        self.state_sub = rospy.Subscriber("state", String, self.state_callback)
+
+        self.obj_bbox = rospy.Subscriber("object/bbox", Float64MultiArray, self.bbox_callback)
         self.bbox_sub = rospy.Subscriber("aruco_node/bbox", Float64MultiArray, self.bbox_callback)
 
         self.label1 = label1
         self.label2 = label2
+        self.label3 = label3  # Keep these for now to avoid breaking layout
+        self.label4 = label4  # Keep these for now to avoid breaking layout
         self.splitter = splitter
 
         # Set size policies correctly
         self.label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.label3.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.label4.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label1.setMinimumSize(300, 200)
         self.label2.setMinimumSize(300, 200)
+        self.label3.setMinimumSize(300, 200)
+        self.label4.setMinimumSize(300, 200)
         self.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
+        # Remove the microscope and genie from active cameras
         self.active_cameras = {"Zed (front) camera": False, "Butt camera": False}
         self.bbox = None  
 
@@ -548,6 +867,8 @@ class CameraFeed:
         self.bbox_timer.setInterval(1000)
         self.bbox_timer.timeout.connect(self.clear_bbox)
         self.bbox_timer.setSingleShot(True)
+
+        self.exposure_value = 50
 
     def register_subscriber1(self):
         if self.image_sub1 is None:
@@ -560,12 +881,15 @@ class CameraFeed:
 
     def register_subscriber2(self):
         if self.image_sub2 is None:
-            self.image_sub2 = rospy.Subscriber("/camera/color/image_raw/compressed", CompressedImage, self.callback2)
+            self.image_sub2 = rospy.Subscriber("/camera2/camera/color/image_raw/compressed", CompressedImage, self.callback2)
 
     def unregister_subscriber2(self):
         if self.image_sub2:
             self.image_sub2.unregister()
             self.image_sub2 = None
+
+    def state_callback(self, msg):
+        self.state = msg.data
 
     def bbox_callback(self, msg):
         if len(msg.data) == 8:
@@ -595,6 +919,10 @@ class CameraFeed:
         if cv_image is None:
             return  
 
+        alpha = self.exposure_value / 50.0   # contrast: 0.02 to 2.0
+        beta = (self.exposure_value - 50) * 2  # brightness: -98 to +100
+
+        cv_image = cv2.convertScaleAbs(cv_image, alpha=alpha, beta=beta)
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
         if label == self.label1 and self.bbox:
@@ -635,36 +963,42 @@ class CameraFeed:
 
     def update_visibility(self):
         active_count = sum(self.active_cameras.values())
-        if active_count == 0:
-            self.label1.hide()
-            self.label2.hide()
-        elif active_count == 1:
-            if self.active_cameras["Zed (front) camera"]:
-                self.label1.show()
-                self.label2.hide()
-                self.splitter.setStretchFactor(0, 1)
-                self.splitter.setStretchFactor(1, 0)
-            else:
-                self.label1.hide()
-                self.label2.show()
-                self.splitter.setStretchFactor(0, 0)
-                self.splitter.setStretchFactor(1, 1)
-        else:  
+        if self.active_cameras["Zed (front) camera"]:
             self.label1.show()
-            self.label2.show()
             self.splitter.setStretchFactor(0, 1)
+        else:
+            self.label1.hide()
+            self.splitter.setStretchFactor(0, 0)
+        if self.active_cameras["Butt camera"]:
+            self.label2.show()
             self.splitter.setStretchFactor(1, 1)
+        else:
+            self.label2.hide()
+            self.splitter.setStretchFactor(1, 0)
+        
+        # Always hide the other labels since cameras are removed
+        self.label3.hide()
+        self.splitter.setStretchFactor(2, 0)
+        self.label4.hide()
+        self.splitter.setStretchFactor(3, 0)
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
+    statusSignal = pyqtSignal(str)
     def __init__(self):
         super().__init__()
+        self.statusTerminal = statusTerminal()
         self.setWindowTitle("Rover Control Panel")
         self.setGeometry(100, 100, 1200, 800)
         # Initialize QTabWidget
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
         self.velocity_control = VelocityControl()
+        self.gui_status_sub = rospy.Subscriber('gui_status', String, self.string_callback)
+        self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
+        # self.manual_abort_pub = rospy.Publisher('/manual_abort_check', Bool, queue_size=5)
+        self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
+        self.reached_state = None
 
         # Create tab
         self.split_screen_tab = QWidget()
@@ -681,6 +1015,9 @@ class RoverGUI(QMainWindow):
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
 
+        
+        self.statusSignal.connect(self.string_signal_receive)
+
 
         self.setup_control_tab()
         self.setup_split_screen_tab()
@@ -688,6 +1025,30 @@ class RoverGUI(QMainWindow):
         self.setup_cams_tab()
         
 
+    def string_callback(self, msg):
+        self.statusTerminal.string_callback(msg)
+        self.statusSignal.emit(msg.data)
+
+    def string_signal_receive(self, msg):
+        msg_list = msg.split(" ")
+        goal_reached_msg = ["Goal", "Point", "Reached:"]
+        reached = True
+        for i in range(len(goal_reached_msg)):
+            try:
+                if msg_list[i] != goal_reached_msg[i]:
+                    reached = False
+                    break
+            except IndexError:
+                reached = False
+                break
+        if reached:
+            self.reached_state = msg_list[3]
+        else:
+            self.reached_state = None
+        if self.reached_state is not None:
+            self.setStyleSheet("background-color: #adebb2")
+            self.status_label.setText(f"Goal Reached: {self.reached_state}")
+        
 
 
         
@@ -716,9 +1077,20 @@ class RoverGUI(QMainWindow):
         self.camera_label2_cams_tab.setMinimumSize(320, 240)
         self.camera_label2_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         self.camera_label2_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label3_cams_tab = ResizableLabel()
+        self.camera_label3_cams_tab.setMinimumSize(320, 240)
+        self.camera_label3_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label3_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label4_cams_tab = ResizableLabel()
+        self.camera_label4_cams_tab.setMinimumSize(320, 240)
+        self.camera_label4_cams_tab.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label4_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         # ROS functionality
         self.camerasplitter_cams_tab = QSplitter(Qt.Horizontal)
-        self.camera_feed_cams_tab = CameraFeed(self.camera_label1_cams_tab, self.camera_label2_cams_tab,self.camerasplitter_cams_tab)
+        self.camera_feed_cams_tab = CameraFeed(self.camera_label1_cams_tab, self.camera_label2_cams_tab, self.camera_label3_cams_tab, self.camera_label4_cams_tab, self.camerasplitter_cams_tab)
         self.camerasplitter_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         
@@ -730,6 +1102,8 @@ class RoverGUI(QMainWindow):
         camera_layout.addWidget(self.camera_selector_cams_tab)
         self.camerasplitter_cams_tab.addWidget(self.camera_label1_cams_tab)
         self.camerasplitter_cams_tab.addWidget(self.camera_label2_cams_tab)
+        self.camerasplitter_cams_tab.addWidget(self.camera_label3_cams_tab)
+        self.camerasplitter_cams_tab.addWidget(self.camera_label4_cams_tab)
         camera_layout.addWidget(self.camerasplitter_cams_tab)
 
         # camera_layout.addWidget(self.camera_label_splitter)
@@ -762,12 +1136,23 @@ class RoverGUI(QMainWindow):
         slider_layout.addWidget(self.gear_slider_control)
         gear_group.setLayout(slider_layout)
 
+        #Exposure slider
+        exposure_group = QGroupBox("Exposure Control")
+        exposure_layout = QVBoxLayout()
+        self.exposure_slider_control = Slider(Qt.Horizontal)
+        self.exposure_slider_control.setMinimum(0)
+        self.exposure_slider_control.setMaximum(100)
+        self.exposure_slider_control.setValue(50)
+        exposure_layout.addWidget(self.exposure_slider_control)
+        exposure_group.setLayout(exposure_layout)
+
         # Sync joystick movements between tabs
         self.joystick_control.joystickMoved.connect(self.sync_joysticks)
 
         # Add to layout
         controls_layout.addWidget(joystick_group)
         controls_layout.addWidget(gear_group)
+        controls_layout.addWidget(exposure_group)
         self.controls_group.setLayout(controls_layout)
 
         control_tab_layout = QVBoxLayout()
@@ -778,7 +1163,9 @@ class RoverGUI(QMainWindow):
         # self.controlTab.setLayout(control_tab_layout)
 
     def setup_lngLat_tab(self):
-        self.lngLatEntry = LngLatEntryBar()
+        self.lngLatEntry = LngLatEntryBar(self.map_overlay_splitter)
+        self.lngLatFile = LngLatEntryFromFile(self.map_overlay_splitter)
+        self.lngLatDeliveryFile = LngLatDeliveryEntryFromFile(self.map_overlay_splitter)
         self.stateMachineDialog = StateMachineStatus()
         self.arucoBox = ArucoWidget()
         
@@ -794,6 +1181,8 @@ class RoverGUI(QMainWindow):
         # Main layout for the tab
         Lnglat_tab_layout = QVBoxLayout()
         Lnglat_tab_layout.addWidget(self.lngLatEntry)
+        Lnglat_tab_layout.addWidget(self.lngLatFile)
+        Lnglat_tab_layout.addWidget(self.lngLatDeliveryFile)
         Lnglat_tab_layout.addWidget(self.stateMachineDialog)
         Lnglat_tab_layout.addWidget(self.arucoGroupBox) 
         
@@ -829,24 +1218,85 @@ class RoverGUI(QMainWindow):
         self.gear_slider_splitter.setMaximum(100)
         self.gear_slider_splitter.setValue(0)
 
+        # Exposure slider
+        exposure_group = QGroupBox("Exposure Control")
+        slider_layout2 = QVBoxLayout()
+        # make a new slider object 
+        self.exposure_slider_splitter = Slider(Qt.Horizontal)
+        self.exposure_slider_splitter.setMinimum(0)
+        self.exposure_slider_splitter.setMaximum(100)
+        self.exposure_slider_splitter.setValue(50)
 
         # Connect the signal to the function
         self.gear_slider_splitter.valueUpdated.connect(self.change_gear)
+        self.exposure_slider_splitter.valueUpdated.connect(self.change_exposure)
         
         slider_layout.addWidget(self.gear_slider_splitter)
         gear_group.setLayout(slider_layout)
 
+        slider_layout2.addWidget(self.exposure_slider_splitter)
+        exposure_group.setLayout(slider_layout2)
+
         # Add joystick and gear controls side by side
         controls_layout.addWidget(joystick_group)
         controls_layout.addWidget(gear_group)
+        controls_layout.addWidget(exposure_group)
         self.controls_group.setMinimumHeight(100)
 
         self.controls_group.setLayout(controls_layout)
         # vertical_splitter.addWidget(controls_group)
         control_tab_layout = QVBoxLayout()
         control_tab_layout.addWidget(self.controls_group)
+
+        # Create the new section to appear above camera
+        status_group = QGroupBox("Status")
+        status_layout = QHBoxLayout()  # Changed from QVBoxLayout to QHBoxLayout
+        status_group.setMaximumHeight(100)  # Set maximum height
+        
+        # Add widgets to the new section
+        self.status_label = QLabel("")
+        self.status_label.setStyleSheet("font-size: 64px")  
+        # self.next_state_input = QLineEdit()
+        # self.next_state_input.setPlaceholderText("Enter next state")
+        # self.next_state_input.setStyleSheet("font-size: 16px")
+        # self.next_state_input.setFixedWidth(150)  # Adjust width as needed
+        next_button = QPushButton("Next Task")
+        # manual_abort_button = QPushButton("Manual Abort")
+        auto_abort_button = QPushButton("Auto Abort")
+        
+        # Make buttons smaller to match the reduced section height
+        button_style = "padding: 4px; min-height: 20px;"
+        next_button.setStyleSheet(button_style)
+        next_button.clicked.connect(self.pub_next_state)
+        # manual_abort_button.setStyleSheet(button_style)
+        # manual_abort_button.clicked.connect(self.pub_manual_abort)
+        auto_abort_button.setStyleSheet(button_style)
+        auto_abort_button.clicked.connect(self.pub_auto_abort)
+        
+        # Add widgets to layout horizontally
+        status_layout.addWidget(self.status_label)
+        # status_layout.addWidget(self.next_state_input)  # Add input field before button
+        status_layout.addWidget(next_button)
+        # status_layout.addWidget(manual_abort_button)
+        status_layout.addWidget(auto_abort_button)
+        status_group.setLayout(status_layout)
+
         splitter = QSplitter(Qt.Horizontal)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+          # Create the detection section with ArucoBar and ObjectBar side by side
+        detection_group = QGroupBox("Detection")
+        detection_layout = QHBoxLayout()
+        detection_group.setMaximumHeight(150)  # Increase from 120 to 150
+        
+        # Create components
+        self.aruco_bar = ArucoBar()
+        self.object_bar = ObjectBar()
+        
+        # Add components to horizontal layout
+        detection_layout.addWidget(self.aruco_bar)
+        detection_layout.addWidget(self.object_bar)
+        detection_group.setLayout(detection_layout)
 
         # Add camera feed to the splitter
         camera_group = QGroupBox("Camera Feed")
@@ -864,9 +1314,20 @@ class RoverGUI(QMainWindow):
         self.camera_label2.setMinimumSize(320, 240)
         self.camera_label2.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         self.camera_label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label3 = ResizableLabel()
+        self.camera_label3.setMinimumSize(320, 240)
+        self.camera_label3.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label3.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.camera_label4 = ResizableLabel()
+        self.camera_label4.setMinimumSize(320, 240)
+        self.camera_label4.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label4.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         # ROS functionality
         self.camerasplitter = QSplitter(Qt.Horizontal)
-        self.camera_feed = CameraFeed(self.camera_label1, self.camera_label2,self.camerasplitter)
+        self.camera_feed = CameraFeed(self.camera_label1, self.camera_label2, self.camera_label3, self.camera_label4, self.camerasplitter)
         self.camerasplitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         
@@ -878,6 +1339,10 @@ class RoverGUI(QMainWindow):
         camera_layout.addWidget(self.camera_selector)
         self.camerasplitter.addWidget(self.camera_label1)
         self.camerasplitter.addWidget(self.camera_label2)
+        self.camerasplitter.addWidget(self.camera_label3) 
+        self.camerasplitter.addWidget(self.camera_label4)
+        self.camera_label3.hide()  # Hide these initially
+        self.camera_label4.hide()
         camera_layout.addWidget(self.camerasplitter)
 
         # camera_layout.addWidget(self.camera_label_splitter)
@@ -894,13 +1359,34 @@ class RoverGUI(QMainWindow):
         self.checkbox_setting_splitter.stateChanged.connect(
             lambda state: self.on_checkbox_state_changed(state, self.map_overlay_splitter)
         )
-        map_layout.addWidget(self.checkbox_setting_splitter)
+        self.clear_map_button = QPushButton("Clear Map")
+        self.clear_map_button.setStyleSheet(button_style)
+        self.clear_map_button.clicked.connect(self.map_overlay_splitter.clear_map)
+
+        # Create horizontal layout for checkbox and clear button
+        checkbox_layout = QHBoxLayout()
+        checkbox_layout.addWidget(self.checkbox_setting_splitter)
+        checkbox_layout.addStretch(1)  # This pushes the checkbox left and button right
+        checkbox_layout.addWidget(self.clear_map_button)
+        
+        # Create a container widget for the checkbox layout
+        checkbox_container = QWidget()
+        checkbox_container.setLayout(checkbox_layout)
+        
+        # Add the container to the map layout instead of individual widgets
+        map_layout.addWidget(checkbox_container)
         map_layout.addWidget(self.map_overlay_splitter)
         map_group.setLayout(map_layout)
 
-        # Add widgets to the splitter
-        splitter.addWidget(camera_group)
-        splitter.addWidget(map_group)
+        # Create a vertical splitter for the left side
+        left_side_splitter = QSplitter(Qt.Vertical)
+        left_side_splitter.addWidget(status_group)
+        left_side_splitter.addWidget(detection_group)
+        left_side_splitter.addWidget(camera_group)
+
+        # Create the horizontal splitter for the main layout
+        splitter.addWidget(left_side_splitter)  # Left side has new section stacked above camera
+        splitter.addWidget(map_group)           # Right side has map
         
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
@@ -908,7 +1394,6 @@ class RoverGUI(QMainWindow):
         # Create a group box for the status terminal
         vertSplitter = QSplitter(Qt.Vertical)
         vertSplitter.addWidget(splitter)
-        self.statusTerminal = statusTerminal()
         self.statusTermGroupBox = QGroupBox("Status Messages")
         status_term_layout = QVBoxLayout()
         status_term_layout.addWidget(self.statusTerminal)
@@ -940,7 +1425,23 @@ class RoverGUI(QMainWindow):
         self.velocity_control.set_gear(value/10+1)
         print(f"Changed to Gear: {value}")
         self.gear_slider_splitter.setValue(value)
+    
+    def change_exposure(self,value):
+        #self.camera_feed_cams_tab.exposure_value = value
+        self.camera_feed.exposure_value = value
 
+    def pub_next_state(self):
+        self.next_state_pub.publish(True)
+        self.setStyleSheet("background-color: #FFFFFF")
+        self.status_label.setText("")
+
+    # def pub_manual_abort(self):
+    #     self.manual_abort_pub.publish(True)
+
+    def pub_auto_abort(self):
+        self.auto_abort_pub.publish(True)
+        self.setStyleSheet("background-color: #FFFFFF")
+        self.status_label.setText("")
 
 
 class CheckableComboBox(QComboBox):
@@ -984,6 +1485,7 @@ class CameraSelect(QWidget):
         self.toolButton.setText("Cameras List")
         self.toolMenu = QMenu(self)
 
+        # Remove microscope and genie camera from the list
         self.cameras = ["Zed (front) camera", "Butt camera"]
         self.selected_cameras = {camera: False for camera in self.cameras}
 
