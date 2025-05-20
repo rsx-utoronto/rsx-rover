@@ -561,14 +561,15 @@ class AstarObstacleAvoidance():
         kp = 0.5  # Angular proportional gain
         target_reached_flag=False
        
-        print("grid origin", self.grid_origin)
+        
         while not self.got_callback:
             rate.sleep()
         self.grid_origin=(self.current_position_x, self.current_position_y)
+        print("grid origin", self.grid_origin)
         while not rospy.is_shutdown() and not target_reached_flag:
             msg = Twist()
             if self.occupancy_grid is None:
-                print("self.occupancy_grid is None")
+                print("self.occupancy_grid for straught line is None")
                 rate.sleep()
                 continue
             
@@ -608,8 +609,6 @@ class AstarObstacleAvoidance():
                     self.publish_waypoints(path)
             
             
-            
-
             # Follow waypoints
             while path_available and self.current_path and not self.abort_check:
                 current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)

@@ -90,17 +90,19 @@ class AstarObstacleAvoidance_GS_Traversal():
         #self.grid_origin=(0.0,0.0)
         self.goal = (1,0)
         self.targets=targets
+        self.got_callback=False
         self.state=state
         self.goal = (1,0)
         self.targets=targets
         self.state=state
         self.obstacle_threshold = 100
         self.grid_size=(10000,10000)
-        self.grid_origin = (
+        self.grid_origin_starter = (
             -(self.grid_size[0]* self.grid_resolution)/2,  # -100.0 meters (for 0.1m resolution)
             -(self.grid_size[1]* self.grid_resolution)/2  # -100.0 meters
         )
         # self.grid_origin = (0.0, 0.0)
+        self.grid_origin=None
         self.rate = rospy.Rate(self.update_rate)
         # self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
@@ -206,6 +208,7 @@ class AstarObstacleAvoidance_GS_Traversal():
                 self.count += 1  
     
     def pose_callback(self, msg):
+        self.got_callback=True
         self.current_position_x = msg.pose.position.x
         self.current_position_y = msg.pose.position.y
         self.current_orientation_w=msg.pose.orientation.w
@@ -418,13 +421,13 @@ class AstarObstacleAvoidance_GS_Traversal():
         self.bounding_box_pub.publish(marker)
     
     def world_to_grid(self, x, y):
-        gx = int(round((x - self.grid_origin[0]) / self.grid_resolution))
-        gy = int(round((y - self.grid_origin[1]) / self.grid_resolution))
+        gx = int(round((x - self.grid_origin_starter[0]) / self.grid_resolution))
+        gy = int(round((y - self.grid_origin_starter[1]) / self.grid_resolution))
         return gx, gy
 
     def grid_to_world(self, gx, gy):
-        x = gx * self.grid_resolution + self.grid_origin[0]
-        y = gy * self.grid_resolution + self.grid_origin[1]
+        x = gx * self.grid_resolution + self.grid_origin_starter[0]
+        y = gy * self.grid_resolution + self.grid_origin_starter[1]
         return x, y
    
 ### A* start 
@@ -625,7 +628,7 @@ class AstarObstacleAvoidance_GS_Traversal():
             angle += 2 * math.pi
         return angle
     
-    def move_to_target(self, target_x, target_y, state):
+    def move_to_target(self, target_x, target_y, state): #called for every grid search waypoint!
         need_replan = True
         last_position = (0, 0)
         self.current_path = []
@@ -634,11 +637,12 @@ class AstarObstacleAvoidance_GS_Traversal():
         path_available = False
         first_time = True
         goal = self.world_to_grid(target_x, target_y)
-        goal = self.world_to_grid(target_x, target_y)
         rate = rospy.Rate(50)
         threshold = 0.5  # meters
         angle_threshold = 0.5  # radians
         kp = 0.5  # Angular proportional gain
+        target_reached_flag=False
+        threshold_goal=1.5
         
         obj = self.mallet_found or self.waterbottle_found
         
@@ -648,17 +652,14 @@ class AstarObstacleAvoidance_GS_Traversal():
                    "OBJ1":obj,
                    "OBJ2":obj}
         
-        obj = self.mallet_found or self.waterbottle_found
-        
-        mapping = {"AR1":self.aruco_found, 
-                   "AR2":self.aruco_found,
-                   "AR3":self.aruco_found,
-                   "OBJ1":obj,
-                   "OBJ2":obj}
+        while not self.got_callback: #wait to get proper origin
+            rate.sleep()
+        self.grid_origin=(self.current_position_x, self.current_position_y)
 
-        while not rospy.is_shutdown():
+        while not rospy.is_shutdown() and not target_reached_flag:
+            msg=Twist()
             if self.occupancy_grid is None:
-                print("self.occupancy_grid is None")
+                print("self.occupancy_grid for grid search is None")
                 rate.sleep()
                 continue
             
@@ -670,24 +671,16 @@ class AstarObstacleAvoidance_GS_Traversal():
                     "OBJ1":obj,
                     "OBJ2":obj}
             
-            if mapping[self.state] is False: #while not detected
-                # normal operations
-                if target_x is None or target_y is None or self.current_position_x is None or self.current_position_y is None:
-                    continue   
-                 
-                start = self.world_to_grid(self.current_position_x, self.current_position_y)
-                need_replan = False
-                if rospy.Time.now() - last_plan_time > replan_interval:
-                    need_replan = True
-                continue
-            
-            obj = self.mallet_found or self.waterbottle_found
-        
-            mapping = {"AR1":self.aruco_found, 
-                    "AR2":self.aruco_found,
-                    "AR3":self.aruco_found,
-                    "OBJ1":obj,
-                    "OBJ2":obj}
+            #stop if target reached
+            current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
+            final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
+            if final_goal_target_distance < threshold_goal or target_reached_flag: 
+                target_reached_flag=True
+                msg.linear.x = 0
+                msg.angular.z = 0
+                self.drive_publisher.publish(msg)
+                print(f"Reached target: ({target_x}, {target_y})")
+                break
             
             if mapping[self.state] is False: #while not detected
                 # normal operations
@@ -699,11 +692,6 @@ class AstarObstacleAvoidance_GS_Traversal():
                 if rospy.Time.now() - last_plan_time > replan_interval:
                     need_replan = True
 
-                if last_position:
-                    dx = start[0] - last_position[0]
-                    dy = start[1] - last_position[1]
-                    if abs(dx) > 0.5 or abs(dy) > 0.5:
-                        need_replan = True
                 if last_position:
                     dx = start[0] - last_position[0]
                     dy = start[1] - last_position[1]
@@ -722,63 +710,36 @@ class AstarObstacleAvoidance_GS_Traversal():
                         path_available = True
                         self.publish_waypoints(path)
                         
-                if need_replan or first_time:
-                    print("attempting to replan", need_replan, path_available)
-                    need_replan = False
-                    first_time = False
-                    path = self.a_star(start, goal)
-                    if path:
-                        print("path found",path)
-                        self.current_path = path
-                        last_position = start
-                        path_available = True
-                        self.publish_waypoints(path)
-                        
-
                 # Follow waypoints
                 while path_available and self.current_path and not self.abort_check:
-
-                    gx, gy = self.current_path[0]
-                    target_x, target_y = self.grid_to_world(gx, gy)        
-                    dx = target_x - self.current_position_x
-                    dy = target_y - self.current_position_y
-                    target_distance = math.sqrt((dx) ** 2 + (dy) ** 2)
-                    target_heading = math.atan2(dy, dx)
                     
-                    angle_diff = target_heading - self.heading
+                    current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
+                    final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
                     msg = Twist()
-                # Follow waypoints
-                while path_available and self.current_path and not self.abort_check:
-
-                    gx, gy = self.current_path[0]
-                    target_x, target_y = self.grid_to_world(gx, gy)        
-                    dx = target_x - self.current_position_x
-                    dy = target_y - self.current_position_y
-                    target_distance = math.sqrt((dx) ** 2 + (dy) ** 2)
-                    target_heading = math.atan2(dy, dx)
-                    
-                    angle_diff = target_heading - self.heading
-                    msg = Twist()
-
-                    if angle_diff > math.pi:
-                        angle_diff -= 2 * math.pi
-                    elif angle_diff < -math.pi:
-                        angle_diff += 2 * math.pi
-                        
-                    if target_distance < threshold:
-                        print("target distance", target_distance)
-                        self.current_path.pop(0)
+                    if final_goal_target_distance < threshold_goal or target_reached_flag: #breaks out of entire loop!
+                        target_reached_flag=True
                         msg.linear.x = 0
                         msg.angular.z = 0
                         self.drive_publisher.publish(msg)
-                        rospy.loginfo("Reached waypoint. Proceeding to next.")
-                        continue
+                        print(f"Reached target: ({target_x}, {target_y})")
+                        break
+
+                    gx, gy = self.current_path[0]
+                    target_x, target_y = self.grid_to_world(gx, gy)        
+                    dx = target_x - self.current_position_x
+                    dy = target_y - self.current_position_y
+                    target_distance = math.sqrt((dx) ** 2 + (dy) ** 2)
+                    target_heading = math.atan2(dy, dx)
+                    
+                    angle_diff = target_heading - self.heading
+                    msg = Twist()
+
                     if angle_diff > math.pi:
                         angle_diff -= 2 * math.pi
                     elif angle_diff < -math.pi:
                         angle_diff += 2 * math.pi
                         
-                    if target_distance < threshold:
+                    if target_distance < threshold: #goes to next waypoint
                         print("target distance", target_distance)
                         self.current_path.pop(0)
                         msg.linear.x = 0
@@ -803,7 +764,7 @@ class AstarObstacleAvoidance_GS_Traversal():
                     
             else: #HOMING!
                 print("mapping state is true!")
-                print("IN HOMING")
+                print("IN HOMING for grid search")
                 # call homing
                 # should publish that it is found
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
@@ -872,7 +833,7 @@ class AstarObstacleAvoidance_GS_Traversal():
                     rate.sleep()
 
                 break
-            # print("publishing grid search velocity")
+      
             self.drive_publisher.publish(msg)
             rate.sleep()
             
