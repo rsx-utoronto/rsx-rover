@@ -21,5 +21,7 @@
 
     <!-- Launch the LED -->
     <node pkg="rover" type="led_light.py" name="led_listener" output="screen" />
+
+    <node pkg="rover" type="pub_manual_indicator.py" name="pub_manual_indicator" output="screen" />
     
 </launch>
