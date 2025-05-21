@@ -43,6 +43,7 @@ from std_msgs.msg import Float32MultiArray, String, Bool
 from nav_msgs.msg import Path
 import os
 import yaml
+import time
 
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
@@ -97,10 +98,10 @@ class AstarObstacleAvoidance():
         self.abort_check = False
         self.heading=0
         self.current_corner_array = [
-            Point(x=1.2, y=1.2, z=0),
-            Point(x=1.2, y=-1.2, z=0),
-            Point(x=-1.2, y=-1.2, z=0), # with 0.5, it produces green blocks!
-            Point(x=-1.2, y=1.2, z=0) ]
+            Point(x=2, y=2, z=0),
+            Point(x=2, y=-2, z=0),
+            Point(x=-2, y=-2, z=0), # with 0.5, it produces green blocks!
+            Point(x=-2, y=2, z=0) ]
         self.z_min = -0.25
         self.z_max = 3
         self.yaw = 0
@@ -122,6 +123,7 @@ class AstarObstacleAvoidance():
         self.footprint_pub = rospy.Publisher('/robot_footprint', Marker, queue_size=1)
         self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
         self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
+        
 
     def abort_callback(self,msg):
         self.abort_check = msg.data
@@ -196,6 +198,8 @@ class AstarObstacleAvoidance():
                 self.current_orientation_z,
                 self.current_orientation_w
             ])
+        
+        self.publish_bounding_box()
     
     def to_euler_angles(self, w, x, y, z):
         angles = [0, 0, 0]  # [roll, pitch, yaw]
@@ -392,6 +396,7 @@ class AstarObstacleAvoidance():
           
             # Skip nodes already processed
             if current in closed:
+                print("in astr, current is closed")
                 continue
             closed.add(current)
 
@@ -400,7 +405,7 @@ class AstarObstacleAvoidance():
                 return self.reconstruct_path(came_from, current)
           #  print("in get neighbors in astar", current)
             for neighbor in self.get_neighbors(current):
-               # print("going to get neighbors", neighbor)
+                
                 if neighbor in closed:
                     continue  # Skip closed nodes
 
@@ -412,7 +417,7 @@ class AstarObstacleAvoidance():
                     g_score[neighbor] = tentative_g
                     f_score[neighbor] = tentative_g + self.heuristic(neighbor, goal)
                     open_set.put((f_score[neighbor], neighbor))
-
+           
         rospy.logwarn("A* failed to find a path")
         return []
          
@@ -550,7 +555,7 @@ class AstarObstacleAvoidance():
         last_position = (0, 0)
         self.current_path = []
         last_plan_time = rospy.Time.now()
-        replan_interval = rospy.Duration(1.0)
+        replan_interval = rospy.Duration(5)
         path_available = False
         first_time = True
         goal = self.world_to_grid(self.goal[0][0], self.goal[0][1])
@@ -561,7 +566,7 @@ class AstarObstacleAvoidance():
         kp = 0.5  # Angular proportional gain
         target_reached_flag=False
        
-        
+        stop_straight_line=False
         while not self.got_callback:
             rate.sleep()
         self.grid_origin=(self.current_position_x, self.current_position_y)
@@ -600,6 +605,12 @@ class AstarObstacleAvoidance():
                 print("attempting to replan", need_replan, path_available)
                 need_replan = False
                 first_time = False
+                print("doing astar", start, goal)
+                # if start[0]-goal[0]<50 and start[1]-goal[1]<50:
+                #     print("goal is close enough")
+                #     stop_straight_line=True
+                #    #break
+                
                 path = self.a_star(start, goal)
                 if path:
                     print("path found",path)
@@ -608,7 +619,12 @@ class AstarObstacleAvoidance():
                     path_available = True
                     self.publish_waypoints(path)
             
-            
+            if len(self.current_path)==1:
+                path_available=False
+                print("len path is 1")
+                break
+           #if stop_straight_line:
+               #break
             # Follow waypoints
             while path_available and self.current_path and not self.abort_check:
                 current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
@@ -651,7 +667,7 @@ class AstarObstacleAvoidance():
                     continue
                 
                 #added this. can try to just break after..
-                if not self.current_path:
+                if not self.current_path or len(self.current_path)==1:
                     print("All waypoints completed.")
                     target_reached_flag = True
                     break

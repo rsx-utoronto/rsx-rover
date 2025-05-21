@@ -9,6 +9,17 @@
     <!-- Launch the realsense camera -->
     <include file="$(find rover)/launch/rs_multiple_devices.launch"/>
 
+    <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />  
+
+    <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" >
+        <param name="publish_tf" value="false" />
+        <param name="use_mag" value="true" />
+        <param name="world_frame" value="enu" />
+        <param name="orientation_stddev" value="0.2" />
+        <remap from="imu/mag" to="/zed_node/imu/mag" />
+        <remap from="imu/data_raw" to="/imu/enu" />
+        <remap from="imu/data" to="/imu/orient" />
+    </node>
     <!-- Launch the GPS -->
 
     <include file='$(find calian_gnss_ros2)/launch/moving_baseline_rtk.launch'/>
@@ -17,7 +28,7 @@
     <!--node pkg="rover" type="final_state_machine.py" name="rover_state_machine" output="screen"/-->
 
     <!-- ZED check -->
-    <!-- <node pkg="rover" type="check_zed.py" name="check_zed" output="screen" /> -->
+    <node pkg="rover" type="check_zed.py" name="check_zed" output="screen" />
 
     <!-- Launch the LED -->
     <node pkg="rover" type="led_light.py" name="led_listener" output="screen" />
