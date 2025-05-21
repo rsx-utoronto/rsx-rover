@@ -35,6 +35,7 @@ class GS_Traversal:
         self.found = False 
         self.abort_check = False
         self.x = 0
+        self.timer=0
         self.y = 0
         self.heading = 0
         self.state = state
@@ -102,9 +103,14 @@ class GS_Traversal:
         return angles
     
     def aruco_detection_callback(self, data):
+        time_now=time.time()
+        if abs(self.timer-time_now) >5:
+            self.timer=time_now
+            self.count=0
+        print("count,",self.count)
         # print("sm grid search_ data.data", data.data)
         if data.data:
-            if self.count <= 2:
+            if self.count <= 4:
                 self.count +=1
             else:
                 self.aruco_found = data.data
@@ -112,8 +118,12 @@ class GS_Traversal:
                 self.count += 1
     
     def mallet_detection_callback(self, data):
+        time_now=time.time()
+        if abs(self.timer-time_now) >5:
+            self.timer=time_now
+            self.count=0
         if data.data:
-            if self.count <= 2:
+            if self.count <= 4:
                 self.count += 1
             else:
                 self.mallet_found = data.data
@@ -121,8 +131,12 @@ class GS_Traversal:
                 self.count += 1
 
     def waterbottle_detection_callback(self, data):
+        time_now=time.time()
+        if abs(self.timer-time_now) >5:
+            self.timer=time_now
+            self.count=0
         if data.data:
-            if self.count <= 2:
+            if self.count <= 4:
                 self.count += 1
             else:
                     
@@ -145,7 +159,8 @@ class GS_Traversal:
                    "AR3":self.aruco_found,
                    "OBJ1":obj,
                    "OBJ2":obj}
-        
+        homing_done=False
+        first_time=True
         
         # print("In move to target")
         while (not rospy.is_shutdown()) and (self.abort_check is False):
@@ -159,9 +174,11 @@ class GS_Traversal:
             msg = Twist()
             # print("state", state)
             # print("mapping state", mapping[state])
+            pub = rospy.Publisher('drive', Twist, queue_size=10)
             if mapping[state] is False: #while not detected
                 # normal operations
                 if target_x is None or target_y is None or self.x is None or self.y is None:
+                    print("tagret x, taget y ,self.x, self.y is none ")
                     continue
 
                 target_heading = math.atan2(target_y - self.y, target_x - self.x)
@@ -200,8 +217,9 @@ class GS_Traversal:
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
                 if state == "AR1" or state == "AR2" or state == "AR3":
-                    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+                    aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+                    
                     #print ("FUCK YOU")
                     print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                 elif state == "OBJ1" or state == "OBJ2":
@@ -231,9 +249,20 @@ class GS_Traversal:
                         # Check if we've reached the target
                         if aimer.linear_v == 0 and aimer.angular_v == 0:
                             print ("at weird", aimer.linear_v, aimer.angular_v)
+                            if first_time:
+                                first_time=False
+                                initial_time=time.time()
+                            
+                            # faking it til you makin it
+                            while abs(initial_time-time.time()) < 0.7:
+                                msg.linear.x=self.lin_vel
+                                pub.publish(msg)
+                                print("final homing movement",abs(initial_time-time.time()) )
+                                rate.sleep()
                             twist.linear.x = 0.0
                             twist.angular.z = 0.0
                             pub.publish(twist)
+                            
                             return
                             
                         # Normal homing behavior
@@ -262,8 +291,10 @@ class GS_Traversal:
                     
                     pub.publish(twist)
                     rate.sleep()
-
+              
                 break
+           
+                
             # print("publishing grid search velocity")
             self.drive_publisher.publish(msg)
             rate.sleep()
@@ -271,6 +302,7 @@ class GS_Traversal:
     def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
         
         for target_x, target_y in self.targets:
+            print('self target lenght', len(self.targets), self.targets, target_x,target_y)
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
                 print(f"Object detected during navigation: {self.found_objects[self.state]}")
                 return True
@@ -278,11 +310,13 @@ class GS_Traversal:
             print("Going to target", target_x, target_y)
             self.move_to_target(target_x, target_y, self.state) #changed from navigate_to_target
             if self.abort_check:
+                print("self.abort is true!")
                 break
 
             rospy.sleep(1)
 
         if self.found_objects[self.state]:
+            
             return True
         return False #Signalling that grid search has been done
 
@@ -314,17 +348,23 @@ class GridSearch:
         #     continue
         targets = [(self.start_x,self.start_y)]
         step = 1
+        out_of_bounds = False
 
-        while len(targets) < self.x:
+        while len(targets) < self.x**2 - 1:
             for i in range(2):  # 1, 1, 2, 2, 3, 3... etc
                 for j in range(step):
                     if step*self.tol > self.x: 
                         print ("step is outside of accepted width: step*tol=", step*self.tol, "\tself.x=",self.x)
+                        out_of_bounds = True
                         break
                     self.start_x, self.start_y = self.start_x + (self.tol*dx), self.start_y + (self.tol*dy)
                     targets.append((self.start_x, self.start_y))
                 dx, dy = -dy, dx
+                if out_of_bounds:
+                    break
             step += 1 
+            if out_of_bounds:
+                break
         print ("these are the final targets", targets) 
         return targets
 

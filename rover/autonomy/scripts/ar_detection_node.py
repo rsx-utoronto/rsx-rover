@@ -125,7 +125,7 @@ class ARucoTagDetectionNode():
                     cv2.rectangle(img, (int(bbox[0,0]), int(bbox[0,1])) , (int(bbox[2,0]), int(bbox[2,1])), (0,255,0), 4)
                     # font
 
-                   # print (bbox[0][0],bbox[0][1],bbox[2][0],bbox[2][1])
+                    print(bbox[0][0],bbox[0][1],bbox[2][0],bbox[2][1])
                     self.array=[bbox[0,0], bbox[0,1], bbox[2,0], bbox[0,1], bbox[0,0], bbox[2,1], bbox[2,0], bbox[2,1]]
                     data = Float64MultiArray(data=self.array)
                     self.bbox_pub.publish(data)
@@ -175,6 +175,7 @@ class ARucoTagDetectionNode():
 def main():
     rospy.init_node('aruco_tag_detector', anonymous=True)
     AR_detector = ARucoTagDetectionNode()
+    AR_detector.curr_state = "AR1"
     rospy.spin()
 
 if __name__ == "__main__":

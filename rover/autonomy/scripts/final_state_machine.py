@@ -411,6 +411,7 @@ class AR1(smach.State): #State for AR1
             rospy.Subscriber("aruco_found", Bool, self.aruco_callback) #Subscribes to aruco found to determine whether its found or not
             self.glob_msg.pub_state("Starting AR1 grid search")
             ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the generated grid search targets
+            print("ar in correct loc", ar_in_correct_loc)
             self.glob_msg.pub_state("End of AR1 grid search")
             if self.glob_msg.abort_check:
                     self.glob_msg.pub_state("Aborting for state AR1")
@@ -418,15 +419,15 @@ class AR1(smach.State): #State for AR1
                     self.glob_msg.pub_state_name("")
                     return "ABORT"
             
-            if self.aruco_found:
+            if ar_in_correct_loc:
                 print("in state machine: aruco found")
                 self.glob_msg.pub_state("Grid Search did find AR1") #Will publish the messages afterwards but there are topics to publish when detected 
-                if ar_in_correct_loc:
-                    self.glob_msg.pub_state("Close enough to AR1") 
-                    self.glob_msg.pub_state("Goal Point Reached: AR1")
-                    self.glob_msg.pub_led_light("mission done")
-                    rospy.sleep(3)
-                    self.glob_msg.pub_led_light("auto")
+                # if ar_in_correct_loc:
+                self.glob_msg.pub_state("Close enough to AR1") 
+                self.glob_msg.pub_state("Goal Point Reached: AR1")
+                self.glob_msg.pub_led_light("mission done")
+                rospy.sleep(3)
+                self.glob_msg.pub_led_light("auto")
                     
 
             else:
@@ -487,6 +488,7 @@ class AR2(smach.State): #State for AR2
 
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
+            print(sm_config.get("AR_grid_search_w"))
             targets = gs.square_target() #generates multiple grid search targets 
            
             gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
@@ -501,14 +503,14 @@ class AR2(smach.State): #State for AR2
                     return "ABORT"
             
             
-            if self.aruco_found:
+            if ar_in_correct_loc:
                 self.glob_msg.pub_state("Grid Search did find AR2") #Will publish the messages afterwards but there are topics to publish when detected 
-                if ar_in_correct_loc:
-                    self.glob_msg.pub_state("Close enough to AR2") 
-                    self.glob_msg.pub_state("Goal Point Reached: AR2")
-                    self.glob_msg.pub_led_light("mission done")
-                    rospy.sleep(3)
-                    self.glob_msg.pub_led_light("auto")
+                # if ar_in_correct_loc:
+                self.glob_msg.pub_state("Close enough to AR2") 
+                self.glob_msg.pub_state("Goal Point Reached: AR2")
+                self.glob_msg.pub_led_light("mission done")
+                rospy.sleep(3)
+                self.glob_msg.pub_led_light("auto")
                 
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR2")
@@ -582,12 +584,12 @@ class AR3(smach.State): #State for AR3
             
             if self.aruco_found:
                 self.glob_msg.pub_state("Grid Search did find AR3") #Will publish the messages afterwards but there are topics to publish when detected 
-                if ar_in_correct_loc:
-                    self.glob_msg.pub_state("Close enough to AR3") 
-                    self.glob_msg.pub_state("Goal Point Reached: AR3")
-                    self.glob_msg.pub_led_light("mission done")
-                    rospy.sleep(3)
-                    self.glob_msg.pub_led_light("auto")
+                # if ar_in_correct_loc:
+                self.glob_msg.pub_state("Close enough to AR3") 
+                self.glob_msg.pub_state("Goal Point Reached: AR3")
+                self.glob_msg.pub_led_light("mission done")
+                rospy.sleep(3)
+                self.glob_msg.pub_led_light("auto")
                     
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR3")

@@ -97,10 +97,10 @@ class AstarObstacleAvoidance():
         self.abort_check = False
         self.heading=0
         self.current_corner_array = [
-            Point(x=0.70, y=0.55, z=0),
-            Point(x=0.70, y=-0.55, z=0),
-            Point(x=-0.70, y=-0.55, z=0), # with 0.5, it produces green blocks!
-            Point(x=-0.70, y=0.55, z=0) ]
+            Point(x=1.2, y=1.2, z=0),
+            Point(x=1.2, y=-1.2, z=0),
+            Point(x=-1.2, y=-1.2, z=0), # with 0.5, it produces green blocks!
+            Point(x=-1.2, y=1.2, z=0) ]
         self.z_min = -0.25
         self.z_max = 3
         self.yaw = 0
@@ -645,6 +645,8 @@ class AstarObstacleAvoidance():
                     msg.linear.x = 0
                     msg.angular.z = 0
                     self.drive_publisher.publish(msg)
+                    if target_reached_flag:
+                        break
                     rospy.loginfo("Reached waypoint. Proceeding to next.")
                     continue
 

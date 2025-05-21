@@ -2,12 +2,11 @@
 RUN_STATES:
   - AR3
   - OBJ2
-  # - GNSS1
-  # - AR1
-  # - OBJ1
-  # - AR2
- 
-  # - GNSS2
+  - GNSS1
+  - AR1
+  - OBJ1
+  - AR2
+  - GNSS2
 
 origin_pose: [0.0, 0.0]
 heading_vector: [1.1, 0.0]
@@ -18,19 +17,19 @@ straight_line_approach_ang_vel: 0.3 #0.3
 straight_line_obstacle_lin_vel: 0.5
 straight_line_obstacle_ang_vel: 0.3
 
-AR_grid_search_w: 12
-AR_grid_search_h: 12
-AR_grid_search_tol: 2
+AR_grid_search_w: 40
+AR_grid_search_h: 40
+AR_grid_search_tol: 4
 
-AR_grid_search_obstacle_avoidance_w: 12
-AR_grid_search_obstacle_avoidance_h: 12
+AR_grid_search_obstacle_avoidance_w: 40
+AR_grid_search_obstacle_avoidance_h: 40
 AR_grid_search_obstacle_avoidance_tol: 2
 
 OBJ_grid_search_w: 20
 OBJ_grid_search_h: 20
 OBJ_grid_search_tol: 2
 
-GS_Traversal_lin_vel: 1
+GS_Traversal_lin_vel: 2.5
 GS_Traversal_ang_vel: 0.3
 
 run_in_order : False #false means we find shortest path, true means it takes in the same order as states_run_in_order
@@ -56,7 +55,7 @@ difficulty: # priority rank!
 
 # sm_grid_search params
 Ar_homing_lin_vel: 1.8 #1.8
-Ar_homing_ang_vel: 0.8 #0.8
+Ar_homing_ang_vel: 0.5 #0.8
 
 Obj_homing_lin_vel: 1 #1
 Obj_homing_ang_vel: 0.5 #0.5

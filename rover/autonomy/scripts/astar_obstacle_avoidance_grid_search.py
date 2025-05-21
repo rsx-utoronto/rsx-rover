@@ -178,10 +178,17 @@ class AstarObstacleAvoidance_GS_Traversal():
     def abort_callback(self,msg):
         self.abort_check = msg.data
         
+        return angles
+    
     def aruco_detection_callback(self, data):
+        time_now=time.time()
+        if abs(self.timer-time_now) >5:
+            self.timer=time_now
+            self.count=0
+        print("count,",self.count)
         # print("sm grid search_ data.data", data.data)
         if data.data:
-            if self.count <= 2:
+            if self.count <= 4:
                 self.count +=1
             else:
                 self.aruco_found = data.data
@@ -189,8 +196,12 @@ class AstarObstacleAvoidance_GS_Traversal():
                 self.count += 1
     
     def mallet_detection_callback(self, data):
+        time_now=time.time()
+        if abs(self.timer-time_now) >5:
+            self.timer=time_now
+            self.count=0
         if data.data:
-            if self.count <= 2:
+            if self.count <= 4:
                 self.count += 1
             else:
                 self.mallet_found = data.data
@@ -198,15 +209,20 @@ class AstarObstacleAvoidance_GS_Traversal():
                 self.count += 1
 
     def waterbottle_detection_callback(self, data):
+        time_now=time.time()
+        if abs(self.timer-time_now) >5:
+            self.timer=time_now
+            self.count=0
         if data.data:
-            if self.count <= 2:
+            if self.count <= 4:
                 self.count += 1
             else:
                     
                 self.waterbottle_found = data.data
                 self.found_objects[self.state] = data.data
-                self.count += 1  
-    
+                self.count += 1
+
+
     def pose_callback(self, msg):
         self.got_callback=True
         self.current_position_x = msg.pose.position.x
@@ -681,7 +697,7 @@ class AstarObstacleAvoidance_GS_Traversal():
                 self.drive_publisher.publish(msg)
                 print(f"Reached target: ({target_x}, {target_y})")
                 break
-            
+            print("in astar for grid search")
             if mapping[self.state] is False: #while not detected
                 # normal operations
                 if target_x is None or target_y is None or self.current_position_x is None or self.current_position_y is None:
@@ -828,7 +844,7 @@ class AstarObstacleAvoidance_GS_Traversal():
                             print("Detection lost and memory expired, returning to grid search")
                             detection_active = False
                             break
-                    
+                    self.drive_publisher.publish(msg)
                     pub.publish(twist)
                     rate.sleep()
 
