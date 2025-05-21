@@ -565,8 +565,8 @@ class AstarObstacleAvoidance():
         while not self.got_callback:
             rate.sleep()
         self.grid_origin=(self.current_position_x, self.current_position_y)
-        print("grid origin", self.grid_origin)
-        while not rospy.is_shutdown() and not target_reached_flag:
+       # print("grid origin", self.grid_origin)
+        while not rospy.is_shutdown() and not target_reached_flag and not self.abort_check:
             msg = Twist()
             if self.occupancy_grid is None:
                 print("self.occupancy_grid for straught line is None")
@@ -585,7 +585,7 @@ class AstarObstacleAvoidance():
                 break
             
             start = self.world_to_grid(self.current_position_x, self.current_position_y)
-            print("start!", start)
+           # print("start!", start)
             need_replan = False
             if rospy.Time.now() - last_plan_time > replan_interval:
                 need_replan = True
@@ -629,7 +629,7 @@ class AstarObstacleAvoidance():
                 dy = target_y - self.current_position_y
                 target_distance = math.sqrt((dx) ** 2 + (dy) ** 2)
                 target_heading = math.atan2(dy, dx)
-                print("trying to get to target:", target_x, target_y, self.current_position_x, self.current_position_y)
+              #  print("trying to get to target:", target_x, target_y, self.current_position_x, self.current_position_y)
                 
                 angle_diff = target_heading - self.heading
                 
@@ -649,7 +649,13 @@ class AstarObstacleAvoidance():
                         break
                     rospy.loginfo("Reached waypoint. Proceeding to next.")
                     continue
-
+                
+                #added this. can try to just break after..
+                if not self.current_path:
+                    print("All waypoints completed.")
+                    target_reached_flag = True
+                    break
+                
                 if abs(angle_diff) <= angle_threshold:
                    # print("trying to move forward", target_distance, self.current_position_x, target_x)
                     msg.linear.x = self.lin_vel
@@ -663,6 +669,8 @@ class AstarObstacleAvoidance():
 
                 self.drive_publisher.publish(msg)
                 rate.sleep()
+                
+                #break maybe uncomment this??
             rate.sleep()
                       
 if __name__ == "__main__":

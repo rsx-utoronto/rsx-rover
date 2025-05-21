@@ -114,10 +114,10 @@ class AstarObstacleAvoidance_GS_Traversal():
         self.abort_check = False
         self.heading=0
         self.current_corner_array = [
-            Point(x=0.55, y=0.55, z=0),
-            Point(x=0.55, y=-0.55, z=0),
-            Point(x=-0.55, y=-0.55, z=0), # with 0.5, it produces green blocks!
-            Point(x=-0.55, y=0.55, z=0) ]
+            Point(x=1.2, y=1.2, z=0),
+            Point(x=1.2, y=-1.2, z=0),
+            Point(x=-1.2, y=-1.2, z=0), # with 0.5, it produces green blocks!
+            Point(x=-1.2, y=1.2, z=0) ]
         
         
         self.z_min = -0.25
@@ -177,8 +177,6 @@ class AstarObstacleAvoidance_GS_Traversal():
 
     def abort_callback(self,msg):
         self.abort_check = msg.data
-        
-        return angles
     
     def aruco_detection_callback(self, data):
         time_now=time.time()
@@ -360,7 +358,7 @@ class AstarObstacleAvoidance_GS_Traversal():
 
     def publish_waypoints_rviz(self, waypoints):
         marker_array = MarkerArray()
-        print("waypoints in publisher", waypoints)
+       # print("waypoints in publisher", waypoints)
 
         # Points marker for waypoints (larger size)
         points_marker = Marker()
@@ -634,7 +632,7 @@ class AstarObstacleAvoidance_GS_Traversal():
             
         msg.data = flattened_waypoints  # Set the data field with the flattened list
         self.astar_pub.publish(msg)
-        # print("flattened waypoints", flattened_waypoints)
+
         self.publish_waypoints_rviz(flattened_waypoints)  # Publish the waypoints for visualization    
 
     def normalize_angle(self, angle):
@@ -697,8 +695,8 @@ class AstarObstacleAvoidance_GS_Traversal():
                 self.drive_publisher.publish(msg)
                 print(f"Reached target: ({target_x}, {target_y})")
                 break
-            print("in astar for grid search")
-            if mapping[self.state] is False: #while not detected
+            print("in astar for grid search and here is mapping.state ", mapping[self.state])
+            if mapping[self.state] is False or mapping[self.state] is None: #while not detected
                 # normal operations
                 if target_x is None or target_y is None or self.current_position_x is None or self.current_position_y is None:
                     continue   
@@ -765,11 +763,9 @@ class AstarObstacleAvoidance_GS_Traversal():
                         continue
 
                     if abs(angle_diff) <= angle_threshold:
-                      #  print("trying to move forward", target_distance, self.current_position_x, target_x)
                         msg.linear.x = self.lin_vel
                         msg.angular.z = 0
                     else:
-                       # print("rotating", angle_diff)
                         msg.linear.x = 0
                         msg.angular.z = angle_diff * kp
                         if abs(msg.angular.z) < 0.3:
@@ -777,22 +773,21 @@ class AstarObstacleAvoidance_GS_Traversal():
 
                     self.drive_publisher.publish(msg)
                     rate.sleep()
-                    
-            else: #HOMING!
+            else:                   
                 print("mapping state is true!")
-                print("IN HOMING for grid search")
+                print("IN HOMING")
                 # call homing
                 # should publish that it is found
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
-                if self.state == "AR1" or self.state == "AR2" or self.state == "AR3":
-                    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+                if state == "AR1" or state == "AR2" or state == "AR3":
+                    aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
-                    print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
-                elif self.state == "OBJ1" or self.state == "OBJ2":
+                   # print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
+                elif state == "OBJ1" or state == "OBJ2":
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
                     rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
-                    print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
+                  #  print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
                 rate = rospy.Rate(10) #this code needs to be adjusted
                 
                 # Wait a bit for initial detection
@@ -815,22 +810,33 @@ class AstarObstacleAvoidance_GS_Traversal():
                         
                         # Check if we've reached the target
                         if aimer.linear_v == 0 and aimer.angular_v == 0:
-                            print ("at weird", aimer.linear_v, aimer.angular_v)
+                         #   print ("at weird", aimer.linear_v, aimer.angular_v)
+                            if first_time:
+                                first_time=False
+                                initial_time=time.time()
+                            
+                            # faking it til you makin it
+                            while abs(initial_time-time.time()) < 0.7:
+                                msg.linear.x=self.lin_vel
+                                pub.publish(msg)
+                                print("final homing movement",abs(initial_time-time.time()) )
+                                rate.sleep()
                             twist.linear.x = 0.0
                             twist.angular.z = 0.0
                             pub.publish(twist)
+                            
                             return
                             
                         # Normal homing behavior
                         if aimer.angular_v == 1:
                             twist.angular.z = float(aimer.max_angular_v)
-                          #  print ("first if",aimer.max_angular_v)
+                            print ("first if",aimer.max_angular_v)
                             twist.linear.x = 0.0
                         elif aimer.angular_v == -1:
                             twist.angular.z = float(-aimer.max_angular_v)
                             twist.linear.x = 0.0
                         elif aimer.linear_v == 1:
-                           # print ("second check",aimer.max_linear_v)
+                            print ("second check",aimer.max_linear_v)
                             twist.linear.x = float(aimer.max_linear_v)
                             twist.angular.z = 0.0
                     else:
@@ -899,17 +905,23 @@ class GridSearch():
         #     continue
         targets = [(self.start_x,self.start_y)]
         step = 1
+        out_of_bounds = False
 
-        while len(targets) < self.x:
+        while len(targets) < self.x**2 - 1:
             for i in range(2):  # 1, 1, 2, 2, 3, 3... etc
                 for j in range(step):
                     if step*self.tol > self.x: 
                         print ("step is outside of accepted width: step*tol=", step*self.tol, "\tself.x=",self.x)
+                        out_of_bounds = True
                         break
                     self.start_x, self.start_y = self.start_x + (self.tol*dx), self.start_y + (self.tol*dy)
                     targets.append((self.start_x, self.start_y))
                 dx, dy = -dy, dx
+                if out_of_bounds:
+                    break
             step += 1 
+            if out_of_bounds:
+                break
         print ("these are the final targets", targets) 
         return targets
 

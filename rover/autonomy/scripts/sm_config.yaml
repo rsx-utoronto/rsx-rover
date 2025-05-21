@@ -14,7 +14,7 @@ heading_vector: [1.1, 0.0]
 straight_line_approach_lin_vel: 2.7 # 2.7
 straight_line_approach_ang_vel: 0.3 #0.3
 
-straight_line_obstacle_lin_vel: 0.5
+straight_line_obstacle_lin_vel: 1
 straight_line_obstacle_ang_vel: 0.3
 
 AR_grid_search_w: 40
