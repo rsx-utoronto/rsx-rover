@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import rospy
+from std_msgs.msg import Float32
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import NavSatFix
 from nav_msgs.msg import Odometry
+from heading_filter import Quaternion
+import math
 
 class OverrideCovariance:
     def __init__(self):
@@ -14,6 +17,7 @@ class OverrideCovariance:
         self.imu_pub = rospy.Publisher('/imu/orient/override', Imu, queue_size=1)
         self.gnss_pub = rospy.Publisher('/calian_gnss/gps/override', NavSatFix, queue_size=1)  
         self.odom_pub = rospy.Publisher('/rtabmap/odom/override', Odometry, queue_size=1)
+        self.heading_pub = rospy.Publisher("/imu/rpy", Float32, queue_size=10)
         self.imu_orien_cov_multiplier = rospy.get_param('~imu_orien_cov_multiplier', 1.0)
         self.imu_ang_vel_cov_multiplier = rospy.get_param('~imu_ang_vel_cov_multiplier', 1.0)
         self.imu_lin_acc_cov_multiplier = rospy.get_param('~imu_lin_acc_cov_multiplier', 1.0)
@@ -27,7 +31,7 @@ class OverrideCovariance:
         print("odom pose covariance multiplier: ", self.odom_pose_cov_multiplier)
         print("odom twist covariance multiplier: ", self.odom_twist_cov_multiplier)
 
-    def imu_callback(self, data):
+    def imu_callback(self, data: Imu):
         # Override the covariance of the IMU message
         ori = [0] * 9
         ang = [0] * 9
@@ -36,10 +40,13 @@ class OverrideCovariance:
             ori[i] = data.orientation_covariance[i] * self.imu_orien_cov_multiplier
             ang[i] = data.angular_velocity_covariance[i] * self.imu_ang_vel_cov_multiplier
             lin[i] = data.linear_acceleration_covariance[i] * self.imu_lin_acc_cov_multiplier
+        q = Quaternion(data.orientation.x, data.orientation.y, data.orientation.z, data.orientation.w)
+        h = q.quaternion_to_heading(q)
         data.orientation_covariance = tuple(ori)
         data.angular_velocity_covariance = tuple(ang)
         data.linear_acceleration_covariance = tuple(lin)     
         self.imu_pub.publish(data)       
+        self.heading_pub.publish(h*180/math.pi)
 
     def gnss_callback(self, data):
         # Override the covariance of the GNSS message

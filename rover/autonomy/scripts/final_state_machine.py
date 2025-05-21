@@ -585,11 +585,7 @@ class AR3(smach.State): #State for AR3
             if self.aruco_found:
                 self.glob_msg.pub_state("Grid Search did find AR3") #Will publish the messages afterwards but there are topics to publish when detected 
                 # if ar_in_correct_loc:
-                self.glob_msg.pub_state("Close enough to AR3") 
-                self.glob_msg.pub_state("Goal Point Reached: AR3")
-                self.glob_msg.pub_led_light("mission done")
-                rospy.sleep(3)
-                self.glob_msg.pub_led_light("auto")
+                self.glgob_msg.pub_led_light("auto")
                     
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR3")

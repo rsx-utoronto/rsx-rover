@@ -37,7 +37,6 @@ from sensor_msgs.msg import PointCloud2
 #from Octomap import Octree
 from queue import PriorityQueue
 from std_msgs.msg import Header, Float32MultiArray, Float64MultiArray
-from std_msgs.msg import Header, Float32MultiArray, Float64MultiArray
 import math
 from visualization_msgs.msg import Marker,MarkerArray
 import tf.transformations as tf
@@ -46,16 +45,14 @@ import threading
 from threading import Lock
 import aruco_homing as aruco_homing
 import ar_detection_node as ar_detect
-import aruco_homing as aruco_homing
-import ar_detection_node as ar_detect
 
 from geometry_msgs.msg import Point
-from std_msgs.msg import Float32MultiArray, String, Bool
 from std_msgs.msg import Float32MultiArray, String, Bool
 from nav_msgs.msg import Path
 
 import yaml
 import os
+import time
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
@@ -95,6 +92,7 @@ class AstarObstacleAvoidance_GS_Traversal():
         self.goal = (1,0)
         self.targets=targets
         self.state=state
+        self.timer=0
         self.obstacle_threshold = 100
         self.grid_size=(10000,10000)
         self.grid_origin_starter = (
@@ -114,10 +112,10 @@ class AstarObstacleAvoidance_GS_Traversal():
         self.abort_check = False
         self.heading=0
         self.current_corner_array = [
-            Point(x=1.2, y=1.2, z=0),
-            Point(x=1.2, y=-1.2, z=0),
-            Point(x=-1.2, y=-1.2, z=0), # with 0.5, it produces green blocks!
-            Point(x=-1.2, y=1.2, z=0) ]
+            Point(x=1.5, y=1.5, z=0),
+            Point(x=1.5, y=-1.5, z=0),
+            Point(x=-1.5, y=-1.5, z=0), # with 0.5, it produces green blocks!
+            Point(x=-1.5, y=1.5, z=0) ]
         
         
         self.z_min = -0.25
@@ -238,6 +236,8 @@ class AstarObstacleAvoidance_GS_Traversal():
                 self.current_orientation_z,
                 self.current_orientation_w
             ])
+        self.publish_bounding_box()
+        
         
     def pointcloud_callback(self, msg):
         """

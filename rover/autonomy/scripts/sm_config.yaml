@@ -1,17 +1,16 @@
 # final_state_machine file params
 RUN_STATES:
-  - AR3
-  - OBJ2
-  - GNSS1
-  - AR1
   - OBJ1
-  - AR2
-  - GNSS2
+  # - GNSS1
+  # - AR1
+  # - OBJ1
+  # - AR2
+  # - GNSS2
 
 origin_pose: [0.0, 0.0]
 heading_vector: [1.1, 0.0]
 
-straight_line_approach_lin_vel: 2.7 # 2.7
+straight_line_approach_lin_vel: 1 # 2.7
 straight_line_approach_ang_vel: 0.3 #0.3
 
 straight_line_obstacle_lin_vel: 1
@@ -33,15 +32,16 @@ GS_Traversal_lin_vel: 2.5
 GS_Traversal_ang_vel: 0.3
 
 run_in_order : False #false means we find shortest path, true means it takes in the same order as states_run_in_order
+#If you set this to true, make sure you do not skip any states
 
 States_run_in_order:
-  - OBJ1
-  - AR2
-  - AR1
   - GNSS1
-  - GNSS2
-  - AR3
   - OBJ2
+  - AR3
+  - AR1
+  - GNSS2
+  - AR2
+  - OBJ1
 
 # optimal_path_file params
 difficulty: # priority rank!
