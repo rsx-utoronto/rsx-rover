@@ -583,6 +583,8 @@ class AstarObstacleAvoidance():
                 rate.sleep()
                 continue
             
+            
+
             current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
             final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
             if final_goal_target_distance < threshold_goal or target_reached_flag:

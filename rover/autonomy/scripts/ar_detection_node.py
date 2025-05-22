@@ -26,13 +26,15 @@ class ARucoTagDetectionNode():
         self.bridge = CvBridge()
         self.curr_state = None
         # self.image_topic = "/camera/color/image_raw"
+        
         if sm_config.get("realsense_detection"):
-            self.image_topic = sm_config.get("realsense_detection_image_topic") 
+            self.image_topic = sm_config.get("realsense_detection_image_topic")
             self.info_topic = sm_config.get("realsense_detection_info_topic")
+            
         else:
             self.image_topic = sm_config.get("zed_detection_image_topic") 
             self.info_topic = sm_config.get("zed_detection_info_topic")
-            
+       
         self.state_topic = "state"
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
@@ -44,6 +46,7 @@ class ARucoTagDetectionNode():
         self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
         self.bbox_pub = rospy.Publisher('aruco_node/bbox', Float64MultiArray, queue_size=10)
         t = time.time()
+        
         while (time.time() - t) < 2:
             #print("Passing time") 
             pass
@@ -71,7 +74,6 @@ class ARucoTagDetectionNode():
                 self.findArucoMarkers(cv_image)
     
     def info_callback(self, info_msg):
-
         self.D = np.array(info_msg.D)
         self.K = np.array(info_msg.K)
         self.K = self.K.reshape(3,3)
