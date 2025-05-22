@@ -132,17 +132,17 @@ class GPSToPose:
         self.pose_pub.publish(msg)
 
     def imu_callback(self, msg):
-        self.imu = msg
         # Convert quaternion to Euler angles (roll, pitch, yaw)
         orientation_list = [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
         (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(orientation_list)
         yaw = yaw + self.mag_declination_rad
         # Convert back to quaternion
         qx, qy, qz, qw = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
-        self.imu.orientation.x = qx
-        self.imu.orientation.y = qy
-        self.imu.orientation.z = qz
-        self.imu.orientation.w = qw
+        msg.orientation.x = qx
+        msg.orientation.y = qy
+        msg.orientation.z = qz
+        msg.orientation.w = qw
+        self.imu = msg
 
 def main():
     # base gps on the right, heading gps on the left
