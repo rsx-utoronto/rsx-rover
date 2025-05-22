@@ -10,18 +10,19 @@ import numpy as np
 import getmicroscopeid # local import
 
 
-camera_name = "GENERAL - UVC : GENERAL - UVC"
-camera_id = getmicroscopeid.get_usb_camera_device(camera_name)
-
-if not camera_id:
-    print("WARNING: Microscope camera not found.")
-else:
-    print(camera_id)
-
-
 class MicroscopeCam:
 
     def __init__(self):
+        camera_name = "GENERAL - UVC : GENERAL - UVC"
+        camera_id = getmicroscopeid.get_usb_camera_device(camera_name)
+        rate = rospy.Rate(1)
+
+        while (not camera_id) and (not rospy.is_shutdown()):
+            print("WARNING: Microscope camera not found.")
+            camera_id = getmicroscopeid.get_usb_camera_device(camera_name)
+            rate.sleep()
+        print(camera_id)
+        
         self.rate = rospy.Rate(10)
         self.pub_raw = rospy.Publisher("/microscope", Image, queue_size=10)
         self.pub_compressed = rospy.Publisher("/microscope/compressed", CompressedImage, queue_size=2)
