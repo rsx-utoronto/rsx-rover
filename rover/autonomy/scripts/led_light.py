@@ -113,13 +113,11 @@ class LedLight():
           #if i > 0:
             #self.board.open()
         self.board.write(bytes(res, 'utf-8')) 
-          #board.close()
-          #time.sleep(0.3) 
-          #board.open()   
-          #board.write(bytes('off\n', 'utf-8'))
-          #board.flush() # Ensure it's sent before closing
-          #board.close()
-          #time.sleep(0.3)
+        while mode == 'mission done':  
+          self.board.write(b'green\n')  
+          time.sleep(0.3)               
+          self.board.write(b'off\n')    
+          time.sleep(0.3)  
         
       elif mode == 'auto': 
         res = 'red\n'

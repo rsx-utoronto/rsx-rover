@@ -321,6 +321,7 @@ class GNSS1(smach.State): #State for GNSS1
             self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
+        self.glob_msg.pub_led_light("auto")
         return "Location Selection"
         
         
@@ -350,8 +351,8 @@ class GNSS2(smach.State): #State for GNSS1
             self.glob_msg.pub_state("GNSS2 reached, successful cruise")
             self.glob_msg.pub_state("Goal Point Reached: GNSS2")
             self.glob_msg.pub_led_light("mission done")
-            rospy.sleep(3)
-            self.glob_msg.pub_led_light("auto")
+            # rospy.sleep(3)
+            # self.glob_msg.pub_led_light("auto")
             
         else:
             self.glob_msg.pub_state("Failed to reach GNSS2 location")
@@ -370,6 +371,7 @@ class GNSS2(smach.State): #State for GNSS1
             self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
+        self.glob_msg.pub_led_light("auto")
         return "Location Selection"
 
 class AR1(smach.State): #State for AR1
@@ -426,8 +428,8 @@ class AR1(smach.State): #State for AR1
                 self.glob_msg.pub_state("Close enough to AR1") 
                 self.glob_msg.pub_state("Goal Point Reached: AR1")
                 self.glob_msg.pub_led_light("mission done")
-                rospy.sleep(3)
-                self.glob_msg.pub_led_light("auto")
+                # rospy.sleep(3)
+                # self.glob_msg.pub_led_light("auto")
                     
 
             else:
@@ -452,6 +454,7 @@ class AR1(smach.State): #State for AR1
             self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
+        self.glob_msg.pub_led_light("auto")
         return "Location Selection"
                     
 
@@ -509,8 +512,8 @@ class AR2(smach.State): #State for AR2
                 self.glob_msg.pub_state("Close enough to AR2") 
                 self.glob_msg.pub_state("Goal Point Reached: AR2")
                 self.glob_msg.pub_led_light("mission done")
-                rospy.sleep(3)
-                self.glob_msg.pub_led_light("auto")
+                # rospy.sleep(3)
+                # self.glob_msg.pub_led_light("auto")
                 
             else:
                 self.glob_msg.pub_state("Grid Search did not find AR2")
@@ -534,6 +537,7 @@ class AR2(smach.State): #State for AR2
             self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
+        self.glob_msg.pub_led_light("auto")
         return "Location Selection"
 
 class AR3(smach.State): #State for AR3
@@ -610,6 +614,7 @@ class AR3(smach.State): #State for AR3
             self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
+        self.glob_msg.pub_led_light("auto")
         return "Location Selection"
 
 class OBJ1(smach.State): #State for mallet
@@ -671,8 +676,8 @@ class OBJ1(smach.State): #State for mallet
                     self.glob_msg.pub_state("Close enough to OBJ1") 
                     self.glob_msg.pub_state("Goal Point Reached: OBJ1")
                     self.glob_msg.pub_led_light("mission done")
-                    rospy.sleep(3)
-                    self.glob_msg.pub_led_light("auto")
+                    # rospy.sleep(3)
+                    # self.glob_msg.pub_led_light("auto")
 
                 else:
                     self.glob_msg.pub_state("Grid Search did not find OBJ1")
@@ -698,6 +703,7 @@ class OBJ1(smach.State): #State for mallet
             self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
+        self.glob_msg.pub_led_light("auto")
         return "Location Selection"
     
 class OBJ2(smach.State): #State for waterbottle
@@ -760,9 +766,8 @@ class OBJ2(smach.State): #State for waterbottle
                     self.glob_msg.pub_state("Close enough to Object1") 
                     self.glob_msg.pub_state("Goal Point Reached: OBJ2")
                     self.glob_msg.pub_led_light("mission done")
-                    rospy.sleep(3)
-                    self.glob_msg.pub_led_light("auto")
-
+                    # rospy.sleep(3)
+                    # self.glob_msg.pub_led_light("auto")
                 else:
                     self.glob_msg.pub_state("Grid Search did not find Object1")
                     if self.glob_msg.abort_check:
@@ -788,6 +793,7 @@ class OBJ2(smach.State): #State for waterbottle
             self.glob_msg.pub_state("Waiting for Next Task Button")
             rospy.sleep(1)
         self.glob_msg.next_task_check = False
+        self.glob_msg.pub_led_light("auto")
         return "Location Selection"
     
     

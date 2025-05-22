@@ -45,8 +45,6 @@ import os
 import yaml
 import time
 
-
-
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
 with open(file_path, "r") as f:
@@ -569,11 +567,17 @@ class AstarObstacleAvoidance():
        
         stop_straight_line=False
         while not self.got_callback:
+            if self.abort_check:
+                print("self.abort is true!")
+                break
             rate.sleep()
         self.grid_origin=(self.current_position_x, self.current_position_y)
        # print("grid origin", self.grid_origin)
         while not rospy.is_shutdown() and not target_reached_flag and not self.abort_check:
             msg = Twist()
+            if self.abort_check:
+                print("self.abort is true!")
+                break
             if self.occupancy_grid is None:
                 print("self.occupancy_grid for straught line is None")
                 rate.sleep()
