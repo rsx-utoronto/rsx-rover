@@ -10,8 +10,8 @@ RUN_STATES:
 origin_pose: [0.0, 0.0]
 heading_vector: [1.1, 0.0]
 
-straight_line_approach_lin_vel: 1 # 2.7
-straight_line_approach_ang_vel: 0.3 #0.3
+straight_line_approach_lin_vel: 2.7 # 2.7
+straight_line_approach_ang_vel: 0.3 # 0.3
 
 straight_line_obstacle_lin_vel: 1
 straight_line_obstacle_ang_vel: 0.3
@@ -75,3 +75,7 @@ realsense_detection: False
 realsense_detection_image_topic: '/camera/color/image_raw'
 realsense_detection_info_topic: '/camera/color/camera_info'
 realsense_pointcloud: '/camera/depth/points'
+
+
+# Homing Camera
+hmoing_camera: 'ZC' # RS or ZC #toleranc-> 2,3 meters
