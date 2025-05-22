@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 import rospy
-from sensor_msgs.msg import NavSatFix
+from sensor_msgs.msg import NavSatFix, Imu
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from math import atan2, pi, sin, cos, radians
 import gps_conversion_functions as functions
 import message_filters
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
-
+import tf
 
 class GPSToPose: 
     
@@ -26,6 +26,8 @@ class GPSToPose:
 
         self.gps1 = message_filters.Subscriber("calian_gnss/gps_extended", GnssSignalStatus)
         self.gps2 = message_filters.Subscriber("calian_gnss/base_gps_extended", GnssSignalStatus)
+        self.imu_sub = rospy.Subscriber("/imu/orient", Imu, self.imu_callback)
+        self.imu = Imu()
         # here 5 is the size of the queue and 0.2 is the time allowed between messages
         self.ts = message_filters.ApproximateTimeSynchronizer([self.gps1, self.gps2], 5, 0.2)
         self.ts.registerCallback(self.callback)
@@ -33,6 +35,8 @@ class GPSToPose:
         self.msg = PoseStamped()
         self.x = 0
         self.y = 0
+
+        self.mag_declination_rad = -10.04 * (pi / 180)  # Magnetic declination in radians
 
     def transform_heading(self, heading):
         # important constants, make sure these are accurate to the current state of the rover (read below description)
@@ -118,13 +122,27 @@ class GPSToPose:
         msg.pose.position.y = self.y
         msg.pose.position.z = (gps1.accuracy_2d + (gps2.accuracy_2d)) / 2 if gps1.valid_fix and gps2.valid_fix else 1000000
 
-        
-        msg.pose.orientation.x = qx
-        msg.pose.orientation.y = qy
-        msg.pose.orientation.z = qz
-        msg.pose.orientation.w = qw
+        if abs(gps1.length - 1.65) > 0.4:
+            msg.pose.orientation = self.imu.orientation
+        else:
+            msg.pose.orientation.x = qx
+            msg.pose.orientation.y = qy
+            msg.pose.orientation.z = qz
+            msg.pose.orientation.w = qw
         self.pose_pub.publish(msg)
 
+    def imu_callback(self, msg):
+        # Convert quaternion to Euler angles (roll, pitch, yaw)
+        orientation_list = [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
+        (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(orientation_list)
+        yaw = yaw + self.mag_declination_rad
+        # Convert back to quaternion
+        qx, qy, qz, qw = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
+        msg.orientation.x = qx
+        msg.orientation.y = qy
+        msg.orientation.z = qz
+        msg.orientation.w = qw
+        self.imu = msg
 
 def main():
     # base gps on the right, heading gps on the left
