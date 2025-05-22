@@ -842,6 +842,7 @@ class ResizableLabel(QLabel):
 
 class CameraFeed:
     def __init__(self, label1, label2, label3, label4, label5, splitter):
+        self.active_cameras = {"Zed (front) camera": False, "Butt camera": False, "Microscope camera": False, "Genie camera": False, "Webcam": False}
         self.bridge = CvBridge()
         self.image_sub1 = None
         self.image_sub2 = None
@@ -873,7 +874,6 @@ class CameraFeed:
         self.label5.setMinimumSize(300, 200)
         self.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        self.active_cameras = {"Zed (front) camera": False, "Butt camera": False, "Microscope camera": False, "Genie camera": False, "webcam": False}
         self.bbox = None  
 
         self.bbox_timer = QTimer()
@@ -953,16 +953,18 @@ class CameraFeed:
             self.update_image(data, self.label2)
     
     def callback3(self, data):
+        # print("Microscope camera callback")
         if self.active_cameras["Microscope camera"]:
-            self.update_image(data, self.label3)
+            # print("get image")
+            self.update_microscope_image(data, self.label3)
 
     def callback4(self, data):
         if self.active_cameras["Genie camera"]:
             self.update_genie_image(data, self.label4)
 
     def callback5(self, data):
-        if self.active_cameras["webcam"]:
-            self.update_image(data, self.label5)
+        if self.active_cameras["Webcam"]:
+            self.update_microscope_image(data, self.label5)
 
     def update_image(self, data, label):
         """Decode and update the camera image with bounding box."""
@@ -995,6 +997,51 @@ class CameraFeed:
             label.setPixmap(scaled_pixmap)
 
         QMetaObject.invokeMethod(label, "setPixmap", Qt.QueuedConnection, Q_ARG(QPixmap, scaled_pixmap))
+
+    def update_microscope_image(self, data, label):
+        """Decode and update a microscope camera ROS Image message."""
+        try:
+            # Convert ROS Image to OpenCV format
+            cv_image = self.bridge.imgmsg_to_cv2(data)
+            if cv_image is None:
+                print("Failed to convert microscope image from topic")
+                return
+                
+            # Check the image shape to determine format
+            if len(cv_image.shape) == 2:
+                # It's grayscale (single channel)
+                # Apply exposure/brightness adjustments
+                alpha = self.exposure_value / 50.0   # contrast: 0.02 to 2.0
+                beta = (self.exposure_value - 50) * 2  # brightness: -98 to +100
+                cv_image = cv2.convertScaleAbs(cv_image, alpha=alpha, beta=beta)
+                
+                # Convert grayscale to BGR for display
+                cv_image_rgb = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
+            else:
+                # It's already a color image
+                # Apply exposure/brightness adjustments
+                alpha = self.exposure_value / 50.0
+                beta = (self.exposure_value - 50) * 2
+                cv_image = cv2.convertScaleAbs(cv_image, alpha=alpha, beta=beta)
+                
+                # Ensure it's in BGR format for OpenCV
+                cv_image_rgb = cv_image
+            
+            # Convert to QImage - always use RGB format for Qt
+            height, width = cv_image_rgb.shape[:2]
+            bytes_per_line = 3 * width
+            cv_image_rgb = cv2.cvtColor(cv_image_rgb, cv2.COLOR_BGR2RGB)
+            qimg = QImage(cv_image_rgb.data, width, height, bytes_per_line, QImage.Format_RGB888)
+            pixmap = QPixmap.fromImage(qimg)
+            
+            # Scale pixmap to fit label while maintaining aspect ratio
+            scaled_pixmap = pixmap.scaled(label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            
+            # Update label with new pixmap
+            QMetaObject.invokeMethod(label, "setPixmap", Qt.QueuedConnection, Q_ARG(QPixmap, scaled_pixmap))
+            
+        except Exception as e:
+            print(f"Error updating microscope image: {e}")
 
     def update_genie_image(self, data, label):
         """Decode and update a grayscale ROS Image message."""
@@ -2264,7 +2311,7 @@ class GenieControl(QWidget):
         # Apply the layout to the widget
         self.setLayout(self.layout)
 
-        self.zoom_mag = 0
+        self.zoom_mag = 5
 
         self.pano_control = rospy.Publisher('/pano_control', Bool, queue_size=10)
         self.pano_result = rospy.Subscriber('/pano_result', Image, self.pano_callback)
@@ -2299,16 +2346,16 @@ class GenieControl(QWidget):
     
     def zoom_in_microscope(self):
         # Implement the logic to zoom in on the microscope
-        self.ui.science_serial_controller.publish("<I," + self.zoom_mag + ">")
+        self.ui.science_serial_controller.publish("<I," + str(self.zoom_mag) + ">")
         print("Zooming in on microscope...")
 
     def zoom_out_microscope(self):
         # Implement the logic to zoom out on the microscope
-        self.ui.science_serial_controller.publish("<O," + self.zoom_mag + ">")
+        self.ui.science_serial_controller.publish("<O," + str(self.zoom_mag) + ">")
         print("Zooming out on microscope...")
 
     def change_microscope_zoom_magnitude(self, value):
-        self.zoom_mag = value
+        self.zoom_mag = value // 10
 
     def pano_callback(self, msg):
         """Save the panorama image when received"""
