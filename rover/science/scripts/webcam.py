@@ -9,11 +9,11 @@ from cv_bridge import CvBridge
 import getmicroscopeid # local import
 
 
-camera_name = "GENERAL - UVC : GENERAL - UVC"
+camera_name = "FHD Camera: FHD Camera"
 camera_id = getmicroscopeid.get_usb_camera_device(camera_name)
 
 if not camera_id:
-    print("WARNING: Microscope camera not found.")
+    print("WARNING: web camera not found.")
 else:
     print(camera_id)
 
@@ -22,7 +22,7 @@ class MicroscopeCam:
 
     def __init__(self):
         self.rate = rospy.Rate(10)
-        self.pub = rospy.Publisher("microscope", Image, queue_size=10)
+        self.pub = rospy.Publisher("/webcam", Image, queue_size=10)
 
 
         # Get camera feed
