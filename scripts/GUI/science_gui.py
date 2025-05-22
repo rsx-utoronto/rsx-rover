@@ -921,7 +921,7 @@ class CameraFeed:
 
     def register_subscriber5(self):
         if self.image_sub5 is None:
-            self.image_sub5 = rospy.Subscriber("/webcam", Image, self.callback5)
+            self.image_sub5 = rospy.Subscriber("/webcam/compressed", CompressedImage, self.callback5)
 
     def unregister_subscriber5(self):
         if self.image_sub5:
@@ -964,7 +964,7 @@ class CameraFeed:
 
     def callback5(self, data):
         if self.active_cameras["Webcam"]:
-            self.update_microscope_image(data, self.label5)
+            self.update_image(data, self.label5)
 
     def update_image(self, data, label):
         """Decode and update the camera image with bounding box."""
