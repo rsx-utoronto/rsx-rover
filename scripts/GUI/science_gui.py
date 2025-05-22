@@ -1650,6 +1650,8 @@ class RoverGUI(QMainWindow):
     #     self.status_label.setText("")
     
     def get_probe_data_callback(self, data):
+        if "RECEIVED" in data.data or "ERROR" in data.data:
+            return
         msgs = data.data.split(";")
         msg = []
         for i in msgs:
@@ -1660,107 +1662,107 @@ class RoverGUI(QMainWindow):
         # PH1 block (no changes needed - this is already correct)
         if self.left_middle_item1.display or self.left_middle_item1.site1_block.reading:
             if self.ph1_time == 1:
-                ph1_time_buffer = []
-                ph1_data_buffer = []
-            ph1_time_buffer.append(self.ph1_time)
+                self.ph1_time_buffer = []
+                self.ph1_data_buffer = []
+            self.ph1_time_buffer.append(self.ph1_time)
             ph1_graph_data = float(msg[0][1])
-            ph1_data_buffer.append(ph1_graph_data)
+            self.ph1_data_buffer.append(ph1_graph_data)
             self.ph1_time += 1
         if self.left_middle_item1.site1_block.start_read:
-            self.ph1_start = len(ph1_data_buffer)
+            self.ph1_start = len(self.ph1_data_buffer)
             self.left_middle_item1.site1_block.start_read = False
         if not (self.left_middle_item1.site1_block.start_read or self.left_middle_item1.site1_block.reading):
-            self.ph1_plot_data = [ph1_data_buffer[self.ph1_start:-1], ph1_time_buffer[self.ph1_start:-1]]
+            self.ph1_plot_data = [self.ph1_data_buffer[self.ph1_start:-1], self.ph1_time_buffer[self.ph1_start:-1]]
             self.ph1_plot_avg = sum(self.ph1_plot_data[0]) / len(self.ph1_plot_data[0])
             self.ph1_plot_data[0].insert(0, self.ph1_plot_avg)
             self.ph1_plot_data[1].insert(0, -1)
             self.ph1_time = 1
-            ph1_data_buffer.clear()
-            ph1_time_buffer.clear()
+            self.ph1_data_buffer.clear()
+            self.ph1_time_buffer.clear()
 
         # PH2 block - updated to match ph1 pattern
         if self.left_middle_item1.display or self.left_middle_item1.site2_block.reading:
             if self.ph2_time == 1:
-                ph2_time_buffer = []
-                ph2_data_buffer = []
-            ph2_time_buffer.append(self.ph2_time)
+                self.ph2_time_buffer = []
+                self.ph2_data_buffer = []
+            self.ph2_time_buffer.append(self.ph2_time)
             ph2_graph_data = float(msg[1][1])
-            ph2_data_buffer.append(ph2_graph_data)
+            self.ph2_data_buffer.append(ph2_graph_data)
             self.ph2_time += 1
         if self.left_middle_item1.site2_block.start_read:
-            self.ph2_start = len(ph2_data_buffer)
+            self.ph2_start = len(self.ph2_data_buffer)
             self.left_middle_item1.site2_block.start_read = False
         if not (self.left_middle_item1.site2_block.start_read or self.left_middle_item1.site2_block.reading):
-            self.ph2_plot_data = [ph2_data_buffer[self.ph2_start:-1], ph2_time_buffer[self.ph2_start:-1]]
+            self.ph2_plot_data = [self.ph2_data_buffer[self.ph2_start:-1], self.ph2_time_buffer[self.ph2_start:-1]]
             self.ph2_plot_avg = sum(self.ph2_plot_data[0]) / len(self.ph2_plot_data[0])
             self.ph2_plot_data[0].insert(0, self.ph2_plot_avg)
             self.ph2_plot_data[1].insert(0, -1)
             self.ph2_time = 1
-            ph2_data_buffer.clear()
-            ph2_time_buffer.clear()
+            self.ph2_data_buffer.clear()
+            self.ph2_time_buffer.clear()
         
         # HUM block - updated to match ph1 pattern
         if self.left_top_widget.display or self.left_top_widget.site1_block.reading:
             if self.hum_time == 1:
-                hum_time_buffer = []
-                hum_data_buffer = []
-            hum_time_buffer.append(self.hum_time)
+                self.hum_time_buffer = []
+                self.hum_data_buffer = []
+            self.hum_time_buffer.append(self.hum_time)
             hum_graph_data = float(msg[2][1])
-            hum_data_buffer.append(hum_graph_data)
+            self.hum_data_buffer.append(hum_graph_data)
             self.hum_time += 1
         if self.left_top_widget.site1_block.start_read:
-            self.hum_start = len(hum_data_buffer)
+            self.hum_start = len(self.hum_data_buffer)
             self.left_top_widget.site1_block.start_read = False
         if not (self.left_top_widget.site1_block.start_read or self.left_top_widget.site1_block.reading):
-            self.hum_plot_data = [hum_data_buffer[self.hum_start:-1], hum_time_buffer[self.hum_start:-1]]
+            self.hum_plot_data = [self.hum_data_buffer[self.hum_start:-1], self.hum_time_buffer[self.hum_start:-1]]
             self.hum_plot_avg = sum(self.hum_plot_data[0]) / len(self.hum_plot_data[0])
             self.hum_plot_data[0].insert(0, self.hum_plot_avg)
             self.hum_plot_data[1].insert(0, -1)
             self.hum_time = 1
-            hum_data_buffer.clear()
-            hum_time_buffer.clear()
+            self.hum_data_buffer.clear()
+            self.hum_time_buffer.clear()
         
         # TEMP block - updated to match ph1 pattern
         if self.left_top_widget.display or self.left_top_widget.site2_block.reading:
             if self.temp_time == 1:
-                temp_time_buffer = []
-                temp_data_buffer = []
-            temp_time_buffer.append(self.temp_time)
+                self.temp_time_buffer = []
+                self.temp_data_buffer = []
+            self.temp_time_buffer.append(self.temp_time)
             temp_graph_data = float(msg[3][1])
-            temp_data_buffer.append(temp_graph_data)
+            self.temp_data_buffer.append(temp_graph_data)
             self.temp_time += 1
         if self.left_top_widget.site2_block.start_read:
-            self.temp_start = len(temp_data_buffer)
+            self.temp_start = len(self.temp_data_buffer)
             self.left_top_widget.site2_block.start_read = False
         if not (self.left_top_widget.site2_block.start_read or self.left_top_widget.site2_block.reading):
-            self.temp_plot_data = [temp_data_buffer[self.temp_start:-1], temp_time_buffer[self.temp_start:-1]]
+            self.temp_plot_data = [self.temp_data_buffer[self.temp_start:-1], self.temp_time_buffer[self.temp_start:-1]]
             self.temp_plot_avg = sum(self.temp_plot_data[0]) / len(self.temp_plot_data[0])
             self.temp_plot_data[0].insert(0, self.temp_plot_avg)
             self.temp_plot_data[1].insert(0, -1)
             self.temp_time = 1
-            temp_data_buffer.clear()
-            temp_time_buffer.clear()
+            self.temp_data_buffer.clear()
+            self.temp_time_buffer.clear()
 
         # PMT block - updated to match ph1 pattern
         if self.left_middle_item2.display or self.left_middle_item2.site1_block.reading:
             if self.pmt_time == 1:
-                pmt_time_buffer = []
-                pmt_data_buffer = []
-            pmt_time_buffer.append(self.pmt_time)
+                self.pmt_time_buffer = []
+                self.pmt_data_buffer = []
+            self.pmt_time_buffer.append(self.pmt_time)
             pmt_graph_data = float(msg[4][1])
-            pmt_data_buffer.append(pmt_graph_data)
+            self.pmt_data_buffer.append(pmt_graph_data)
             self.pmt_time += 1
         if self.left_middle_item2.site1_block.start_read:
-            self.pmt_start = len(pmt_data_buffer)
+            self.pmt_start = len(self.pmt_data_buffer)
             self.left_middle_item2.site1_block.start_read = False
         if not (self.left_middle_item2.site1_block.start_read or self.left_middle_item2.site1_block.reading):
-            self.pmt_plot_data = [pmt_data_buffer[self.pmt_start:-1], pmt_time_buffer[self.pmt_start:-1]]
+            self.pmt_plot_data = [self.pmt_data_buffer[self.pmt_start:-1], self.pmt_time_buffer[self.pmt_start:-1]]
             self.pmt_plot_avg = sum(self.pmt_plot_data[0]) / len(self.pmt_plot_data[0])
             self.pmt_plot_data[0].insert(0, self.pmt_plot_avg)
             self.pmt_plot_data[1].insert(0, -1)
             self.pmt_time = 1
-            pmt_data_buffer.clear()
-            pmt_time_buffer.clear()
+            self.pmt_data_buffer.clear()
+            self.pmt_time_buffer.clear()
         
         self.pmt_switch = msg[5][1]
         self.left_middle_item2.site1_block.pmtWidget.setText(f"PMT: {self.pmt_switch}")
