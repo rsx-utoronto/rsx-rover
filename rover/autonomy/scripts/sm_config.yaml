@@ -75,7 +75,3 @@ realsense_detection: False
 realsense_detection_image_topic: '/camera/color/image_raw'
 realsense_detection_info_topic: '/camera/color/camera_info'
 realsense_pointcloud: '/camera/depth/points'
-
-
-# Homing Camera
-hmoing_camera: 'ZC' # RS or ZC #toleranc-> 2,3 meters

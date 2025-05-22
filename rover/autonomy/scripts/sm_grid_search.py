@@ -218,14 +218,12 @@ class GS_Traversal:
                 pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
                 if state == "AR1" or state == "AR2" or state == "AR3":
                     # this sees which camera it is using and then uses the parameters accordingly.
-                    if sm_config.get("homing_camera") == 'ZC': 
+                    if sm_config.get("realsense_detection"):
                         aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
-                    elif sm_config.get("homing_camera") == 'RS': 
-                        aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel"))
+                    else: 
+                        aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     
                     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
-                    
-                    #print ("FUCK YOU")
                     print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                 elif state == "OBJ1" or state == "OBJ2":
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
