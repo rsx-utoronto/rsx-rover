@@ -15,6 +15,7 @@ import ar_detection_node
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
+from sm_straight_line_new import StraightLineApproachNew
 from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
 import astar_obstacle_avoidance_grid_search 
 import gps_conversion_functions as functions
@@ -262,7 +263,8 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 else:
                     print("Not Doing Obstalce Avoidance")
                     #sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
-                    sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
+                   # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
+                    sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target], target_name) 
                 sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 if self.glob_msg.abort_check: #Checks if abort button is pressed
                     userdata.aborted_state = list(path.items())[0][0]
@@ -832,7 +834,8 @@ class ABORT(smach.State):  # Assuming it won't be called before we try to go to 
 
         try:
             # Perform straight-line traversal back to the determined location
-            sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [return_location])
+           # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [return_location])
+            sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [return_location], userdata.prev_loc)
             self.glob_msg.pub_state("Navigating to Abort location")
             sla.navigate()
             rospy.sleep(2) #For waiting after the abort location is reached

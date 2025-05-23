@@ -23,12 +23,13 @@ with open(file_path, "r") as f:
 # through the state machine. When navigate function is called, it calls the move_to_target function which continuously calculates the target distance
 # and heading to determine the angular and linear velocities. When the target distance is within the threshold it breaks out of the loop to return.
     
-class StraightLineApproach:
-    def __init__(self, lin_vel, ang_vel, targets):
+class StraightLineApproachNew:
+    def __init__(self, lin_vel, ang_vel, targets, state):
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
         self.targets = targets
         self.found = False
+        self.state=state
         self.abort_check = False
         self.x = -100000
         self.y = -100000
@@ -41,7 +42,7 @@ class StraightLineApproach:
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
-        self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
+       
         self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
         self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
         self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
@@ -201,8 +202,8 @@ class StraightLineApproach:
             else: #if mapping[state] is True --> if the object is found
                 print("mapping state is true!")
                 print("IN HOMING")
-                state="In Homing"
-                self.message_pub.publish(state)
+                message="In Homing"
+                self.message_pub.publish(message)
                 # call homing
                 # should publish that it is found
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed

@@ -209,8 +209,8 @@ class GS_Traversal:
             else: #if mapping[state] is True --> if the object is found
                 print("mapping state is true!")
                 print("IN HOMING")
-                state="In Homing"
-                self.message_pub.publish(state)
+                message="In Homing"
+                self.message_pub.publish(message)
                 # call homing
                 # should publish that it is found
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
