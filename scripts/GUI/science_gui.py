@@ -29,7 +29,9 @@ from calian_gnss_ros2_msg.msg import GnssSignalStatus
 import pyqtgraph as pg
 from pyqtgraph.exporters import ImageExporter
 
-
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend for headless saving
 
 #cache folder of map tiles generated from tile_scraper.py
 CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
@@ -843,6 +845,7 @@ class ResizableLabel(QLabel):
 
 class CameraFeed:
     def __init__(self, label1, label2, label3, label4, label5, splitter):
+        self.last_genie_image = None
         self.active_cameras = {"Zed (front) camera": False, "Butt camera": False, "Microscope camera": False, "Genie camera": False, "Webcam": False}
         self.bridge = CvBridge()
         self.image_sub1 = None
@@ -961,6 +964,7 @@ class CameraFeed:
 
     def callback4(self, data):
         if self.active_cameras["Genie camera"]:
+            self.last_genie_image = data
             self.update_genie_image(data, self.label4)
 
     def callback5(self, data):
@@ -1628,6 +1632,10 @@ class RoverGUI(QMainWindow):
             self.genieControl.show_pano_button(True)
         else:
             self.genieControl.show_pano_button(False)
+        if active_cameras["Genie camera"]:
+            self.genieControl.show_save_genie_button(True)
+        else:
+            self.genieControl.show_save_genie_button(False)
 
     def on_checkbox_state_changed(self, state,map_overlay):
         if state == Qt.Checked:
@@ -1678,7 +1686,7 @@ class RoverGUI(QMainWindow):
             ph1_graph_data = float(msg[0][1])
             self.ph1_data_buffer.append(ph1_graph_data)
             self.ph1_time += 1
-            self.ph1_plot_data = [self.ph1_data_buffer[self.ph1_start:], self.ph1_time_buffer[self.ph1_start:]]
+            self.ph1_plot_data = [self.ph1_data_buffer, self.ph1_time_buffer]
         if self.left_middle_item1.site1_block.start_read:
             self.ph1_start = len(self.ph1_data_buffer)
             self.left_middle_item1.site1_block.start_read = False
@@ -1688,7 +1696,7 @@ class RoverGUI(QMainWindow):
             self.ph1_save_data = [self.ph1_plot_data[0][:], self.ph1_plot_data[1][:]]
             self.ph1_save_data[0].insert(0, self.ph1_plot_avg)
             self.ph1_save_data[1].insert(0, -1)
-            self.ph1_time = 1
+            # self.ph1_time = 1
             self.left_middle_item1.site1_block.stop_read = False
 
         # PH2 block - updated to match ph1 pattern
@@ -1700,7 +1708,7 @@ class RoverGUI(QMainWindow):
             ph2_graph_data = float(msg[1][1])
             self.ph2_data_buffer.append(ph2_graph_data)
             self.ph2_time += 1
-            self.ph2_plot_data = [self.ph2_data_buffer[self.ph2_start:], self.ph2_time_buffer[self.ph2_start:]]
+            self.ph2_plot_data = [self.ph2_data_buffer, self.ph2_time_buffer]
         if self.left_middle_item1.site2_block.start_read:
             self.ph2_start = len(self.ph2_data_buffer)
             self.left_middle_item1.site2_block.start_read = False
@@ -1710,7 +1718,7 @@ class RoverGUI(QMainWindow):
             self.ph2_save_data = [self.ph2_plot_data[0][:], self.ph2_plot_data[1][:]]
             self.ph2_save_data[0].insert(0, self.ph2_plot_avg)
             self.ph2_save_data[1].insert(0, -1)
-            self.ph2_time = 1
+            # self.ph2_time = 1
             self.left_middle_item1.site2_block.stop_read = False
         
         # Merged HUM & TEMP block
@@ -1737,8 +1745,8 @@ class RoverGUI(QMainWindow):
             self.temp_time = self.hum_time  # Keep temp time in sync
             
             # Create plot data for both
-            self.hum_plot_data = [self.hum_data_buffer[self.hum_start:], self.hum_time_buffer[self.hum_start:]]
-            self.temp_plot_data = [self.temp_data_buffer[self.temp_start:], self.temp_time_buffer[self.temp_start:]]
+            self.hum_plot_data = [self.hum_data_buffer, self.hum_time_buffer]
+            self.temp_plot_data = [self.temp_data_buffer, self.temp_time_buffer]
 
         # Handle start reading event for both measurements
         if self.left_top_widget.start_read:
@@ -1765,8 +1773,8 @@ class RoverGUI(QMainWindow):
                 self.temp_save_data[1].insert(0, -1)
             
             # Reset counters and buffers
-            self.hum_time = 1
-            self.temp_time = 1
+            # self.hum_time = 1
+            # self.temp_time = 1
             self.left_top_widget.stop_read = False
 
         # PMT block - updated to match ph1 pattern
@@ -1778,7 +1786,7 @@ class RoverGUI(QMainWindow):
             pmt_graph_data = float(msg[4][1])
             self.pmt_data_buffer.append(pmt_graph_data)
             self.pmt_time += 1
-            self.pmt_plot_data = [self.pmt_data_buffer[self.pmt_start:], self.pmt_time_buffer[self.pmt_start:]]
+            self.pmt_plot_data = [self.pmt_data_buffer, self.pmt_time_buffer]
         if self.left_middle_item2.site1_block.start_read:
             self.pmt_start = len(self.pmt_data_buffer)
             self.left_middle_item2.site1_block.start_read = False
@@ -1788,7 +1796,7 @@ class RoverGUI(QMainWindow):
             self.pmt_save_data = [self.pmt_plot_data[0][:], self.pmt_plot_data[1][:]]
             self.pmt_save_data[0].insert(0, self.pmt_plot_avg)
             self.pmt_save_data[1].insert(0, -1)
-            self.pmt_time = 1
+            # self.pmt_time = 1
             self.left_middle_item2.site1_block.stop_read = False
         
         self.pmt_switch = int(msg[5][1])
@@ -1959,11 +1967,17 @@ class SensorBlock(QWidget):
                 writer.writerow(["Time", "Temperature (°C)"])
                 for i in range(len(self.ui.temp_save_data[0])):
                     writer.writerow([self.ui.temp_save_data[1][i], self.ui.temp_save_data[0][i]])
-            
-            # Save temperature graph as PNG
+        
+            # Save temperature graph as PNG using matplotlib
             temp_png_path = os.path.join(csv_dir, f"temperature_graph_{timestr}.png")
-            exporter = ImageExporter(self.ui.science_temperature_plot.plotItem)
-            exporter.export(temp_png_path)
+            plt.figure(figsize=(10, 6))
+            plt.plot(self.ui.temp_save_data[1][1:], self.ui.temp_save_data[0][1:], 'r-+', markersize=8)
+            plt.grid(True, alpha=0.3)
+            plt.title("Temperature Data")
+            plt.xlabel("Time")
+            plt.ylabel("Temperature (°C)")
+            plt.savefig(temp_png_path, dpi=150, bbox_inches='tight')
+            plt.close()
             
             print(f"Temperature data saved to {temp_csv_path}")
             print(f"Temperature graph saved to {temp_png_path}")
@@ -1972,7 +1986,7 @@ class SensorBlock(QWidget):
             # Clear buffers after saving
             self.ui.temp_data_buffer.clear()
             self.ui.temp_time_buffer.clear()
-        
+    
         # Save humidity data to CSV if available
         if self.ui.hum_save_data:
             # Use saved data instead of plot data
@@ -1982,11 +1996,17 @@ class SensorBlock(QWidget):
                 writer.writerow(["Time", "Humidity (%)"])
                 for i in range(len(self.ui.hum_save_data[0])):
                     writer.writerow([self.ui.hum_save_data[1][i], self.ui.hum_save_data[0][i]])
-            
-            # Save humidity graph as PNG
+        
+            # Save humidity graph as PNG using matplotlib
             hum_png_path = os.path.join(csv_dir, f"humidity_graph_{timestr}.png")
-            exporter = ImageExporter(self.ui.science_humidity_plot.plotItem)
-            exporter.export(hum_png_path)
+            plt.figure(figsize=(10, 6))
+            plt.plot(self.ui.hum_save_data[1][1:], self.ui.hum_save_data[0][1:], 'b-+', markersize=8)
+            plt.grid(True, alpha=0.3)
+            plt.title("Humidity Data")
+            plt.xlabel("Time")
+            plt.ylabel("Humidity (%)")
+            plt.savefig(hum_png_path, dpi=150, bbox_inches='tight')
+            plt.close()
             
             print(f"Humidity data saved to {hum_csv_path}")
             print(f"Humidity graph saved to {hum_png_path}")
@@ -1995,7 +2015,7 @@ class SensorBlock(QWidget):
             # Clear buffers after saving
             self.ui.hum_data_buffer.clear()
             self.ui.hum_time_buffer.clear() 
-        
+    
         # Show a confirmation message
         if saved_something:
             # Flash the button to indicate successful save
@@ -2236,23 +2256,23 @@ class SampleSubBlock(QWidget):
         if self.chem:
             if self.site1:
                 data = self.ui.ph1_save_data  # Use saved data
-                plot_widget = self.ui.science_ph1_plot
                 data_type = "ph1"
                 title = "Site 1 pH"
+                color = 'r'
             else:
                 data = self.ui.ph2_save_data  # Use saved data
-                plot_widget = self.ui.science_ph2_plot
                 data_type = "ph2"
                 title = "Site 2 pH"
+                color = 'r'
         else:
             # FAM/Soil data (PMT)
             data = self.ui.pmt_save_data  # Use saved data
-            plot_widget = self.ui.science_pmt_plot
             data_type = "pmt"
-            title = "Site " + str(self.ui.pmt_switch) + " PMT"
+            title = f"Site {self.ui.pmt_switch} PMT"
+            color = 'g'
         
         # Save data to CSV if available
-        if data:
+        if data and len(data[0]) > 0:
             # Save data to CSV
             csv_path = os.path.join(csv_dir, f"{data_type}_data_{timestr}.csv")
             with open(csv_path, 'w') as f:
@@ -2261,10 +2281,16 @@ class SampleSubBlock(QWidget):
                 for i in range(len(data[0])):
                     writer.writerow([data[1][i], data[0][i]])
             
-            # Save graph as PNG
+            # Save graph as PNG using matplotlib
             png_path = os.path.join(csv_dir, f"{data_type}_graph_{timestr}.png")
-            exporter = ImageExporter(plot_widget.plotItem)
-            exporter.export(png_path)
+            plt.figure(figsize=(10, 6))
+            plt.plot(data[1][1:], data[0][1:], f'{color}-+', markersize=8)
+            plt.grid(True, alpha=0.3)
+            plt.title(f"{title} Data")
+            plt.xlabel("Time")
+            plt.ylabel(title)
+            plt.savefig(png_path, dpi=150, bbox_inches='tight')
+            plt.close()
             
             print(f"{title} data saved to {csv_path}")
             print(f"{title} graph saved to {png_path}")
@@ -2309,6 +2335,7 @@ class GenieControl(QWidget):
         # Create buttons
         self.take_pano_button = QPushButton("Take Pano")
         self.toggle_genie_button = QPushButton("Toggle Genie Filter")
+        self.save_genie_button = QPushButton("Save Genie Image")  # New button
         self.microscope_zoom_in_button = QPushButton("+")
         self.microscope_zoom_out_button = QPushButton("-")
         self.micro_slider_splitter = Slider(Qt.Horizontal)
@@ -2317,6 +2344,7 @@ class GenieControl(QWidget):
         button_style = "padding: 4px; min-height: 20px;"
         self.take_pano_button.setStyleSheet(button_style)
         self.toggle_genie_button.setStyleSheet(button_style)
+        self.save_genie_button.setStyleSheet(button_style)  # Style for new button
         self.microscope_zoom_in_button.setStyleSheet(button_style)
         self.microscope_zoom_out_button.setStyleSheet(button_style)
         self.micro_slider_splitter.setMinimum(0)
@@ -2326,6 +2354,7 @@ class GenieControl(QWidget):
         # Set size policies to make buttons fit their content
         self.take_pano_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
         self.toggle_genie_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self.save_genie_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)  # Size policy for new button
         self.microscope_zoom_in_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.microscope_zoom_out_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         
@@ -2338,6 +2367,7 @@ class GenieControl(QWidget):
         # Connect button signals to slots
         self.take_pano_button.clicked.connect(self.take_pano)
         self.toggle_genie_button.clicked.connect(self.toggle_genie)
+        self.save_genie_button.clicked.connect(self.save_genie_image)  # Connect new button
         self.microscope_zoom_in_button.clicked.connect(self.zoom_in_microscope)
         self.microscope_zoom_out_button.clicked.connect(self.zoom_out_microscope)
 
@@ -2357,6 +2387,7 @@ class GenieControl(QWidget):
         # Add buttons to the row layout (now they'll be right-aligned)
         button_layout.addWidget(self.take_pano_button)
         button_layout.addWidget(self.toggle_genie_button)
+        button_layout.addWidget(self.save_genie_button)  # Add new button
         button_layout.addWidget(self.micro_slider_splitter)
         button_layout.addWidget(microscope_widget)
         
@@ -2370,10 +2401,13 @@ class GenieControl(QWidget):
 
         self.pano_control = rospy.Publisher('/pano_control', Bool, queue_size=10)
         self.pano_result = rospy.Subscriber('/pano_result', Image, self.pano_callback)
+        
+        self.feed = ui.camera_feed
 
         self.show_pano_button(False)
         # self.show_genie_button(False)
         self.show_zoom_controls(False)
+        self.show_save_genie_button(False)  # Initially hide save button
 
     def show_pano_button(self, show=True):
         """Show or hide the panorama button"""
@@ -2388,6 +2422,10 @@ class GenieControl(QWidget):
         self.micro_slider_splitter.setVisible(show)
         self.microscope_zoom_in_button.setVisible(show)
         self.microscope_zoom_out_button.setVisible(show)
+    
+    def show_save_genie_button(self, show=True):
+        """Show or hide the save genie image button"""
+        self.save_genie_button.setVisible(show)
     
     def take_pano(self):
         # Implement the logic to take a panorama
@@ -2446,6 +2484,52 @@ class GenieControl(QWidget):
             self.take_pano_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
             QTimer.singleShot(1000, lambda: self.take_pano_button.setStyleSheet(original_style))
 
+    def save_genie_image(self):
+        """Save the current genie camera image"""
+        if self.feed.last_genie_image is None:
+            print("No genie image available to save")
+            # Flash the button red to indicate failure
+            original_style = self.save_genie_button.styleSheet()
+            self.save_genie_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
+            QTimer.singleShot(1000, lambda: self.save_genie_button.setStyleSheet(original_style))
+            return
+        
+        try:
+            # Create bridge to convert ROS Image to OpenCV image
+            bridge = CvBridge()
+            cv_image = bridge.imgmsg_to_cv2(self.feed.last_genie_image, desired_encoding="passthrough")
+            
+            # Create directory if it doesn't exist
+            images_dir = os.path.join(os.path.expanduser("~"), "rover_ws/src/rsx-rover/science_data", "genie_images")
+            if not os.path.exists(images_dir):
+                os.makedirs(images_dir)
+            
+            # Create a timestamp for a unique filename
+            timestr = time.strftime("%Y%m%d-%H%M%S")
+            filename = os.path.join(images_dir, f"genie_image_{timestr}.png")
+            
+            # Save the image
+            cv2.imwrite(filename, cv_image)
+            
+            # Notify user
+            print(f"Genie image saved to {filename}")
+            
+            # Flash the button to indicate successful save
+            original_style = self.save_genie_button.styleSheet()
+            self.save_genie_button.setStyleSheet("background-color: #00FF00; padding: 4px; min-height: 20px;")
+            QTimer.singleShot(1000, lambda: self.save_genie_button.setStyleSheet(original_style))
+            
+        except Exception as e:
+            print(f"Error saving genie image: {e}")
+            # Flash the button red to indicate failure
+            original_style = self.save_genie_button.styleSheet()
+            self.save_genie_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
+            QTimer.singleShot(1000, lambda: self.save_genie_button.setStyleSheet(original_style))
+    
+    # def genie_image_callback(self, msg):
+    #     """Store the latest genie camera image"""
+    #     self.last_genie_image = msg
+        
 
 class CheckableComboBox(QComboBox):
     def __init__(self, title = '', parent=None):
