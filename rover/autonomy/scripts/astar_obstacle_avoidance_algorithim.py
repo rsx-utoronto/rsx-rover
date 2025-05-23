@@ -528,7 +528,6 @@ class AstarObstacleAvoidance():
     def publish_waypoints(self, waypoints):
         # Create the Float32MultiArray message
         msg = Float32MultiArray()
-
         # Flatten the waypoint list (e.g., [(x1, y1), (x2, y2)] -> [x1, y1, x2, y2])
         # flattened_waypoints = [coord for waypoint in waypoints for coord in waypoint]
         

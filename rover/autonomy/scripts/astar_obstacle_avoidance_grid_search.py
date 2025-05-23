@@ -78,6 +78,7 @@ class AstarObstacleAvoidance_GS_Traversal():
         self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
         self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
         self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")
+        self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
         
         # Map and planning variables
         self.robot_footprint=[]
@@ -774,12 +775,13 @@ class AstarObstacleAvoidance_GS_Traversal():
                         msg.angular.z = angle_diff * kp
                         if abs(msg.angular.z) < 0.3:
                             msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
-
                     self.drive_publisher.publish(msg)
                     rate.sleep()
             else:                   
                 print("mapping state is true!")
                 print("IN HOMING")
+                state="In Homing"
+                self.message_pub.publish(state)
                 # call homing
                 # should publish that it is found
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed

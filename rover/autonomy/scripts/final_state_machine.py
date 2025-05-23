@@ -236,7 +236,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
         self.glob_msg = glob_msg
   
     def execute(self, userdata):
-        print("start execture loc selec")
+        print("start execture loc select")
         self.glob_msg.pub_state("Performing Next Task")
         if userdata.prev_loc == "start": #if its the first instance of running the state, initialize the global variables locations_dict, rem_loc_dict
             print("user_data is none")

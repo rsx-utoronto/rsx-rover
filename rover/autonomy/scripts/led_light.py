@@ -124,7 +124,7 @@ class LedLight():
           #if i > 0:
             #self.board.open()
         self.board.write(bytes(res, 'utf-8')) 
-          #board.close()
+          #board.close() #dont need a while loop because board does it automatically!
           #time.sleep(0.3) 
           #board.open()   
           #board.write(bytes('off\n', 'utf-8'))
