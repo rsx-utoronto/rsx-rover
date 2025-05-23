@@ -1,6 +1,6 @@
 # final_state_machine file params
 RUN_STATES:
-  - OBJ2
+  - AR1
   # - GNSS1
   # - AR1
   # - OBJ1
@@ -10,7 +10,7 @@ RUN_STATES:
 origin_pose: [0.0, 0.0]
 heading_vector: [1.1, 0.0]
 
-straight_line_approach_lin_vel: 2.7 # 2.7
+straight_line_approach_lin_vel: 1.5 # 2.7
 straight_line_approach_ang_vel: 0.3 # 0.3
 
 straight_line_obstacle_lin_vel: 1

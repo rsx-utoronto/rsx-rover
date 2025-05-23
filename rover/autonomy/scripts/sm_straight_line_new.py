@@ -7,9 +7,11 @@ import time
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Float64MultiArray, Bool
+from std_msgs.msg import Float64MultiArray, Bool, String
 import math
 import ar_detection_node as adn
+import aruco_homing as aruco_homing
+import ar_detection_node as ar_detect
 
 import yaml
 import os
@@ -29,6 +31,7 @@ class StraightLineApproachNew:
         self.ang_vel = ang_vel
         self.targets = targets
         self.found = False
+        self.timer = 0
         self.state=state
         self.abort_check = False
         self.x = -100000
@@ -41,8 +44,7 @@ class StraightLineApproachNew:
         self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
-       
+        self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
         self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
         self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
         self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
@@ -52,9 +54,12 @@ class StraightLineApproachNew:
                    "AR3":False,
                    "OBJ1":False,
                    "OBJ2":False}
+        self.aruco_found = False
+        self.mallet_found = False
+        self.waterbottle_found = False
 
         #new additions
-        # self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
+        #  elf.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
         # self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
         # self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
 
@@ -99,6 +104,7 @@ class StraightLineApproachNew:
     
        
     def aruco_detection_callback(self, data):
+        print("in aruco detection callback")
         time_now=time.time()
         if abs(self.timer-time_now) >5:
             self.timer=time_now
@@ -135,16 +141,14 @@ class StraightLineApproachNew:
             if self.count <= 4:
                 self.count += 1
             else:
-                    
                 self.waterbottle_found = data.data
                 self.found_objects[self.state] = data.data
                 self.count += 1
-
     
     def detection_callback(self, data):
         self.found = data
 
-    def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISHIT)
+    def move_to_target(self, target_x, target_y, state): #navigate needs to take in a state value as well (FINISHIT)
         rate = rospy.Rate(50)
         kp = 0.5
         threshold = 0.5
@@ -170,12 +174,13 @@ class StraightLineApproachNew:
                    "AR3":self.aruco_found,
                    "OBJ1":obj,
                    "OBJ2":obj}
+            print("state is mapping[state]", mapping[state], state)
             if mapping[state] is False:
                 #nomral operation
                 target_heading = math.atan2(target_y - self.y, target_x - self.x)
                 target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
                 # print(f"Current Position: ({self.x}, {self.y})")
-                print("Target Heading:", math.degrees(target_heading), " Target Distance:", target_distance)
+                #print("Target Heading:", math.degrees(target_heading), " Target Distance:", target_distance)
                 angle_diff = target_heading - self.heading
                 
                 # print ( f"angle_diff: {angle_diff}")
@@ -299,7 +304,7 @@ class StraightLineApproachNew:
     def navigate(self, state="Location Selection"): #navigate needs to take in a state value as well
         for target_x, target_y in self.targets:
             print(f"Moving towards target: ({target_x}, {target_y})")
-            self.move_to_target(target_x, target_y)
+            self.move_to_target(target_x, target_y, self.state)
             if self.abort_check:
                 self.abort_check = False
                 break
