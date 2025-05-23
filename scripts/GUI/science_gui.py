@@ -27,6 +27,7 @@ import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
 import pyqtgraph as pg
+from pyqtgraph.exporters import ImageExporter
 
 
 
@@ -1178,6 +1179,13 @@ class RoverGUI(QMainWindow):
         self.pmt_plot_data = []
         self.ph1_time, self.ph2_time, self.hum_time, self.temp_time, self.pmt_time = (1, 1, 1, 1, 1)
 
+        # Add save data variables for each measurement type
+        self.ph1_save_data = []  # For storing finalized pH1 data
+        self.ph2_save_data = []  # For storing finalized pH2 data
+        self.hum_save_data = []  # For storing finalized humidity data
+        self.temp_save_data = []  # For storing finalized temperature data
+        self.pmt_save_data = []  # For storing finalized PMT data
+
         # Create tabs
         self.scienceTab = QWidget()  # Create science tab first
         self.longlat_tab = QWidget()
@@ -1383,6 +1391,8 @@ class RoverGUI(QMainWindow):
         self.hum_start = 0
         self.temp_start = 0
         self.pmt_start = 0
+
+        self.pmt_switch = 1
 
         button_style = "padding: 4px; min-height: 20px;"
         # Create main tab
@@ -1668,17 +1678,18 @@ class RoverGUI(QMainWindow):
             ph1_graph_data = float(msg[0][1])
             self.ph1_data_buffer.append(ph1_graph_data)
             self.ph1_time += 1
+            self.ph1_plot_data = [self.ph1_data_buffer[self.ph1_start:], self.ph1_time_buffer[self.ph1_start:]]
         if self.left_middle_item1.site1_block.start_read:
             self.ph1_start = len(self.ph1_data_buffer)
             self.left_middle_item1.site1_block.start_read = False
-        if not (self.left_middle_item1.site1_block.start_read or self.left_middle_item1.site1_block.reading):
-            self.ph1_plot_data = [self.ph1_data_buffer[self.ph1_start:-1], self.ph1_time_buffer[self.ph1_start:-1]]
+        if not (self.left_middle_item1.site1_block.start_read or self.left_middle_item1.site1_block.reading) and self.left_middle_item1.site1_block.stop_read:
             self.ph1_plot_avg = sum(self.ph1_plot_data[0]) / len(self.ph1_plot_data[0])
-            self.ph1_plot_data[0].insert(0, self.ph1_plot_avg)
-            self.ph1_plot_data[1].insert(0, -1)
+            # Store a deep copy of the data for saving
+            self.ph1_save_data = [self.ph1_plot_data[0][:], self.ph1_plot_data[1][:]]
+            self.ph1_save_data[0].insert(0, self.ph1_plot_avg)
+            self.ph1_save_data[1].insert(0, -1)
             self.ph1_time = 1
-            self.ph1_data_buffer.clear()
-            self.ph1_time_buffer.clear()
+            self.left_middle_item1.site1_block.stop_read = False
 
         # PH2 block - updated to match ph1 pattern
         if self.left_middle_item1.display or self.left_middle_item1.site2_block.reading:
@@ -1689,59 +1700,74 @@ class RoverGUI(QMainWindow):
             ph2_graph_data = float(msg[1][1])
             self.ph2_data_buffer.append(ph2_graph_data)
             self.ph2_time += 1
+            self.ph2_plot_data = [self.ph2_data_buffer[self.ph2_start:], self.ph2_time_buffer[self.ph2_start:]]
         if self.left_middle_item1.site2_block.start_read:
             self.ph2_start = len(self.ph2_data_buffer)
             self.left_middle_item1.site2_block.start_read = False
-        if not (self.left_middle_item1.site2_block.start_read or self.left_middle_item1.site2_block.reading):
-            self.ph2_plot_data = [self.ph2_data_buffer[self.ph2_start:-1], self.ph2_time_buffer[self.ph2_start:-1]]
+        if not (self.left_middle_item1.site2_block.start_read or self.left_middle_item1.site2_block.reading) and self.left_middle_item1.site2_block.stop_read:
             self.ph2_plot_avg = sum(self.ph2_plot_data[0]) / len(self.ph2_plot_data[0])
-            self.ph2_plot_data[0].insert(0, self.ph2_plot_avg)
-            self.ph2_plot_data[1].insert(0, -1)
+            # Store a deep copy of the data for saving
+            self.ph2_save_data = [self.ph2_plot_data[0][:], self.ph2_plot_data[1][:]]
+            self.ph2_save_data[0].insert(0, self.ph2_plot_avg)
+            self.ph2_save_data[1].insert(0, -1)
             self.ph2_time = 1
-            self.ph2_data_buffer.clear()
-            self.ph2_time_buffer.clear()
+            self.left_middle_item1.site2_block.stop_read = False
         
-        # HUM block - updated to match ph1 pattern
-        if self.left_top_widget.display or self.left_top_widget.site1_block.reading:
+        # Merged HUM & TEMP block
+        if self.left_top_widget.display or self.left_top_widget.reading:
+            # Initialize buffers if needed for both measurements
             if self.hum_time == 1:
                 self.hum_time_buffer = []
                 self.hum_data_buffer = []
+                self.temp_time_buffer = []
+                self.temp_data_buffer = []
+            
+            # Process humidity data
             self.hum_time_buffer.append(self.hum_time)
             hum_graph_data = float(msg[2][1])
             self.hum_data_buffer.append(hum_graph_data)
-            self.hum_time += 1
-        if self.left_top_widget.site1_block.start_read:
-            self.hum_start = len(self.hum_data_buffer)
-            self.left_top_widget.site1_block.start_read = False
-        if not (self.left_top_widget.site1_block.start_read or self.left_top_widget.site1_block.reading):
-            self.hum_plot_data = [self.hum_data_buffer[self.hum_start:-1], self.hum_time_buffer[self.hum_start:-1]]
-            self.hum_plot_avg = sum(self.hum_plot_data[0]) / len(self.hum_plot_data[0])
-            self.hum_plot_data[0].insert(0, self.hum_plot_avg)
-            self.hum_plot_data[1].insert(0, -1)
-            self.hum_time = 1
-            self.hum_data_buffer.clear()
-            self.hum_time_buffer.clear()
-        
-        # TEMP block - updated to match ph1 pattern
-        if self.left_top_widget.display or self.left_top_widget.site2_block.reading:
-            if self.temp_time == 1:
-                self.temp_time_buffer = []
-                self.temp_data_buffer = []
-            self.temp_time_buffer.append(self.temp_time)
+            
+            # Process temperature data with same time index
+            self.temp_time_buffer.append(self.hum_time)  # Use same time counter for both
             temp_graph_data = float(msg[3][1])
             self.temp_data_buffer.append(temp_graph_data)
-            self.temp_time += 1
-        if self.left_top_widget.site2_block.start_read:
+            
+            # Increment shared time counter
+            self.hum_time += 1
+            self.temp_time = self.hum_time  # Keep temp time in sync
+            
+            # Create plot data for both
+            self.hum_plot_data = [self.hum_data_buffer[self.hum_start:], self.hum_time_buffer[self.hum_start:]]
+            self.temp_plot_data = [self.temp_data_buffer[self.temp_start:], self.temp_time_buffer[self.temp_start:]]
+
+        # Handle start reading event for both measurements
+        if self.left_top_widget.start_read:
+            self.hum_start = len(self.hum_data_buffer)
             self.temp_start = len(self.temp_data_buffer)
-            self.left_top_widget.site2_block.start_read = False
-        if not (self.left_top_widget.site2_block.start_read or self.left_top_widget.site2_block.reading):
-            self.temp_plot_data = [self.temp_data_buffer[self.temp_start:-1], self.temp_time_buffer[self.temp_start:-1]]
-            self.temp_plot_avg = sum(self.temp_plot_data[0]) / len(self.temp_plot_data[0])
-            self.temp_plot_data[0].insert(0, self.temp_plot_avg)
-            self.temp_plot_data[1].insert(0, -1)
+            self.left_top_widget.start_read = False
+
+        # Handle stop reading event for both measurements
+        if not (self.left_top_widget.start_read or self.left_top_widget.reading) and self.left_top_widget.stop_read:
+            # Process humidity final data
+            if len(self.hum_plot_data[0]) > 0:
+                self.hum_plot_avg = sum(self.hum_plot_data[0]) / len(self.hum_plot_data[0])
+                # Store a deep copy of the data for saving
+                self.hum_save_data = [self.hum_plot_data[0][:], self.hum_plot_data[1][:]]
+                self.hum_save_data[0].insert(0, self.hum_plot_avg)
+                self.hum_save_data[1].insert(0, -1)
+            
+            # Process temperature final data
+            if len(self.temp_plot_data[0]) > 0:
+                self.temp_plot_avg = sum(self.temp_plot_data[0]) / len(self.temp_plot_data[0])
+                # Store a deep copy of the data for saving
+                self.temp_save_data = [self.temp_plot_data[0][:], self.temp_plot_data[1][:]]
+                self.temp_save_data[0].insert(0, self.temp_plot_avg)
+                self.temp_save_data[1].insert(0, -1)
+            
+            # Reset counters and buffers
+            self.hum_time = 1
             self.temp_time = 1
-            self.temp_data_buffer.clear()
-            self.temp_time_buffer.clear()
+            self.left_top_widget.stop_read = False
 
         # PMT block - updated to match ph1 pattern
         if self.left_middle_item2.display or self.left_middle_item2.site1_block.reading:
@@ -1752,20 +1778,21 @@ class RoverGUI(QMainWindow):
             pmt_graph_data = float(msg[4][1])
             self.pmt_data_buffer.append(pmt_graph_data)
             self.pmt_time += 1
+            self.pmt_plot_data = [self.pmt_data_buffer[self.pmt_start:], self.pmt_time_buffer[self.pmt_start:]]
         if self.left_middle_item2.site1_block.start_read:
             self.pmt_start = len(self.pmt_data_buffer)
             self.left_middle_item2.site1_block.start_read = False
-        if not (self.left_middle_item2.site1_block.start_read or self.left_middle_item2.site1_block.reading):
-            self.pmt_plot_data = [self.pmt_data_buffer[self.pmt_start:-1], self.pmt_time_buffer[self.pmt_start:-1]]
+        if not (self.left_middle_item2.site1_block.start_read or self.left_middle_item2.site1_block.reading) and self.left_middle_item2.site1_block.stop_read:
             self.pmt_plot_avg = sum(self.pmt_plot_data[0]) / len(self.pmt_plot_data[0])
-            self.pmt_plot_data[0].insert(0, self.pmt_plot_avg)
-            self.pmt_plot_data[1].insert(0, -1)
+            # Store a deep copy of the data for saving
+            self.pmt_save_data = [self.pmt_plot_data[0][:], self.pmt_plot_data[1][:]]
+            self.pmt_save_data[0].insert(0, self.pmt_plot_avg)
+            self.pmt_save_data[1].insert(0, -1)
             self.pmt_time = 1
-            self.pmt_data_buffer.clear()
-            self.pmt_time_buffer.clear()
+            self.left_middle_item2.site1_block.stop_read = False
         
-        self.pmt_switch = msg[5][1]
-        self.left_middle_item2.site1_block.pmtWidget.setText(f"PMT: {self.pmt_switch}")
+        self.pmt_switch = int(msg[5][1])
+        self.left_middle_item2.pmtWidget.setText(f"PMT: {msg[5][1]}")
 
         self.probeUpdateSignal.emit(True)
 
@@ -1897,6 +1924,7 @@ class SensorBlock(QWidget):
         self.setFixedHeight(40)
         self.reading = False
         self.start_read = False
+        self.stop_read = False
         self.display = False
 
     def read(self):
@@ -1907,58 +1935,69 @@ class SensorBlock(QWidget):
             self.read_button.setStyleSheet("background-color: #FF0000;")
         else:
             self.read_button.setStyleSheet("background-color: #FFFFFF;")
+            self.stop_read = True
     
     def save(self):
         """Save temperature and humidity data to CSV and graphs to PNG"""
         print("Saving sensor data...")
         
         # Create directory if it doesn't exist
-        csv_dir = os.path.join(os.path.expanduser("~"), "rover-ws/src/rsx-rover/science_data")
+        csv_dir = os.path.join(os.path.expanduser("~"), "rover_ws/src/rsx-rover/science_data")
         if not os.path.exists(csv_dir):
             os.makedirs(csv_dir)
         
         # Create a timestamp for unique filenames
-        timestamp = rospy.Time.now().to_sec()
         timestr = time.strftime("%Y%m%d-%H%M%S")
+        saved_something = False
         
         # Save temperature data to CSV if available
-        if self.ui.temp_plot_data:
-            # Save temperature data to CSV
+        if self.ui.temp_save_data:
+            # Use saved data
             temp_csv_path = os.path.join(csv_dir, f"temperature_data_{timestr}.csv")
             with open(temp_csv_path, 'w') as f:
                 writer = csv.writer(f)
                 writer.writerow(["Time", "Temperature (°C)"])
-                for i in range(len(self.ui.temp_plot_data[0])):
-                    writer.writerow([self.ui.temp_plot_data[1][i], self.ui.temp_plot_data[0][i]])
+                for i in range(len(self.ui.temp_save_data[0])):
+                    writer.writerow([self.ui.temp_save_data[1][i], self.ui.temp_save_data[0][i]])
             
             # Save temperature graph as PNG
             temp_png_path = os.path.join(csv_dir, f"temperature_graph_{timestr}.png")
-            exporter = pg.exporters.ImageExporter(self.ui.science_temperature_plot.plotItem)
+            exporter = ImageExporter(self.ui.science_temperature_plot.plotItem)
             exporter.export(temp_png_path)
             
             print(f"Temperature data saved to {temp_csv_path}")
             print(f"Temperature graph saved to {temp_png_path}")
+            saved_something = True
+            
+            # Clear buffers after saving
+            self.ui.temp_data_buffer.clear()
+            self.ui.temp_time_buffer.clear()
         
         # Save humidity data to CSV if available
-        if self.ui.hum_plot_data:
-            # Save humidity data to CSV
+        if self.ui.hum_save_data:
+            # Use saved data instead of plot data
             hum_csv_path = os.path.join(csv_dir, f"humidity_data_{timestr}.csv")
             with open(hum_csv_path, 'w') as f:
                 writer = csv.writer(f)
                 writer.writerow(["Time", "Humidity (%)"])
-                for i in range(len(self.ui.hum_plot_data[0])):
-                    writer.writerow([self.ui.hum_plot_data[1][i], self.ui.hum_plot_data[0][i]])
+                for i in range(len(self.ui.hum_save_data[0])):
+                    writer.writerow([self.ui.hum_save_data[1][i], self.ui.hum_save_data[0][i]])
             
             # Save humidity graph as PNG
             hum_png_path = os.path.join(csv_dir, f"humidity_graph_{timestr}.png")
-            exporter = pg.exporters.ImageExporter(self.ui.science_humidity_plot.plotItem)
+            exporter = ImageExporter(self.ui.science_humidity_plot.plotItem)
             exporter.export(hum_png_path)
             
             print(f"Humidity data saved to {hum_csv_path}")
             print(f"Humidity graph saved to {hum_png_path}")
+            saved_something = True
+            
+            # Clear buffers after saving
+            self.ui.hum_data_buffer.clear()
+            self.ui.hum_time_buffer.clear() 
         
         # Show a confirmation message
-        if self.ui.temp_plot_data or self.ui.hum_plot_data:
+        if saved_something:
             # Flash the button to indicate successful save
             original_style = self.save_button.styleSheet()
             self.save_button.setStyleSheet("background-color: #00FF00; padding: 4px; min-height: 20px;")
@@ -2140,6 +2179,7 @@ class SampleSubBlock(QWidget):
 
         self.reading = False
         self.start_read = False
+        self.stop_read = False
 
     def sample(self):
         if self.chem:
@@ -2150,16 +2190,18 @@ class SampleSubBlock(QWidget):
                 self.ui.science_serial_controller.publish("<B>")
                 print("Sampled Chem Site 2")
         else:
-            if self.site1:
+            if self.ui.pmt_switch == 1:
                 self.ui.science_serial_controller.publish("<D>")
                 print("Sampled FAM Site 1")
-            else:
+            elif self.ui.pmt_switch == 2:
                 self.ui.science_serial_controller.publish("<E>")
                 print("Sampled FAM Site 2")
     
     def read(self):
         self.reading = not self.reading
         self.start_read = self.reading
+        if not self.reading:
+            self.stop_read = True
         if self.chem:
             print("Read Chem")
         else:
@@ -2183,32 +2225,31 @@ class SampleSubBlock(QWidget):
         print(f"Saving {'chemistry' if self.chem else 'FAM'} data...")
         
         # Create directory if it doesn't exist
-        csv_dir = os.path.join(os.path.expanduser("~"), "rover-ws/src/rsx-rover/science_data")
+        csv_dir = os.path.join(os.path.expanduser("~"), "rover_ws/src/rsx-rover/science_data")
         if not os.path.exists(csv_dir):
             os.makedirs(csv_dir)
         
         # Create a timestamp for unique filenames
-        timestamp = rospy.Time.now().to_sec()
         timestr = time.strftime("%Y%m%d-%H%M%S")
         
         # Determine which data to save based on chemistry/FAM and site
         if self.chem:
             if self.site1:
-                data = self.ui.ph1_plot_data
+                data = self.ui.ph1_save_data  # Use saved data
                 plot_widget = self.ui.science_ph1_plot
                 data_type = "ph1"
                 title = "Site 1 pH"
             else:
-                data = self.ui.ph2_plot_data
+                data = self.ui.ph2_save_data  # Use saved data
                 plot_widget = self.ui.science_ph2_plot
                 data_type = "ph2"
                 title = "Site 2 pH"
         else:
             # FAM/Soil data (PMT)
-            data = self.ui.pmt_plot_data
+            data = self.ui.pmt_save_data  # Use saved data
             plot_widget = self.ui.science_pmt_plot
             data_type = "pmt"
-            title = "Site " + self.ui.pmt_switch + " PMT"
+            title = "Site " + str(self.ui.pmt_switch) + " PMT"
         
         # Save data to CSV if available
         if data:
@@ -2222,12 +2263,24 @@ class SampleSubBlock(QWidget):
             
             # Save graph as PNG
             png_path = os.path.join(csv_dir, f"{data_type}_graph_{timestr}.png")
-            exporter = pg.exporters.ImageExporter(plot_widget.plotItem)
+            exporter = ImageExporter(plot_widget.plotItem)
             exporter.export(png_path)
             
             print(f"{title} data saved to {csv_path}")
             print(f"{title} graph saved to {png_path}")
             
+            # Clear buffers after saving
+            if self.chem:
+                if self.site1:
+                    self.ui.ph1_data_buffer.clear()
+                    self.ui.ph1_time_buffer.clear()
+                else:
+                    self.ui.ph2_data_buffer.clear()
+                    self.ui.ph2_time_buffer.clear()
+            else:
+                self.ui.pmt_data_buffer.clear()
+                self.ui.pmt_time_buffer.clear()
+                
             # Give visual feedback - briefly change button color to green
             original_style = self.save_button.styleSheet()
             self.save_button.setStyleSheet("background-color: #00FF00; padding: 4px; min-height: 20px;")
@@ -2367,7 +2420,7 @@ class GenieControl(QWidget):
             cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
             
             # Create directory if it doesn't exist
-            pano_dir = os.path.join(os.path.expanduser("~"), "rover-ws/src/rsx-rover/science_data", "panoramas")
+            pano_dir = os.path.join(os.path.expanduser("~"), "rover_ws/src/rsx-rover/science_data", "panoramas")
             if not os.path.exists(pano_dir):
                 os.makedirs(pano_dir)
             
