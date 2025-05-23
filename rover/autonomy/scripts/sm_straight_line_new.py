@@ -47,6 +47,11 @@ class StraightLineApproachNew:
         self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
         self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
         # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        self.found_objects = {"AR1":False, 
+                   "AR2":False,
+                   "AR3":False,
+                   "OBJ1":False,
+                   "OBJ2":False}
 
         #new additions
         # self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
