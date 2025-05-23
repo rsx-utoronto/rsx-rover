@@ -14,6 +14,8 @@ class LedLight():
     def __init__(self):
       self.led_sub = rospy.Subscriber("led_light", String, self.state_callback)
       self.board = None
+      self.done_pre = False
+      self.mode = "off"
       self.init_board()
 
     def list_all_ports(self):
@@ -113,23 +115,22 @@ class LedLight():
     def state_callback(self, msg):
       mode = msg.data.strip()
       # mode = msg.data
-      print("mode",mode)
       #print(mode)
       #global res
       #mode = msg.rover_mode stm32
       if mode == 'mission done':
-        print("YES")
         res = 'green\n' # 'green' not working yet
-        off = 'off\n'
         #for i in range(3):
           #if i > 0:
             #self.board.open()
-        #x= self.board.write(bytes(res, 'utf-8')) 
-        while mode == 'mission done':  
-          x = self.board.write(bytes(res, 'utf-8'))
-          time.sleep(0.3)                       
-          x = self.board.write(bytes(off, 'utf-8'))
-          time.sleep(0.3)  
+        self.board.write(bytes(res, 'utf-8')) 
+          #board.close() #dont need a while loop because board does it automatically!
+          #time.sleep(0.3) 
+          #board.open()   
+          #board.write(bytes('off\n', 'utf-8'))
+          #board.flush() # Ensure it's sent before closing
+          #board.close()
+          #time.sleep(0.3)
         
       elif mode == 'auto': 
         res = 'red\n'
@@ -156,3 +157,4 @@ if __name__ == "__main__":
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
+    
