@@ -13,8 +13,9 @@ class ROSVideoSubscriber(QObject):
         super().__init__()
         self.bridge = CvBridge()
         self.compressed = compressed
-        msg_type = CompressedImage if compressed else Image
-        self.sub = rospy.Subscriber(topic_name, msg_type, self.callback)
+        self.msg_type = CompressedImage if compressed else Image
+        self.topic_name = topic_name
+        self.sub = rospy.Subscriber(self.topic_name, self.msg_type, self.callback)
 
     def callback(self, msg):
         try:

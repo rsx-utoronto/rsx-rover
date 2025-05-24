@@ -43,6 +43,12 @@ class RobotControlGUI(QWidget):
         self.camera_compressed = [camera['compressed'] for camera in self.camera_topics]
         self.camera_aspect_ratio = eval(config['camera_aspect_ratio'])
 
+        # Current camera topic from dropdown
+        self.current_camera_topic = 0
+
+        # Boolean to check if cameras are being streamed from
+        self.are_cameras_on = True
+
         # Initialize all of the buttons, labels, and other widgets
         self.initUI()
 
@@ -59,6 +65,21 @@ class RobotControlGUI(QWidget):
 
         # The default mode when you start the GUI is Idle
         self.mode_buttons["Idle"].click()
+
+    # Toggles the camera views from on to off, while changing colour and text
+    def toggle_cameras(self):
+        if self.are_cameras_on:
+            self.video_subscriber.unregister()
+            self.coord_view_label.clear()
+            self.coord_view_label.setText("Cameras are off. Press Camera ON!")
+            self.camera_toggle.setText("Cameras ON")
+            self.are_cameras_on = False
+            self.camera_toggle.setStyleSheet('QPushButton {background-color: #00FF00; color: #000000}')
+        else:
+            self.are_cameras_on = True
+            self.camera_toggle.setText("Cameras OFF")
+            self.on_view_selected(self.current_camera_topic)
+            self.camera_toggle.setStyleSheet('QPushButton {background-color: #FF0000; color: #FFFFFF}')
 
     def resizeEvent(self, event):
         camera_width = self.power_on.width() + self.power_off.width() + self.move_origin.width()
@@ -188,9 +209,12 @@ class RobotControlGUI(QWidget):
 
     # Switch camera feeds
     def on_view_selected(self, index):
-        self.video_subscriber.sub.unregister()
-        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[index], self.camera_compressed[index])
-        self.video_subscriber.frame_received.connect(self.update_image)
+        self.current_camera_topic = index
+        if self.are_cameras_on:
+            self.video_subscriber.sub.unregister()
+            self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[index], self.camera_compressed[index])
+            self.video_subscriber.frame_received.connect(self.update_image)
+        
 
     # Update the end effector coordinate section
     def update_end_effector_coords(self, data):
@@ -271,10 +295,22 @@ class RobotControlGUI(QWidget):
         view_group = QGroupBox("Camera View")
         view_layout = QVBoxLayout()
 
+        # Camera toggle and dropdown section
+        cam_layout = QHBoxLayout()
+
         self.camera_view_box  = QComboBox()
         camera_names = [camera['name'] for camera in self.camera_topics]
         self.camera_view_box.addItems(camera_names)
-        view_layout.addWidget(self.camera_view_box)
+        cam_layout.addWidget(self.camera_view_box)
+
+        self.camera_toggle = QPushButton("Cameras OFF")
+        self.camera_toggle.setMaximumWidth(150) 
+        self.camera_toggle.clicked.connect(self.toggle_cameras)
+        self.camera_toggle.setStyleSheet('QPushButton {background-color: #FF0000; color: #FFFFFF}')
+
+        cam_layout.addWidget(self.camera_toggle)
+
+        view_layout.addLayout(cam_layout)
 
         view_layout.addStretch(1)
         
@@ -283,7 +319,7 @@ class RobotControlGUI(QWidget):
         view_layout.addWidget(self.coord_view_label)
 
         # Initialize the ROS video subscriber
-        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[0],self.camera_compressed[0])
+        self.video_subscriber = ROSVideoSubscriber(self.camera_topic_name[self.current_camera_topic],self.camera_compressed[self.current_camera_topic])
         self.video_subscriber.frame_received.connect(self.update_image)
 
         self.camera_view_box.currentIndexChanged.connect(self.on_view_selected)
