@@ -36,11 +36,15 @@ class StraightLineApproachNew:
         self.abort_check = False
         self.x = -100000
         self.y = -100000
+        self.done_early = False
+        self.start_looking = False
         self.heading = 0
+        
         self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
         self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
         self.aruco_found = False
+        self.count=0
         self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
@@ -48,6 +52,7 @@ class StraightLineApproachNew:
         self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
         self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
         self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
+        self.done_early = rospy.Publisher("done_early", Bool, queue_size=10)
         # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.found_objects = {"AR1":False, 
                    "AR2":False,
@@ -104,20 +109,21 @@ class StraightLineApproachNew:
     
        
     def aruco_detection_callback(self, data):
-        print("in aruco detection callback")
-        time_now=time.time()
-        if abs(self.timer-time_now) >5:
-            self.timer=time_now
-            self.count=0
-        print("count,",self.count)
-        # print("sm grid search_ data.data", data.data)
-        if data.data:
-            if self.count <= 4:
-                self.count +=1
-            else:
-                self.aruco_found = data.data
-                self.found_objects[self.state] = data.data
-                self.count += 1
+        if self.start_looking:
+            print("in aruco detection callback", self.count)
+            time_now=time.time()
+            if abs(self.timer-time_now) > 5:
+                self.timer = time_now
+                self.count = 0
+            print("count,",self.count)
+            # print("sm grid search_ data.data", data.data)
+            if data.data:
+                if self.count <= 4:
+                    self.count +=1
+                else:
+                    self.aruco_found = data.data
+                    self.found_objects[self.state] = data.data
+                    self.count += 1
     
     def mallet_detection_callback(self, data):
         time_now=time.time()
@@ -163,11 +169,16 @@ class StraightLineApproachNew:
                    "OBJ2":obj}
         
         first_time=True
+        
 
         while (not rospy.is_shutdown()) and (self.abort_check is False):
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
+            
+            if abs(self.x-self.target_x) < 25 or abs(self.y-self.target_y) < 25:
+                self.start_looking=True
+                
             obj = self.mallet_found or self.waterbottle_found
             mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
@@ -226,11 +237,11 @@ class StraightLineApproachNew:
                         aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     
                     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
-                    print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
+                    #print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                 elif state == "OBJ1" or state == "OBJ2":
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
                     rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
-                    print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
+                    #print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
                 rate = rospy.Rate(10) #this code needs to be adjusted
                 
                 # Wait a bit for initial detection
@@ -265,6 +276,8 @@ class StraightLineApproachNew:
                                 print("final homing movement",abs(initial_time-time.time()) )
                                 rate.sleep()
                             twist.linear.x = 0.0
+                            msgg=True
+                            self.done_early.publish(msgg)
                             twist.angular.z = 0.0
                             pub.publish(twist)
                             return
