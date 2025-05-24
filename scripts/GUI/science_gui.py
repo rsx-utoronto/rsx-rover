@@ -903,7 +903,7 @@ class CameraFeed:
 
     def register_subscriber3(self):
         if self.image_sub3 is None:
-            self.image_sub3 = rospy.Subscriber("/microscope", Image, self.callback3)
+            self.image_sub3 = rospy.Subscriber("/microscope/compressed", CompressedImage, self.callback3)
 
     def unregister_subscriber3(self):
         if self.image_sub3:
@@ -956,7 +956,7 @@ class CameraFeed:
         # print("Microscope camera callback")
         if self.active_cameras["Microscope camera"]:
             # print("get image")
-            self.update_microscope_image(data, self.label3)
+            self.update_image(data, self.label3)
 
     def callback4(self, data):
         if self.active_cameras["Genie camera"]:
