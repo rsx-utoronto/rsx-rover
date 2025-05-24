@@ -37,6 +37,7 @@ class GS_Traversal:
         self.heading = 0
         self.state = state
         self.count = 0
+        self.timer=0
         
         self.aruco_found = False
         self.mallet_found = False
