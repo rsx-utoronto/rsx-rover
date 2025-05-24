@@ -6,12 +6,16 @@ import subprocess
 import serial.tools.list_ports
 from std_msgs.msg import String
 import rospy
+import os
+import rospkg
 
 #For Windows
 class LedLight():
     def __init__(self):
       self.led_sub = rospy.Subscriber("led_light", String, self.state_callback)
       self.board = None
+      self.done_pre = False
+      self.mode = "off"
       self.init_board()
 
     def list_all_ports(self):
@@ -57,16 +61,23 @@ class LedLight():
               return port
         
     def linux_get_led_port(self):
-        # Run the v4l2-ctl command and capture the output
-        #journalctl -k | grep -i usb
-
-        command = 'rover_ws/src/rsx-rover/scripts/utils/gen/find_usb.sh'
-
-        output = subprocess.run(['bash', command], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        # Get the output and errors from the script
-        stdout = output.stdout.decode()
-
+        # locate the find_usb.sh script in the rsx-rover package
+        rospack = rospkg.RosPack()
+        pkg_path = rospack.get_path('rover')
+        script_path = os.path.join(pkg_path, 'scripts/utils/gen/find_usb.sh')
+        if not os.path.isfile(script_path):
+            rospy.logerr(f"LED port finder script not found: {script_path}")
+            return ''
+        
+        result = subprocess.run(['bash', script_path],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                text=True)
+        if result.returncode != 0:
+            rospy.logerr(f"Error running {script_path}: {result.stderr.strip()}")
+            return ''
+        stdout = result.stdout
+        print("stdout", stdout)
         # Split the output into lines
         lines = stdout.splitlines()
         
@@ -94,13 +105,13 @@ class LedLight():
     def init_board(self):
       serial_port =  self.linux_get_led_port().strip() #only works when accessing with sudo
       print("Serial Port:", serial_port)
-      serial_port = "/dev/ttyUSB4" #Find out the seriel_port
+      # serial_port = "/dev/ttyUSB5" #Find out the serial_port
       self.board = serial.Serial(port=serial_port, baudrate=115200, timeout=1)
       rospy.sleep(2)
       self.board.write(bytes('blue\n', 'utf-8'))
       print("I'm initialized!")
       
-
+      
     def state_callback(self, msg):
       mode = msg.data.strip()
       # mode = msg.data
@@ -113,7 +124,7 @@ class LedLight():
           #if i > 0:
             #self.board.open()
         self.board.write(bytes(res, 'utf-8')) 
-          #board.close()
+          #board.close() #dont need a while loop because board does it automatically!
           #time.sleep(0.3) 
           #board.open()   
           #board.write(bytes('off\n', 'utf-8'))

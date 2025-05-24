@@ -25,6 +25,7 @@ class ObjectDetectionNode():
         else:
             self.image_topic = sm_config.get("zed_detection_image_topic") 
             self.info_topic = sm_config.get("zed_detection_info_topic")    
+            
         self.state_topic = "state"
         self.curr_state = "Start"
         t = time.time()

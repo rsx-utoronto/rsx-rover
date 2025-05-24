@@ -2,11 +2,9 @@
 
 import rospy
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseStamped
-from geometry_msgs.msg import Twist
-from std_msgs.msg import Float64MultiArray, Bool
+from geometry_msgs.msg import PoseStamped, Twist
+from std_msgs.msg import Float64MultiArray, Bool, String
 import math
-from nav_msgs.msg import Odometry
 import aruco_homing as aruco_homing
 import ar_detection_node as ar_detect
 import sm_straight_line as StraightLineApproach
@@ -19,7 +17,6 @@ file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
-
 
 # File for the grid search class. Class is initialized with linear, angular velocities, and the target location sent through
 # the state machine. When the function square_target is called, it generates grid search targets in a spiral to navigate to. When 
@@ -40,6 +37,7 @@ class GS_Traversal:
         self.heading = 0
         self.state = state
         self.count = 0
+        self.timer=0
         
         self.aruco_found = False
         self.mallet_found = False
@@ -62,6 +60,7 @@ class GS_Traversal:
         self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
         self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
         self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
+        self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
 
         # self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         
@@ -159,7 +158,6 @@ class GS_Traversal:
                    "AR3":self.aruco_found,
                    "OBJ1":obj,
                    "OBJ2":obj}
-        homing_done=False
         first_time=True
         
         # print("In move to target")
@@ -212,15 +210,20 @@ class GS_Traversal:
             else: #if mapping[state] is True --> if the object is found
                 print("mapping state is true!")
                 print("IN HOMING")
+                message="In Homing"
+                self.message_pub.publish(message)
                 # call homing
                 # should publish that it is found
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
                 if state == "AR1" or state == "AR2" or state == "AR3":
-                    aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
-                    rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+                    # this sees which camera it is using and then uses the parameters accordingly.
+                    if sm_config.get("realsense_detection"):
+                        aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+                    else: 
+                        aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     
-                    #print ("FUCK YOU")
+                    rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
                     print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                 elif state == "OBJ1" or state == "OBJ2":
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE

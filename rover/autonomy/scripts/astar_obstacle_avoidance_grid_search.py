@@ -78,6 +78,7 @@ class AstarObstacleAvoidance_GS_Traversal():
         self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
         self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
         self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")
+        self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
         
         # Map and planning variables
         self.robot_footprint=[]
@@ -677,6 +678,10 @@ class AstarObstacleAvoidance_GS_Traversal():
                 rate.sleep()
                 continue
             
+            if self.abort_check:
+                print("self.abort is true!")
+                break
+            
             obj = self.mallet_found or self.waterbottle_found
         
             mapping = {"AR1":self.aruco_found, 
@@ -770,18 +775,24 @@ class AstarObstacleAvoidance_GS_Traversal():
                         msg.angular.z = angle_diff * kp
                         if abs(msg.angular.z) < 0.3:
                             msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
-
                     self.drive_publisher.publish(msg)
                     rate.sleep()
             else:                   
                 print("mapping state is true!")
                 print("IN HOMING")
+                message="In Homing"
+                self.message_pub.publish(message)
                 # call homing
                 # should publish that it is found
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
                 if state == "AR1" or state == "AR2" or state == "AR3":
-                    aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+                    # sees which parameters we need to take.
+                    if sm_config.get("realsense_detection"):
+                        aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+                    else: 
+                        aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+                    
                     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
                    # print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                 elif state == "OBJ1" or state == "OBJ2":
@@ -861,6 +872,11 @@ class AstarObstacleAvoidance_GS_Traversal():
             
     def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
         for target_x, target_y in self.targets:
+            
+            if self.abort_check:
+                print("self.abort is true!")
+                break
+            
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
                 print(f"Object detected during navigation: {self.state}")
                 return True
@@ -871,6 +887,8 @@ class AstarObstacleAvoidance_GS_Traversal():
                 break
 
             rospy.sleep(1)
+            
+            
 
         if self.found_objects[self.state]:
             return True

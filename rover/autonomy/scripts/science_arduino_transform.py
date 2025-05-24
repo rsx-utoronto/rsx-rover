@@ -1,17 +1,19 @@
+#!/usr/bin/env python3
+
 #Class for opening the science arduino and sending messages
 import subprocess
 import serial
 import rospy
 from std_msgs.msg import String
 
-board_name = None
+board_name = "Arduino__www.arduino.cc__0042_334383935313517160E1"
 
 class ScienceArduino():
     def __init__(self, board_name):
         self.board_name = board_name
         self.port_name = self.find_port()
         self.sci_board = serial.Serial(self.port_name, baudrate=9600, timeout=1)
-        self.sci_pub = rospy.Publisher("/science_serial_data", String, queue=10)
+        self.sci_pub = rospy.Publisher("/science_serial_data", String, queue_size=10)
         self.sci_sub = rospy.Subscriber("/science_serial_control", String, self.board_write_callback)
     
     def find_port(self):
@@ -47,8 +49,14 @@ class ScienceArduino():
         self.sci_board.write(bytes(data, 'utf-8'))
     
     def board_read(self):
-        data = self.sci_board.readline().split("\n")[0] #Blocking call 
-        self.sci_pub.publish(data)
+        # Read line as bytes and decode to string first
+        raw_data = self.sci_board.readline()
+        
+        # Decode bytes to string and split to remove newline
+        if raw_data:
+            # print(raw_data)
+            data = raw_data.decode('utf-8').strip()  # strip() removes \n, \r etc.
+            self.sci_pub.publish(data)
 
 
 def main():

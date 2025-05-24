@@ -20,11 +20,13 @@ class ManualIndicator:
 
     def joy_callback(self, data):
         # print("pub manual")
-        if abs(self.init_time - time.time()) > 10:
-            msg = String()
-            msg.data = "manual"
-            self.pub.publish(msg)
-        self.init_time = time.time()
+        if data is not None:
+            # Check if the joystick is in manual mode
+            if abs(self.init_time - time.time()) > 1:
+                msg = String()
+                msg.data = "manual"
+                self.pub.publish(msg)
+            self.init_time = time.time()
         
 if __name__ == '__main__':
     try:
