@@ -502,34 +502,7 @@ class AstarObstacleAvoidance():
             transformed.append((x, y))
         return transformed
     
-### A* END
-
-    def publish_velocity(self, current_pos, next_pos):
-        """
-        Publish velocity commands to move towards the next waypoint.
-        speed will depend on how far away it is from somethin
-        """
-        velocity_msg = Twist()
-
-        # Calculate the difference in position
-        dx = next_pos[0] - current_pos[0]
-        dy = next_pos[1] - current_pos[1]
-        distance = math.sqrt(dx ** 2 + dy ** 2)
-
-        # Set a simple proportional controller for speed
-        if distance > 0.1:  # If the rover is not at the waypoint
-            # Linear velocity based on distance
-            velocity_msg.linear.x = min(0.5, distance)  # Limit max speed to 0.5 m/s
-
-            # Angular velocity to align with the direction
-            angle = math.atan2(dy, dx)
-            velocity_msg.angular.z = 2 * math.atan2(math.sin(angle), math.cos(angle))  # Basic P-controller for angular velocity
-        else:
-            velocity_msg.linear.x = 0  # Stop when the waypoint is reached
-            velocity_msg.angular.z = 0  # No rotation
-
-        self.vel_pub.publish(velocity_msg)
-   
+### A* END 
     def publish_waypoints(self, waypoints):
         # Create the Float32MultiArray message
         msg = Float32MultiArray()
@@ -562,6 +535,7 @@ class AstarObstacleAvoidance():
         path_available = False
         first_time = True
         goal = self.world_to_grid(self.goal[0][0], self.goal[0][1])
+        world_goal=(self.goal[0][0], self.goal[0][1])
         rate = rospy.Rate(50)
         threshold = 0.5  # meters  for each waypoint
         angle_threshold = 0.5  # radians for each waypoint
@@ -598,17 +572,26 @@ class AstarObstacleAvoidance():
             current_x, current_y = self.world_to_grid(self.current_position_x,self.current_position_y)
             final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
             
-            if final_goal_target_distance < threshold_goal or target_reached_flag:
+            world_final_goal_target_distance = math.sqrt(
+                     (world_goal[0] - self.current_position_x) ** 2 +
+                     (world_goal[1] - self.current_position_y) ** 2
+                 )
+            
+            # if this isn't working, try world_final_goal_distance
+            # if final_goal_target_distance < threshold_goal or target_reached_flag:
+            if world_final_goal_target_distance < threshold_goal or target_reached_flag:
                 print("final goal target distance", final_goal_target_distance)
                 target_reached_flag=True
                 msg.linear.x = 0
                 msg.angular.z = 0
                 self.drive_publisher.publish(msg)
-                break
+                print(f"Reached final target: ({target_x}, {target_y}) whithin a distance of {world_final_goal_target_distance}")
+                return
+                # break
             
             start = self.world_to_grid(self.current_position_x, self.current_position_y)
 
-            #replanning conditions
+            # replanning conditions
             
             need_replan = False
             if rospy.Time.now() - last_plan_time > replan_interval:
@@ -654,13 +637,20 @@ class AstarObstacleAvoidance():
                 gx, gy = self.current_path[0]
                 target_x, target_y = self.grid_to_world(gx, gy) #target =current waypoint only, go
                 
-                if final_goal_target_distance < threshold_goal or target_reached_flag:
+                world_final_goal_target_distance = math.sqrt(
+                     (world_goal[0] - self.current_position_x) ** 2 +
+                     (world_goal[1] - self.current_position_y) ** 2
+                 )
+                
+                # if final_goal_target_distance < threshold_goal or target_reached_flag:
+                if world_final_goal_target_distance < threshold_goal or target_reached_flag:
                     target_reached_flag = True
                     msg.linear.x = 0
                     msg.angular.z = 0
                     self.drive_publisher.publish(msg)
-                    print(f"Reached final target: ({target_x}, {target_y})")
-                    break
+                    print(f"Reached final target: ({target_x}, {target_y}) whithin a distance of {world_final_goal_target_distance}")
+                    return
+                   # break
                         
                 dx = target_x - self.current_position_x
                 dy = target_y - self.current_position_y
@@ -686,7 +676,7 @@ class AstarObstacleAvoidance():
                     if self.abort_check:
                         break
                     if target_reached_flag:
-                        break
+                        return
                     rospy.loginfo(f"Reached waypoint. Proceeding to next. There are {len(self.current_path)} waypoints left.")
                     
                     if self.abort_check:
