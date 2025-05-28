@@ -260,9 +260,10 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     sla = AstarObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                   
                 else:
-                    print("Not Doing Obstalce Avoidance")
+                  
                     #sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                     sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
+                    
                 sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 if self.glob_msg.abort_check: #Checks if abort button is pressed
                     userdata.aborted_state = list(path.items())[0][0]

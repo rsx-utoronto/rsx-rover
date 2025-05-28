@@ -17,6 +17,9 @@ Reim Notes Documentary:
 - OctoMap is one way to turn that into a map (an octree of occupied vs. free space). - OctoMap needs 3D points + ray‐casts to build its occupancy tree.
 - Octree: What it is: A data structure used to partition 3D space hierarchically. Each node in an octree can have up to 8 children, subdividing space into smaller cubes (voxels).
 - OctoMapWhat it is: A library built on octrees, designed for robotic mapping and navigation.
+
+If self.auto abort is still not working:
+print it ou† to see.
 """
 
 import rospy
@@ -52,7 +55,7 @@ with open(file_path, "r") as f:
 
 
 class AstarObstacleAvoidance():
-    def __init__(self, lin_vel = 0.3, ang_vel= 0.3, goal=(5,0)):
+    def __init__(self, lin_vel = 0.3, ang_vel= 0.3, goal=[(5,0)]):
         
         if sm_config.get("realsense_detection"):
             self.pointcloud_topic = rospy.get_param("~pointcloud_topic", sm_config.get("realsense_pointcloud"))
@@ -93,14 +96,14 @@ class AstarObstacleAvoidance():
         self.current_orientation_x=0
         self.current_orientation_y=0
         self.current_orientation_z=0
-        self.got_callback=False
+        self.got_callback=False #make this false
         self.abort_check = False
         self.heading=0
         self.current_corner_array = [
-            Point(x=2, y=2, z=0),
-            Point(x=2, y=-2, z=0),
-            Point(x=-2, y=-2, z=0), # with 0.5, it produces green blocks!
-            Point(x=-2, y=2, z=0) ]
+            Point(x=1.5, y=1.5, z=0),
+            Point(x=1.5, y=-1.5, z=0),
+            Point(x=-1.5, y=-1.5, z=0), # with 0.5, it produces green blocks!
+            Point(x=-1.5, y=1.5, z=0) ]
         self.z_min = -0.25
         self.z_max = 3
         self.yaw = 0
@@ -108,7 +111,8 @@ class AstarObstacleAvoidance():
         self.ang_vel = ang_vel
         
         # Publishers and Subscribers
-        #self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+       # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        
         self.bounding_box_pub = rospy.Publisher("/rover_bounding_box", Marker, queue_size=10)
         self.invaliid_pose_sub=rospy.Publisher('/invalid_pose_markers', Marker, queue_size=10)
         # self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
@@ -121,9 +125,9 @@ class AstarObstacleAvoidance():
         self.astar_marker_pub = rospy.Publisher('/astar_waypoints_markers', MarkerArray, queue_size=1)  # New publisher for A* markers
         self.footprint_pub = rospy.Publisher('/robot_footprint', Marker, queue_size=1)
         self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
         self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         
-
     def abort_callback(self,msg):
         self.abort_check = msg.data
 
@@ -157,6 +161,7 @@ class AstarObstacleAvoidance():
         self.occupancy_grid=grid
     
     def odom_callback(self, msg):
+       # print("in callback")
             # Extract robot's position from the Odometry message
         self.current_position_x = msg.pose.pose.position.x
         self.current_position_y = msg.pose.pose.position.y
@@ -389,8 +394,8 @@ class AstarObstacleAvoidance():
         g_score = {start: 0}
         f_score = {start: self.heuristic(start, goal)}
         closed = set()
-
-        while not open_set.empty():
+        
+        while not open_set.empty() and not self.abort_check:
             _, current = open_set.get()
           
             # Skip nodes already processed
@@ -558,45 +563,53 @@ class AstarObstacleAvoidance():
         first_time = True
         goal = self.world_to_grid(self.goal[0][0], self.goal[0][1])
         rate = rospy.Rate(50)
-        threshold = 0.5  # meters
-        threshold_goal = 1.5
-        angle_threshold = 0.5  # radians
+        threshold = 0.5  # meters  for each waypoint
+        angle_threshold = 0.5  # radians for each waypoint
+        threshold_goal = 1.5 #for final waypoint
         kp = 0.5  # Angular proportional gain
-        target_reached_flag=False
+        target_reached_flag=False #when true, stop!
        
-        stop_straight_line=False
+       #this makes sure the origin is the right origin before stating to plan
         while not self.got_callback:
             if self.abort_check:
                 print("self.abort is true!")
                 break
-            rate.sleep()
+            # rate.sleep()
         self.grid_origin=(self.current_position_x, self.current_position_y)
-       # print("grid origin", self.grid_origin)
+     
         while not rospy.is_shutdown() and not target_reached_flag and not self.abort_check:
+            print("Self abort check is ", self.abort_check)
             msg = Twist()
+            
             if self.abort_check:
                 print("self.abort is true!")
                 break
-            if self.occupancy_grid is None:
+            
+            if self.occupancy_grid is None: 
+                if self.abort_check:
+                    break
                 print("self.occupancy_grid for straught line is None")
                 rate.sleep()
                 continue
+           
+            if self.abort_check or target_reached_flag:
+                break
             
-            
-
-            current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
+            current_x, current_y = self.world_to_grid(self.current_position_x,self.current_position_y)
             final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
+            
             if final_goal_target_distance < threshold_goal or target_reached_flag:
-                
+                print("final goal target distance", final_goal_target_distance)
                 target_reached_flag=True
                 msg.linear.x = 0
                 msg.angular.z = 0
                 self.drive_publisher.publish(msg)
-                print(f"Reached target: ({target_x}, {target_y})")
                 break
             
             start = self.world_to_grid(self.current_position_x, self.current_position_y)
-           # print("start!", start)
+
+            #replanning conditions
+            
             need_replan = False
             if rospy.Time.now() - last_plan_time > replan_interval:
                 need_replan = True
@@ -604,20 +617,21 @@ class AstarObstacleAvoidance():
             if last_position:
                 dx = start[0] - last_position[0]
                 dy = start[1] - last_position[1]
-                if abs(dx) > 0.5 or abs(dy) > 0.5:
+                if abs(dx) > 6 or abs(dy) > 6:
                     need_replan = True
 
-            if (need_replan or first_time) and not target_reached_flag:
-                print("attempting to replan", need_replan, path_available)
+            if (need_replan or first_time) and not target_reached_flag and not path_available and not self.abort_check:
+                print(f"attempting to replan: need replan is {need_replan}, path available is {path_available} and target_Reached_falg is {target_reached_flag}")
                 need_replan = False
                 first_time = False
+                
+                if self.abort_check:
+                    break
                 print("doing astar", start, goal)
-                # if start[0]-goal[0]<50 and start[1]-goal[1]<50:
-                #     print("goal is close enough")
-                #     stop_straight_line=True
-                #    #break
                 
                 path = self.a_star(start, goal)
+                if self.abort_check:
+                    break
                 if path:
                     print("path found",path)
                     self.current_path = path
@@ -625,55 +639,63 @@ class AstarObstacleAvoidance():
                     path_available = True
                     self.publish_waypoints(path)
             
-            if len(self.current_path)==1:
-                path_available=False
-                print("len path is 1")
-                break
-           #if stop_straight_line:
-               #break
+            # if len(self.current_path)==1:
+            #     path_available=False
+            #     print("len path is 1")
+            #     break
+   
             # Follow waypoints
-            while path_available and self.current_path and not self.abort_check:
+            while path_available and self.current_path and not self.abort_check and not target_reached_flag:
+                print("self.abort_check in in inner loop is", self.abort_check)
                 current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
                 final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
+                
                 msg = Twist()
+                gx, gy = self.current_path[0]
+                target_x, target_y = self.grid_to_world(gx, gy) #target =current waypoint only, go
+                
                 if final_goal_target_distance < threshold_goal or target_reached_flag:
-                    target_reached_flag=True
+                    target_reached_flag = True
                     msg.linear.x = 0
                     msg.angular.z = 0
                     self.drive_publisher.publish(msg)
-                    print(f"Reached target: ({target_x}, {target_y})")
+                    print(f"Reached final target: ({target_x}, {target_y})")
                     break
-                
-                gx, gy = self.current_path[0]
-                
-                target_x, target_y = self.grid_to_world(gx, gy)        
+                        
                 dx = target_x - self.current_position_x
                 dy = target_y - self.current_position_y
                 target_distance = math.sqrt((dx) ** 2 + (dy) ** 2)
                 target_heading = math.atan2(dy, dx)
-              #  print("trying to get to target:", target_x, target_y, self.current_position_x, self.current_position_y)
+                # print("trying to get to target:", target_x, target_y, self.current_position_x, self.current_position_y)
                 
                 angle_diff = target_heading - self.heading
                 
-
                 if angle_diff > math.pi:
                     angle_diff -= 2 * math.pi
                 elif angle_diff < -math.pi:
                     angle_diff += 2 * math.pi
-                    
-                if target_distance < threshold:
+                
+                if self.abort_check:
+                    break
+                if target_distance < threshold and not target_reached_flag:
                     #print("target distance", target_distance)
                     self.current_path.pop(0)
                     msg.linear.x = 0
                     msg.angular.z = 0
                     self.drive_publisher.publish(msg)
+                    if self.abort_check:
+                        break
                     if target_reached_flag:
                         break
-                    rospy.loginfo("Reached waypoint. Proceeding to next.")
+                    rospy.loginfo(f"Reached waypoint. Proceeding to next. There are {len(self.current_path)} waypoints left.")
+                    
+                    if self.abort_check:
+                        break
+                    
                     continue
                 
                 #added this. can try to just break after..
-                if not self.current_path or len(self.current_path)==1:
+                if not self.current_path or target_reached_flag: #or len(self.current_path)==1:
                     print("All waypoints completed.")
                     target_reached_flag = True
                     break
