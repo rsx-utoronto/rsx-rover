@@ -70,7 +70,7 @@ def get_reflectance(filepath: str) -> dict:
         return d
 
 def calibrate_images(
-    bias_folder, dark_folder, flat_folder, calibration_folder, sample_folder, wavelengths, roi=None
+    bias_folder, dark_folder, flat_folder, calibration_folder, sample_folder, wavelengths, roi=None, chalk_roi=None, hematite_roi=None, magnetite_roi=None, serpentine_roi=None, chlorite_roi=None
 ):
     # loading images from folders
     bias_imgs = load_images(bias_folder)
@@ -85,8 +85,13 @@ def calibrate_images(
     flat_corr = mean_image(flat_imgs) - dark_corr
     flat_norm = flat_corr / np.mean(flat_corr)
 
-    cv2.imwrite("../genie_calibration_data/dark_corr", dark_corr)
-    cv2.imwrite("../genie_calibration_data/flat_norm", flat_norm)
+    # After computing dark_corr and flat_norm
+    output_dir = "../genie_calibration_data"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Save the calibration matrices
+    np.save(os.path.join(output_dir, "dark_correction.npy"), dark_corr)
+    np.save(os.path.join(output_dir, "flat_normalization.npy"), flat_norm)
 
     # correct calibration and sample images
     cal_corrected = (cal_imgs - dark_corr) / flat_norm
@@ -145,13 +150,18 @@ def calibrate_images(
             [chlorite_reflectance[wavelengths[i]], 1]
         ]
         A[i] = a
-    
-    B = np.transpose(B)
+        B[i] = [0] * 5
+        B[i][0] = cal_corrected[i, chalk_roi[1]:chalk_roi[3], chalk_roi[0]:chalk_roi[2]].mean()
+        B[i][1] = cal_corrected[i, hematite_roi[1]:hematite_roi[3], hematite_roi[0]:hematite_roi[2]].mean()
+        B[i][2] = cal_corrected[i, magnetite_roi[1]:magnetite_roi[3], magnetite_roi[0]:magnetite_roi[2]].mean()
+        B[i][3] = cal_corrected[i, serpentine_roi[1]:serpentine_roi[3], serpentine_roi[0]:serpentine_roi[2]].mean()
+        B[i][4] = cal_corrected[i, chlorite_roi[1]:chlorite_roi[3], chlorite_roi[0]:chlorite_roi[2]].mean()
+        B[i] = np.transpose(B[i])
 
     M = [0] * 12
     C = [0] * 12
     for i in range(12):
-        m, c = np.linalg.lstsq(A, B)
+        m, c = np.linalg.lstsq(A[i], B[i])
         M[i] = m
         C[i] = c
 
@@ -191,7 +201,12 @@ if __name__ == "__main__":
 
     # optionally, set ROI as (x1, y1, x2, y2)
     roi = (100, 100, 400, 400)
+    chalk_roi = (100, 100, 400, 400)
+    hematite_roi = (100, 100, 400, 400)
+    magnetite_roi = (100, 100, 400, 400)
+    serpentine_roi = (100, 100, 400, 400)
+    chlorite_roi = (100, 100, 400, 400)
 
     mean_reflectance = calibrate_images(
-        bias_folder, dark_folder, flat_folder, calibration_folder, sample_folder, wavelengths, roi
+        bias_folder, dark_folder, flat_folder, calibration_folder, sample_folder, wavelengths, roi, chalk_roi, hematite_roi, magnetite_roi, serpentine_roi, chlorite_roi
     )

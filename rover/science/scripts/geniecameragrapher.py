@@ -3,7 +3,7 @@ from tkinter import filedialog
 from PIL import Image, ImageTk
 import os
 import matplotlib.pyplot as plt
-import cv2
+import numpy as np
 
 class PhotoViewerApp:
     def __init__(self, root):
@@ -56,8 +56,8 @@ class PhotoViewerApp:
         self.canvas.bind("<Button-1>", self.show_greyscale_value)
 
         self.wavelength = [440, 500, 530, 570, 610, 670, 740, 780, 840, 900, 950, 1000]
-        self.flat_norm = cv2.imread("../genie_calibration_data/flat_norm")
-        self.dark_corr = cv2.imread("../genie_calibration_data/dark_corr")
+        self.dark_corr = np.load("../calibration_output/dark_correction.npy")
+        self.flat_norm = np.load("../calibration_output/flat_normalization.npy")
 
         with open("../genie_calibration_data/calibration_constants.csv", "r") as f:
             lines = f.readlines
@@ -211,9 +211,12 @@ class PhotoViewerApp:
         
         i = 0
         for photo in self.photos:
+            photo = photo
             print(self.photo_names[i])
             pixel = photo.convert("L").getpixel((x, y))  # Convert to greyscale and get the pixel value
+            pixel = float((pixel - self.dark_corr[y][x]) / self.flat_norm[y][x])  # Apply dark correction and flat normalization  
             pixel = float(pixel / self.relative_spectral_sensitivity[str(self.photo_names[i])])
+            pixel = float((pixel - self.C[str(self.wavelength[i])]) / self.M[str(self.wavelength[i])])  # Apply calibration constants
             greyscale_values.append(pixel)
             i += 1
 
