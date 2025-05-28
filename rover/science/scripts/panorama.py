@@ -24,7 +24,6 @@ class Subscriber:
             self.imgfiles.append(data)
             #cv2.imshow('image', CvBridge().imgmsg_to_cv2(data, "bgr8"))
 
-
     def save1(self):
         self.save = True
 
@@ -57,6 +56,7 @@ class Panorama:
         self.sub:Subscriber = Subscriber()
         self.pub:Publisher = Publisher()
         self.receive_control = rospy.Subscriber("/pano_control", Bool, self.callback)
+        self.pano_img = rospy.Publisher('/pano_img', Image, queue_size=100)
         self.result_pub = rospy.Publisher("/pano_result", Image, queue_size=100)
         self.stitcher = stitcher.Stitcher()
 
@@ -96,6 +96,12 @@ class Panorama:
                 ros_image = bridge.cv2_to_imgmsg(stitched_image, "bgr8")
                 # Publish the ROS Image message
                 self.result_pub.publish(ros_image)
+
+                # Publish the panorama images as ROS Images
+                for img in self.sub.imgfiles:
+                    ros_image = bridge.cv2_to_imgmsg(img, "bgr8")
+                    self.pano_img.publish(ros_image)
+
             except CvBridgeError as e:
                 print(e)
                 

@@ -887,6 +887,12 @@ class CameraFeed:
 
         self.exposure_value = 50
 
+        self.label1.hide()
+        self.label2.hide()
+        self.label3.hide()
+        self.label4.hide()
+        self.label5.hide()
+
     def register_subscriber1(self):
         if self.image_sub1 is None:
             self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color/compressed", CompressedImage, self.callback1)
@@ -1213,6 +1219,45 @@ class RoverGUI(QMainWindow):
         
         self.statusSignal.connect(self.string_signal_receive)
         self.probeUpdateSignal.connect(self.update_science_plot)
+
+    def pano_individual_callback(self, msg):
+        try:
+            # Create bridge to convert ROS Image to OpenCV image
+            bridge = CvBridge()
+            cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+            
+            # Create directory if it doesn't exist
+            """Save the current genie camera image"""
+            if self.pano_site1 and self.pano_site2:
+                site = "Site_3"
+            elif self.pano_site1:
+                site = "Site_1"
+            elif self.pano_site2:
+                site = "Site_2"
+            else:
+                site = "Site_0"
+
+            pano_dir = os.path.join(os.path.expanduser("~"), "rover_ws/src/rsx-rover/science_data", "panoramas_individual")
+            if not os.path.exists(pano_dir):
+                os.makedirs(pano_dir)
+            
+            # Create a timestamp for a unique filename
+            timestr = time.strftime("%Y%m%d-%H%M%S")
+            filename = os.path.join(pano_dir, f"panorama_{site}_{timestr}.png")
+            
+            # Save the image
+            cv2.imwrite(filename, cv_image)
+            
+            # Notify user
+            print(f"Panoramas saved to {filename}")
+            
+        except Exception as e:
+            print(f"Error saving panoramas: {e}")
+            # Flash the button red to indicate failure
+            original_style = self.take_pano_button.styleSheet()
+            self.take_pano_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
+            QTimer.singleShot(1000, lambda: self.take_pano_button.setStyleSheet(original_style))
+
 
     def string_callback(self, msg):
         self.statusTerminal.string_callback(msg)
@@ -1632,10 +1677,10 @@ class RoverGUI(QMainWindow):
             self.genieControl.show_pano_button(True)
         else:
             self.genieControl.show_pano_button(False)
-        if active_cameras["Genie camera"]:
-            self.genieControl.show_save_genie_button(True)
-        else:
-            self.genieControl.show_save_genie_button(False)
+        # if active_cameras["Genie camera"]:
+        #     self.genieControl.show_save_genie_button(True)
+        # else:
+        #     self.genieControl.show_save_genie_button(False)
 
     def on_checkbox_state_changed(self, state,map_overlay):
         if state == Qt.Checked:
@@ -2380,12 +2425,34 @@ class GenieControl(QWidget):
         microscope_widget = QWidget()
         microscope_widget.setLayout(microscope_layout)
         microscope_widget.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+
+        self.site1checkbox = QCheckBox("Site 1")
+        self.site2checkbox = QCheckBox("Site 2")
+        self.site1checkbox.setChecked(False)
+        self.site2checkbox.setChecked(False)
+        self.genie_site1 = False
+        self.genie_site2 = False
+
+        self.pano_site1 = False
+        self.pano_site2 = False
+        self.site1checkbox.stateChanged.connect(self.site1checkbox_changed)
+        self.site2checkbox.stateChanged.connect(self.site2checkbox_changed)
         
         # Add stretch FIRST to push buttons to the right
         button_layout.addStretch(1)
 
+        self.wavelength_display = QLabel("Wavelength: None")
+        self.wavelengths = [None, 440, 500, 530, 570, 610, 670, 740, 780, 840, 900, 950, 1000]
+        self.curr_l = None
+        self.curr_l_count = 0
+
         # Add buttons to the row layout (now they'll be right-aligned)
         button_layout.addWidget(self.take_pano_button)
+        # button_layout.addWidget(QLabel("Site 1"))
+        button_layout.addWidget(self.site1checkbox)
+        # button_layout.addWidget(QLabel("Site 2"))
+        button_layout.addWidget(self.site2checkbox)
+        button_layout.addWidget(self.wavelength_display)
         button_layout.addWidget(self.toggle_genie_button)
         button_layout.addWidget(self.save_genie_button)  # Add new button
         button_layout.addWidget(self.micro_slider_splitter)
@@ -2401,13 +2468,35 @@ class GenieControl(QWidget):
 
         self.pano_control = rospy.Publisher('/pano_control', Bool, queue_size=10)
         self.pano_result = rospy.Subscriber('/pano_result', Image, self.pano_callback)
+        self.pano_img = rospy.Subscriber('/pano_img', Image, self.pano_individual_callback)
+        self.get_genie_pub = rospy.Publisher('/save_genie_image', String, queue_size=10)
         
         self.feed = ui.camera_feed
 
         self.show_pano_button(False)
         # self.show_genie_button(False)
         self.show_zoom_controls(False)
-        self.show_save_genie_button(False)  # Initially hide save button
+        self.show_save_genie_button(True)  # Initially hide save button
+
+    def site1checkbox_changed(self, state):
+        if state == Qt.Checked:
+            self.genie_site1 = True
+            self.site1 = True
+            print("Site 1 selected")
+        else:
+            self.genie_site1 = False
+            self.pano_site1 = False
+            print("Site 1 deselected")
+    
+    def site2checkbox_changed(self, state):
+        if state == Qt.Checked:
+            self.genie_site2 = True
+            self.pano_site2 = True
+            print("Site 2 selected")
+        else:
+            self.genie_site2 = False
+            self.pano_site2 = False
+            print("Site 2 deselected")
 
     def show_pano_button(self, show=True):
         """Show or hide the panorama button"""
@@ -2431,12 +2520,25 @@ class GenieControl(QWidget):
         # Implement the logic to take a panorama
         print("Taking panorama...")
         self.pano_control.publish(True)
+
+    def toggle_genie_lambda(self):
+        self.toggle_genie_button.setStyleSheet(self.genie_button_style)
+        self.curr_l_count += 1
+        if self.curr_l_count >= len(self.wavelengths):
+            self.curr_l_count = 0
+        self.curr_l = self.wavelengths[self.curr_l_count]
+        self.wavelength_display.setText("Wavelength: " + str(self.curr_l) + "nm" if self.curr_l is not None else "Wavelength: None")
+        self.toggle_genie_button.setEnabled(True)
     
     def toggle_genie(self):
         # Implement the logic to toggle the genie lens
         self.ui.science_serial_controller.publish("<M>")
         print("Toggling genie filter...")
-    
+        self.genie_button_style = self.toggle_genie_button.styleSheet()
+        self.toggle_genie_button.setEnabled(False)
+        self.toggle_genie_button.setStyleSheet("background-color: #00FF00; padding: 4px; min-height: 20px;")
+        QTimer.singleShot(5000, self.toggle_genie_lambda)
+
     def zoom_in_microscope(self):
         # Implement the logic to zoom in on the microscope
         self.ui.science_serial_controller.publish("<I," + str(self.zoom_mag) + ">")
@@ -2469,13 +2571,8 @@ class GenieControl(QWidget):
             # Save the image
             cv2.imwrite(filename, cv_image)
             
-            # Notify user
+            # Notify users
             print(f"Panorama saved to {filename}")
-            
-            # Flash the button to indicate successful save
-            original_style = self.take_pano_button.styleSheet()
-            self.take_pano_button.setStyleSheet("background-color: #00FF00; padding: 4px; min-height: 20px;")
-            QTimer.singleShot(1000, lambda: self.take_pano_button.setStyleSheet(original_style))
             
         except Exception as e:
             print(f"Error saving panorama: {e}")
@@ -2486,46 +2583,17 @@ class GenieControl(QWidget):
 
     def save_genie_image(self):
         """Save the current genie camera image"""
-        if self.feed.last_genie_image is None:
-            print("No genie image available to save")
-            # Flash the button red to indicate failure
-            original_style = self.save_genie_button.styleSheet()
-            self.save_genie_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
-            QTimer.singleShot(1000, lambda: self.save_genie_button.setStyleSheet(original_style))
-            return
-        
-        try:
-            # Create bridge to convert ROS Image to OpenCV image
-            bridge = CvBridge()
-            cv_image = bridge.imgmsg_to_cv2(self.feed.last_genie_image, desired_encoding="passthrough")
-            
-            # Create directory if it doesn't exist
-            images_dir = os.path.join(os.path.expanduser("~"), "rover_ws/src/rsx-rover/science_data", "genie_images")
-            if not os.path.exists(images_dir):
-                os.makedirs(images_dir)
-            
-            # Create a timestamp for a unique filename
-            timestr = time.strftime("%Y%m%d-%H%M%S")
-            filename = os.path.join(images_dir, f"genie_image_{timestr}.png")
-            
-            # Save the image
-            cv2.imwrite(filename, cv_image)
-            
-            # Notify user
-            print(f"Genie image saved to {filename}")
-            
-            # Flash the button to indicate successful save
-            original_style = self.save_genie_button.styleSheet()
-            self.save_genie_button.setStyleSheet("background-color: #00FF00; padding: 4px; min-height: 20px;")
-            QTimer.singleShot(1000, lambda: self.save_genie_button.setStyleSheet(original_style))
-            
-        except Exception as e:
-            print(f"Error saving genie image: {e}")
-            # Flash the button red to indicate failure
-            original_style = self.save_genie_button.styleSheet()
-            self.save_genie_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
-            QTimer.singleShot(1000, lambda: self.save_genie_button.setStyleSheet(original_style))
-    
+        if self.genie_site1 and self.genie_site2:
+            site = "Site_3"
+        elif self.genie_site1:
+            site = "Site_1"
+        elif self.genie_site2:
+            site = "Site_2"
+        else:
+            site = "Site_0"
+        self.get_genie_pub.publish(site + "," + (str(self.curr_l) + "nm" if self.curr_l is not None else "None"))
+        print("Saving genie image...")
+
     # def genie_image_callback(self, msg):
     #     """Store the latest genie camera image"""
     #     self.last_genie_image = msg

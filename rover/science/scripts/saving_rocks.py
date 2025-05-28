@@ -7,6 +7,7 @@ import cv2
 from sensor_msgs.msg import Image
 from std_msgs.msg import Bool
 from cv_bridge import CvBridge
+import subprocess
 
 class CameraStoring:
     def __init__(self):
@@ -15,8 +16,40 @@ class CameraStoring:
         self.image = None
         self.bridge= CvBridge()
 
+        self.board_name = "Arduino__www.arduino.cc__0042_334383935313517160E1"
+        self.port = self.find_port()
+
         self.camera_sub = rospy.Subscriber('geniecam', Image, callback = self.img_callback)
         self.GUI_sub = rospy.Subscriber('need_rocks', Bool, callback = self.starting_callback)
+    
+    def find_port(self):
+        command = 'rover_ws/src/rsx-rover/scripts/utils/gen/find_usb.sh'
+
+        output = subprocess.run(['bash', command], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # Get the output and errors from the script
+        stdout = output.stdout.decode()
+
+        # Split the output into lines
+        lines = stdout.splitlines()
+        
+        sci_port = ''
+        found_sci_port = False
+
+        for line in lines:
+            # Check for the USB camera device header
+            if self.board_name in line:
+              found_sci_port = True
+            
+            # If we are in the USB camera section, look for the device path
+            if found_sci_port:
+                if line.strip():  # If the line is not empty
+                    line_parsed = line.split(' ')
+                    sci_port = line_parsed[0]
+                    break  # Stop after getting the first device path
+
+        return sci_port
+
 
     # recieves a signal to start recording the camera data 
     def starting_callback(self, gui_data):
@@ -62,7 +95,8 @@ class CameraStoring:
                 arduino_port = p.description[0]
             else:
                 rospy.loginfo("Arduino port not found")'''
-        arduino_port = '/dev/ttyUSB0'
+        # arduino_port = '/dev/ttyUSB0'
+        arduino_port = self.port
                 
 
         baud_rate = 9600  # Must match the Arduino baud rate
@@ -74,7 +108,7 @@ class CameraStoring:
         rate = rospy.Rate(0.2)
         while not rospy.is_shutdown():
             
-            if True or self.start:
+            if self.start:
                 # create a folder, then store the images in this folder 1 time. then 
                 print("hi")
                 #while 
@@ -99,13 +133,13 @@ class CameraStoring:
                         cv2.imwrite(img_path, self.image)
                         rospy.loginfo(f"image saved")
 
-                        ser.write(b'M')  # Sending character 'M'
+                        ser.write(b'<M>')  # Sending character 'M'
                         rospy.loginfo("Sent signal: M") 
 
                     else:
                         # if there is no image saved (basically an error)
                         rospy.loginfo("waiting")
-                    serial_read = ser.read()
+                    # serial_read = ser.read()
                     '''while serial_read != b'S':
                         rospy.loginfo("waiting for next filter")
                         # serial_read = ser.read()

@@ -22,7 +22,7 @@ class WebcamNode:
         # Parameters
         self.compression_quality = rospy.get_param("~compression_quality", 50)  # JPEG quality 0-100
         self.scale_factor = rospy.get_param("~scale_factor", 0.5)  # Scale resolution by this factor
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(2)
         
         # Publishers
         self.pub_compressed = rospy.Publisher("/webcam/compressed", CompressedImage, queue_size=2)
