@@ -648,7 +648,7 @@ class AstarObstacleAvoidance_GS_Traversal():
         last_position = (0, 0)
         self.current_path = []
         last_plan_time = rospy.Time.now()
-        replan_interval = rospy.Duration(1.0)
+        replan_interval = rospy.Duration(4)
         path_available = False
         first_time = True
         goal = self.world_to_grid(target_x, target_y)
@@ -668,12 +668,17 @@ class AstarObstacleAvoidance_GS_Traversal():
                    "OBJ2":obj}
         
         while not self.got_callback: #wait to get proper origin
-            rate.sleep()
+            # rate.sleep()
+            if self.abort_check:
+                break
         self.grid_origin=(self.current_position_x, self.current_position_y)
 
-        while not rospy.is_shutdown() and not target_reached_flag:
+        while not rospy.is_shutdown() and not target_reached_flag and self.abort_check is False:
             msg=Twist()
+            
             if self.occupancy_grid is None:
+                if self.abort_check:
+                    break
                 print("self.occupancy_grid for grid search is None")
                 rate.sleep()
                 continue
@@ -691,7 +696,7 @@ class AstarObstacleAvoidance_GS_Traversal():
                     "OBJ2":obj}
             
             #stop if target reached
-            current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
+            current_x, current_y = self.world_to_grid(self.current_position_x,self.current_position_y)
             final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
             if final_goal_target_distance < threshold_goal or target_reached_flag: 
                 target_reached_flag=True
@@ -701,27 +706,32 @@ class AstarObstacleAvoidance_GS_Traversal():
                 print(f"Reached target: ({target_x}, {target_y})")
                 break
             print("in astar for grid search and here is mapping.state ", mapping[self.state])
-            if mapping[self.state] is False or mapping[self.state] is None: #while not detected
+            if mapping[self.state] is False or mapping[self.state] is None and not self.abort_check: #while not detected
                 # normal operations
                 if target_x is None or target_y is None or self.current_position_x is None or self.current_position_y is None:
                     continue   
                  
                 start = self.world_to_grid(self.current_position_x, self.current_position_y)
                 need_replan = False
-                if rospy.Time.now() - last_plan_time > replan_interval:
+                
+                if abs(rospy.Time.now() - last_plan_time) > replan_interval:
                     need_replan = True
 
                 if last_position:
                     dx = start[0] - last_position[0]
                     dy = start[1] - last_position[1]
-                    if abs(dx) > 0.5 or abs(dy) > 0.5:
+                    if abs(dx) > 5 or abs(dy) > 5:
                         need_replan = True
 
-                if need_replan or first_time:
+                if need_replan or first_time and not self.abort_check:
                     print("attempting to replan", need_replan, path_available)
                     need_replan = False
                     first_time = False
+                    if self.abort_check:
+                        break
                     path = self.a_star(start, goal)
+                    if self.abort_check:
+                        break
                     if path:
                         print("path found",path)
                         self.current_path = path
@@ -729,6 +739,8 @@ class AstarObstacleAvoidance_GS_Traversal():
                         path_available = True
                         self.publish_waypoints(path)
                         
+                if self.abort_check:
+                    break
                 # Follow waypoints
                 while path_available and self.current_path and not self.abort_check:
                     
@@ -777,7 +789,9 @@ class AstarObstacleAvoidance_GS_Traversal():
                             msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
                     self.drive_publisher.publish(msg)
                     rate.sleep()
-            else:                   
+            else:      
+                if self.abort_check:
+                    break             
                 print("mapping state is true!")
                 print("IN HOMING")
                 message="In Homing"
