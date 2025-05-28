@@ -125,9 +125,9 @@ class AstarObstacleAvoidance():
         self.astar_marker_pub = rospy.Publisher('/astar_waypoints_markers', MarkerArray, queue_size=1)  # New publisher for A* markers
         self.footprint_pub = rospy.Publisher('/robot_footprint', Marker, queue_size=1)
         self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
         self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         
-
     def abort_callback(self,msg):
         self.abort_check = msg.data
 
