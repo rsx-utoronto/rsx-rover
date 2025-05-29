@@ -110,7 +110,7 @@ class Panorama:
     def callback(self, data):
         if data.data:
             print('Received control')
-            self.start(10)
+            self.start(15)
 
 def main():
     rospy.init_node('panorama')

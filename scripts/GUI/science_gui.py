@@ -904,7 +904,7 @@ class CameraFeed:
 
     def register_subscriber2(self):
         if self.image_sub2 is None:
-            self.image_sub2 = rospy.Subscriber("/camera/color/image_raw/compressed", CompressedImage, self.callback2)
+            self.image_sub2 = rospy.Subscriber("/camera2/camera/color/image_raw/compressed", CompressedImage, self.callback2)
 
     def unregister_subscriber2(self):
         if self.image_sub2:
@@ -1219,44 +1219,6 @@ class RoverGUI(QMainWindow):
         
         self.statusSignal.connect(self.string_signal_receive)
         self.probeUpdateSignal.connect(self.update_science_plot)
-
-    def pano_individual_callback(self, msg):
-        try:
-            # Create bridge to convert ROS Image to OpenCV image
-            bridge = CvBridge()
-            cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
-            
-            # Create directory if it doesn't exist
-            """Save the current genie camera image"""
-            if self.pano_site1 and self.pano_site2:
-                site = "Site_3"
-            elif self.pano_site1:
-                site = "Site_1"
-            elif self.pano_site2:
-                site = "Site_2"
-            else:
-                site = "Site_0"
-
-            pano_dir = os.path.join(os.path.expanduser("~"), "rover_ws/src/rsx-rover/science_data", "panoramas_individual")
-            if not os.path.exists(pano_dir):
-                os.makedirs(pano_dir)
-            
-            # Create a timestamp for a unique filename
-            timestr = time.strftime("%Y%m%d-%H%M%S")
-            filename = os.path.join(pano_dir, f"panorama_{site}_{timestr}.png")
-            
-            # Save the image
-            cv2.imwrite(filename, cv_image)
-            
-            # Notify user
-            print(f"Panoramas saved to {filename}")
-            
-        except Exception as e:
-            print(f"Error saving panoramas: {e}")
-            # Flash the button red to indicate failure
-            original_style = self.take_pano_button.styleSheet()
-            self.take_pano_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
-            QTimer.singleShot(1000, lambda: self.take_pano_button.setStyleSheet(original_style))
 
 
     def string_callback(self, msg):
@@ -2580,6 +2542,45 @@ class GenieControl(QWidget):
             original_style = self.take_pano_button.styleSheet()
             self.take_pano_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
             QTimer.singleShot(1000, lambda: self.take_pano_button.setStyleSheet(original_style))
+    
+    def pano_individual_callback(self, msg):
+        try:
+            # Create bridge to convert ROS Image to OpenCV image
+            bridge = CvBridge()
+            cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+            
+            # Create directory if it doesn't exist
+            """Save the current genie camera image"""
+            if self.pano_site1 and self.pano_site2:
+                site = "Site_3"
+            elif self.pano_site1:
+                site = "Site_1"
+            elif self.pano_site2:
+                site = "Site_2"
+            else:
+                site = "Site_0"
+
+            pano_dir = os.path.join(os.path.expanduser("~"), "rover_ws/src/rsx-rover/science_data", "panoramas_individual")
+            if not os.path.exists(pano_dir):
+                os.makedirs(pano_dir)
+            
+            # Create a timestamp for a unique filename
+            timestr = time.strftime("%Y%m%d-%H%M%S")
+            filename = os.path.join(pano_dir, f"panorama_{site}_{timestr}.png")
+            
+            # Save the image
+            cv2.imwrite(filename, cv_image)
+            
+            # Notify user
+            print(f"Panoramas saved to {filename}")
+            
+        except Exception as e:
+            print(f"Error saving panoramas: {e}")
+            # Flash the button red to indicate failure
+            original_style = self.take_pano_button.styleSheet()
+            self.take_pano_button.setStyleSheet("background-color: #FF0000; padding: 4px; min-height: 20px;")
+            QTimer.singleShot(1000, lambda: self.take_pano_button.setStyleSheet(original_style))
+
 
     def save_genie_image(self):
         """Save the current genie camera image"""
