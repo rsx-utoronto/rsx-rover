@@ -3,6 +3,7 @@ from tkinter import filedialog
 from PIL import Image, ImageTk
 import os
 import matplotlib.pyplot as plt
+import cv2
 
 class PhotoViewerApp:
     def __init__(self, root):
@@ -12,14 +13,30 @@ class PhotoViewerApp:
         
         self.folder_path = None
         self.photos = []
+        self.photo_names = []
         self.current_photo_idx = 0
         
+        self.relative_spectral_sensitivity = {
+            "440": 0.78,
+            "500": 0.97,
+            "530": 1.0,
+            "570": 0.96,
+            "610": 0.9,
+            "670": 0.76,
+            "740": 0.58,
+            "780": 0.44,
+            "840": 0.31,
+            "900": 0.18,
+            "950": 0.1,
+            "1000": 0.05
+        }
+
         # Create the open folder button
         self.open_button = tk.Button(self.root, text="Open Folder", command=self.open_folder)
         self.open_button.pack()
         
-        # Canvas to display the main image
-        self.canvas = tk.Canvas(self.root, width=500, height=400)
+        # Canvas to display the main image - increase size
+        self.canvas = tk.Canvas(self.root, width=700, height=500)
         self.canvas.pack(pady=10)
         
         # Label to display mouse coordinates on the main image
@@ -37,6 +54,45 @@ class PhotoViewerApp:
         # Bind the canvas mouse movement to display coordinates
         self.canvas.bind("<Motion>", self.show_coordinates)
         self.canvas.bind("<Button-1>", self.show_greyscale_value)
+
+        self.wavelength = [440, 500, 530, 570, 610, 670, 740, 780, 840, 900, 950, 1000]
+        self.flat_norm = cv2.imread("../genie_calibration_data/flat_norm")
+        self.dark_corr = cv2.imread("../genie_calibration_data/dark_corr")
+
+        with open("../genie_calibration_data/calibration_constants.csv", "r") as f:
+            lines = f.readlines
+            self.M = {
+                "440": 0.78,
+                "500": 0.97,
+                "530": 1.0,
+                "570": 0.96,
+                "610": 0.9,
+                "670": 0.76,
+                "740": 0.58,
+                "780": 0.44,
+                "840": 0.31,
+                "900": 0.18,
+                "950": 0.1,
+                "1000": 0.05
+            }
+            self.C = {
+                "440": 0.78,
+                "500": 0.97,
+                "530": 1.0,
+                "570": 0.96,
+                "610": 0.9,
+                "670": 0.76,
+                "740": 0.58,
+                "780": 0.44,
+                "840": 0.31,
+                "900": 0.18,
+                "950": 0.1,
+                "1000": 0.05
+            }
+            for line in lines:
+                l = line.split(",")
+                self.M[l[0]] = float(l[1])
+                self.C[l[0]] = float(l[2])
         
     def open_folder(self):
         """Open the folder and load 12 photos."""
@@ -55,6 +111,7 @@ class PhotoViewerApp:
                 img_path = os.path.join(self.folder_path, filename)
                 img = Image.open(img_path)
                 self.photos.append(img)
+                self.photo_names.append(int(filename.split('.')[0].split("_")[2].split("nm")[0]))  # Store the name without extension
 
         # Ensure there are exactly 12 photos
         if len(self.photos) != 12:
@@ -62,12 +119,44 @@ class PhotoViewerApp:
             self.folder_path = None
             return
 
+        temp = self.photos[0]
+        temp_name = self.photo_names[0]
+        self.photos[0:11] = self.photos[1:12] 
+        self.photos[11] = temp
+        self.photo_names[0:11] = self.photo_names[1:12]
+        self.photo_names[11] = temp_name
+
     def display_photo(self):
-        """Display the current main photo on the canvas."""
+        """Display the current main photo on the canvas, resized to fit the canvas."""
         photo = self.photos[self.current_photo_idx]
-        self.main_photo = ImageTk.PhotoImage(photo)
         
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.main_photo)
+        # Get canvas dimensions
+        canvas_width = self.canvas.winfo_width() or 700  # Default if not yet rendered
+        canvas_height = self.canvas.winfo_height() or 500
+        
+        # Calculate resize ratio while preserving aspect ratio
+        img_width, img_height = photo.size
+        width_ratio = canvas_width / img_width
+        height_ratio = canvas_height / img_height
+        ratio = min(width_ratio, height_ratio)
+        
+        # Resize image to fit canvas
+        new_width = int(img_width * ratio)
+        new_height = int(img_height * ratio)
+        resized_photo = photo.resize((new_width, new_height), Image.LANCZOS)
+        
+        self.main_photo = ImageTk.PhotoImage(resized_photo)
+        
+        # Clear previous image and center the new one
+        self.canvas.delete("all")
+        x_center = (canvas_width - new_width) // 2
+        y_center = (canvas_height - new_height) // 2
+        self.canvas.create_image(x_center, y_center, anchor=tk.NW, image=self.main_photo)
+        
+        # Store original and resized dimensions for coordinate mapping
+        self.original_dims = (img_width, img_height)
+        self.resized_dims = (new_width, new_height)
+        self.img_offset = (x_center, y_center)
     
     def display_thumbnails(self):
         """Display smaller versions of each photo below the main photo with numbers."""
@@ -75,7 +164,7 @@ class PhotoViewerApp:
             widget.destroy()
 
         for i, photo in enumerate(self.photos):
-            thumb = photo.resize((50, 50), Image.ANTIALIAS)
+            thumb = photo.resize((50, 50), Image.LANCZOS)
             thumb_photo = ImageTk.PhotoImage(thumb)
             
             # Create a button for the thumbnail
@@ -120,9 +209,13 @@ class PhotoViewerApp:
         x, y = event.x, event.y
         greyscale_values = []
         
+        i = 0
         for photo in self.photos:
+            print(self.photo_names[i])
             pixel = photo.convert("L").getpixel((x, y))  # Convert to greyscale and get the pixel value
+            pixel = float(pixel / self.relative_spectral_sensitivity[str(self.photo_names[i])])
             greyscale_values.append(pixel)
+            i += 1
 
         # Plot the greyscale values for the 12 images
         self.plot_greyscale_values(greyscale_values)
@@ -130,7 +223,7 @@ class PhotoViewerApp:
     def plot_greyscale_values(self, greyscale_values):
         """Plot the greyscale values on a line plot with fixed y-axis range."""
         plt.figure(figsize=(10, 6))
-        plt.plot(range(1, 13), greyscale_values, marker='o', linestyle='-', color='b')
+        plt.plot(self.photo_names, greyscale_values, marker='o', linestyle='-', color='b')
 
         # Set fixed y-axis limits
         plt.ylim(0, 255)
@@ -141,7 +234,7 @@ class PhotoViewerApp:
         plt.ylabel("Greyscale Value (0-255)", fontsize=12)
         
         # Set x-ticks and y-ticks with labels
-        plt.xticks(range(1, 13), [f"{i}" for i in range(1, 13)], rotation=45)
+        plt.xticks(self.wavelength, ["440", "500", "530", "570", "610", "670", "740", "780", "840", "900", "950", "1000"], rotation=45)
         plt.yticks(range(0, 256, 51), [str(i) for i in range(0, 256, 51)])
         
         plt.grid(True)
