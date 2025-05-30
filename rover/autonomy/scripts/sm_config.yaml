@@ -21,6 +21,7 @@ straight_line_obstacle_ang_vel: 0.3
 AR_grid_search_w: 40
 AR_grid_search_h: 40
 AR_grid_search_tol: 4
+# if we're using realsense, change this to 2
 
 AR_grid_search_obstacle_avoidance_w: 40
 AR_grid_search_obstacle_avoidance_h: 40
@@ -29,6 +30,7 @@ AR_grid_search_obstacle_avoidance_tol: 2
 OBJ_grid_search_w: 20
 OBJ_grid_search_h: 20
 OBJ_grid_search_tol: 2
+# don't change this unless it's realsense
 
 GS_Traversal_lin_vel: 2.5
 GS_Traversal_ang_vel: 0.3

@@ -14,7 +14,7 @@ class PicSaver:
         self.num_photos = 25 # TODO: change to predetermined number of photos!
         self.save_path = os.path.join(os.path.dirname(__file__), "../genie_calibration_data")
         self.save_path = os.path.abspath(self.save_path)  # Ensure absolute path
-        self.save_path = os.path.join(self.save_path, "dark") # change to desired save path
+        self.save_path = os.path.join(self.save_path, "flat") # change to desired save path
         os.makedirs(self.save_path, exist_ok=True)
 
     def pic_sub_callback(self, msg):
