@@ -95,7 +95,7 @@ class GLOB_MSGS:
         self.gui_loc = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray, self.coord_callback) 
         self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
         self.next_state_sub = rospy.Subscriber("/next_state", Bool, self.next_task_callback)
-        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.drive_pub= rospy.Publisher('/drive', Twist, queue_size=10)
         self.next_task_check = False
         self.abort_check = False
         self.locations = None
@@ -260,13 +260,13 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 if userdata.prev_loc=='AR1' or  userdata.prev_loc=='AR2' or  userdata.prev_loc=='AR3':
                     twist=Twist()
                     initial_time=time.time()
-                    while abs(initial_time-time.time()) < 1.0:
+                    while abs(initial_time-time.time()) < 5:
                         twist.linear.x = -1.0
-                        self.drive_pub.publish(twist)
-                        self.drive_sleep.sleep()
+                        self.glob_msg.drive_pub.publish(twist)
+                        self.glob_msg.drive_sleep.sleep()
                     
                     twist.linear.x=0
-                    self.drive_pub.publish(twist)
+                    self.glob_msg.drive_pub.publish(twist)
                     
                 if target_name == "AR3" or target_name == 'OBJ2' or userdata.prev_loc =='AR3' or userdata.prev_loc =='OBJ2':
                     print("doing obstacle_avoidance in straight line")
