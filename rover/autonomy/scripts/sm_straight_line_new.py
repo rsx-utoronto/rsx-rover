@@ -176,7 +176,7 @@ class StraightLineApproachNew:
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
             
-            if abs(self.x-self.target_x) < 25 or abs(self.y-self.target_y) < 25:
+            if abs(self.x-target_x) < 25 or abs(self.y-target_y) < 25:
                 self.start_looking=True
                 
             obj = self.mallet_found or self.waterbottle_found
