@@ -268,7 +268,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     twist.linear.x=0
                     self.glob_msg.drive_pub.publish(twist)
                     
-                if target_name == "AR3" or target_name == 'OBJ2' or userdata.prev_loc =='AR3' or userdata.prev_loc =='OBJ2':
+                if target_name == "OBJ1" or target_name == 'OBJ2' or userdata.prev_loc =='OBJ1' or userdata.prev_loc =='OBJ2':
                     print("doing obstacle_avoidance in straight line")
                     sla = AstarObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                   
