@@ -839,10 +839,15 @@ class ResizableLabel(QLabel):
 
 
 class CameraFeed:
-    def __init__(self, label1, label2, label3, label4, splitter):
+    def __init__(self, label1, label2, label3, label5, splitter):
+        self.last_genie_image = None
+        self.active_cameras = {"Zed (front) camera": False, "Butt camera": False, "Microscope camera": False, "Genie camera": False, "Webcam": False}
         self.bridge = CvBridge()
         self.image_sub1 = None
         self.image_sub2 = None
+        self.image_sub3 = None
+        self.image_sub4 = None
+        self.image_sub5 = None
         self.state_sub = rospy.Subscriber("state", String, self.state_callback)
 
         self.obj_bbox = rospy.Subscriber("object/bbox", Float64MultiArray, self.bbox_callback)
@@ -850,23 +855,21 @@ class CameraFeed:
 
         self.label1 = label1
         self.label2 = label2
-        self.label3 = label3  # Keep these for now to avoid breaking layout
-        self.label4 = label4  # Keep these for now to avoid breaking layout
+        self.label3 = label3
+        self.label5 = label5
         self.splitter = splitter
 
         # Set size policies correctly
         self.label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label3.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.label4.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.label5.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label1.setMinimumSize(300, 200)
         self.label2.setMinimumSize(300, 200)
         self.label3.setMinimumSize(300, 200)
-        self.label4.setMinimumSize(300, 200)
+        self.label5.setMinimumSize(300, 200)
         self.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        # Remove the microscope and genie from active cameras
-        self.active_cameras = {"Zed (front) camera": False, "Butt camera": False}
         self.bbox = None  
 
         self.bbox_timer = QTimer()
@@ -875,6 +878,11 @@ class CameraFeed:
         self.bbox_timer.setSingleShot(True)
 
         self.exposure_value = 50
+
+        self.label1.hide()
+        self.label2.hide()
+        self.label3.hide()
+        self.label5.hide()
 
     def register_subscriber1(self):
         if self.image_sub1 is None:
@@ -893,6 +901,24 @@ class CameraFeed:
         if self.image_sub2:
             self.image_sub2.unregister()
             self.image_sub2 = None
+
+    def register_subscriber3(self):
+        if self.image_sub3 is None:
+            self.image_sub3 = rospy.Subscriber("/webcam/compressed", CompressedImage, self.callback3)
+
+    def unregister_subscriber3(self):
+        if self.image_sub3:
+            self.image_sub3.unregister()
+            self.image_sub3 = None
+
+    def register_subscriber5(self):
+        if self.image_sub5 is None:
+            self.image_sub5 = rospy.Subscriber("/webcam2/compressed", CompressedImage, self.callback5)
+
+    def unregister_subscriber5(self):
+        if self.image_sub5:
+            self.image_sub5.unregister()
+            self.image_sub5 = None
 
     def state_callback(self, msg):
         self.state = msg.data
@@ -917,6 +943,16 @@ class CameraFeed:
     def callback2(self, data):
         if self.active_cameras["Butt camera"]:
             self.update_image(data, self.label2)
+    
+    def callback3(self, data):
+        # print("Microscope camera callback")
+        if self.active_cameras["Webcam Left"]:
+            # print("get image")
+            self.update_image(data, self.label3)
+
+    def callback5(self, data):
+        if self.active_cameras["Webcam Right"]:
+            self.update_image(data, self.label5)
 
     def update_image(self, data, label):
         """Decode and update the camera image with bounding box."""
@@ -950,7 +986,6 @@ class CameraFeed:
 
         QMetaObject.invokeMethod(label, "setPixmap", Qt.QueuedConnection, Q_ARG(QPixmap, scaled_pixmap))
 
-
     def update_active_cameras(self, active_cameras):
         self.active_cameras = active_cameras
         self.update_subscribers()
@@ -967,6 +1002,16 @@ class CameraFeed:
         else:
             self.unregister_subscriber2()
 
+        if self.active_cameras["Webcam Left"]:
+            self.register_subscriber3()
+        else:
+            self.unregister_subscriber3()
+
+        if self.active_cameras["Webcam Right"]:
+            self.register_subscriber5()
+        else:
+            self.unregister_subscriber5()
+
     def update_visibility(self):
         active_count = sum(self.active_cameras.values())
         if self.active_cameras["Zed (front) camera"]:
@@ -981,12 +1026,19 @@ class CameraFeed:
         else:
             self.label2.hide()
             self.splitter.setStretchFactor(1, 0)
-        
-        # Always hide the other labels since cameras are removed
-        self.label3.hide()
-        self.splitter.setStretchFactor(2, 0)
-        self.label4.hide()
-        self.splitter.setStretchFactor(3, 0)
+        if self.active_cameras["Webcam Left"]:
+            self.label3.show()
+            self.splitter.setStretchFactor(2, 1)
+        else:
+            self.label3.hide()
+            self.splitter.setStretchFactor(2, 0)
+        if self.active_cameras["Webcam Right"]:
+            self.label5.show()
+            self.splitter.setStretchFactor(3, 1)
+        else:
+            self.label5.hide()
+            self.splitter.setStretchFactor(3, 0)
+
 
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
@@ -1492,7 +1544,7 @@ class CameraSelect(QWidget):
         self.toolMenu = QMenu(self)
 
         # Remove microscope and genie camera from the list
-        self.cameras = ["Zed (front) camera", "Butt camera"]
+        self.cameras = ["Zed (front) camera", "Butt camera", "Webcam Left", "Webcam Right"]
         self.selected_cameras = {camera: False for camera in self.cameras}
 
         for camera in self.cameras:
