@@ -34,5 +34,9 @@
     <node pkg="rover" type="led_light.py" name="led_listener" output="screen" />
 
     <node pkg="rover" type="pub_manual_indicator.py" name="pub_manual_indicator" output="screen" />
+
+    <!-- to be used with arm  -->
+    <node pkg="rover" type="webcam.py" name="webcam_node" output="screen" />
+    <node pkg="rover" type="webcam2.py" name="webcam2_node" output="screen" />
     
 </launch>
