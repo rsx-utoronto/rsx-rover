@@ -95,11 +95,13 @@ class GLOB_MSGS:
         self.gui_loc = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray, self.coord_callback) 
         self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
         self.next_state_sub = rospy.Subscriber("/next_state", Bool, self.next_task_callback)
+        self.drive_pub= rospy.Publisher('/drive', Twist, queue_size=10)
         self.next_task_check = False
         self.abort_check = False
         self.locations = None
         self.cartesian = None
         self.odom_zero = None
+        self.drive_sleep = rospy.Rate(10)
         self.ar_detection_node = ar_detection_node.ARucoTagDetectionNode() #Initializes the AR detection node
         self.object_detector_node = object_subscriber_node.ObjectDetectionNode() #Initializes the Object detection node
         # self.led_light = led_light.LedLight() #Initializes class for led light
@@ -255,7 +257,18 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 target = path[list(path.items())[0][0]]
                 target_name = list(path.items())[0][0]
                 print("target_name", target_name) # add check for if it's going to AR3, OBJ2 or leaving from those!
-                if target_name == "AR3" or target_name == 'OBJ2' or userdata.prev_loc =='AR3' or userdata.prev_loc =='OBJ2':
+                if userdata.prev_loc=='AR1' or  userdata.prev_loc=='AR2' or  userdata.prev_loc=='AR3':
+                    twist=Twist()
+                    initial_time=time.time()
+                    while abs(initial_time-time.time()) < 5:
+                        twist.linear.x = -1.0
+                        self.glob_msg.drive_pub.publish(twist)
+                        self.glob_msg.drive_sleep.sleep()
+                    
+                    twist.linear.x=0
+                    self.glob_msg.drive_pub.publish(twist)
+                    
+                if target_name == "OBJ1" or target_name == 'OBJ2' or userdata.prev_loc =='OBJ1' or userdata.prev_loc =='OBJ2':
                     print("doing obstacle_avoidance in straight line")
                     sla = AstarObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                   
@@ -304,8 +317,8 @@ class GNSS1(smach.State): #State for GNSS1
             self.glob_msg.pub_state("GNSS1 reached, successful cruise")
             self.glob_msg.pub_state("Goal Point Reached: GNSS1")
             self.glob_msg.pub_led_light("mission done")
-            rospy.sleep(3)
-            self.glob_msg.pub_led_light("auto")
+            # rospy.sleep(3)
+            # self.glob_msg.pub_led_light("auto")
             
         else:
             self.glob_msg.pub_state("Failed to reach GNSS1 location")

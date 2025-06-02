@@ -7,7 +7,7 @@ from cv_bridge import CvBridge
 import numpy as np
 import getmicroscopeid # local import
 
-camera_name = "FHD Camera: FHD Camera"
+camera_name = "HD Webcam eMeet C960: HD Webcam"
 camera_id = getmicroscopeid.get_usb_camera_device(camera_name)
 
 if not camera_id:
@@ -17,7 +17,7 @@ else:
 
 class WebcamNode:
     def __init__(self):
-        rospy.init_node("webcam_node")
+        rospy.init_node("webcam2_node")
         
         # Parameters
         self.compression_quality = rospy.get_param("~compression_quality", 50)  # JPEG quality 0-100
@@ -25,8 +25,8 @@ class WebcamNode:
         self.rate = rospy.Rate(10)
         
         # Publishers
-        self.pub_compressed = rospy.Publisher("/webcam/compressed", CompressedImage, queue_size=1)
-        self.pub_raw = rospy.Publisher("/webcam", Image, queue_size=1)
+        self.pub_compressed = rospy.Publisher("/webcam2/compressed", CompressedImage, queue_size=1)
+        self.pub_raw = rospy.Publisher("/webcam2", Image, queue_size=1)
         
         # Create bridge object
         self.bridge = CvBridge()
