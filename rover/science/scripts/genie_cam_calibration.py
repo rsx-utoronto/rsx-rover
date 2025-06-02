@@ -193,11 +193,13 @@ def calibrate_images(
 
 if __name__ == "__main__":
     # SET FOLDERS AND WAVELENGTHS HERE!!!   
-    bias_folder = "../genie_cam_calibration/bias"
-    dark_folder = "../genie_cam_calibration/dark"
-    flat_folder = "../genie_cam_calibration/flat"
-    calibration_folder = "../genie_cam_calibration/calibration_target"
-    sample_folder = "../genie_cam_calibration/sample"
+    bias_folder = "genie_cam_calibration/bias"
+    dark_folder = "genie_cam_calibration/dark"
+    flat_folder = "genie_cam_calibration/flat"
+    calibration_folder = "genie_cam_calibration/calibration_target"
+    sample_folder = "genie_cam_calibration/sample"
+
+    path = os.path.
 
     # optionally, set ROI as (x1, y1, x2, y2)
     roi = (100, 100, 400, 400)
