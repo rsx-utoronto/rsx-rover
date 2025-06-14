@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# This one is new. Won't use without testing. Adding detection furing straight line traversal
+# This one is new because it can home during straight line traversal. 
 
 import rospy
 import time

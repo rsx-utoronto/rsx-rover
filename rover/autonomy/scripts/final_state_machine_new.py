@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+
+#this code is new becasue it includes the new straight line code (homes during straight line)
 """
 Code for the state machine
 
