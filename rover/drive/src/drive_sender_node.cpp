@@ -1,31 +1,37 @@
-#include <ros/ros.h>
-#include <geometry_msgs/Twist.h>
-#include <std_msgs/Float32.h>
-#include <std_msgs/String.h>
-#include <std_msgs/Bool.h>
+// #include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
+#include "geometry_msgs/msg/twist.hpp"
+// #include <geometry_msgs/Twist.h>
+// #include <std_msgs/Float32.h>
+#include "std_msgs/msg/float32.hpp"
+// #include <std_msgs/String.h>
+#include "std_msgs/msg/string.hpp"
+// #include <std_msgs/Bool.h>
+#include "std_msgs/msg/bool.hpp"
 // #include <rover/StateMsg.h>
 #include <signal.h>
 #include <termios.h>
 #include <stdio.h>
 #include <boost/thread.hpp>
-#include <sensor_msgs/Joy.h>
-#include <std_msgs/Bool.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/time_synchronizer.h>
+#include "sensor_msgs/msg/joy.hpp"
+#include "std_msgs//msg/bool.hpp"
+#include "message_filters/subscriber.h"
+#include "message_filters/time_synchronizer.h"
 #include <cmath>
 
 class TeleopRover
 {
 public:
-	TeleopRover(); // constructor (just like __init__ in python) // has to be the same name as the class
+	// TeleopRover(); // constructor (just like __init__ in python) // has to be the same name as the class
+	TeleopRover(std::shared_ptr<rclcpp::Node> node);
 	void publishDrive();
 	void pubConstSpeed();
-	void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
-	void networkCallback(const std_msgs::Bool::ConstPtr& net_stat);
+	// void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
+	void joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy);
+	void networkCallback(const std_msgs::msg::Bool::SharedPtr net_stat);
 	// void stateCallback(const rover::StateMsg::ConstPtr& state);
 	void SetVelocity();
 
-	ros::NodeHandle nh;
 	double robot_radius = 1;
 	double MAX_LINEAR_SPEED = 2.5; // 2.5 speed est * 0.65 from rough calibration
 	double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED*robot_radius;
@@ -38,12 +44,25 @@ public:
 	double prev_ang_vel = 0;
 	// double TIME = 
 	double gear = 0; // set to 0 initially
-	ros::Publisher drive_pub;
-	ros::Subscriber joy_sub;
-	ros::Subscriber net_sub;
-	ros::Subscriber state_sub;
+	// ros::Publisher drive_pub;
+	// node->create_publisher<MsgType>(...)
+
+	rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr drive_pub;
+	// drive_pub = node->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+	
+	std::shared_ptr<rclcpp::Node> node;
+	// ros::Subscriber joy_sub;
+	// ros::Subscriber net_sub;
+	// ros::Subscriber state_sub;
+
+	rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub;
+	rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr net_sub;
+	// rclcpp::Subscription</*your_custom_msg*/>::SharedPtr state_sub_;  // if you ever bring back StateMsg
+
+
 	bool network_status = false;
-	geometry_msgs::Twist twist;
+	// geometry_msgs::Twist twist;
+	geometry_msgs::msg::Twist twist;
 	// bool MANUAL_ENABLED = true;
 	// The MANUAL variable is so that it doesn't keep sending the zero velocity values to the rover when we are not using the controller
 	// So that it doesn't interfere with autonomy
@@ -58,14 +77,30 @@ public:
 	std::vector<float> axes = {-0.0, -0.0, 1.0, -0.0, -0.0, 1.0, -0.0, -0.0};
 };
 
-TeleopRover::TeleopRover()
+// TeleopRover::TeleopRover()
+TeleopRover::TeleopRover(std::shared_ptr<rclcpp::Node> node) : node(node)
 {
-	drive_pub = nh.advertise<geometry_msgs::Twist>("drive", 1);
+	// drive_pub = nh.advertise<geometry_msgs::Twist>("drive", 1);
+	drive_pub = node->create_publisher<geometry_msgs::msg::Twist>("drive", 1);
 	TeleopRover::joy_sub = nh.subscribe("/software/joy", 10, &TeleopRover::joyCallback, this);
 	TeleopRover::net_sub = nh.subscribe("/network_status", 1, &TeleopRover::networkCallback, this);
 	// TeleopRover::state_sub = nh.subscribe("/rover_state", 1, &TeleopRover::stateCallback, this);
 	// network_status = false;
 }
+
+
+
+// {
+//     drive_pub = node_->create_publisher<geometry_msgs::msg::Twist>("drive", 10);
+
+//     joy_sub_ = node_->create_subscription<sensor_msgs::msg::Joy>(
+//         "/software/joy", 10,
+//         std::bind(&TeleopRover::joyCallback, this, std::placeholders::_1));
+
+//     net_sub_ = node_->create_subscription<std_msgs::msg::Bool>(
+//         "/network_status", 10,
+//         std::bind(&TeleopRover::networkCallback, this, std::placeholders::_1));
+// }
 
 void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 {
@@ -509,8 +544,10 @@ void TeleopRover::SetVelocity(){
 
 int main(int argc, char** argv)
 {
-	ros::init(argc, argv, "drive_sender_node");
-	TeleopRover drive_sender;
+	rclcpp::init(argc, argv);
+	auto nh = std::make_shared<rclcpp::Node>("drive_sender_node");
+	
+	TeleopRover drive_sender(nh);
 	drive_sender.SetVelocity();
 	// ros::spin(); // no need for this since we have a while loop in SetVelocity function
 }

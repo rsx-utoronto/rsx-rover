@@ -1,19 +1,42 @@
 <?xml version="1.0"?>
+<package format="3">
+  <name>vision</name>
+  <version>0.1.0</version>
+  <description>ROS 2 vision package for camera input using Python nodes</description>
+
+  <maintainer email="ikazinatagiat@todo.todo">ikazinatagiat</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>image_transport</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
+
+
+<!-- <?xml version="1.0"?>
 <package format="2">
   <name>vision</name>
   <version>0.0.0</version>
-  <description>The vision package</description>
+  <description>The vision package</description> -->
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="ikazinatagiat@todo.todo">ikazinatagiat</maintainer>
+  <!-- <maintainer email="ikazinatagiat@todo.todo">ikazinatagiat</maintainer> -->
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
   <!-- Commonly used license strings: -->
   <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
-  <license>TODO</license>
+  <!-- <license>TODO</license> -->
 
 
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
@@ -48,7 +71,7 @@
   <!--   <test_depend>gtest</test_depend> -->
   <!-- Use doc_depend for packages you need only for building documentation: -->
   <!--   <doc_depend>doxygen</doc_depend> -->
-  <buildtool_depend>catkin</buildtool_depend>
+  <!-- <buildtool_depend>catkin</buildtool_depend>
   <build_depend>cv_bridge</build_depend>
   <build_depend>rospy</build_depend>
   <build_depend>sensor_msgs</build_depend>
@@ -60,12 +83,12 @@
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend> -->
 
 
   <!-- The export tag contains other, unspecified, tags -->
-  <export>
+  <!-- <export> -->
     <!-- Other tools can request additional information be placed here -->
 
-  </export>
-</package>
+  <!-- </export>
+</package> -->
