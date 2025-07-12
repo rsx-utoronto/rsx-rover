@@ -84,6 +84,13 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 # )
 
 add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
+ament_target_dependencies(drive_sender_node
+  rclcpp
+  std_msgs
+  geometry_msgs
+  sensor_msgs
+  message_filters
+)
 
 target_link_libraries(drive_sender_node PUBLIC
   rclcpp::rclcpp
@@ -112,15 +119,6 @@ target_include_directories(drive_sender_node PUBLIC
 # target_link_libraries(drive_sender_node
 #   ${rclcpp_LIBRARIES}
 #   ${std_msgs_LIBRARIES}
-# )
-
-# add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
-# ament_target_dependencies(drive_sender_node
-#   rclcpp
-#   std_msgs
-#    geometry_msgs
-#    sensor_msgs
-#    message_filters
 # )
 
 
