@@ -1,5 +1,14 @@
-cmake_minimum_required(VERSION 3.8)  # ROS 2 requires CMake 3.8+
+cmake_minimum_required(VERSION 3.14.4)  # ROS 2 requires CMake 3.8+
 project(rover)
+
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+cmake_policy(SET CMP0144 NEW)
 
 # ROS 2 Core ===========================================================
 find_package(ament_cmake REQUIRED)
@@ -74,12 +83,27 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 #   # CATKIN_DEPENDS removed in ROS 2
 # )
 
-# Include Directories =================================================
-include_directories(
-  include
-  ${rosidl_include_directories}  # ROS 2 generated message headers
-  # $(OCTOMAP_INCLUDE_DIRS)
-  # rover/autonomy/scripts/obstacle_avoidance/include
+add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
+
+target_link_libraries(drive_sender_node PUBLIC
+  rclcpp::rclcpp
+  ${std_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${message_filters_TARGETS}
+)
+
+# DEPRECATED # Include Directories =================================================
+# include_directories(
+#   include
+#   ${rosidl_include_directories}  # ROS 2 generated message headers
+#   # $(OCTOMAP_INCLUDE_DIRS)
+#   # rover/autonomy/scripts/obstacle_avoidance/include
+# )
+
+target_include_directories(drive_sender_node PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${rover}>"
 )
 
 # Executable Targets ==================================================
@@ -114,10 +138,10 @@ include_directories(
 
 # Install Targets =====================================================
 install(TARGETS 
-#   drive_sender_node
+  drive_sender_node
 #   arm_point_cloud_assembler
   # Add other executables here
-  DESTINATION lib/${PROJECT_NAME}
+  DESTINATION lib/${rover}
 )
 
 # install(

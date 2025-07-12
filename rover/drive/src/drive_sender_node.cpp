@@ -13,17 +13,18 @@
 #include <termios.h>
 #include <stdio.h>
 #include <boost/thread.hpp>
+#include <chrono>
 #include "sensor_msgs/msg/joy.hpp"
 #include "std_msgs//msg/bool.hpp"
 #include "message_filters/subscriber.h"
 #include "message_filters/time_synchronizer.h"
 #include <cmath>
 
-class TeleopRover
+class TeleopRover : public rclcpp::Node
 {
 public:
 	// TeleopRover(); // constructor (just like __init__ in python) // has to be the same name as the class
-	TeleopRover(std::shared_ptr<rclcpp::Node> node);
+	TeleopRover();
 	void publishDrive();
 	void pubConstSpeed();
 	// void joyCallback(const sensor_msgs::Joy::ConstPtr &joy);
@@ -78,12 +79,14 @@ public:
 };
 
 // TeleopRover::TeleopRover()
-TeleopRover::TeleopRover(std::shared_ptr<rclcpp::Node> node) : node(node)
+TeleopRover::TeleopRover() : Node("teleop_rover")
 {
 	// drive_pub = nh.advertise<geometry_msgs::Twist>("drive", 1);
-	drive_pub = node->create_publisher<geometry_msgs::msg::Twist>("drive", 1);
-	TeleopRover::joy_sub = nh.subscribe("/software/joy", 10, &TeleopRover::joyCallback, this);
-	TeleopRover::net_sub = nh.subscribe("/network_status", 1, &TeleopRover::networkCallback, this);
+	drive_pub = this->create_publisher<geometry_msgs::msg::Twist>("drive", 1);
+	TeleopRover::joy_sub = this->create_subscription<sensor_msgs::msg::Joy>(
+		"/software/joy", 10, std::bind(&TeleopRover::joyCallback, this, std::placeholders::_1));
+	TeleopRover::net_sub = this->create_subscription<std_msgs::msg::Bool>(
+		"/network_status", 1, std::bind(&TeleopRover::networkCallback, this, std::placeholders::_1));
 	// TeleopRover::state_sub = nh.subscribe("/rover_state", 1, &TeleopRover::stateCallback, this);
 	// network_status = false;
 }
@@ -102,7 +105,7 @@ TeleopRover::TeleopRover(std::shared_ptr<rclcpp::Node> node) : node(node)
 //         std::bind(&TeleopRover::networkCallback, this, std::placeholders::_1));
 // }
 
-void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
+void TeleopRover::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy)
 {
 	buttons = joy->buttons;
 	axes = joy->axes;
@@ -113,7 +116,7 @@ void TeleopRover::joyCallback(const sensor_msgs::Joy::ConstPtr &joy)
 	
 }
 
-void TeleopRover::networkCallback(const std_msgs::Bool::ConstPtr& net_stat){
+void TeleopRover::networkCallback(const std_msgs::msg::Bool::SharedPtr net_stat){
 	network_status = net_stat->data;
 }
 
@@ -122,19 +125,19 @@ void TeleopRover::networkCallback(const std_msgs::Bool::ConstPtr& net_stat){
 // }
 
 void TeleopRover::SetVelocity(){
-	ros::Rate loop_rate(RATE);
-	while (ros::ok())
+	rclcpp::Rate loop_rate(RATE);
+	while (rclcpp::ok())
 	{
 		int KILL = 10; // PS button to kill (0 velocity) as soon as it is pressed
 		if (buttons[KILL] == 1){
-			// ROS_INFO("KILL ENGAGED\n\n\n\n\n\n\n\n\n\n");
+			// RCLCPP_INFO(this->get_logger(), "KILL ENGAGED\n\n\n\n\n\n\n\n\n\n");
 			twist.linear.x = 0;
 			twist.linear.y = 0;
 			twist.linear.z = 0;
 			twist.angular.x = 0;
 			twist.angular.y = 0;
 			twist.angular.z = 0;
-			drive_pub.publish(twist);
+			drive_pub->publish(twist);
 			prev_lin_vel = 0;
 			prev_ang_vel = 0;	
 			KILL_PRESSED = true;
@@ -144,8 +147,8 @@ void TeleopRover::SetVelocity(){
 				KILL_PRESSED = false;
 			}
 
-		if (~KILL_PRESSED && MANUAL){
-			ROS_INFO("MANUAL MODE");
+		if (!KILL_PRESSED && MANUAL){
+			RCLCPP_INFO(this->get_logger(), "MANUAL MODE");
 			twist.linear.x = 0; 
 			twist.linear.y = 0;
 			twist.linear.z = 0;
@@ -175,16 +178,16 @@ void TeleopRover::SetVelocity(){
 				else{
 					easy_mode = true;
 				}
-				// ROS_INFO("MODE: %d", easy_mode);
-				ROS_INFO("EASY MODE TOGGLED");
+				// RCLCPP_INFO("MODE: %d", easy_mode);
+				RCLCPP_INFO(this->get_logger(), "EASY MODE TOGGLED");
 				// This loop is to keep stop the iterations until the buttons are released
 				while (buttons[L1] != 0 && buttons[R1] != 0 && buttons[T] != 0){
-					ros::spinOnce();
+					rclcpp::spin_some(this->get_node_base_interface());
 					loop_rate.sleep();
 				}
 			}
 			if (easy_mode){
-				ROS_INFO("EASY MODE");
+				RCLCPP_INFO(this->get_logger(), "EASY MODE");
 
 				double turnFactor_x = static_cast<double>(axes[LS_x]);
 				double turnFactor_y = static_cast<double>(axes[LS_y]);
@@ -228,33 +231,33 @@ void TeleopRover::SetVelocity(){
 				
 				lin_vel = lin_vel * gear;
 				turnFactor_x = turnFactor_x * gear;
-				ROS_INFO("Linear velocity: %f", (lin_vel/100));
+				RCLCPP_INFO(this->get_logger(), "Linear velocity: %f", (lin_vel/100));
 				twist.linear.x = static_cast<double>(lin_vel/(double)255.0)*MAX_LINEAR_SPEED; // Should be in range of -MAX_LINEAR_SPEED to +MAX_LINEAR_SPEED 
 				twist.angular.z = static_cast<double>(turnFactor_x)*MAX_ANGULAR_SPEED; // Should be in range of -MAX_ANGULAR_SPEED to +MAX_ANGULAR_SPEED 
 
 				// ROS_INFO("Turn Factor X %f", turnFactor_x);
-				// ROS_INFO("Turn Factor Y %f", turnFactor_y);
-				// ROS_INFO("Motor Value %f", lin_vel);
-				ROS_INFO("GEAR %f", gear);
+				// RCLCPP_INFO(this->get_logger(), "Turn Factor Y %f", turnFactor_y);
+				// RCLCPP_INFO(this->get_logger(), "Motor Value %f", lin_vel);
+				RCLCPP_INFO(this->get_logger(), "GEAR %f", gear);
 
-				drive_pub.publish(twist);
+				drive_pub->publish(twist);
 			}
 			else{
-				ROS_INFO("GTA MODE");
+				RCLCPP_INFO(this->get_logger(), "GTA MODE");
 				// Values from Controller
 				double posThrottle = static_cast<double>(axes[R2]);
 				double negThrottle = static_cast<double>(axes[L2]);
 				double turnFactor_x = static_cast<double>(axes[LS_x]);
 				double turnFactor_y = static_cast<double>(axes[LS_y]);
-				ROS_INFO("LS_x:%f", turnFactor_x);
-				ROS_INFO("LS_y:%f", turnFactor_y);
+				RCLCPP_INFO(this->get_logger(), "LS_x:%f", turnFactor_x);
+				RCLCPP_INFO(this->get_logger(), "LS_y:%f", turnFactor_y);
 
 				posThrottle = (posThrottle + 1) / 2; // Normalizing values from 0 to 1
 				negThrottle = (negThrottle + 1) / 2; // Normalizing values from 0 to 1
 				posThrottle = 1 - posThrottle; // Inverting values because posThrottle is 1 when not pressed, 0 when completely pressed
 				negThrottle = 1 - negThrottle; // Inverting values
-				ROS_INFO("R2:%f", posThrottle);
-				ROS_INFO("L2:%f", negThrottle);
+				RCLCPP_INFO(this->get_logger(), "R2:%f", posThrottle);
+				RCLCPP_INFO(this->get_logger(), "L2:%f", negThrottle);
 
 				double turnFactor_x_lin_vel = 1 - std::fabs(turnFactor_x); // When completely to the right or left, turnFactor_x = +-1, lin_vel = 0
 																// Linear velocity is less when turning, least when turining on spot 		
@@ -302,7 +305,7 @@ void TeleopRover::SetVelocity(){
 						gear_pressed = true;
 					}
 				}
-				ROS_INFO("KILL_ENGAGED: %d", KILL_PRESSED);
+				RCLCPP_INFO(this->get_logger(), "KILL_ENGAGED: %d", KILL_PRESSED);
 				// This is a bit repetitive (there was an if KILL_PRESSED earlier) but it works so I am not gonna change it
 				if (KILL_PRESSED == true)
 				{
@@ -313,17 +316,17 @@ void TeleopRover::SetVelocity(){
 				{
 					// When Circle is pressed, turns on spot with 0 linear speed
 					// Turns the rover in place clockwise with max angular speed for that gear
-					ROS_INFO("Right Dpad");
+					RCLCPP_INFO(this->get_logger(), "Right Dpad");
 					lin_vel = 0;
 					prev_lin_vel = 0;
 					ang_vel = -max_allowed_ang_speed;
-					// ROS_INFO("Ang Vel: %f", ang_vel);
+					// RCLCPP_INFO(this->get_logger(), "Ang Vel: %f", ang_vel);
 				}
 				else if (axes[hor_dpad] == 1.0)
 				{
 					// When Sqaure is pressed, turns on spot with 0 linear speed
 					// Turns the rover in place counter-clockwise with max angular speed for that gear
-					ROS_INFO("Left Dpad");
+					RCLCPP_INFO(this->get_logger(), "Left Dpad");
 					lin_vel = 0;
 					prev_lin_vel = 0;
 					ang_vel = max_allowed_ang_speed;
@@ -331,7 +334,7 @@ void TeleopRover::SetVelocity(){
 				else if (posThrottle != 0 && negThrottle != 0 && buttons[R2_pressed] == 1 && buttons[L2_pressed] == 1)
 				{
 					lin_vel = prev_lin_vel;
-					ROS_INFO("Both Throttle Pressed %f", lin_vel);
+					RCLCPP_INFO(this->get_logger(), "Both Throttle Pressed %f", lin_vel);
 				}
 				else if (posThrottle !=0 && buttons[R2_pressed] == 1)
 				{
@@ -358,12 +361,12 @@ void TeleopRover::SetVelocity(){
 							prev_lin_vel = lin_vel;
 						}
 					}
-					ROS_INFO("Positive Throttle Pressed %f", lin_vel);
+					RCLCPP_INFO(this->get_logger(), "Positive Throttle Pressed %f", lin_vel);
 				}
 				else if (negThrottle != 0 && buttons[L2_pressed] == 1)
 				{
 					acc = negThrottle * MAX_ACCELERATION;
-					// ROS_INFO("lin_vel = %f", std::fabs(lin_vel - acc));
+					// RCLCPP_INFO(this->get_logger(), "lin_vel = %f", std::fabs(lin_vel - acc));
 					if ((std::fabs(lin_vel - acc)) < max_allowed_lin_speed) // floating point aboslute value - fabs
 					{
 						lin_vel = prev_lin_vel - acc;
@@ -391,7 +394,7 @@ void TeleopRover::SetVelocity(){
 							}
 						}
 					}
-					ROS_INFO("Negative Throttle Pressed %f", lin_vel);
+					RCLCPP_INFO(this->get_logger(), "Negative Throttle Pressed %f", lin_vel);
 				}
 				else
 				{
@@ -423,8 +426,8 @@ void TeleopRover::SetVelocity(){
 						lin_vel = 0;
 						prev_lin_vel = 0;
 					}
-					
-					ROS_INFO("No Throttle Pressed %f", lin_vel);
+
+					RCLCPP_INFO(this->get_logger(), "No Throttle Pressed %f", lin_vel);
 				}
 				
 
@@ -519,24 +522,24 @@ void TeleopRover::SetVelocity(){
 					// ang_vel = max_allowed_ang_speed * turnFactor_x;
 				}
 
-				ROS_INFO("Linear velocity: %f", (lin_vel));
-				ROS_INFO("Angular velocity: %f", (ang_vel));
-				twist.linear.x = static_cast<double>(lin_vel); // Should be in range of -MAX_LINEAR_SPEED to +MAX_LINEAR_SPEED 
-				twist.angular.z = static_cast<double>(ang_vel); // Should be in range of -MAX_ANGULAR_SPEED to +MAX_ANGULAR_SPEED 
+				RCLCPP_INFO(this->get_logger(), "Linear velocity: %f", (lin_vel));
+				RCLCPP_INFO(this->get_logger(), "Angular velocity: %f", (ang_vel));
+				twist.linear.x = static_cast<double>(lin_vel); // Should be in range of -MAX_LINEAR_SPEED to +MAX_LINEAR_SPEED
+				twist.angular.z = static_cast<double>(ang_vel); // Should be in range of -MAX_ANGULAR_SPEED to +MAX_ANGULAR_SPEED
 
-				// ROS_INFO("Turn Factor X %f", turnFactor_x);
-				// ROS_INFO("Turn Factor Y %f", turnFactor_y);
-				// ROS_INFO("Motor Value %f", lin_vel);
-				ROS_INFO("GEAR %f", gear);
+				// RCLCPP_INFO(this->get_logger(), "Turn Factor X %f", turnFactor_x);
+				// RCLCPP_INFO(this->get_logger(), "Turn Factor Y %f", turnFactor_y);
+				// RCLCPP_INFO(this->get_logger(), "Motor Value %f", lin_vel);
+				RCLCPP_INFO(this->get_logger(), "GEAR %f", gear);
 
-				drive_pub.publish(twist);
+				drive_pub->publish(twist);
 			}
 			if (twist.linear.x == 0 && twist.angular.z == 0){
-				ROS_INFO("Stopped");
+				RCLCPP_INFO(this->get_logger(), "Stopped");
 				MANUAL = false;
 			}
 		}
-		ros::spinOnce(); // for some reason, without this line, the code just remains in this loop and doesn't exit which doesn't let the subscriber to get data
+		rclcpp::spin_some(this->get_node_base_interface()); // for some reason, without this line, the code just remains in this loop and doesn't exit which doesn't let the subscriber to get data
 		loop_rate.sleep();
 	}
 
@@ -545,9 +548,7 @@ void TeleopRover::SetVelocity(){
 int main(int argc, char** argv)
 {
 	rclcpp::init(argc, argv);
-	auto nh = std::make_shared<rclcpp::Node>("drive_sender_node");
-	
-	TeleopRover drive_sender(nh);
+	TeleopRover drive_sender;
 	drive_sender.SetVelocity();
-	// ros::spin(); // no need for this since we have a while loop in SetVelocity function
+	// rclcpp::spin(); // no need for this since we have a while loop in SetVelocity function
 }
