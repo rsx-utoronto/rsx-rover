@@ -1,28 +1,31 @@
 #!/usr/bin/python3
 
-import rospy
+import rclpy 
+from rclpy.node import Node
 import cv2
 import time
 import cv2.aruco as aruco
 from sensor_msgs.msg import Image, CameraInfo
-from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 import os
 import yaml
 from std_msgs.msg import Float64MultiArray
 from std_msgs.msg import Bool
 from std_msgs.msg import String
+from cv_bridge import CvBridge, CvBridgeError
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
 
 bridge = CvBridge()
 
-class ARucoTagDetectionNode():
+class ARucoTagDetectionNode(Node):
 
     def __init__(self):
+        super().__init__('aruco_tag_detector')
         self.bridge = CvBridge()
         self.curr_state = None
         # self.image_topic = "/camera/color/image_raw"
@@ -36,15 +39,18 @@ class ARucoTagDetectionNode():
             self.info_topic = sm_config.get("zed_detection_info_topic")
        
         self.state_topic = "state"
-        self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
-        self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
-        self.state_sub = rospy.Subscriber(self.state_topic, String, self.state_callback)
+        # self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
+        self.image_sub = self.create_subscription(Image,self.image_topic, self.image_callback,10)
+        self.cam_info_sub = self.create_subscription( CameraInfo,self.info_topic, self.info_callback, 10)
+        self.state_sub = self.create_subscription( String,self.state_topic, self.state_callback, 10)
         #self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         #self.aruco_pub = rospy.Publisher('aruco_node/rover_state', StateMsg, queue_size=10)
         #self.scanned_pub = rospy.Publisher('aruco_scanned_node/rover_state', StateMsg, queue_size=10)
-        self.aruco_pub = rospy.Publisher('aruco_found', Bool, queue_size=1)
-        self.vis_pub = rospy.Publisher('vis/current_aruco_detections', Image, queue_size=10)
-        self.bbox_pub = rospy.Publisher('aruco_node/bbox', Float64MultiArray, queue_size=10)
+        # self.aruco_pub = rospy.Publisher('aruco_found', Bool, queue_size=1)
+        self.aruco_pub = self.create_publisher(Bool,'aruco_found', 10)
+        self.vis_pub = self.create_publisher(Image, 'vis/current_aruco_detections', 10)
+        self.bbox_pub = self.create_publisher(Float64MultiArray,'aruco_node/bbox', 10)
+    
         t = time.time()
         
         while (time.time() - t) < 2:
@@ -174,11 +180,18 @@ class ARucoTagDetectionNode():
     def is_found(self):
         return self.found
 
-def main():
-    rospy.init_node('aruco_tag_detector', anonymous=True)
-    AR_detector = ARucoTagDetectionNode()
-    AR_detector.curr_state = "AR1"
-    rospy.spin()
+def main(args=None):
+    rclpy.init(args=args)
+    node = ARucoTagDetectionNode()
+    node.curr_state = "AR1"
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+    # rospy.init_node('aruco_tag_detector', anonymous=True)
+    # AR_detector = ARucoTagDetectionNode()
+    
+    # rospy.spin()
 
 if __name__ == "__main__":
     main()
+    

@@ -23,7 +23,8 @@ Notes:
 - Do same for grid search
 """
 
-import rospy
+import rclpy 
+from rclpy.node import Node
 import numpy as np
 np.float = float
 import time

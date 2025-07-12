@@ -22,10 +22,11 @@ If self.auto abort is still not working:
 print it ou† to see.
 """
 
-import rospy
+import rclpy 
+from rclpy.node import Node
 import numpy as np
 np.float = float
-import ros_numpy
+#import ros_numpy
 from nav_msgs.msg import Odometry, OccupancyGrid
 from octomap_msgs.msg import Octomap
 from geometry_msgs.msg import PoseStamped, Twist, Pose, Point, Quaternion
@@ -36,11 +37,11 @@ from queue import PriorityQueue
 from std_msgs.msg import Header, Float32MultiArray
 import math
 from visualization_msgs.msg import Marker,MarkerArray
-import tf.transformations as tf
-from tf.transformations import quaternion_from_euler
+import transformations as tf
+from transformations import quaternion_from_euler
 import threading
 from threading import Lock
-
+from sensor_msgs_py import point_cloud2
 from geometry_msgs.msg import Point
 from std_msgs.msg import Float32MultiArray, String, Bool
 from nav_msgs.msg import Path
@@ -137,7 +138,8 @@ class AstarObstacleAvoidance():
         """
         #  rospy.loginfo("Received point cloud, processing…")
 
-        xyz = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
+        # xyz = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
+        xyz = np.array([[point[0], point[1], point[2]] for point in point_cloud2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)])
         mask = np.isfinite(xyz).all(axis=1)
         xyz = xyz[mask]
 

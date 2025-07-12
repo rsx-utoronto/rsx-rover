@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
 import numpy as np
-import rospy
+import rclpy 
+from rclpy.node import Node
 import time
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32MultiArray, Float64MultiArray
@@ -121,46 +122,120 @@ class AimerROS(Aimer):  #updates coords continuously
         aruco_bottom_left = (data.data[4], data.data[5])
         aruco_bottom_right = (data.data[6], data.data[7])
         self.update(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right)
+        
 
-def main():
-    pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
-    # frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v
-    aimer = AimerROS(640, 360, 1000, 100, 100, 1.8, 0.8) # FOR ARUCO
-    
-    # aimer = AimerROS(640, 360, 1450, 50, 200, 1.0, 0.5) # FOR WATER BOTTLE
-    rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
-    # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
-    rate = rospy.Rate(10)
-    prev_flag =  ""
-    flag = ""
-    startRotationTime = time.time()
-    while not rospy.is_shutdown():
+
+class ArucoHomingNode(Node):
+    def __init__(self):
+        super().__init__('aruco_homing')
+        # Configuration parameters
+        frame_width = 640
+        frame_height = 360
+        min_aruco_area = 1000.0
+        aruco_min_x_uncert = 100.0
+        aruco_min_area_uncert = 100.0
+        max_linear_v = 1.8
+        max_angular_v = 0.8
+        
+        self.aimer = AimerROS(frame_width, frame_height, min_aruco_area,
+                             aruco_min_x_uncert, aruco_min_area_uncert,
+                             max_linear_v, max_angular_v)
+        
+        # ROS 2 setup
+        self.publisher = self.create_publisher(Twist, 'cmd_vel', 10)
+        self.subscription = self.create_subscription(
+            Float64MultiArray,
+            'aruco_node/bbox',
+            self.aimer.rosUpdate,
+            10)
+        
+        self.start_time = time.time()
+        self.timer = self.create_timer(0.1, self.timer_callback)  # 10 Hz
+        self.active = True
+    def timer_callback(self):
+        if not self.active:
+            return
+            
+        # Timeout check
+        if time.time() - self.start_time > 35:
+            self.get_logger().error("Timeout (35s) reached")
+            self.stop_robot()
+            self.active = False
+            return
+
+        # Success check
+        if self.aimer.linear_v == 0 and self.aimer.angular_v == 0:
+            self.get_logger().info("Target reached")
+            self.stop_robot()
+            self.active = False
+            return
+
+        # Control logic
         twist = Twist()
-        if(time.time()-startRotationTime) > 35:
-            print ("failure", aimer.linear_v, aimer.angular_v)
-            twist.linear.x = 0
-            twist.angular.z = 0
-            pub.publish(twist)
-            return False
-        if aimer.linear_v == 0 and aimer.angular_v == 0:
-            print ("at weird", aimer.linear_v, aimer.angular_v)
-            twist.linear.x = 0
-            twist.angular.z = 0
-            pub.publish(twist)
-            return True
-        if aimer.angular_v == 1:
-            twist.angular.z = aimer.max_angular_v
-            twist.linear.x = 0
-        elif aimer.angular_v == -1:
-            twist.angular.z = -aimer.max_angular_v
-            twist.linear.x = 0
-        elif aimer.linear_v == 1:
-            twist.linear.x = aimer.max_linear_v
-            twist.angular.z = 0
+        if self.aimer.angular_v == 1:
+            twist.angular.z = self.aimer.max_angular_v
+        elif self.aimer.angular_v == -1:
+            twist.angular.z = -self.aimer.max_angular_v
+        elif self.aimer.linear_v == 1:
+            twist.linear.x = self.aimer.max_linear_v
+            
+        self.publisher.publish(twist)
+
+    def stop_robot(self):
+        twist = Twist()
+        self.publisher.publish(twist)    
+
+def main(args=None):
+   
+    rclpy.init(args=args)
+    node = ArucoHomingNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+    
+    
+    # pub = rclpy.create_publisher(Twist, 'drive', 10) # change topic name
+    
+    # # frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v
+    # aimer = AimerROS(640, 360, 1000, 100, 100, 1.8, 0.8) # FOR ARUCO
+    
+    # # aimer = AimerROS(640, 360, 1450, 50, 200, 1.0, 0.5) # FOR WATER BOTTLE
+    # rclpy.create_subscription( Float64MultiArray,'aruco_node/bbox', aimer.rosUpdate, 10) # change topic name
+    # # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
+    # rate = rospy.Rate(10)
+    # prev_flag =  ""
+    # flag = ""
+    # startRotationTime = time.time()
+    # while not rospy.is_shutdown():
+    #     twist = Twist()
+    #     if(time.time()-startRotationTime) > 35:
+    #         print ("failure", aimer.linear_v, aimer.angular_v)
+    #         twist.linear.x = 0
+    #         twist.angular.z = 0
+    #         pub.publish(twist)
+    #         return False
+    #     if aimer.linear_v == 0 and aimer.angular_v == 0:
+    #         print ("at weird", aimer.linear_v, aimer.angular_v)
+    #         twist.linear.x = 0
+    #         twist.angular.z = 0
+    #         pub.publish(twist)
+    #         return True
+    #     if aimer.angular_v == 1:
+    #         twist.angular.z = aimer.max_angular_v
+    #         twist.linear.x = 0
+    #     elif aimer.angular_v == -1:
+    #         twist.angular.z = -aimer.max_angular_v
+    #         twist.linear.x = 0
+    #     elif aimer.linear_v == 1:
+    #         twist.linear.x = aimer.max_linear_v
+    #         twist.angular.z = 0
          
-        pub.publish(twist)
-        rate.sleep()
+    #     pub.publish(twist)
+    #     rate.sleep()
 
 if __name__ == '__main__':
-    rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
+    # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
+    # rclpy.init()
+    # node='aruco_homing'
+    
     main()
