@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 
-import rospy
+# import rospy
+import rclpy
 from std_msgs.msg import Bool
 from geometry_msgs.msg import Twist
 
 
-class NetworkFailsafe:
+class NetworkFailsafe (rclpy.node.Node):
     def __init__(self):
-        self.status_sub = rospy.Subscriber("/network_status", Bool, self.status_callback)
-        self.drive_pub = rospy.Publisher("/drive", Twist, queue_size=1)
-        self.rate = rospy.Rate(10)
+        super().__init__('network_failsafe')
+        self.status_sub = self.create_subscription(Bool, "/network_status", self.status_callback, 10)
+        self.drive_pub = self.create_publisher(Twist, "/drive", 10)
         self.twist = Twist()
     def status_callback(self, msg):
         if msg.data == False:
-            rospy.loginfo("KILL ENGAGED")
+            self.get_logger().info("KILL ENGAGED")
             # self.twist = Twist()
             self.twist.linear.x = 0
             self.twist.linear.y = 0
@@ -27,9 +28,11 @@ class NetworkFailsafe:
             pass
 
 def main():
-    rospy.init_node("network_failsafe")
+    rclpy.init()
     nf = NetworkFailsafe()
-    rospy.spin()
+    rclpy.spin(nf)
+    nf.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
