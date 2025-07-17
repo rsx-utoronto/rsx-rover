@@ -92,13 +92,13 @@ ament_target_dependencies(drive_sender_node
   message_filters
 )
 
-target_link_libraries(drive_sender_node PUBLIC
-  rclcpp::rclcpp
-  ${std_msgs_TARGETS}
-  ${sensor_msgs_TARGETS}
-  ${geometry_msgs_TARGETS}
-  ${message_filters_TARGETS}
-)
+# target_link_libraries(drive_sender_node PUBLIC
+#   rclcpp::rclcpp
+#   ${std_msgs_TARGETS}
+#   ${sensor_msgs_TARGETS}
+#   ${geometry_msgs_TARGETS}
+#   ${message_filters_TARGETS}
+# )
 
 # DEPRECATED # Include Directories =================================================
 # include_directories(
@@ -139,7 +139,7 @@ install(TARGETS
   drive_sender_node
 #   arm_point_cloud_assembler
   # Add other executables here
-  DESTINATION lib/${rover}
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 # install(
