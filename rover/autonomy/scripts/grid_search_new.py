@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from nav_msgs.msg import Odometry
-from tf.transformations import euler_from_quaternion
+from transformations import euler_from_quaternion
 from geometry_msgs.msg import Point, Twist
 import math
 from std_msgs.msg import Float32
@@ -13,6 +14,7 @@ x = 0.0
 y = 0.0 
 theta = 0.0
 found = False
+scale_factor = 1.0
 
 def newOdom(msg):
     global x, y, theta
@@ -43,66 +45,128 @@ def ang_to_goal(goal_x, goal_y):
     angle_to_goal = np.arctan2(diff_y, diff_x)
     return angle_to_goal
 
+# rospy.init_node("grid_search")
 
-rospy.init_node("grid_search")
 
+# sub = rospy.Subscriber("/rtabmap/odom", Odometry, newOdom) # launch zed camera
+# aruco_sub = rospy.Subscriber('aruco_found', Bool, aruco_callback)
+# pub = rospy.Publisher("drive", Twist, queue_size = 1)
+# pub_error = rospy.Publisher("/robot_base_velocity_controller/error", Float32, queue_size = 1)
 
-sub = rospy.Subscriber("/rtabmap/odom", Odometry, newOdom) # launch zed camera
-aruco_sub = rospy.Subscriber('aruco_found', Bool, aruco_callback)
-pub = rospy.Publisher("drive", Twist, queue_size = 1)
-pub_error = rospy.Publisher("/robot_base_velocity_controller/error", Float32, queue_size = 1)
+# speed = Twist()
 
-speed = Twist()
+# path_list = [(3.5+x,0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)]
+#             #,(-3.5, -7.0), (10.5, -7.0), (10.5,10.5), (-10.5,10.5), 
+#             # (-10.5, -14.0), (17.5, -14.0), (17.5, 17.5), (-17.5, 17.5), (-17.5, -21.0), (17.5, -21.0)]
+# scale_factor = 1.0
 
-path_list = [(3.5+x,0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)]
-            #,(-3.5, -7.0), (10.5, -7.0), (10.5,10.5), (-10.5,10.5), 
-            # (-10.5, -14.0), (17.5, -14.0), (17.5, 17.5), (-17.5, 17.5), (-17.5, -21.0), (17.5, -21.0)]
-scale_factor = 1.0
+# while len(path_list) > 0 and not found:
+#     goal_x, goal_y = path_list.pop(0)
+#     if not found:
+#         print('working')
+#     else:
+#         print('bad')
 
-while len(path_list) > 0 and not found:
-    goal_x, goal_y = path_list.pop(0)
-    if not found:
-        print('working')
-    else:
-        print('bad')
+#     # angle_to_goal = theta + math.pi/2
 
-    # angle_to_goal = theta + math.pi/2
-
-    # if your position is changing and 0,0 is only the start point then use the distance between 2 points formula
-    distance_to_goal = dist_to_goal(goal_x, goal_y)
-    angle_to_goal = ang_to_goal(goal_x, goal_y) # this is our "bearing to goal" as I can guess
+#     # if your position is changing and 0,0 is only the start point then use the distance between 2 points formula
+#     distance_to_goal = dist_to_goal(goal_x, goal_y)
+#     angle_to_goal = ang_to_goal(goal_x, goal_y) # this is our "bearing to goal" as I can guess
     
 
-    print ("angle to goal", angle_to_goal)
-    print("theta", theta)
-    print ("dist to goal", distance_to_goal)
+#     print ("angle to goal", angle_to_goal)
+#     print("theta", theta)
+#     print ("dist to goal", distance_to_goal)
 
-    while distance_to_goal > 0.5 and not found:
-        diff_angle = angle_to_goal - theta
-        if abs(diff_angle) > 0.15:
-            # the rover is off the angle to next point location
-            if diff_angle > 0:
-                # rotate CCW?
+#     while distance_to_goal > 0.5 and not found:
+#         diff_angle = angle_to_goal - theta
+#         if abs(diff_angle) > 0.15:
+#             # the rover is off the angle to next point location
+#             if diff_angle > 0:
+#                 # rotate CCW?
+#                 speed.linear.x = 0.0
+#                 speed.angular.z = 0.3 
+#             else:
+#                 # rotate CW?
+#                 speed.linear.x = 0.0
+#                 speed.angular.z = -0.3 
+#         else:
+#             # we are on the right heading for the next location but to far away, move forward
+#             speed.linear.x = 0.5
+#             speed.angular.z = 0.0
+#         pub.publish(speed)
+#         distance_to_goal = dist_to_goal(goal_x, goal_y)
+#         angle_to_goal = ang_to_goal(goal_x, goal_y)
+#         print ("angle to goal", angle_to_goal)
+#         print("theta", theta)
+#         print ("dist to goal", distance_to_goal)
+# if not found:
+#     print('we are finished, aruco not found')
+# else:
+#     print('found')
+# speed.linear.x = 0.0
+# speed.angular.z = 0.0
+# pub.publish(speed)
+
+
+def main():
+    global found
+
+    rclpy.init()
+    node = rclpy.create_node('grid_search_node')
+
+    node.create_subscription(Odometry, "/rtabmap/odom", newOdom, 10)
+    node.create_subscription(Bool, "aruco_found", aruco_callback, 10)
+
+    pub = node.create_publisher(Twist, "drive", 10)
+    pub_error = node.create_publisher(Float32, "/robot_base_velocity_controller/error", 10)
+
+    speed = Twist()
+
+    path_list = [(3.5+x, 0.0+y), (3.5+x, 3.5+y), (-3.5+x, 3.5+y)]
+
+    rate = node.create_rate(10)
+
+    while rclpy.ok() and len(path_list) > 0 and not found:
+        goal_x, goal_y = path_list.pop(0)
+        print("Heading to", goal_x, goal_y)
+
+        while rclpy.ok():
+            rclpy.spin_once(node)
+
+            if found:
+                break
+
+            distance_to_goal = dist_to_goal(goal_x, goal_y)
+            angle_to_goal = ang_to_goal(goal_x, goal_y)
+            diff_angle = angle_to_goal - theta
+
+            print("Distance:", distance_to_goal, "Angle diff:", diff_angle)
+
+            if distance_to_goal < 0.5:
+                break
+
+            if abs(diff_angle) > 0.15:
                 speed.linear.x = 0.0
-                speed.angular.z = 0.3 
+                speed.angular.z = 0.3 if diff_angle > 0 else -0.3
             else:
-                # rotate CW?
-                speed.linear.x = 0.0
-                speed.angular.z = -0.3 
-        else:
-            # we are on the right heading for the next location but to far away, move forward
-            speed.linear.x = 0.5
-            speed.angular.z = 0.0
-        pub.publish(speed)
-        distance_to_goal = dist_to_goal(goal_x, goal_y)
-        angle_to_goal = ang_to_goal(goal_x, goal_y)
-        print ("angle to goal", angle_to_goal)
-        print("theta", theta)
-        print ("dist to goal", distance_to_goal)
-if not found:
-    print('we are finished, aruco not found')
-else:
-    print('found')
-speed.linear.x = 0.0
-speed.angular.z = 0.0
-pub.publish(speed)
+                speed.linear.x = 0.5
+                speed.angular.z = 0.0
+
+            pub.publish(speed)
+
+    # Stop the robot
+    speed.linear.x = 0.0
+    speed.angular.z = 0.0
+    pub.publish(speed)
+
+    if found:
+        print("Found the ArUco!")
+    else:
+        print("We are finished. ArUco not found.")
+
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
