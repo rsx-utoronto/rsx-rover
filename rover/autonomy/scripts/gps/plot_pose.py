@@ -1,22 +1,25 @@
 #! /usr/bin/env python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, TransformStamped
 import time
-import tf
+# import tf
+# import tf_transformations 
 # import threading
 
 import matplotlib.pyplot as plt
-import matplotlib.animation as anim
+import matplotlib.animation as animation
 import numpy as np
+
 # import numpy.typing as npt
 import statistics as stats
 import math
 from nav_msgs.msg import Odometry
-import tf2_ros
+from tf2_ros import TransformBroadcaster, Buffer, TransformListener
 
 
-class PlotPose:
+class PlotPose(Node):
     """
     A class for visualizing the position of a robot in real-time.
 
@@ -33,6 +36,7 @@ class PlotPose:
             fig_xy (matplotlib.figure.Figure): The figure for plotting the XY position of the robot.
             ax_xy (matplotlib.axes.Axes): The axes associated with the XY figure.
         """
+        super().__init__('plot_pose')
 
         # Initialize figure and axes and save to class
         self.fig_xy, self.ax_xy = plt.subplots()
@@ -47,10 +51,11 @@ class PlotPose:
 
         
         self.init_time = time.time()
-        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
+        self.pose_subscriber = self.create_subscription( PoseStamped,'/pose', self.pose_callback,10)
 
-        self.odom_subscriber = rospy.Subscriber('/odometry/filtered', Odometry, self.odom_callback)
-        self.tf_listener = tf.TransformListener()
+        self.odom_subscriber = self.create_subscription( Odometry, '/odometry/filtered', self.odom_callback,10)
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
         self.x_list = [] # List of x positions
         self.y_list = [] # List of y positions 
 
@@ -64,9 +69,8 @@ class PlotPose:
         self.o_x_list = [] # List of x positions from odom
         self.o_y_list = [] # List of y positions from odom
 
-
-        self.tf2_buffer = tf2_ros.Buffer()
-        self.listener = tf2_ros.TransformListener(self.tf2_buffer)
+        # self.tf2_buffer = tf2_ros.Buffer()
+        # self.listener = tf2_ros.TransformListener(self.tf2_buffer)
     def pose_callback(self, msg):
 
         # rospy.loginfo("Received a new pose from cartographer")
@@ -195,7 +199,7 @@ class PlotPose:
         """Function for initializing and showing matplotlib animation."""
         print("plotting")
 
-        self.ani = anim.FuncAnimation(self.fig_xy, self.plot_pose, interval=10) # frames=100, blit=False)
+        self.ani = animation.FuncAnimation(self.fig_xy, self.plot_pose, interval=10) # frames=100, blit=False)
 
         # self.ani_x = anim.FuncAnimation(self.fig_x, self.plot_x, interval=10)
         # self.ani_y = anim.FuncAnimation(self.fig_y, self.plot_y, interval=10)
@@ -206,13 +210,14 @@ class PlotPose:
         print("here")
 
 
-def main():
-    rospy.init_node('plot_pose')
-    ac = PlotPose()
+def main(args=None):
+    rclpy.init(args=args)
     
+    ac = PlotPose()
     ac._plot()
-    rospy.spin()
-
+    rclpy.spin(ac)
+    ac.destroy_node()
+    rclpy.shutdown()
 if __name__ == '__main__':
     main()
 
