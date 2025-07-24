@@ -36,6 +36,8 @@ from sensor_msgs.msg import PointCloud2
 from queue import PriorityQueue
 from std_msgs.msg import Header, Float32MultiArray
 import math
+from builtin_interfaces.msg import Duration
+from rclpy.duration import Duration
 from visualization_msgs.msg import Marker,MarkerArray
 import transformations as tf
 from transformations import quaternion_from_euler
@@ -46,6 +48,7 @@ from geometry_msgs.msg import Point
 from std_msgs.msg import Float32MultiArray, String, Bool
 from nav_msgs.msg import Path
 import os
+from rclpy.clock import Clock
 import yaml
 import time
 
@@ -55,24 +58,51 @@ with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
 
 
-class AstarObstacleAvoidance():
+class AstarObstacleAvoidance(Node):
     def __init__(self, lin_vel = 0.3, ang_vel= 0.3, goal=[(5,0)]):
+        super().__init__('octomap_a_star_planner')
         
-        if sm_config.get("realsense_detection"):
-            self.pointcloud_topic = rospy.get_param("~pointcloud_topic", sm_config.get("realsense_pointcloud"))
+        # if sm_config.get("realsense_detection"):
+        #     self.pointcloud_topic = rospy.get_param("~pointcloud_topic", sm_config.get("realsense_pointcloud"))
+        # else:
+        #     self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed_node/point_cloud/cloud_registered")
+        
+        #  parameters with default values
+        self.declare_parameter('realsense_detection', False)
+        self.declare_parameter('realsense_pointcloud', '/camera/depth/points')
+        self.declare_parameter('pointcloud_topic', '/zed_node/point_cloud/cloud_registered')
+
+        realsense_enabled = self.get_parameter('realsense_detection').get_parameter_value().bool_value
+        realsense_topic = self.get_parameter('realsense_pointcloud').get_parameter_value().string_value
+        fallback_topic = self.get_parameter('pointcloud_topic').get_parameter_value().string_value
+
+        if realsense_enabled:
+            self.pointcloud_topic = realsense_topic
         else:
-            self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed_node/point_cloud/cloud_registered")
-          
-        # Parameters
-        self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
-        self.waypoint_topic = rospy.get_param("~waypoint_topic", "/waypoint")
-        self.update_rate = rospy.get_param("~update_rate", 5.0)  # Frequency in Hz 
-        self.vel_topic = rospy.get_param("~vel_topic", "/cmd_vel")  # Velocity command
-        self.height_min = rospy.get_param("~height_min", 0.2)  # Min height for obstacles
-        self.height_max = rospy.get_param("~height_max", 15)  # Max height for obstacles
-        self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
-        self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
-        self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")
+            self.pointcloud_topic = fallback_topic
+        
+        # Declare all parameters
+        self.declare_parameter("map_topic", "/octomap_binary")
+        self.declare_parameter("waypoint_topic", "/waypoint")
+        self.declare_parameter("update_rate", 5.0)
+        self.declare_parameter("vel_topic", "/cmd_vel")
+        self.declare_parameter("height_min", 0.2)
+        self.declare_parameter("height_max", 15.0)
+        self.declare_parameter("octomap_topic", "/octomap_binary")
+        self.declare_parameter("resolution", 0.1)
+        self.declare_parameter("pose_topic", "/robot_pose")
+
+        # Retrieve parameter values
+        self.map_topic = self.get_parameter("map_topic").get_parameter_value().string_value
+        self.waypoint_topic = self.get_parameter("waypoint_topic").get_parameter_value().string_value
+        self.update_rate = self.get_parameter("update_rate").get_parameter_value().double_value
+        self.vel_topic = self.get_parameter("vel_topic").get_parameter_value().string_value
+        self.height_min = self.get_parameter("height_min").get_parameter_value().double_value
+        self.height_max = self.get_parameter("height_max").get_parameter_value().double_value
+        self.octomap_topic = self.get_parameter("octomap_topic").get_parameter_value().string_value
+        self.tree_resolution = self.get_parameter("resolution").get_parameter_value().double_value
+        self.pose_topic = self.get_parameter("pose_topic").get_parameter_value().string_value
+        
         
         # Map and planning variables
         self.robot_footprint=[]
@@ -89,7 +119,8 @@ class AstarObstacleAvoidance():
         )
         self.grid_origin=None
         # self.grid_origin = (0.0, 0.0)
-        self.rate = rospy.Rate(self.update_rate)
+        # self.rate = rospy.Rate(self.update_rate)
+        self.rate = self.create_rate(self.update_rate)
         # self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
         self.current_position_y=0
@@ -111,24 +142,23 @@ class AstarObstacleAvoidance():
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
         
-        # Publishers and Subscribers
-       # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        
-        self.bounding_box_pub = rospy.Publisher("/rover_bounding_box", Marker, queue_size=10)
-        self.invaliid_pose_sub=rospy.Publisher('/invalid_pose_markers', Marker, queue_size=10)
-        # self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
-        # self.pose_sub = rospy.Subscriber(self.pose_topic, PoseStamped, self.odom_callback)
-        self.waypoint_pub = rospy.Publisher(self.waypoint_topic, PoseStamped, queue_size=10)
-        self.astar_pub = rospy.Publisher('/astar_waypoints', Float32MultiArray, queue_size=10)
-        self.pointcloud_sub = rospy.Subscriber(self.pointcloud_topic, PointCloud2, self.pointcloud_callback)
-        self.octomap_pub = rospy.Publisher(self.octomap_topic, Octomap, queue_size=10)
-        self.marker_array_pub = rospy.Publisher('/dwa_trajectories', MarkerArray, queue_size=1)
-        self.astar_marker_pub = rospy.Publisher('/astar_waypoints_markers', MarkerArray, queue_size=1)  # New publisher for A* markers
-        self.footprint_pub = rospy.Publisher('/robot_footprint', Marker, queue_size=1)
-        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
-        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
-        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
-        
+        # Publishers
+        self.bounding_box_pub = self.create_publisher(Marker, "/rover_bounding_box", 10)
+        self.invalid_pose_pub = self.create_publisher(Marker, "/invalid_pose_markers", 10)
+        self.waypoint_pub = self.create_publisher(PoseStamped, self.waypoint_topic, 10)
+        self.astar_pub = self.create_publisher(Float32MultiArray, "/astar_waypoints", 10)
+        self.octomap_pub = self.create_publisher(Octomap, self.octomap_topic, 10)
+        self.marker_array_pub = self.create_publisher(MarkerArray, "/dwa_trajectories", 1)
+        self.astar_marker_pub = self.create_publisher(MarkerArray, "/astar_waypoints_markers", 1)
+        self.footprint_pub = self.create_publisher(Marker, "/robot_footprint", 1)
+        self.drive_publisher = self.create_publisher(Twist, "/drive", 10)
+
+        # Subscribers
+        self.pointcloud_sub = self.create_subscription(PointCloud2, self.pointcloud_topic, self.pointcloud_callback, 10)
+        self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
+        self.pose_subscriber = self.create_subscription(PoseStamped, "/pose", self.pose_callback, 10)
+
+                
     def abort_callback(self,msg):
         self.abort_check = msg.data
 
@@ -234,7 +264,7 @@ class AstarObstacleAvoidance():
         # rospy.loginfo("Publishing OctoMap...")
         octomap_msg = self.tree.writeBinaryMsg()
         header = Header()
-        header.stamp = rospy.Time.now()
+        header.stamp =  self.get_clock().now().to_msg() 
         header.frame_id = "map"
         octomap_msg.header = header
         self.octomap_pub.publish(octomap_msg)
@@ -246,7 +276,7 @@ class AstarObstacleAvoidance():
         for traj in trajectories:
             line_marker = Marker()
             line_marker.header.frame_id = "map"
-            line_marker.header.stamp = rospy.Time.now()
+            line_marker.header.stamp = self.get_clock().now().to_msg()
             line_marker.ns = "dwa_trajectories"
             line_marker.id = marker_id
             line_marker.type = Marker.LINE_STRIP
@@ -257,7 +287,7 @@ class AstarObstacleAvoidance():
             line_marker.color.b = 0.0
             line_marker.color.a = 1.0
             line_marker.pose.orientation.w = 1.0
-            line_marker.lifetime = rospy.Duration(0.1)
+            line_marker.lifetime = Duration(seconds=0.1)
 
             for point in traj:
                 p = Point()
@@ -532,13 +562,13 @@ class AstarObstacleAvoidance():
         need_replan = True
         last_position = (0, 0)
         self.current_path = []
-        last_plan_time = rospy.Time.now()
-        replan_interval = rospy.Duration(5)
+        last_plan_time = self.get_clock().now()
+        replan_interval = Duration(seconds=5)
         path_available = False
         first_time = True
         goal = self.world_to_grid(self.goal[0][0], self.goal[0][1])
         world_goal=(self.goal[0][0], self.goal[0][1])
-        rate = rospy.Rate(50)
+        rate = self.create_rate(50)
         threshold = 0.5  # meters  for each waypoint
         angle_threshold = 0.5  # radians for each waypoint
         threshold_goal = 1.5 #for final waypoint
@@ -553,7 +583,7 @@ class AstarObstacleAvoidance():
             # rate.sleep()
         self.grid_origin=(self.current_position_x, self.current_position_y)
      
-        while not rospy.is_shutdown() and not target_reached_flag and not self.abort_check:
+        while rclpy.ok() and not target_reached_flag and not self.abort_check:
             print("Self abort check is ", self.abort_check)
             msg = Twist()
             
@@ -596,7 +626,7 @@ class AstarObstacleAvoidance():
             # replanning conditions
             
             need_replan = False
-            if rospy.Time.now() - last_plan_time > replan_interval:
+            if self.get_clock().now() - last_plan_time > replan_interval:
                 need_replan = True
 
             if last_position:
@@ -679,7 +709,7 @@ class AstarObstacleAvoidance():
                         break
                     if target_reached_flag:
                         return
-                    rospy.loginfo(f"Reached waypoint. Proceeding to next. There are {len(self.current_path)} waypoints left.")
+                    self.get_logger().info(f"Reached waypoint. Proceeding to next. There are {len(self.current_path)} waypoints left.")
                     
                     if self.abort_check:
                         break
@@ -709,10 +739,22 @@ class AstarObstacleAvoidance():
                 #break maybe uncomment this??
             rate.sleep()
                       
-if __name__ == "__main__":
-    rospy.init_node("octomap_a_star_planner", anonymous=True)
+def main(args=None):
+    rclpy.init(args=args)
     try:
-        planner = AstarObstacleAvoidance()
+        planner = AstarObstacleAvoidance()  
         planner.navigate()
-    except rospy.ROSInterruptException:
+    except KeyboardInterrupt:
         pass
+    finally:
+        planner.destroy_node()
+        rclpy.shutdown()
+        
+if __name__ == "__main__":
+    main()
+    # rospy.init_node("octomap_a_star_planner", anonymous=True)
+    # try:
+    #     planner = AstarObstacleAvoidance()
+    #     planner.navigate()
+    # except rospy.ROSInterruptException:
+    #     pass
