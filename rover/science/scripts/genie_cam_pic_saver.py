@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 import os
 
-class PicSaver:
+class PicSaver(Node):
     def __init__(self):
-        self.pic_sub=rospy.Subscriber('geniecam', Image, self.pic_sub_callback)
+        super().__init__('pic_saver_node')
+        self.pic_sub=self.create_subscription( Image, 'geniecam', self.pic_sub_callback, 10)
         self.counter = 0
         self.bridge=CvBridge()  # Create an instance of CvBridge
         self.num_photos = 25 # TODO: change to predetermined number of photos!
@@ -26,9 +28,15 @@ class PicSaver:
                 print(f"Saved image {self.counter} to {filename}")
                 self.counter += 1
             except Exception as e:
-                rospy.logerr(f"Error saving image: {e}")
+                self.get_logger().error(f"Error saving image: {e}")
 
-if __name__ == '__main__':
-    rospy.init_node('pic_saver_node')
+def main(args=None):
+    rclpy.init(args=args)
     ps = PicSaver()
-    rospy.spin()
+    rclpy.spin(ps)
+    pc.destroy_node()
+    rclpy.shutdown()
+    
+if __name__ == '__main__':
+    main()
+   
