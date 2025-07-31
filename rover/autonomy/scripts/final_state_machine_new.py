@@ -5,7 +5,8 @@
 Code for the state machine
 
 """
-import rospy
+import rclpy
+from rclpy.node import Node 
 import object_subscriber_node
 # import led_light
 import smach
@@ -88,26 +89,27 @@ def shortest_path(start: str, locations: dict) -> list:
 # [For publishing messages for led to light on]
 # Subscribers : pose(PoseStamped) [Gets the pose/location data], /long_lat_goal_array(Float32MultiArray) [Gets the GPS coordinates of task points]
 
-class GLOB_MSGS:
+class GLOB_MSGS(Node):
     def __init__(self):
-        self.pub = rospy.Publisher("gui_status", String, queue_size=10)
-        self.state_publisher = rospy.Publisher("state", String, queue_size=10) #ask about que size
-        self.led_publisher = rospy.Publisher("led_light", String, queue_size = 10)
-        self.sub = rospy.Subscriber("pose", PoseStamped, self.pose_callback)
-        self.odom_sub = rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) #Subscribes to the pose topic
-        self.gui_loc = rospy.Subscriber('/long_lat_goal_array', Float32MultiArray, self.coord_callback) 
-        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
-        self.next_state_sub = rospy.Subscriber("/next_state", Bool, self.next_task_callback)
+        super().__init__('glob_msgs')
+        self.pub = self.create_publisher(String, "gui_status", 10)
+        self.state_publisher = self.create_publisher(String, "state", 10)
+        self.led_publisher = self.create_publisher(String, "led_light", 10)
+        self.sub = self.create_subscription(PoseStamped, "pose", self.pose_callback, 10)
+        self.odom_sub = self.create_subscription(Odometry, "/rtabmap/odom", self.odom_callback, 10)
+        self.gui_loc = self.create_subscription(Float32MultiArray, '/long_lat_goal_array', self.coord_callback, 10)
+        self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
+        self.next_state_sub = self.create_subscription(Bool, "/next_state", self.next_task_callback, 10)
+        self.done_early_sub = self.create_subscription(Bool, "done_early", self.done_early_callback, 10)
         self.next_task_check = False
         self.abort_check = False
         self.locations = None
         self.cartesian = None
         self.odom_zero = None
         self.done_early = False
-        self.done_early=rospy.Subscriber("done_early", Bool, self.done_early_callback)
-        self.ar_detection_node = ar_detection_node.ARucoTagDetectionNode() #Initializes the AR detection node
-        self.object_detector_node = object_subscriber_node.ObjectDetectionNode() #Initializes the Object detection node
-        # self.led_light = led_light.LedLight() #Initializes class for led light
+        self.pose = None
+        self.odom = None
+        self.current_position = None
         
     def pose_callback(self, msg):
         self.pose = msg
@@ -186,8 +188,8 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
 
     def initialize(self, userdata): # main init function
 
-        rospy.Subscriber("/long_lat_goal_array", Float32MultiArray, self.glob_msg.coord_callback) #Subcribes to the gui location publisher
-        while (self.glob_msg.locations is None and rospy.is_shutdown() == False): #Waits for all GPS locations to be received
+        self.create_subscription(Float32MultiArray, "/long_lat_goal_array",  self.glob_msg.coord_callback) #Subcribes to the gui location publisher
+        while (self.glob_msg.locations is None and rclpy.ok()): #Waits for all GPS locations to be received
             time.sleep(10)
             self.glob_msg.pub_state("Waiting for GPS coordinates")
 
@@ -279,7 +281,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 if self.glob_msg.abort_check: #Checks if abort button is pressed
                     userdata.aborted_state = list(path.items())[0][0]
                     return "ABORT"
-            except rospy.ROSInterruptException:
+            except Exception:
                 self.glob_msg.pub_state(f"ROS Interrupt Exception during Location Selection")
                 if self.glob_msg.abort_check:
                     userdata.aborted_state = list(path.items())[0][0]
@@ -315,7 +317,7 @@ class GNSS1(smach.State): #State for GNSS1
             self.glob_msg.pub_state("GNSS1 reached, successful cruise")
             self.glob_msg.pub_state("Goal Point Reached: GNSS1")
             self.glob_msg.pub_led_light("mission done")
-            rospy.sleep(3)
+            time.sleep(3)
             self.glob_msg.pub_led_light("auto")
             
         else:
@@ -331,7 +333,7 @@ class GNSS1(smach.State): #State for GNSS1
 
         while(self.glob_msg.get_next_task_check() is not True):
             self.glob_msg.pub_state("Waiting for Next Task Button")
-            rospy.sleep(1)
+            time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light("auto")
         return "Location Selection"
@@ -381,7 +383,7 @@ class GNSS2(smach.State): #State for GNSS1
 
         while(self.glob_msg.get_next_task_check() is not True):
             self.glob_msg.pub_state("Waiting for Next Task Button")
-            rospy.sleep(1)
+            time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light("auto")
         return "Location Selection"
@@ -424,7 +426,7 @@ class AR1(smach.State): #State for AR1
                 gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
                 targets = gs.square_target() #Generates multiple points for grid search
                 gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR1") #Starts grid search traversal
-                rospy.Subscriber("aruco_found", Bool, self.aruco_callback) #Subscribes to aruco found to determine whether its found or not
+                self.create_subscription("aruco_found", Bool, self.aruco_callback) #Subscribes to aruco found to determine whether its found or not
                 self.glob_msg.pub_state("Starting AR1 grid search")
                 ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the generated grid search targets
                 print("ar in correct loc", ar_in_correct_loc)
@@ -476,7 +478,7 @@ class AR1(smach.State): #State for AR1
 
         while(self.glob_msg.get_next_task_check() is not True):
             self.glob_msg.pub_state("Waiting for Next Task Button")
-            rospy.sleep(1)
+            time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light("auto")
         return "Location Selection"
@@ -519,7 +521,7 @@ class AR2(smach.State): #State for AR2
                 targets = gs.square_target() #generates multiple grid search targets 
             
                 gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
-                rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
+                self.create_subscription( Bool, "aruco_found", self.aruco_callback,10)
                 self.glob_msg.pub_state("Starting AR2 grid search")
                 ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
                 self.glob_msg.pub_state("End of AR2 grid search")
@@ -570,7 +572,7 @@ class AR2(smach.State): #State for AR2
 
         while(self.glob_msg.get_next_task_check() is not True):
             self.glob_msg.pub_state("Waiting for Next Task Button")
-            rospy.sleep(1)
+            time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light("auto")
         return "Location Selection"
@@ -611,7 +613,7 @@ class AR3(smach.State): #State for AR3
                 gs =  astar_obstacle_avoidance_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
                 targets = gs.square_target() #generates multiple targets 
                 gs_traversal_object = astar_obstacle_avoidance_grid_search.AstarObstacleAvoidance_GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR3")
-                rospy.Subscriber("aruco_found", Bool, self.aruco_callback)
+                self.create_subscription( Bool, "aruco_found", self.aruco_callback,10)
                 self.glob_msg.pub_state("Starting AR3 grid search")
                 ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
                 self.glob_msg.pub_state("End of AR3 grid search")
@@ -659,7 +661,7 @@ class AR3(smach.State): #State for AR3
 
         while(self.glob_msg.get_next_task_check() is not True):
             self.glob_msg.pub_state("Waiting for Next Task Button")
-            rospy.sleep(1)
+            time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light("auto")
         return "Location Selection"
@@ -702,8 +704,8 @@ class OBJ1(smach.State): #State for mallet
                 gs = sm_grid_search.GridSearch(sm_config.get("OBJ_grid_search_w"), sm_config.get("OBJ_grid_search_h"), sm_config.get("OBJ_grid_search_tol"), userdata.rem_loc_dict["OBJ1"][0], userdata.rem_loc_dict["OBJ1"][1])  # define multiple target points here: cartesian
                 targets = gs.square_target() #Generates grid search targets
                 gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ1")
-                rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
-                rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
+                self.create_subscription( Bool, "mallet_detected",self.mallet_callback)
+                self.create_subscription( Bool, "waterbottle_detected", self.waterbottle_callback)
 
                 self.glob_msg.pub_state("Starting OBJ1 grid search")
                 obj1_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
@@ -758,7 +760,7 @@ class OBJ1(smach.State): #State for mallet
 
         while(self.glob_msg.get_next_task_check() is not True):
             self.glob_msg.pub_state("Waiting for Next Task Button")
-            rospy.sleep(1)
+            time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light("auto")
         return "Location Selection"
@@ -802,9 +804,10 @@ class OBJ2(smach.State): #State for waterbottle
                 targets = gs.square_target()
                 gs_traversal_object = astar_obstacle_avoidance_grid_search.AstarObstacleAvoidance_GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ2")
                 gs_traversal_object = astar_obstacle_avoidance_grid_search.AstarObstacleAvoidance_GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ2")
-                rospy.Subscriber("mallet_detected", Bool, self.mallet_callback)
-                rospy.Subscriber("waterbottle_detected", Bool, self.waterbottle_callback)
-
+                
+                self.create_subscription( Bool, "mallet_detected", self.mallet_callback,10)
+                self.create_subscription( Bool, "waterbottle_detected", self.waterbottle_callback,10)
+                
                 self.glob_msg.pub_state("Starting OBJ2 grid search")
                 obj1_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
                 self.glob_msg.pub_state("End of OBJ2 grid search")
@@ -858,7 +861,7 @@ class OBJ2(smach.State): #State for waterbottle
 
         while(self.glob_msg.get_next_task_check() is not True):
             self.glob_msg.pub_state("Waiting for Next Task Button")
-            rospy.sleep(1)
+            time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light("auto")
         return "Location Selection"
@@ -903,7 +906,7 @@ class ABORT(smach.State):  # Assuming it won't be called before we try to go to 
             #sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [return_location], userdata.prev_loc)
             self.glob_msg.pub_state("Navigating to Abort location")
             sla.navigate()
-            rospy.sleep(2) #For waiting after the abort location is reached
+            time.sleep(2) #For waiting after the abort location is reached
             # Check final distance to the target location
             current_pose = self.glob_msg.get_pose()
             distance = math.sqrt(
@@ -918,7 +921,7 @@ class ABORT(smach.State):  # Assuming it won't be called before we try to go to 
                 self.glob_msg.pub_state("Failed to reach the prev task location within threshold.")
                 return "Location Selection"
 
-        except rospy.ROSInterruptException as e:
+        except Exception as e:
             self.glob_msg.pub_state(f"ROS Interrupt Exception during abort: {e}")
             return "Location Selection"
 
@@ -934,8 +937,11 @@ class TasksEnded(smach.State):
     def execute(self, userdata):
         self.glob_msg.pub("All tasks finished yeeeyy!!!")
 
-def main():
-    rospy.init_node('RSX_Rover')
+def main(args=None):
+    rclpy.init(args=args)
+    glob_msg_node = GLOB_MSGS()
+
+    # rospy.init_node('RSX_Rover')
     #gui_status = rospy.Publisher('gui_status', String, queue_size=10) #where should be used?
     sm = smach.StateMachine(outcomes=["Tasks Ended"])
     glob_msg = GLOB_MSGS()
@@ -1116,7 +1122,9 @@ def main():
         
 
     sm.execute()
-    
+    rclpy.spin(glob_msg_node)  
+    glob_msg_node.destroy_node()
+    rclpy.shutdown()
     
 
 
@@ -1127,6 +1135,7 @@ def main():
 #And if a task fails go to the previous location, try the next one, and put the other one at the end
 #There should be a case that also considers going to the previous task teleop
 
+    
 
 if __name__ == "__main__":
     print("Starting the autonomous missions")

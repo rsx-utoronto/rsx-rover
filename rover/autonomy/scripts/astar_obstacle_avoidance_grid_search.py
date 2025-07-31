@@ -40,10 +40,9 @@ from std_msgs.msg import Header, Float32MultiArray, Float64MultiArray
 import math
 from rclpy.clock import Clock
 from visualization_msgs.msg import Marker,MarkerArray
-# import tf.transformations as tf
-# from tf.transformations import quaternion_from_euler
-import transformations as tf
-from transformations import quaternion_from_euler
+# import transformations as tf
+# from transformations import quaternion_from_euler
+from transforms3d.euler import quat2euler
 import threading
 from rclpy.duration import Duration
 from threading import Lock
@@ -136,10 +135,10 @@ class AstarObstacleAvoidance_GS_Traversal(Node):
         self.abort_check = False
         self.heading=0
         self.current_corner_array = [
-            Point(x=1.5, y=1.5, z=0),
-            Point(x=1.5, y=-1.5, z=0),
-            Point(x=-1.5, y=-1.5, z=0), # with 0.5, it produces green blocks!
-            Point(x=-1.5, y=1.5, z=0) ]
+            Point(x=1.5, y=1.5, z=.0),
+            Point(x=1.5, y=-1.5, z=.0),
+            Point(x=-1.5, y=-1.5, z=.0), # with 0.5, it produces green blocks!
+            Point(x=-1.5, y=1.5, z=.0) ]
         
         
         self.z_min = -0.25
@@ -254,7 +253,7 @@ class AstarObstacleAvoidance_GS_Traversal(Node):
         self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
                                             msg.pose.orientation.y, msg.pose.orientation.z)[2]
         
-        (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
+        (self.roll, self.pitch, self.yaw) = quat2euler([
                 self.current_orientation_x,
                 self.current_orientation_y,
                 self.current_orientation_z,
@@ -305,7 +304,7 @@ class AstarObstacleAvoidance_GS_Traversal(Node):
         self.current_orientation_w = msg.pose.pose.orientation.w
 
             # Convert quaternion to Euler angles to get roll, pitch, and yaw (theta)
-        (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
+        (self.roll, self.pitch, self.yaw) = quat2euler([
                 self.current_orientation_x,
                 self.current_orientation_y,
                 self.current_orientation_z,

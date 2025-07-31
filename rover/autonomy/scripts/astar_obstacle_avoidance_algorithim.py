@@ -39,8 +39,9 @@ import math
 from builtin_interfaces.msg import Duration
 from rclpy.duration import Duration
 from visualization_msgs.msg import Marker,MarkerArray
-import transformations as tf
-from transformations import quaternion_from_euler
+# import tf_transformations as tf
+# from transformations import quaternion_from_euler
+from transforms3d.euler import quat2euler
 import threading
 from threading import Lock
 from sensor_msgs_py import point_cloud2
@@ -132,10 +133,10 @@ class AstarObstacleAvoidance(Node):
         self.abort_check = False
         self.heading=0
         self.current_corner_array = [
-            Point(x=1.5, y=1.5, z=0),
-            Point(x=1.5, y=-1.5, z=0),
-            Point(x=-1.5, y=-1.5, z=0), # with 0.5, it produces green blocks!
-            Point(x=-1.5, y=1.5, z=0) ]
+            Point(x=1.5, y=1.5, z=0.0),
+            Point(x=1.5, y=-1.5, z=0.0),
+            Point(x=-1.5, y=-1.5, z=0.0), # with 0.5, it produces green blocks!
+            Point(x=-1.5, y=1.5, z=0.0) ]
         self.z_min = -0.25
         self.z_max = 3
         self.yaw = 0
@@ -206,12 +207,13 @@ class AstarObstacleAvoidance(Node):
         self.current_orientation_w = msg.pose.pose.orientation.w
 
             # Convert quaternion to Euler angles to get roll, pitch, and yaw (theta)
-        (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
+        (self.roll, self.pitch, self.yaw) = quat2euler([
                 self.current_orientation_x,
                 self.current_orientation_y,
                 self.current_orientation_z,
                 self.current_orientation_w
             ])
+        
 
         self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
                                             msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
@@ -228,7 +230,7 @@ class AstarObstacleAvoidance(Node):
         self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
                                             msg.pose.orientation.y, msg.pose.orientation.z)[2]
         
-        (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
+        (self.roll, self.pitch, self.yaw) = quat2euler([
                 self.current_orientation_x,
                 self.current_orientation_y,
                 self.current_orientation_z,
