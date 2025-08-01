@@ -18,7 +18,7 @@ with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
 
 
-class ObjectDetectionNode():
+class ObjectDetectionNode(Node):
     def __init__(self):
         super().__init__('object_detector')
         if sm_config.get("realsense_detection"):

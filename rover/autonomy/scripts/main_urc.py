@@ -1,36 +1,21 @@
 #!/usr/bin/env python3
 
-
-#note
-#positive angluar velocity is counter clockwise 
+##NOT IN USE
+#note: positive angluar velocity is counter clockwise 
 """
 The main file for integrating the different modules of the rover autonomy system for URC 2024, 
 will be replaced by State Machine in 2025
 """
-import rospy
+import rclpy
+from rclpy.node import Node
 from nav_msgs.msg import Odometry
-from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from geometry_msgs.msg import Point, Twist
-from rover.msg import StateMsg
 import math
-from std_msgs.msg import Float32, Bool
 import numpy as np
-import roslib
-roslib.load_manifest('sensor_msgs')
-import sys
-import time
-import rospy
-import cv2
-from sensor_msgs.msg import Image, CameraInfo
-from geometry_msgs.msg import Twist, TransformStamped
-from cv_bridge import CvBridge, CvBridgeError
-from std_srvs.srv import Empty, EmptyResponse
-import tf2_ros
+from geometry_msgs.msg import Twist
 import os
 import aruco_homing
-from aruco_homing import Aimer
-from aruco_homing import PID #don't use
-from aruco_homing import AimerROS
+from aruco_homing import Aimer, PID, AimerROS
 import ar_detection_node 
 from ar_detection_node import ARucoTagDetectionNode
 import grid_search 
@@ -39,8 +24,9 @@ import thomas_grid_search
 from thomas_grid_search import thomasgrid
 import write_serial
 
-class maincaller():
+class maincaller(Node):
     def __init__(self, name, gps_type):
+        super().__init__('maincaller_node')
         self.name = name
         self.gps_type = gps_type # array
         self.scale_factor = 0.75 # to scale up/down the path
@@ -89,9 +75,10 @@ class maincaller():
         
     
 if __name__ == "__main__":
-    print("hello")
+    rclpy.init_node(args=None)
+    
     ar=maincaller("aruco", "gps")
     ar.next()
-    
 
-    
+    ar.destroy_node()
+    rclpy.shutdown()

@@ -6,7 +6,8 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Point, Twist
 # from rover.msg import StateMsg
 import math
-from transformations import euler_from_quaternion, quaternion_from_euler
+from transforms3d.euler import quat2euler
+#from transformations import euler_from_quaternion, quaternion_from_euler
 from std_msgs.msg import Float32
 import numpy as np
 import time
@@ -26,7 +27,7 @@ class grid_search_class(Node):
         # self.roll=euler_from_quaternion([0])
         # self.pitch=euler_from_quaternion([1])
         # self.yaw=euler_from_quaternion([2])
-        self.roll, self.pitch, self.yaw = euler_from_quaternion([0, 0, 0, 1])
+        self.roll, self.pitch, self.yaw = quat2euler([0, 0, 0, 1])
         self.go_to_loc = False
 
     def newOdom(self, msg):
@@ -44,7 +45,7 @@ class grid_search_class(Node):
         #print("ANGLES: ", (roll, pitch, theta))
         # rospy.init_node("speed_controller")
         orientation_list = [self.rot_q.x, self.rot_q.y, self.rot_q.z, self.rot_q.w]
-        (roll, pitch, yaw) = euler_from_quaternion(orientation_list) #new add on 
+        (roll, pitch, yaw) = quat2euler(orientation_list) #new add on 
         self.theta = yaw 
 
     

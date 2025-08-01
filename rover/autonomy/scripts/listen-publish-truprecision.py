@@ -22,74 +22,133 @@ Date: 2024-11-23
 
 
 import socket
-import rospy
+import rclpy
+from rclpy.node import Node
 from std_msgs.msg import UInt8
 
 
 
-
-
-# Ensure that these are the same on the Windows-side Python script.
-# HOST should be the Ubuntu computer's local IP, and
-# PORT should be an available port on the Ubuntu computer.
-# This is to send the data to the Ubuntu computer.
 HOST = "192.168.2.88"
 PORT = 5409
 
 
+class TruPrecisionListener(Node):
+    def __init__(self):
+        super().__init__('listener_truprecision')
+        self.pub = self.create_publisher(UInt8, 'truprecision_data', 10)
+
+        self.get_logger().info("Starting socket server...")
+        self.run_socket_listener()
+
+    def run_socket_listener(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((HOST, PORT))
+            s.listen()
+
+            self.get_logger().info(f"Listening on {HOST}:{PORT}...")
+
+            while rclpy.ok():
+                conn, addr = s.accept()
+                with conn:
+                    self.get_logger().info(f"Connected by {addr}")
+
+                    while rclpy.ok():
+                        data = conn.recv(1024)
+
+                        if not data:
+                            self.get_logger().info("Connection closed by client.")
+                            break
+
+                        for byte in data:
+                            msg = UInt8()
+                            msg.data = byte
+                            self.pub.publish(msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node =None
+    try:
+        node = TruPrecisionListener()
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if node is not None:
+            
+            node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
 
 
 
-# ROS setup -------------------------------------
 
-
-rospy.init_node('listener_truprecision', anonymous=True)
-topic_name = 'truprecision_data'
-pub = rospy.Publisher(topic_name, UInt8, queue_size=10)
-
-
-# -----------------------------------------------
+# # Ensure that these are the same on the Windows-side Python script.
+# # HOST should be the Ubuntu computer's local IP, and
+# # PORT should be an available port on the Ubuntu computer.
+# # This is to send the data to the Ubuntu computer.
+# HOST = "192.168.2.88"
+# PORT = 5409
 
 
 
 
 
-# Socket listener -------------------------------
+# # ROS setup -------------------------------------
 
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind((HOST, PORT))
-    s.listen()
-
-    rospy.loginfo("Ready for connection from Windows")
-
-    rate = rospy.Rate(10)
-    while not rospy.is_shutdown():
-
-        # Found connection
-        conn, addr = s.accept()
-        with conn:
-            print(f"Connected by {addr}")
+# rospy.init_node('listener_truprecision', anonymous=True)
+# topic_name = 'truprecision_data'
+# pub = rospy.Publisher(topic_name, UInt8, queue_size=10)
 
 
-            while not rospy.is_shutdown():
-
-                # Received data
-                data = conn.recv(1024)
-                if data:
-
-                    for byte in data:
-                        pub.publish(byte)
-
-                # Disconnect when data has stopped
-                # Outer while loop will wait for connection again
-                else:
-                    break
-                rate.sleep()
-
-        rospy.loginfo("Shutting down TruPrecision ROS listener node.")
-        rate.sleep()
+# # -----------------------------------------------
 
 
-# -----------------------------------------------
+
+
+
+# # Socket listener -------------------------------
+
+
+# with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+#     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+#     s.bind((HOST, PORT))
+#     s.listen()
+
+#     # rospy.loginfo("Ready for connection from Windows")
+#     self.get_logger().info("Ready for connection from Windows")
+
+#     rate = rospy.Rate(10)
+#     while not rospy.is_shutdown():
+
+#         # Found connection
+#         conn, addr = s.accept()
+#         with conn:
+#             print(f"Connected by {addr}")
+
+
+#             while not rospy.is_shutdown():
+
+#                 # Received data
+#                 data = conn.recv(1024)
+#                 if data:
+
+#                     for byte in data:
+#                         pub.publish(byte)
+
+#                 # Disconnect when data has stopped
+#                 # Outer while loop will wait for connection again
+#                 else:
+#                     break
+#                 rate.sleep()
+
+#         rospy.loginfo("Shutting down TruPrecision ROS listener node.")
+#         rate.sleep()
+
+
+# # -----------------------------------------------

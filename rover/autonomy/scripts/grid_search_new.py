@@ -3,7 +3,8 @@
 import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
-from transformations import euler_from_quaternion
+from transforms3d.euler import quat2euler
+#from transformations import euler_from_quaternion
 from geometry_msgs.msg import Point, Twist
 import math
 from std_msgs.msg import Float32
@@ -23,8 +24,8 @@ def newOdom(msg):
     y = msg.pose.pose.position.y
 
     rot_q = msg.pose.pose.orientation
-    (roll, pitch, theta) = euler_from_quaternion([rot_q.x, rot_q.y, rot_q.z, rot_q.w])
-
+    #(roll, pitch, theta) = euler_from_quaternion([rot_q.x, rot_q.y, rot_q.z, rot_q.w])
+    (roll, pitch, theta) = quat2euler([rot_q.x, rot_q.y, rot_q.z, rot_q.w])
 
 def aruco_callback(msg):
     if msg.data == True:
