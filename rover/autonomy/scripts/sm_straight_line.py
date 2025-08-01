@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Bool
 import math
+import time
 import ar_detection_node as adn
 
 import yaml
@@ -20,8 +22,9 @@ with open(file_path, "r") as f:
 # through the state machine. When navigate function is called, it calls the move_to_target function which continuously calculates the target distance
 # and heading to determine the angular and linear velocities. When the target distance is within the threshold it breaks out of the loop to return.
     
-class StraightLineApproach:
+class StraightLineApproach(Node):
     def __init__(self, lin_vel, ang_vel, targets):
+        super().__init__('straight_line_approach_node')
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
         self.targets = targets
@@ -30,14 +33,18 @@ class StraightLineApproach:
         self.x = -100000
         self.y = -100000
         self.heading = 0
-        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
-        self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        # self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
+        # self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
+        # self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.pose_subscriber = self.create_subscription(PoseStamped, '/pose', self.pose_callback, 10)
+        self.target_subscriber = self.create_subscription(Float64MultiArray, 'target', self.target_callback, 10)
+        self.drive_publisher = self.create_publisher(Twist, '/drive', 10)
+        self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
         self.aruco_found = False
-        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
+        self.aruco_sub = self.create_subscription(Bool, "aruco_found", self.detection_callback, 10)
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.detection_callback)
+     
         # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
 
         #new additions
@@ -88,12 +95,12 @@ class StraightLineApproach:
         self.found = data
 
     def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISHIT)
-        rate = rospy.Rate(50)
+        
         kp = 0.5
         threshold = 0.5
         angle_threshold = 0.2
 
-        while (not rospy.is_shutdown()) and (self.abort_check is False):
+        while (rclpy.ok()) and (self.abort_check is False):
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
@@ -114,23 +121,23 @@ class StraightLineApproach:
             # print (f"diff in heading: {angle_diff}", f"target_distance: {target_distance}")
 
             if target_distance < threshold:
-                msg.linear.x = 0
-                msg.angular.z = 0
+                msg.linear.x = 0.0
+                msg.angular.z = 0.0
                 self.drive_publisher.publish(msg)
                 print(f"Reached target: ({target_x}, {target_y})")
                 break
 
             if abs(angle_diff) <= angle_threshold:
                 msg.linear.x = self.lin_vel
-                msg.angular.z = 0
+                msg.angular.z = 0.0
             else:
-                msg.linear.x = 0
+                msg.linear.x = 0.0
                 msg.angular.z = angle_diff * kp
                 if abs(msg.angular.z) < 0.3:
                     msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
 
             self.drive_publisher.publish(msg)
-            rate.sleep()
+            time.sleep(1/50)
 
     def navigate(self, state="Location Selection"): #navigate needs to take in a state value as well
         for target_x, target_y in self.targets:
@@ -139,15 +146,16 @@ class StraightLineApproach:
             if self.abort_check:
                 self.abort_check = False
                 break
-            rospy.sleep(1)
+            time.sleep(1)
 
 if __name__ == '__main__':
     targets = [(9, 2)]  # Define multiple target points
+    rclpy.init(args=None)
     try:
-        rospy.init_node('straight_line_approach_node')
+        
         approach = StraightLineApproach(1.5, 0.5, targets)
         approach.navigate()
-    except rospy.ROSInterruptException:
+    except rclpy.exceptions.ROSInterruptException:
         pass
 
     gs = GridSearch(4, 4, 1, x, y)  # define multiple target points here: cartesian
@@ -155,5 +163,5 @@ if __name__ == '__main__':
     print(target)
     try:
         straight_line_approach(1, 0.5, target) #LOOK HERE
-    except rospy.ROSInterruptException:
+    except rclpy.exceptions.ROSInterruptException:
         pass

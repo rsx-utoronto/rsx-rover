@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
-import rospy 
+import rclpy
+from rclpy.node import Node 
 from PIL import Image as im
 from sensor_msgs.msg import Image 
 import cv2 
@@ -15,12 +16,12 @@ subscriberNodeName = "camera_sensor_subscriber"
 topicName = "video_topic"
 
 model = YOLO('yolov8n.pt')
-
+rclpy.init(args=None)
+node = rclpy.create_node(subscriberNodeName)
 # function callback that is called everytume the message arrives 
 def callback(message):
     bridgeObject = CvBridge()
-
-    rospy.loginfo("received a video message/frame")
+    node.get_logger().info("received a video message/frame")
 
     # convert from cv_bridge to OpenCV image format
     convertedFrame = bridgeObject.imgmsg_to_cv2(message)
@@ -48,11 +49,11 @@ def callback(message):
 
 # initialize the subscriber node 
 # anonymous = True means that a random number is added to the subscriber node name
-rospy.init_node(subscriberNodeName, anonymous=True)
+# rospy.init_node(subscriberNodeName, anonymous=True)
 
 # specify the topic name, type of the message will receive, and the name of the callback function 
-rospy.Subscriber(topicName,Image,callback)
+node.create_subscription(Image,topicName,callback, 10)
 
-rospy.spin()
+rclpy.spin(node)
 
 cv2.destroyAllWindows()

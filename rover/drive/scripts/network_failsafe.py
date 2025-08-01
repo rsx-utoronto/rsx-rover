@@ -2,11 +2,12 @@
 
 # import rospy
 import rclpy
+from rclpy.node import Node
 from std_msgs.msg import Bool
 from geometry_msgs.msg import Twist
 
 
-class NetworkFailsafe (rclpy.node.Node):
+class NetworkFailsafe (Node):
     def __init__(self):
         super().__init__('network_failsafe')
         self.status_sub = self.create_subscription(Bool, "/network_status", self.status_callback, 10)

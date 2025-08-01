@@ -1,14 +1,14 @@
 #! /usr/bin/env python3
 
 import os
-import rospy 
+import rclpy
+from rclpy.node import Node 
 from PIL import Image as im
 from sensor_msgs.msg import Image 
 import cv2 
 import json
 from ultralytics import YOLO 
 from cv_bridge import CvBridge 
-import cvzone
 import math
 import numpy as np
 
@@ -50,23 +50,22 @@ import numpy as np
 # cv2.destroyAllWindows()
 
 
-class BottleDetector:
+class BottleDetector(Node):
     def __init__(self, model_path, topicName):
+        super().__init__('bottle_detector_node')
         self.model = YOLO(model_path)
-
-        NodeName = "bottle_detector_node"
-
-        # make sure that the same name is used in the soufce file of the publisher
+       
         self.topicName = topicName
 
         # initialize the subscriber node
         # anonymous = True means that a random number is added to the subscriber node name
-        rospy.init_node(NodeName, anonymous=True)
         
         # specify the topic name, type of the message will receive, and the name of the callback function 
-        rospy.Subscriber(topicName,Image, self.callback)
+        # rospy.Subscriber(topicName,Image, self.callback)
+        self.create_subscription(Image, topicName, self.callback, 10)
         self.bridge = CvBridge()
-        self.pub = rospy.Publisher("bottle_detector", Image, queue_size=10)
+        # self.pub = rospy.Publisher("bottle_detector", Image, queue_size=10)
+        self.pub = self.create_publisher(Image, "bottle_detector", 10)
 
     def callback(self, msg):
 
@@ -151,12 +150,13 @@ class BottleDetector:
 
 
 if __name__ == '__main__':
+    rclpy.init(args=None)
     path = os.path.dirname(os.path.abspath(__file__))
     # print(path)
     model_path = os.path.join(path, 'bottle_detector.pt')
     topicName = "/zed_node/rgb/image_rect_color"
     detector = BottleDetector(model_path, topicName)
-    rospy.spin()
+    rclpy.spin(detector)
     cv2.destroyAllWindows()
 
     # model = YOLO(model_path)

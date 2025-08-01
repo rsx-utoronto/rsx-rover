@@ -2,7 +2,8 @@
 
 # This one is new because it can home during straight line traversal. 
 
-import rospy
+import rclpy
+from rclpy.node import Node
 import time
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
@@ -25,8 +26,9 @@ with open(file_path, "r") as f:
 # through the state machine. When navigate function is called, it calls the move_to_target function which continuously calculates the target distance
 # and heading to determine the angular and linear velocities. When the target distance is within the threshold it breaks out of the loop to return.
     
-class StraightLineApproachNew:
+class StraightLineApproachNew(Node):
     def __init__(self, lin_vel, ang_vel, targets, state):
+        super().__init__('straight_line_approach_new')
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
         self.targets = targets
@@ -40,20 +42,34 @@ class StraightLineApproachNew:
         self.start_looking = False
         self.heading = 0
         
-        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
-        self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        # self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
+        # self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
+        # self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.create_subscription(PoseStamped, '/pose', self.pose_callback, 10)
+        self.create_subscription(Float64MultiArray, 'target', self.target_callback, 10)
+        self.drive_publisher = self.create_publisher(Twist, '/drive', 10)
+        
         self.aruco_found = False
         self.count=0
-        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
+        # self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
+        self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
+        
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
-        self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
-        self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
-        self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
-        self.done_early = rospy.Publisher("done_early", Bool, queue_size=10)
+        # self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
+        # self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
+        # self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
+        # self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
+        # self.done_early = rospy.Publisher("done_early", Bool, queue_size=10)
+        self.aruco_sub=self.create_subscription(Odometry, '/rtabmap/odom', self.odom_callback, 10)
+        self.aruco_sub = self.create_subscription(Bool, 'aruco_found', self.aruco_detection_callback, 10)
+        self.mallet_sub = self.create_subscription(Bool, 'mallet_detected', self.mallet_detection_callback, 10)
+        self.waterbottle_sub = self.create_subscription(Bool, 'waterbottle_detected', self.waterbottle_detection_callback, 10)
+        self.message_pub = self.create_publisher(String, "gui_status", 10)
+        self.done_early = self.create_publisher(Bool, "done_early", 10)
+        
         # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        # self.odom_sub = self.create_subscription(Odometry, '/rtabmap/odom', self.odom_callback, 10)
         self.found_objects = {"AR1":False, 
                    "AR2":False,
                    "AR3":False,
@@ -155,7 +171,7 @@ class StraightLineApproachNew:
         self.found = data
 
     def move_to_target(self, target_x, target_y, state): #navigate needs to take in a state value as well (FINISHIT)
-        rate = rospy.Rate(50)
+        
         kp = 0.5
         threshold = 0.5
         angle_threshold = 0.2
@@ -171,7 +187,7 @@ class StraightLineApproachNew:
         first_time=True
         
 
-        while (not rospy.is_shutdown()) and (self.abort_check is False):
+        while (rclpy.ok()) and (self.abort_check is False):
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
@@ -204,17 +220,17 @@ class StraightLineApproachNew:
                 # print (f"diff in heading: {angle_diff}", f"target_distance: {target_distance}")
 
                 if target_distance < threshold:
-                    msg.linear.x = 0
-                    msg.angular.z = 0
+                    msg.linear.x = 0.0
+                    msg.angular.z = 0.0
                     self.drive_publisher.publish(msg)
                     print(f"Reached target: ({target_x}, {target_y})")
                     break
 
                 if abs(angle_diff) <= angle_threshold:
                     msg.linear.x = self.lin_vel
-                    msg.angular.z = 0
+                    msg.angular.z = 0.0
                 else:
-                    msg.linear.x = 0
+                    msg.linear.x = 0.0
                     msg.angular.z = angle_diff * kp
                     if abs(msg.angular.z) < 0.3:
                         msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
@@ -228,7 +244,8 @@ class StraightLineApproachNew:
                 # call homing
                 # should publish that it is found
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
-                pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
+                # pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
+                pub=self.create_publisher(Twist, 'drive', 10) # change topic name
                 if state == "AR1" or state == "AR2" or state == "AR3":
                     # this sees which camera it is using and then uses the parameters accordingly.
                     if sm_config.get("realsense_detection"):
@@ -242,11 +259,11 @@ class StraightLineApproachNew:
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
                     rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
                     #print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
-                rate = rospy.Rate(10) #this code needs to be adjusted
+                 #this code needs to be adjusted
                 
                 # Wait a bit for initial detection
                 for i in range(50):
-                    rate.sleep()
+                    time.sleep(0.1)
                 
                 # Add variables for tracking detection memory
                 last_detection_time = time.time()
@@ -307,12 +324,12 @@ class StraightLineApproachNew:
                             break
                     
                     pub.publish(twist)
-                    rate.sleep()
+                    time.sleep(1/50)
               
                 break
             
             self.drive_publisher.publish(msg)
-            rate.sleep()
+            time.sleep(1/50)
 
     def navigate(self, state="Location Selection"): #navigate needs to take in a state value as well
         for target_x, target_y in self.targets:
@@ -321,15 +338,16 @@ class StraightLineApproachNew:
             if self.abort_check:
                 self.abort_check = False
                 break
-            rospy.sleep(1)
+            time.sleep(1)
 
 if __name__ == '__main__':
     targets = [(9, 2)]  # Define multiple target points
+    rclpy.init()
     try:
-        rospy.init_node('straight_line_approach_node')
-        approach = StraightLineApproach(1.5, 0.5, targets)
+        
+        approach = StraightLineApproachNew(1.5, 0.5, targets, 'AR1')
         approach.navigate()
-    except rospy.ROSInterruptException:
+    except rclpy.exceptions.ROSInterruptException:
         pass
 
     gs = GridSearch(4, 4, 1, x, y)  # define multiple target points here: cartesian
@@ -337,5 +355,5 @@ if __name__ == '__main__':
     print(target)
     try:
         straight_line_approach(1, 0.5, target) #LOOK HERE
-    except rospy.ROSInterruptException:
+    except rclpy.exceptions.ROSInterruptException:
         pass

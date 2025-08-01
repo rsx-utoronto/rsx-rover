@@ -146,6 +146,10 @@ install(TARGETS
 #   DESTINATION include
 # )
 
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
 # Python scripts installation (adjust for ROS 2)
 # install(PROGRAMS
 #   rover/autonomy/scripts/state_machine_node.py

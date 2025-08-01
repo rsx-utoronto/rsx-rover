@@ -3,18 +3,22 @@
 #Class for opening the science arduino and sending messages
 import subprocess
 import serial
-import rospy
+import rclpy
+from rclpy.node import Node
 from std_msgs.msg import String
 
 board_name = "Arduino__www.arduino.cc__0042_334383935313517160E1"
 
-class ScienceArduino():
+class ScienceArduino(Node):
     def __init__(self, board_name):
+        super().__init__('science_arduino_node')
         self.board_name = board_name
         self.port_name = self.find_port()
         self.sci_board = serial.Serial(self.port_name, baudrate=9600, timeout=1)
-        self.sci_pub = rospy.Publisher("/science_serial_data", String, queue_size=10)
-        self.sci_sub = rospy.Subscriber("/science_serial_control", String, self.board_write_callback)
+        # self.sci_pub = rospy.Publisher("/science_serial_data", String, queue_size=10)
+        # self.sci_sub = rospy.Subscriber("/science_serial_control", String, self.board_write_callback)
+        self.sci_pub = self.create_publisher(String, "/science_serial_data", 10)
+        self.sci_sub = self.create_subscription(String, "/science_serial_control", self.board_write_callback, 10)
     
     def find_port(self):
         command = 'rover_ws/src/rsx-rover/scripts/utils/gen/find_usb.sh'
@@ -60,17 +64,17 @@ class ScienceArduino():
 
 
 def main():
+    rclpy.init(args=None)
     try:
-        rospy.init_node("science_arduino_node", anonymous=True)
         science_arduino = ScienceArduino(board_name)
         # Set the rate to 10 Hz
-        rate = rospy.Rate(10)  # 10 Hz
-        while not rospy.is_shutdown():
+   
+        while rclpy.ok():
             science_arduino.board_read()
-            rate.sleep()
+            time.sleep(0.1)
         # rospy.spin()
         
-    except rospy.ROSInterruptException:
+    except rclpy.exceptions.ROSInterruptException:
         pass
     
 

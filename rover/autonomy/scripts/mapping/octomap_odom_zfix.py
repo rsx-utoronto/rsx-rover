@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from nav_msgs.msg import Odometry
-import tf
+from transforms3d.euler import euler2quat, quat2euler
 """
 Doesn't help to fix the problem, check documentation (https://docs.google.com/document/d/1oCBbmjoqrstUPOOrSD8CYpfelnwaZ9cZcK6Ddsa__c4/edit?usp=sharing) for the another way to fix the problem
 """
-class Odom2D:
+class Odom2D(Node):
     def __init__(self):
-
-        self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        self.odom_pub = rospy.Publisher('/odom_2d', Odometry, queue_size=10)
-        self.prev_stamp = rospy.Time.now()
+        super().__init__('odom_2d')
+        # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        # self.odom_pub = rospy.Publisher('/odom_2d', Odometry, queue_size=10)
+        # self.prev_stamp = rospy.Time.now()
+        self.odom_sub = self.create_subscription(Odometry, '/rtabmap/odom', self.odom_callback, 10) 
+        self.odom_pub = self.create_publisher(Odometry, '/odom_2d', 10)
+        self.prev_stamp = self.get_clock().now().to_msg()  # Use ROS
         self.odom_2d = Odometry()
 
     def odom_callback(self, msg):
@@ -23,10 +27,10 @@ class Odom2D:
         position = msg.pose.pose.position
         orientation = msg.pose.pose.orientation
 
-        euler = tf.transformations.euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
+        euler = quat2euler([orientation.x, orientation.y, orientation.z, orientation.w])
 
         # Projecting 3D pose to 2D
-        quaternion_2d = tf.transformations.quaternion_from_euler(0, 0, euler[2]) # yaw is euler[2], set pitch and roll to 0
+        quaternion_2d = euler2quat(0, 0, euler[2]) # yaw is euler[2], set pitch and roll to 0
         self.odom_2d.pose.pose.position.x = position.x
         self.odom_2d.pose.pose.position.y = position.y
         self.odom_2d.pose.pose.position.z = 0.0 # 2D # set z to 0
@@ -49,6 +53,8 @@ class Odom2D:
         self.odom_pub.publish(self.odom_2d)
 
 if __name__ == '__main__':
-    rospy.init_node('odom_2d')
+    rclpy.init(args=None)
+    
+    
     odom2d = Odom2D()
-    rospy.spin()
+    rclpy.spin(odom2d)
