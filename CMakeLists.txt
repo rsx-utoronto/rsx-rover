@@ -166,5 +166,14 @@ install(PROGRAMS
   rover/autonomy/scripts/imu_to_enu.py
   DESTINATION lib/${PROJECT_NAME}
 )
+install(PROGRAMS
+  rover/science/scripts/geniecamerapublisher.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/check_zed.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()
