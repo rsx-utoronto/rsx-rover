@@ -5,19 +5,12 @@ import launch
 import launch_ros.actions
 from ament_index_python.packages import get_package_share_directory
 
-# I think that remapping must be done in the command line... check this 
-''' these were skipped from the pkg: 
-<remap from="imu/mag" to="/zed_node/imu/mag" />
-<remap from="imu/data_raw" to="/imu/enu" />
-<remap from="imu/data" to="/imu/orient" />'''
-
-
 
 def generate_launch_description():
     ld = launch.LaunchDescription([
         launch_ros.actions.Node(
             package='rover',
-            executable='manual_control',
+            executable='manual_switch.py', #note this was manual_control
             name='rover_manual_control',
             output='screen'
         ),
@@ -29,7 +22,7 @@ def generate_launch_description():
         ),
         launch_ros.actions.Node(
             package='imu_filter_madgwick',
-            executable='imu_filter_node',
+            executable='imu_filter_madqwick_node',
             name='imu_filter_madgwick',
             output='screen',
             parameters=[
@@ -45,8 +38,13 @@ def generate_launch_description():
                 {
                     'orientation_stddev': '0.2'
                 }
-            ]
-
+            ],
+        
+        remappings=[
+            ('imu/mag', '/zed_node/imu/mag'),
+            ('imu/data_raw', '/imu/enu'),
+            ('imu/data', '/imu/orient')
+        ]
 
         ),
         launch_ros.actions.Node(
@@ -92,6 +90,7 @@ def generate_launch_description():
             )
         )
     ])
+    
     return ld
 
 

@@ -157,4 +157,14 @@ install(DIRECTORY launch
 # )
 
 # Required ROS 2 macro
+install(PROGRAMS
+  scripts/manual_switch.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/imu_to_enu.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_package()

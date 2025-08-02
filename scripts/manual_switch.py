@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from sensor_msgs.msg import Joy
 import subprocess
 
 
-class ManualSwitch:
+class ManualSwitch(Node):
     def __init__(self):
-        rospy.init_node('auto_switch')
-        sub = rospy.Subscriber('/auto/joy', Joy, self.callback)
+        super().__init__('manual_switch_node')
+      
+       
+        sub=self.create_subscription(
+            Joy,
+            '/auto/joy',
+            self.callback,
+            10
+        )
         self.manual_script_path = '/home/rsx/rover_ws/src/rsx-rover/scripts/manual_auto'
         self.switch_pressed = False
         # self.PS = 0
@@ -32,9 +40,9 @@ class ManualSwitch:
         # check if zed publishing, if it doesn't have anything for x time wait 5 seconds check, if still no, relaunch the zed_dies.
   
 if __name__ == '__main__':
-    while not rospy.is_shutdown():
+        rclpy.init(args=None)
         manual_switch = ManualSwitch()
-        if manual_switch.switch_pressed:
-            break
-        rospy.spin()
-
+        rclpy.spin(manual_switch)
+        manual_switch.destroy_node()
+        rclpy.shutdown()
+   
