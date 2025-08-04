@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-
-
-import rospy
+import rclpy
+from rclpy.node import Node
 from sensor_msgs.msg import Image, CompressedImage
 import cv2
 from cv_bridge import CvBridge
@@ -10,30 +9,29 @@ import numpy as np
 import getmicroscopeid # local import
 
 
-class MicroscopeCam:
-
+class MicroscopeCam(Node):
     def __init__(self):
+        super().__init__("microscopecam")
         camera_name = "GENERAL - UVC : GENERAL - UVC"
         camera_id = getmicroscopeid.get_usb_camera_device(camera_name)
-        rate = rospy.Rate(1)
+        
 
-        while (not camera_id) and (not rospy.is_shutdown()):
+        while (not camera_id) and (rclpy.ok()):
             print("WARNING: Microscope camera not found.")
             camera_id = getmicroscopeid.get_usb_camera_device(camera_name)
             rate.sleep()
         print(camera_id)
         
-        self.rate = rospy.Rate(10)
-        self.pub_raw = rospy.Publisher("/microscope", Image, queue_size=10)
-        self.pub_compressed = rospy.Publisher("/microscope/compressed", CompressedImage, queue_size=2)
-
+        
+        self.pub_raw = self.create_publisher(Image, "/microscope", 10)
+        self.pub_compressed = self.create_publisher(CompressedImage, "/microscope/compressed", 2)
         # Get camera feed
         camera = cv2.VideoCapture(camera_id)
 
         # Create bridge object
         bridge = CvBridge()
 
-        while not rospy.is_shutdown():
+        while rclpy.ok():
 
             ret, frame = camera.read()
 
@@ -45,19 +43,19 @@ class MicroscopeCam:
 
                 # Publish compressed image
                 comp = CompressedImage()
-                comp.header.stamp = rospy.Time.now()
+                comp.header.stamp = self.get_clock().now().to_msg()
                 comp.format = "jpeg"
                 comp.data = np.array(cv2.imencode(
                     '.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 50]
                 )[1]).tobytes()
                 self.pub_compressed.publish(comp)
 
-                self.rate.sleep()
+                time.sleep(1/10)
 
 
 if __name__ == "__main__":
+    rclpy.init()
     try:
-        rospy.init_node("microscopecam")
         microscopecam = MicroscopeCam()
-    except rospy.ROSInterruptException:
+    except rclpy.exceptions.ROSInterruptException:
         pass

@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 import cv2
 import time
 from sensor_msgs.msg import Image, CameraInfo
@@ -12,18 +13,25 @@ import os
 
 bridge = CvBridge()
 
-class ObjectDetectionNode():
+class ObjectDetectionNode(Node):
 
     def __init__(self):
+        super().__init__('object_detection_node')
         self.image_topic = "/zed_node/rgb/image_rect_color"
         self.info_topic = "/zed_node/rgb/camera_info"
-        self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
-        self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
-        self.mallet_pub = rospy.Publisher('mallet_detected', Bool, queue_size=1)
-        self.waterbottle_pub = rospy.Publisher('waterbottle_detected', Bool, queue_size=1)
-        self.bbox_pub = rospy.Publisher('aruco_node/bbox', Float64MultiArray, queue_size=10)
-        self.vis_pub = rospy.Publisher('vis/object_detections', Image, queue_size=10)
+        # self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
+        # self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
+        # self.mallet_pub = rospy.Publisher('mallet_detected', Bool, queue_size=1)
+        # self.waterbottle_pub = rospy.Publisher('waterbottle_detected', Bool, queue_size=1)
+        # self.bbox_pub = rospy.Publisher('aruco_node/bbox', Float64MultiArray, queue_size=10)
+        # self.vis_pub = rospy.Publisher('vis/object_detections', Image, queue_size=10)
 
+        self.image_sub = self.create_subscription(Image, self.image_topic, self.image_callback, 10)
+        self.cam_info_sub = self.create_subscription(CameraInfo, self.info_topic, self.info_callback, 10)
+        self.mallet_pub = self.create_publisher(Bool, 'mallet_detected', 10)
+        self.waterbottle_pub = self.create_publisher(Bool, 'waterbottle_detected', 10)
+        self.bbox_pub = self.create_publisher(Float64MultiArray, 'object/bbox', 10)
+        self.vis_pub = self.create_publisher(Image, 'vis/object_detections', 10)
         self.K = None
         self.D = None
         script_dir=os.path.dirname(os.path.abspath(__file__))
@@ -44,7 +52,8 @@ class ObjectDetectionNode():
         try:
             cv_image = bridge.imgmsg_to_cv2(ros_image, "bgr8")
         except CvBridgeError as e:
-            rospy.logerr(f"Failed to convert ROS image to CV2: {e}")
+            # rospy.logerr(f"Failed to convert ROS image to CV2: {e}")
+            self.get_logger().error(f"Failed to convert ROS image to CV2: {e}")
             return
 
         self.detect_objects(cv_image)
@@ -89,9 +98,12 @@ class ObjectDetectionNode():
             self.vis_pub.publish(img_msg)
 
 def main():
-    rospy.init_node('object_detector', anonymous=True)
+    # rospy.init_node('object_detector', anonymous=True)
+    # object_detector = ObjectDetectionNode()
+    # rospy.spin()
+    rclpy.init()
     object_detector = ObjectDetectionNode()
-    rospy.spin()
+    rclpy.spin(object_detector)
 
 
 if __name__ == "__main__":

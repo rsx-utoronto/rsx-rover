@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import stitcher
-import rospy
+import rclpy
+from rclpy.node import Node
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
@@ -10,9 +11,11 @@ from std_msgs.msg import Bool
 import time
 
 # ros subscriber
-class Subscriber:
-    def __init__(self):
-        self.sub = rospy.Subscriber('/zed_node/rgb/image_rect_color', Image, self.callback)
+class Subscriber():
+    def __init__(self, node: Node):
+        self.node = node
+        # self.sub = rospy.Subscriber('/zed_node/rgb/image_rect_color', Image, self.callback)
+        self.sub = self.node.create_subscription(Image, '/zed_node/rgb/image_rect_color', self.callback, 10)
         self.imgfiles = []
         self.save = False
     
@@ -35,8 +38,9 @@ class Subscriber:
         
 # ros publisher
 class Publisher:
-    def __init__(self):
-        self.pub = rospy.Publisher('/drive', Twist, queue_size=100)
+    def __init__(self, node: Node):
+        # self.pub = rospy.Publisher('/drive', Twist, queue_size=100)
+        self.pub = node.create_publisher(Twist, '/drive', 10)
 
     def turn(self, angular_vel):
         twist = Twist()
@@ -51,13 +55,17 @@ class Publisher:
         self.pub.publish(twist)
 
 
-class Panorama:
+class Panorama(Node):
     def __init__(self):
-        self.sub:Subscriber = Subscriber()
-        self.pub:Publisher = Publisher()
-        self.receive_control = rospy.Subscriber("/pano_control", Bool, self.callback)
-        self.pano_img = rospy.Publisher('/pano_img', Image, queue_size=100)
-        self.result_pub = rospy.Publisher("/pano_result", Image, queue_size=100)
+        super().__init__("panorama")
+        self.sub:Subscriber = Subscriber(self)
+        self.pub:Publisher = Publisher(self)
+        # self.receive_control = rospy.Subscriber("/pano_control", Bool, self.callback)
+        # self.pano_img = rospy.Publisher('/pano_img', Image, queue_size=100)
+        # self.result_pub = rospy.Publisher("/pano_result", Image, queue_size=100)
+        self.receive_control = self.create_subscription(Bool, "/pano_control", self.callback, 10)
+        self.pano_img = self.create_publisher(Image, '/pano_img', 10)
+        self.result_pub = self.create_publisher(Image, "/pano_result", 10)
         self.stitcher = stitcher.Stitcher()
 
     def start(self, num_images):
@@ -113,11 +121,11 @@ class Panorama:
             self.start(15)
 
 def main():
-    rospy.init_node('panorama')
+    rclpy.init(args=None)
     # sub = Subscriber()
     # pub = Publisher()
     pan = Panorama()
-    rospy.spin()
+    rclpy.spin(pan)
 
 if __name__ == '__main__':
     main()
