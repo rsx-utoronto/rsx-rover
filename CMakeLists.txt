@@ -176,4 +176,9 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+  scripts/manual_control
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_package()
