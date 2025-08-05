@@ -191,6 +191,8 @@ void TeleopRover::SetVelocity(){
 
 				double turnFactor_x = static_cast<double>(axes[LS_x]);
 				double turnFactor_y = static_cast<double>(axes[LS_y]);
+				RCLCPP_INFO(this->get_logger(), "tfx: %f", turnFactor_x);
+				RCLCPP_INFO(this->get_logger(), "tfy: %f", turnFactor_y);
 				double lin_vel;
 
 				// Encoding value from joystick 

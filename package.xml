@@ -9,14 +9,8 @@
   <member_of_group>rosidl_interface_packages</member_of_group>
 
   <buildtool_depend>ament_cmake</buildtool_depend>  
-
- 
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
-  <export>
-    <member_of_group>rosidl_interface_packages</member_of_group>
-    <build_type>ament_cmake</build_type>
-  </export>
 
   <depend>rclcpp</depend>          
   <depend>rclpy</depend>          
@@ -24,68 +18,12 @@
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>visualization_msgs</depend>
-  <depend>message_filters</depend> 
-
-</package>
-
-<!-- <?xml version="1.0"?>
-<package format="2">
-  <name>rover</name>
-  <version>2.0.0</version>
-  <description>The Rover package</description>
-  <maintainer email="richard@todo.todo">richard</maintainer>
-  <license>TODO</license>
-
-  <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>rosidl_default_generators</buildtool_depend>
-
-  
-  <depend>rclcpp</depend>
-  <depend>rclpy</depend>
-  <depend>std_msgs</depend>
-  <depend>sensor_msgs</depend>
-  <depend>geometry_msgs</depend>
-  <depend>visualization_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>tf2</depend>
   <depend>message_filters</depend>
-  <depend>ros_phoenix</depend>
-  
 
-  <exec_depend>rosidl_default_runtime</exec_depend>
-
- 
   <export>
     <build_type>ament_cmake</build_type>
-   
-    <rosidl_interface_packages>rosidl_interface_packages</rosidl_interface_packages>
   </export>
-</package> -->
 
-
-
-
-
-<!--   
-  <member_of_group>rosidl_interface_packages</member_of_group>
-
-
-  <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>rosidl_default_generators</buildtool_depend>
-
-
-  <exec_depend>rosidl_default_runtime</exec_depend>
- -->
-
-
-
-  <!-- CORE DEPENDENCIES (ROS 2 VERSIONS) -->
-  <!-- <depend>rclcpp</depend>          
-  <depend>rclpy</depend>          
-  <depend>std_msgs</depend>
-  <depend>message_filters</depend> 
-  
-  
-  <depend>ros_phoenix</depend>     
-
-</package> -->
+</package>
