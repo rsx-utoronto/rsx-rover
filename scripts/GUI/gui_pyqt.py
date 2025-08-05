@@ -2,7 +2,8 @@
 
 
 import sys
-import rospy
+import rclpy
+from rclpy.node import Node
 import map_viewer as map_viewer
 from pathlib import Path
 import numpy as np
@@ -28,9 +29,9 @@ CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
 
 #map widget that has map viewer 
 class mapOverlay(QWidget):
-    def __init__(self):
+    def __init__(self, node):
         super().__init__()
-        
+        self.node = node
         self.viewer = map_viewer.MapViewer()
         #sets the source of map tiles to local tile cache folder
         self.viewer.set_map_server(
@@ -40,9 +41,11 @@ class mapOverlay(QWidget):
         self.centreOnRover = False
         
         # ROS Subscriber for GPS coordinates
-        rospy.Subscriber('/calian_gnss/gps', NavSatFix, self.update_gps_coordinates)
-        rospy.Subscriber('/calian_gnss/gps_extended', GnssSignalStatus, self.update_gps_heading)
-    
+        # rospy.Subscriber('/calian_gnss/gps', NavSatFix, self.update_gps_coordinates)
+        # rospy.Subscriber('/calian_gnss/gps_extended', GnssSignalStatus, self.update_gps_heading)
+        self.node.create_subscription(NavSatFix, '/calian_gnss/gps', self.update_gps_coordinates, 10)
+        self.node.create_subscription(GnssSignalStatus, '/calian_gnss/gps_extended', self.update_gps_heading, 10)
+        
     #initialize overall layout
     def initOverlayout(self):
         OverLayout = QGridLayout()
@@ -132,7 +135,7 @@ class ArucoWidget(QWidget):
     update_label_signal = pyqtSignal(bool)
     update_list_signal = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, node):
         super().__init__()
         self.init_ui()
 
@@ -141,8 +144,10 @@ class ArucoWidget(QWidget):
         self.update_list_signal.connect(self.update_string_list)
 
         # Initialize ROS subscribers
-        rospy.Subscriber('aruco_found', Bool, self.bool_callback)
-        rospy.Subscriber('aruco_name', String, self.string_callback)
+        # rospy.Subscriber('aruco_found', Bool, self.bool_callback)
+        # rospy.Subscriber('aruco_name', String, self.string_callback)
+        node.create_subscription(Bool, 'aruco_found', self.bool_callback, 10)
+        node.create_subscription(String, 'aruco_name', self.string_callback, 10)
 
         self.received_strings = []
 
@@ -215,18 +220,21 @@ class ArucoBar(QWidget):
     update_label_signal = pyqtSignal(bool)
     update_list_signal = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, node):
         super().__init__()
         self.init_ui()
-
+        self.node=node
         # Connect signals to the corresponding update methods
         self.update_label_signal.connect(self.update_label)
         self.update_list_signal.connect(self.update_string_list)
 
         # Initialize ROS subscribers
-        rospy.Subscriber('aruco_found', Bool, self.bool_callback)
-        rospy.Subscriber('aruco_name', String, self.string_callback)
-
+        # rospy.Subscriber('aruco_found', Bool, self.bool_callback)
+        # rospy.Subscriber('aruco_name', String, self.string_callback)
+        node.create_subscription(Bool, 'aruco_found', self.bool_callback, 10)
+        node.create_subscription(String, 'aruco_name', self.string_callback, 10)
+        
+        
         self.received_string = ""
 
     def init_ui(self):
@@ -285,17 +293,19 @@ class ObjectBar(QWidget):
     update_mallet_signal = pyqtSignal(bool)
     update_bottle_signal = pyqtSignal(bool)
 
-    def __init__(self):
+    def __init__(self, node):
         super().__init__()
         self.init_ui()
-
+        self.node = node
         # Connect signals to the corresponding update methods
         self.update_mallet_signal.connect(self.update_mallet)
         self.update_bottle_signal.connect(self.update_bottle)
 
         # Initialize ROS subscribers
-        rospy.Subscriber('mallet_detected', Bool, self.mallet_callback)
-        rospy.Subscriber('waterbottle_detected', Bool, self.bottle_callback)
+        # rospy.Subscriber('mallet_detected', Bool, self.mallet_callback)
+        # rospy.Subscriber('waterbottle_detected', Bool, self.bottle_callback)
+        node.create_subscription(Bool, 'mallet_detected', self.mallet_callback, 10)
+        node.create_subscription(Bool, 'waterbottle_detected', self.bottle_callback, 10)
 
         self.received_strings = []
 
@@ -383,15 +393,16 @@ class StateMachineStatus(QWidget):
     # Define signal to update the label
     update_label_signal = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, node):
         super().__init__()
         self.init_ui()
-
+        self.node=node
         # Connect the signal to the update method
         self.update_label_signal.connect(self.update_label)
 
         # Initialize ROS subscriber
-        rospy.Subscriber('/led_colour', String, self.callback)
+        # rospy.Subscriber('/led_colour', String, self.callback)
+        node.create_subscription(String, '/led_colour', self.callback, 10)
 
     def init_ui(self):
         # Create a label
@@ -499,9 +510,12 @@ class EditableComboBox(QComboBox):
         return data
 
 class LngLatEntryBar(QWidget):
-    def __init__(self, map_overlay):
+    def __init__(self,node, map_overlay):
         super().__init__()
-        self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
+        self.node = node
+        # self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
+        self.longLat_pub = self.node.create_publisher(Float32MultiArray, '/long_lat_goal_array', 5)
+        
         self.array = Float32MultiArray()
         layout = QVBoxLayout(self)
 
@@ -544,9 +558,11 @@ class LngLatEntryBar(QWidget):
         
 
 class LngLatEntryFromFile(QWidget):
-    def __init__(self, map_overlay):
+    def __init__(self, node, map_overlay):
         super().__init__()
-        self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
+        self.node = node
+        # self.longLat_pub = rospy.Publisher('/long_lat_goal_array', Float32MultiArray, queue_size=5)
+        self.longLat_pub = self.node.create_publisher(Float32MultiArray, '/long_lat_goal_array', 5)
         self.array = Float32MultiArray()
         layout = QVBoxLayout(self)
 
@@ -639,8 +655,10 @@ class LngLatDeliveryEntryFromFile(QWidget):
            
 
 class VelocityControl:
-    def __init__(self):
-        self.pub = rospy.Publisher('/drive', Twist, queue_size=10)
+    def __init__(self, node):
+        self.node=node
+        # self.pub = rospy.Publisher('/drive', Twist, queue_size=10)
+        self.pub= self.node.create_publisher(Twist, '/drive', 10)
         self.gear = 1
 
     def set_gear(self, gear):
@@ -833,14 +851,14 @@ class ResizableLabel(QLabel):
 
 
 class CameraFeed:
-    def __init__(self, label1, label2, label3, label4, splitter):
+    def __init__(self, node, label1, label2, label3, label4, splitter):
         self.bridge = CvBridge()
         self.image_sub1 = None
         self.image_sub2 = None
-        self.state_sub = rospy.Subscriber("state", String, self.state_callback)
-
-        self.obj_bbox = rospy.Subscriber("object/bbox", Float64MultiArray, self.bbox_callback)
-        self.bbox_sub = rospy.Subscriber("aruco_node/bbox", Float64MultiArray, self.bbox_callback)
+    
+        self.state_sub = node.create_subscription(String, "state", self.state_callback, 10)
+        self.bbox_sub = node.create_subscription(Float64MultiArray, "aruco_node/bbox", self.bbox_callback, 10)
+        self.obj_bbox= node.create_subscription(Float64MultiArray, "object/bbox", self.bbox_callback, 10)
 
         self.label1 = label1
         self.label2 = label2
@@ -872,8 +890,9 @@ class CameraFeed:
 
     def register_subscriber1(self):
         if self.image_sub1 is None:
-            self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color/compressed", CompressedImage, self.callback1)
-
+            # self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color/compressed", CompressedImage, self.callback1)
+            self.image_sub1 = node.create_subscription(CompressedImage, "/zed_node/rgb/image_rect_color/compressed", self.callback1, 10)
+            
     def unregister_subscriber1(self):
         if self.image_sub1:
             self.image_sub1.unregister()
@@ -881,8 +900,8 @@ class CameraFeed:
 
     def register_subscriber2(self):
         if self.image_sub2 is None:
-            self.image_sub2 = rospy.Subscriber("/camera2/camera/color/image_raw/compressed", CompressedImage, self.callback2)
-
+            # self.image_sub2 = rospy.Subscriber("/camera2/camera/color/image_raw/compressed", CompressedImage, self.callback2)
+            self.image_sub2 = node.create_subscription(CompressedImage, "/camera2/camera/color/image_raw/compressed", self.callback2, 10)
     def unregister_subscriber2(self):
         if self.image_sub2:
             self.image_sub2.unregister()
@@ -985,19 +1004,23 @@ class CameraFeed:
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
     statusSignal = pyqtSignal(str)
-    def __init__(self):
+    def __init__(self,node):
         super().__init__()
+        self.node=node
         self.statusTerminal = statusTerminal()
         self.setWindowTitle("Rover Control Panel")
         self.setGeometry(100, 100, 1200, 800)
         # Initialize QTabWidget
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
-        self.velocity_control = VelocityControl()
-        self.gui_status_sub = rospy.Subscriber('gui_status', String, self.string_callback)
-        self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
+        self.velocity_control = VelocityControl(self)
+        # self.gui_status_sub = self.node.('gui_status', String, self.string_callback)
+        # self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
+        self.gui_status_sub=node.create_subscription(String, 'gui_status', self.string_callback, 10)
+        self.auto_abort_pub=node.create_publisher(Bool, '/auto_abort_check', 5)
         # self.manual_abort_pub = rospy.Publisher('/manual_abort_check', Bool, queue_size=5)
-        self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
+        # self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
+        self.next_state_pub = node.create_publisher(Bool, '/next_state', 5)
         self.reached_state = None
 
         # Create tab
@@ -1090,7 +1113,7 @@ class RoverGUI(QMainWindow):
 
         # ROS functionality
         self.camerasplitter_cams_tab = QSplitter(Qt.Horizontal)
-        self.camera_feed_cams_tab = CameraFeed(self.camera_label1_cams_tab, self.camera_label2_cams_tab, self.camera_label3_cams_tab, self.camera_label4_cams_tab, self.camerasplitter_cams_tab)
+        self.camera_feed_cams_tab = CameraFeed(self, self.camera_label1_cams_tab, self.camera_label2_cams_tab, self.camera_label3_cams_tab, self.camera_label4_cams_tab, self.camerasplitter_cams_tab)
         self.camerasplitter_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         
@@ -1163,11 +1186,11 @@ class RoverGUI(QMainWindow):
         # self.controlTab.setLayout(control_tab_layout)
 
     def setup_lngLat_tab(self):
-        self.lngLatEntry = LngLatEntryBar(self.map_overlay_splitter)
-        self.lngLatFile = LngLatEntryFromFile(self.map_overlay_splitter)
+        self.lngLatEntry = LngLatEntryBar(self, self.map_overlay_splitter)
+        self.lngLatFile = LngLatEntryFromFile(self, self.map_overlay_splitter)
         self.lngLatDeliveryFile = LngLatDeliveryEntryFromFile(self.map_overlay_splitter)
-        self.stateMachineDialog = StateMachineStatus()
-        self.arucoBox = ArucoWidget()
+        self.stateMachineDialog = StateMachineStatus(self)
+        self.arucoBox = ArucoWidget(self)
         
 
         # Create a group box for the ArucoWidget
@@ -1290,8 +1313,8 @@ class RoverGUI(QMainWindow):
         detection_group.setMaximumHeight(150)  # Increase from 120 to 150
         
         # Create components
-        self.aruco_bar = ArucoBar()
-        self.object_bar = ObjectBar()
+        self.aruco_bar = ArucoBar(self)
+        self.object_bar = ObjectBar(self)
         
         # Add components to horizontal layout
         detection_layout.addWidget(self.aruco_bar)
@@ -1327,7 +1350,7 @@ class RoverGUI(QMainWindow):
 
         # ROS functionality
         self.camerasplitter = QSplitter(Qt.Horizontal)
-        self.camera_feed = CameraFeed(self.camera_label1, self.camera_label2, self.camera_label3, self.camera_label4, self.camerasplitter)
+        self.camera_feed = CameraFeed(self, self.camera_label1, self.camera_label2, self.camera_label3, self.camera_label4, self.camerasplitter)
         self.camerasplitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         
@@ -1351,7 +1374,7 @@ class RoverGUI(QMainWindow):
         # Add map to the splitter
         map_group = QGroupBox("Map")
         map_layout = QVBoxLayout()
-        self.map_overlay_splitter = mapOverlay()
+        self.map_overlay_splitter = mapOverlay(self)
         self.map_overlay_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.checkbox_setting_splitter = QCheckBox("Recentre map when rover offscreen")
         self.checkbox_setting_splitter.setChecked(False)  # Set the default state to unchecked
@@ -1507,9 +1530,11 @@ class CameraSelect(QWidget):
 
 
 if __name__ == '__main__':
-    rospy.init_node('rover_gui', anonymous=False)
+    rclpy.init()
+    node=rclpy.create_node('rover_gui')
+    # rospy.init_node('rover_gui', anonymous=False)
     app = QApplication(sys.argv)
-    gui = RoverGUI()
+    gui = RoverGUI(node)
 
      # Apply a basic stylesheet for a modern look
     app.setStyleSheet("""

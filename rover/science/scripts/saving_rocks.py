@@ -2,15 +2,17 @@
 import os
 import serial
 import time
-import rospy
+import rclpy
+from rclpy.node import Node
 import cv2
 from sensor_msgs.msg import Image
 from std_msgs.msg import Bool
 from cv_bridge import CvBridge
 import subprocess
 
-class CameraStoring:
+class CameraStoring(Node):
     def __init__(self):
+        super().__init__('image_saving')
         self.start = False
         self.cam_data = None
         self.image = None
@@ -19,9 +21,11 @@ class CameraStoring:
         self.board_name = "Arduino__www.arduino.cc__0042_334383935313517160E1"
         self.port = self.find_port()
 
-        self.camera_sub = rospy.Subscriber('geniecam', Image, callback = self.img_callback)
-        self.GUI_sub = rospy.Subscriber('need_rocks', Bool, callback = self.starting_callback)
-    
+        # self.camera_sub = rospy.Subscriber('geniecam', Image, callback = self.img_callback)
+        # self.GUI_sub = rospy.Subscriber('need_rocks', Bool, callback = self.starting_callback)
+        self.create_subscription(Image, 'geniecam', self.img_callback, 10)
+        self.create_subscription(Bool, 'need_rocks', self.starting_callback, 10)
+        
     def find_port(self):
         command = 'rover_ws/src/rsx-rover/scripts/utils/gen/find_usb.sh'
 
@@ -105,8 +109,8 @@ class CameraStoring:
         ser = serial.Serial(arduino_port, baud_rate, timeout=1)
         time.sleep(2)  
         
-        rate = rospy.Rate(0.2)
-        while not rospy.is_shutdown():
+        # rate = rospy.Rate(0.2)
+        while rclpy.ok():
             
             if self.start:
                 # create a folder, then store the images in this folder 1 time. then 
@@ -114,15 +118,12 @@ class CameraStoring:
                 #while 
                 # while loop can end when counter is 12. also dont run when u dont get the S signal from ardiono 
                             
-                while filter_count <= filter and not rospy.is_shutdown():
+                while filter_count <= filter and rclpy.ok():
                     # create folder within the base_dir for the filter images
                     # new_folder_path = os.path.join(folder_path, f"folder_{filter_count}")
                     new_folder_path = folder_path
                     if not os.path.exists(new_folder_path):
                         os.makedirs(new_folder_path)
-                    
-                    
-
 
                     if self.image.all():
                         #cv2.imwrite("~/testing/image_name.jpeg", self.image)
@@ -131,14 +132,17 @@ class CameraStoring:
                         #os.makedirs(img_path)
 
                         cv2.imwrite(img_path, self.image)
-                        rospy.loginfo(f"image saved")
+                        # rospy.loginfo(f"image saved")
+                        self.get_logger().info(f"Image saved at {img_path}")
 
                         ser.write(b'<M>')  # Sending character 'M'
-                        rospy.loginfo("Sent signal: M") 
+                        # rospy.loginfo("Sent signal: M") 
+                        self.get_logger().info("Sent signal: M")
 
                     else:
                         # if there is no image saved (basically an error)
-                        rospy.loginfo("waiting")
+                        # rospy.loginfo("waiting")
+                        self.get_logger().info("No image to save, waiting for new image...")
                     # serial_read = ser.read()
                     '''while serial_read != b'S':
                         rospy.loginfo("waiting for next filter")
@@ -149,7 +153,7 @@ class CameraStoring:
                         
                     
                     filter_count += 1
-                    rate.sleep()
+                    rate.sleep(1/0.2)
                     self.start = False 
 
             rate.sleep()
@@ -158,9 +162,9 @@ class CameraStoring:
         ser.close()
 
 if __name__ == '__main__':
+    rclpy.init()
     try:
-        rospy.init_node('image_saving', anonymous=True)
         image_saving_node = CameraStoring() 
         image_saving_node.saving() 
-    except rospy.ROSInterruptException:
+    except rclpy.exceptions.ROSInterruptException:
         pass

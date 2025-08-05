@@ -1,17 +1,20 @@
-import os
-import sys
-
-import launch
-import launch_ros.actions
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
+import os
 
 
 def generate_launch_description():
-    ld = launch.LaunchDescription([
-        launch.actions.IncludeLaunchDescription(
-            launch.launch_description_sources.PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory(
-                    'realsense2_camera'), 'launch/rs_camera.launch.py')
+    realsense_launch_dir = os.path.join(
+        get_package_share_directory('realsense2_camera'),
+        'launch'
+    )
+
+    return LaunchDescription([
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(realsense_launch_dir, 'rs_camera.launch.py')
             ),
             launch_arguments={
                 'enable_infra': 'true',
@@ -20,11 +23,9 @@ def generate_launch_description():
                 'depth_width': '640',
                 'depth_height': '480',
                 'depth_fps': '15',
-                
                 'color_width': '640',
                 'color_height': '480',
                 'color_fps': '15',
-
                 'infra_width': '640',
                 'infra_height': '480',
                 'infra_fps': '15',
@@ -36,10 +37,20 @@ def generate_launch_description():
                 'enable_pointcloud': 'true',
                 'unite_imu_method': 'linear_interpolation'
             }.items()
-        )
+        ),
+
+        # Optional RViz node — still commented, like your dreams
+        # Node(
+        #     package='rviz2',
+        #     executable='rviz2',
+        #     name='rviz_camera',
+        #     arguments=['-d', os.path.join(
+        #         get_package_share_directory('rover'),
+        #         'rover',
+        #         'autonomy',
+        #         'config',
+        #         'camera_config.rviz'
+        #     )],
+        #     output='screen'
+        # )
     ])
-    return ld
-
-
-if __name__ == '__main__':
-    generate_launch_description()

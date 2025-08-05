@@ -1,11 +1,32 @@
-source /opt/ros/noetic/setup.bash && source /home/rsx/rover_ws/devel/setup.bash
+#!/bin/bash
 
-roscore&
+# Source ROS 2 environment
+source /opt/ros/humble/setup.bash && source /home/rsx/rover_ws/install/setup.bash
 
 sleep 1
 
+# Start tmux session
 tmux new-session -d -s manual
 
-tmux new-window -t manual:1 'bash -c "source /home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh && sleep 2 && roslaunch rover falcons.launch; exec bash"'
-tmux new-window -t manual:2 'bash -c "rosrun rover drive_sender_node; exec bash"'
-tmux new-window -t manual:3 'bash -c "roslaunch rover joy_software.launch; exec bash"'
+# Window 1: Setup CAN and launch falcons
+tmux new-window -t manual:1 'bash -c "source /home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh && sleep 2 && ros2 launch rover falcons.py; exec bash"'
+
+# Window 2: Run drive_sender_node (must be a ROS 2 node!)
+tmux new-window -t manual:2 'bash -c "ros2 run rover drive_sender_node; exec bash"'
+
+# Window 3: Launch joy_software (must be a ROS 2 launch file)
+tmux new-window -t manual:3 'bash -c "ros2 launch rover joy_software.py; exec bash"'
+
+
+# source /opt/ros/noetic/setup.bash && source /home/rsx/rover_ws/devel/setup.bash
+
+# roscore&
+
+# sleep 1
+
+# tmux new-session -d -s manual
+
+# tmux new-window -t manual:1 'bash -c "source /home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh && sleep 2 && roslaunch rover falcons.launch; exec bash"'
+# tmux new-window -t manual:2 'bash -c "rosrun rover drive_sender_node; exec bash"'
+# tmux new-window -t manual:3 'bash -c "roslaunch rover joy_software.launch; exec bash"'
+

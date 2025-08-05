@@ -1,18 +1,25 @@
 #!/usr/bin/env python
 
-import rospy
+import rclpy
+from rclpy.node import Node
 import subprocess
 import time
 from std_msgs.msg import Bool
 
 def main():
-    pub_network = rospy.Publisher('network_status', Bool, queue_size=1)
-    rospy.init_node("base_comms_check")
-    host = rospy.get_param("nuc_ip", "192.168.0.99")
+    rclpy.init()
+    node=rclpy.create_node('base_comms_check')
+    pub_network = node.create_publisher( Bool, 'network_status',1)
+    
+    # host = rospy.get_param("nuc_ip", "192.168.0.99")
+    
+    node.declare_parameter('nuc_ip', '192.168.0.99')
+    host = node.get_parameter('nuc_ip').get_parameter_value().string_value
+    
     net_stat = Bool()
 
     # we continuously send pings to check network communication is working
-    while not rospy.is_shutdown():
+    while rclpy.ok():
         """ 
         For linux:
         -c followed by a number is the number of pings to be sent
@@ -26,7 +33,8 @@ def main():
         else:
             net_stat = False
         print(net_stat)
-        pub_network.publish(net_stat)
+        # pub_network.publish(net_stat)
+        pub_network.publish(Bool(data=net_stat))
         time.sleep(0.001)
 
 if __name__ == '__main__':

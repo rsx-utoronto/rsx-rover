@@ -1,18 +1,14 @@
-import os
-import sys
-
-import launch
-import launch_ros.actions
-
-# I dont think this converted properly, add the group class 
-
+from launch import LaunchDescription
+from launch_ros.actions import Node
 
 def generate_launch_description():
-    ld = launch.LaunchDescription([
-
+    return LaunchDescription([
+        Node(
+            package='joy',
+            executable='joy_node',
+            name='joy_node',
+            namespace='arm',
+            parameters=[{'dev': '/dev/input/js0'}],
+            output='screen'
+        )
     ])
-    return ld
-
-
-if __name__ == '__main__':
-    generate_launch_description()

@@ -1,7 +1,8 @@
 #! /usr/bin/python3
 
 # rospy for the subscriber
-import rospy
+import rclpy
+from rclpy.node import Node
 # ROS Image message
 from sensor_msgs.msg import Image
 # ROS Image message -> OpenCV2 image converter
@@ -27,7 +28,9 @@ def image_callback(msg):
         cv2.imwrite("camera_image.png", cv2_img)
 
 def main():
-    rospy.init_node('cam_to_png')
+    rclpy.init()
+    node=rclpy.create_node('cam_to_png_node')
+    # rospy.init_node('cam_to_png')
     # Define ZED camera image topic
     image_topic = "/zed/zed_node/right_raw/image_raw_color"
 
@@ -40,9 +43,9 @@ def main():
     print("End time: ", args.end_time)
 
     # Set up your subscriber and define its callback
-    rospy.Subscriber(image_topic, Image, image_callback)
+    node.create_subscription( Image, image_topic, image_callback,10)
     # Spin until ctrl + c
-    rospy.spin()
+    rclpy.spin(node)
 
 if __name__ == '__main__':
     main()
