@@ -1,28 +1,35 @@
-import os
-import sys
-
-import launch
-import launch_ros.actions
-from ament_index_python.packages import get_package_share_directory
-
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
+# from launch.actions import ExecuteProcess  # Uncomment if you want to run shell commands
 
 def generate_launch_description():
-    ld = launch.LaunchDescription([
-        launch_ros.actions.Node(
+    return LaunchDescription([
+        # Optional: run `setip; setmaster` if needed
+        # ExecuteProcess(
+        #     cmd=['bash', '-c', 'setip; setmaster'],
+        #     shell=True
+        # ),
+
+        # Launch the GUI node
+        Node(
             package='rover',
             executable='arm_task_gui.py',
             name='rover_gui',
             output='screen'
         ),
-        launch.actions.IncludeLaunchDescription(
-            launch.launch_description_sources.PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory(
-                    'rover'), 'launch/joy.launch.py')
+
+        # Include the joy launch file
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('rover'),
+                    'launch',
+                    'joy.py'
+                ])
             )
         )
     ])
-    return ld
-
-
-if __name__ == '__main__':
-    generate_launch_description()

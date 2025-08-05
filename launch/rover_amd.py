@@ -1,32 +1,34 @@
-import os
 from launch import LaunchDescription
+from launch_ros.actions import Node
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
+import os
+
 
 def generate_launch_description():
+
+    rover_launch_dir = os.path.join(get_package_share_directory('rover'), 'launch')
+    gnss_launch_dir = os.path.join(get_package_share_directory('calian_gnss_ros2'), 'launch')
+
     return LaunchDescription([
-        # Manual control
+
+        # Manual Control
         Node(
             package='rover',
-            executable='manual_switch.py',  # Renamed from 'manual_control'
+            executable='manual_control',
             name='rover_manual_control',
             output='screen'
         ),
 
-        # Realsense cameras
+        # RealSense Camera
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                os.path.join(
-                    get_package_share_directory('rover'),
-                    'launch',
-                    'rs_multiple_devices.launch.py'
-                )
+                os.path.join(rover_launch_dir, 'rs_multiple_devices.py')
             )
         ),
 
-        # IMU to ENU converter
+        # IMU to ENU Conversion
         Node(
             package='rover',
             executable='imu_to_enu.py',
@@ -34,10 +36,10 @@ def generate_launch_description():
             output='screen'
         ),
 
-        # Madgwick IMU filter
+        # IMU Filter Madgwick
         Node(
             package='imu_filter_madgwick',
-            executable='imu_filter_madgwick_node',  # Correct executable for ROS 2
+            executable='imu_filter_node',
             name='imu_filter_madgwick',
             output='screen',
             parameters=[{
@@ -53,68 +55,54 @@ def generate_launch_description():
             ]
         ),
 
-        # GNSS moving baseline RTK
+        # GNSS RTK
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                os.path.join(
-                    get_package_share_directory('calian_gnss_ros2'),
-                    'launch',
-                    'moving_baseline_rtk.launch.py'
-                )
+                os.path.join(gnss_launch_dir, 'moving_baseline_rtk.py')
             )
         ),
 
-        # ZED camera check node
+        # LED Light Node
         Node(
             package='rover',
-            executable='check_zed.py',
-            name='check_zed',
+            executable='led_light.py',
+            name='led_listener',
             output='screen'
         ),
 
-        # Genie camera publisher
+        # Manual Indicator Publisher
         Node(
             package='rover',
-            executable='geniecamerapublisher.py',
-            name='geniecam_publisher',
+            executable='pub_manual_indicator.py',
+            name='pub_manual_indicator',
             output='screen'
         ),
 
-        # Microscope camera
-        Node(
-            package='rover',
-            executable='microscopecam.py',
-            name='microscopecam',
-            output='screen'
-        ),
-
-        # Web camera
+        # Webcam nodes (for the arm)
         Node(
             package='rover',
             executable='webcam.py',
             name='webcam_node',
             output='screen'
         ),
-
-        # Science Arduino transform
         Node(
             package='rover',
-            executable='science_arduino_transform.py',
-            name='science_arduino_transform',
+            executable='webcam2.py',
+            name='webcam2_node',
             output='screen'
-        ),
+        )
 
-        # Optional LED nodes (commented)
+        # Uncomment these if you want them back in:
         # Node(
         #     package='rover',
-        #     executable='led_light.py',
-        #     name='led_listener',
+        #     executable='check_zed.py',
+        #     name='check_zed',
         #     output='screen'
         # ),
         # Node(
         #     package='rover',
-        #     executable='pub_manual_indicator.py',
-        #     name='pub_manual_indicator',
+        #     executable='final_state_machine.py',
+        #     name='rover_state_machine',
         #     output='screen'
-        # )
+        # ),
     ])
