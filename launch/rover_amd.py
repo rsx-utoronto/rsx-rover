@@ -55,12 +55,12 @@ def generate_launch_description():
             ]
         ),
 
-        # GNSS RTK
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(gnss_launch_dir, 'moving_baseline_rtk.py')
-            )
-        ),
+        # # GNSS RTK
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         os.path.join(gnss_launch_dir, 'moving_baseline_rtk.py')
+        #     )
+        # ),
 
         # LED Light Node
         Node(
@@ -84,13 +84,14 @@ def generate_launch_description():
             executable='webcam.py',
             name='webcam_node',
             output='screen'
-        ),
-        Node(
-            package='rover',
-            executable='webcam2.py',
-            name='webcam2_node',
-            output='screen'
         )
+        # ,
+        # Node(
+        #     package='rover',
+        #     executable='webcam2.py',
+        #     name='webcam2_node',
+        #     output='screen'
+        # )
 
         # Uncomment these if you want them back in:
         # Node(

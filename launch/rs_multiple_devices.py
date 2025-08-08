@@ -6,7 +6,7 @@ from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 import os
-
+from launch_ros.actions import PushRosNamespace
 
 def generate_launch_description():
     # Declare arguments
@@ -49,10 +49,11 @@ def generate_launch_description():
         DeclareLaunchArgument('reconnect_timeout', default_value='6.0'),
 
         # Camera 1 group
-        GroupAction([
+        PushRosNamespace(camera1),
+            GroupAction([
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
-                    os.path.join(realsense_launch_dir, 'rs_camera.py')
+                    os.path.join(realsense_launch_dir, 'rs_launch.py')
                 ),
                 launch_arguments={
                     'serial_no': serial_no_camera1,
@@ -77,13 +78,14 @@ def generate_launch_description():
                     'unite_imu_method': 'linear_interpolation'
                 }.items()
             )
-        ], namespace=camera1),
+        ]),
 
         # Camera 2 group
+        PushRosNamespace(camera2),
         GroupAction([
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
-                    os.path.join(realsense_launch_dir, 'rs_camera.py')
+                    os.path.join(realsense_launch_dir, 'rs_launch.py')
                 ),
                 launch_arguments={
                     'serial_no': serial_no_camera2,
@@ -108,7 +110,7 @@ def generate_launch_description():
                     'unite_imu_method': 'linear_interpolation'
                 }.items()
             )
-        ], namespace=camera2),
+        ]),
 
         # If you ever decide to love camera3, you can add this:
         # GroupAction([

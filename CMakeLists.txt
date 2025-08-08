@@ -181,4 +181,79 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+  rover/science/scripts/microscopecam.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/science/scripts/webcam.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/science/scripts/webcam.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+install(PROGRAMS
+  rover/autonomy/scripts/science_arduino_transform.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/GUI/gui_pyqt.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/GUI/arm_task_gui.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/led_light.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/pub_manual_indicator.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  DIRECTORY rover/autonomy/launch/lidar_slam
+  DESTINATION share/${PROJECT_NAME}/
+  FILES_MATCHING PATTERN "*.py"
+)
+
+install(
+  DIRECTORY rover/autonomy/launch/mapping
+  DESTINATION share/${PROJECT_NAME}/
+  FILES_MATCHING PATTERN "*.py"
+)
+
+install(
+  DIRECTORY rover/autonomy/launch/planner
+  DESTINATION share/${PROJECT_NAME}/
+  FILES_MATCHING PATTERN "*.py"
+)
+
+install(
+  DIRECTORY rover/autonomy/launch/visual_odometry
+  DESTINATION share/${PROJECT_NAME}/
+  FILES_MATCHING PATTERN "*.py"
+)
+
+
+install(
+  DIRECTORY rover/autonomy/launch
+  DESTINATION share/${PROJECT_NAME}/
+  FILES_MATCHING PATTERN "*.py"
+)
+
+install(DIRECTORY rover/
+  DESTINATION share/${PROJECT_NAME}
+  FILES_MATCHING PATTERN "*.yaml"
+)
+
 ament_package()
