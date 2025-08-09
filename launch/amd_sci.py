@@ -21,7 +21,7 @@ def generate_launch_description():
                 os.path.join(
                     get_package_share_directory('rover'),
                     'launch',
-                    'rs_multiple_devices.launch.py'
+                    'rs_multiple_devices.py'
                 )
             )
         ),
@@ -53,16 +53,16 @@ def generate_launch_description():
             ]
         ),
 
-        # GNSS moving baseline RTK
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(
-                    get_package_share_directory('calian_gnss_ros2'),
-                    'launch',
-                    'moving_baseline_rtk.launch.py'
-                )
-            )
-        ),
+        # # GNSS moving baseline RTK
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         os.path.join(
+        #             get_package_share_directory('calian_gnss_ros2'),
+        #             'launch',
+        #             'moving_baseline_rtk.py'
+        #         )
+        #     )
+        # ),
 
         # ZED camera check node
         Node(

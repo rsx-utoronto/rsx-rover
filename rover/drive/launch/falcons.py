@@ -7,7 +7,7 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     config_file = PathJoinSubstitution([
         FindPackageShare('rover'),
-        'rover',
+        # 'rover',
         'drive',
         'launch',
         'goose.yaml'
