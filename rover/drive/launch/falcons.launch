@@ -1,5 +1,5 @@
 <launch>
-    <param from="$(find rover)/rover/drive/launch/goose.yaml" />
+    <param from="$(find rover)/drive/launch/goose.yaml" />
     <node pkg="ros_phoenix" exec="ros_phoenix_node" name="ros_phoenix" respawn="false" />
     <node pkg="ros_phoenix" exec="falcon_motor_control_node" name="falcon_motor_control" respawn="false" />
 </launch>

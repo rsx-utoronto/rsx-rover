@@ -256,4 +256,16 @@ install(DIRECTORY rover/
   FILES_MATCHING PATTERN "*.yaml"
 )
 
+install(
+  DIRECTORY rover/drive/launch
+  DESTINATION share/${PROJECT_NAME}/
+  FILES_MATCHING PATTERN "*.py"
+)
+
+install(
+  DIRECTORY rover/drive/launch
+  DESTINATION share/${PROJECT_NAME}/
+  FILES_MATCHING PATTERN "*.yaml"
+)
+
 ament_package()
