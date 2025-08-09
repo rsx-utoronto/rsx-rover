@@ -220,6 +220,12 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+
+install(PROGRAMS
+  scripts/GUI/science_gui.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 install(
   DIRECTORY rover/autonomy/launch/lidar_slam
   DESTINATION share/${PROJECT_NAME}/
