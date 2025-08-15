@@ -105,7 +105,7 @@ class CAN_Recv():
         while not rospy.is_shutdown():
 
             # Read and process messages
-            msg                     = BUS.recv(timeout= 1)
+            msg                     = BUS.recv(timeout= 0.01)
             if msg:
                 self.read_message_from_spark(msg= msg)
 

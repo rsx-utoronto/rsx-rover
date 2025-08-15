@@ -270,8 +270,9 @@ class Safety_Node():
         # TODO
         # Limits for position safety (Need to test these values)
         #limit = [1.25, 1.25, 1.25, 20, 1.25, 1.25, 1.25]
-        limit = [5, 5, 5, 10, 120, 80, 80] # 40 was an old value for this limit, no clue if it is correct for now
-
+        # limit = [5, 5, 5, 10, 120, 80, 80] # 40 was an old value for this limit, no clue if it is correct for now
+        ##### the previous line is the old limits! john t is messing around 
+        limit = [25, 25, 25, 40, 120, 120, 300]
         if not pos:
             pos = self.GOAL_POS
 

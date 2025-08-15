@@ -41,7 +41,7 @@ class Manual():
         self.goal_pos            = Float32MultiArray()
         self.goal_pos.data       = [0, 0, 0, 0, 0, 0, 0]
 
-        ## Buffer to hold error messages and offsets
+        ## Buffer to hold error messages and offsetscansend can0 02050C80#FFFFFFFFFFFFFFFF
         # Message Descriptions:
         # 0 -> No Error
         # 1 -> Faraway position
@@ -52,7 +52,7 @@ class Manual():
 
         ## Constant Speed limits, values are chosen by trial and error #TODO Find value for 7th motor
 
-        self.SPEED_LIMIT         = [0.2, 0.2, 0.5, 0.75, 0.12, 0.8, 400]
+        self.SPEED_LIMIT         = [0.2, 0.2, 0.15, 0.75, 0.12, 0.12, 10]
 
         ## Variable for the status, start at idle
         self.status              = "Idle"
