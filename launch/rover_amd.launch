@@ -1,0 +1,42 @@
+<launch>
+
+    <!-- Launch the full software stack on AMD (including the zed camera on jetson)-->
+    <!-- To kill, after ctrl+c, run the command `rosrun rover kill_manual` to kill the manual control stuff + zed camera -->
+
+    <!-- Launch the manual control -->
+    <node pkg="rover" type="manual_control" name="rover_manual_control" output="screen"/>
+
+    <!-- Launch the realsense camera -->
+    <include file="$(find rover)/launch/rs_multiple_devices.launch"/>
+
+    <node pkg="rover" type="imu_to_enu.py" name="imu_to_enu" output="screen" />  
+
+    <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_madgwick" output="screen" >
+        <param name="publish_tf" value="false" />
+        <param name="use_mag" value="true" />
+        <param name="world_frame" value="enu" />
+        <param name="orientation_stddev" value="0.2" />
+        <remap from="imu/mag" to="/zed_node/imu/mag" />
+        <remap from="imu/data_raw" to="/imu/enu" />
+        <remap from="imu/data" to="/imu/orient" />
+    </node>
+    <!-- Launch the GPS -->
+
+    <include file='$(find calian_gnss_ros2)/launch/moving_baseline_rtk.launch'/>
+
+    <!-- Launch the State Machine -->
+    <!--node pkg="rover" type="final_state_machine.py" name="rover_state_machine" output="screen"/-->
+
+    <!-- ZED check -->
+    <!-- <node pkg="rover" type="check_zed.py" name="check_zed" output="screen" /> -->
+
+    <!-- Launch the LED -->
+    <node pkg="rover" type="led_light.py" name="led_listener" output="screen" />
+
+    <node pkg="rover" type="pub_manual_indicator.py" name="pub_manual_indicator" output="screen" />
+
+    <!-- to be used with arm  -->
+    <node pkg="rover" type="webcam.py" name="webcam_node" output="screen" />
+    <node pkg="rover" type="webcam2.py" name="webcam2_node" output="screen" />
+    
+</launch>

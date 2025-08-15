@@ -1,0 +1,5 @@
+#!/bin/bash
+rosnode kill /zed_node
+sleep 40 #seconds after killing zed_node and then relaunch 
+ssh jetson 'source /opt/ros/noetic/setup.bash && source ~/rover_ws/devel/setup.bash && export ROS_MASTER_URI=http://192.168.0.99:11311 && export ROS_IP=192.168.0.250  && roslaunch rover zed_odom.launch && exit'
+

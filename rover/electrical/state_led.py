@@ -33,4 +33,3 @@ rospy.Subscriber("/rover_state", String, state_callback)
 
 # spin() simply keeps python from exiting until this node is stopped
 rospy.spin()
-

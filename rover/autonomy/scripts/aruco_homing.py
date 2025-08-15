@@ -32,8 +32,8 @@ class Aimer: #
 
     def update(self, aruco_top_left: tuple, aruco_top_right: tuple, 
                aruco_bottom_left: tuple, aruco_bottom_right: tuple) -> None: # update linear_v, angular_v
-        if aruco_top_left == None or aruco_top_right == None or aruco_bottom_left == None or aruco_bottom_right == None:
-            self.linear_v, self.angular_v = 0, 0
+        # if aruco_top_left == None or aruco_top_right == None or aruco_bottom_left == None or aruco_bottom_right == None:
+        #    self.linear_v, self.angular_v = 0, 0
 
         # the middle of the aruco tag is aruco_x
         aruco_x = (aruco_top_left[0] + aruco_top_right[0] + aruco_bottom_left[0] + aruco_bottom_right[0]) / 4
@@ -123,9 +123,11 @@ class AimerROS(Aimer):  #updates coords continuously
         self.update(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right)
 
 def main():
-    rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
     pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
-    aimer = AimerROS(640, 360, 1000, 100, 100, 0.5, 0.5) # change constants
+    # frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v
+    aimer = AimerROS(640, 360, 1000, 100, 100, 1.8, 0.8) # FOR ARUCO
+    
+    # aimer = AimerROS(640, 360, 1450, 50, 200, 1.0, 0.5) # FOR WATER BOTTLE
     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
     # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
     rate = rospy.Rate(10)
@@ -146,28 +148,19 @@ def main():
             twist.angular.z = 0
             pub.publish(twist)
             return True
-        else:
-
-            if aimer.angular_v == 1:
-                
-                flag = "right"
-
-                twist.angular.z = aimer.max_angular_v
-                twist.linear.x = 0
-            elif aimer.angular_v == -1:
-                flag = "left"
-                twist.angular.z = -aimer.max_angular_v
-                twist.linear.x = 0
-            elif aimer.linear_v == 1:
-                twist.linear.x = aimer.max_linear_v
-                twist.angular.z = 0
-        
-        if prev_flag!=flag:
-            #velocity thing
-            startRotationTime = time.time()
-        prev_flag = flag
-        
+        if aimer.angular_v == 1:
+            twist.angular.z = aimer.max_angular_v
+            twist.linear.x = 0
+        elif aimer.angular_v == -1:
+            twist.angular.z = -aimer.max_angular_v
+            twist.linear.x = 0
+        elif aimer.linear_v == 1:
+            twist.linear.x = aimer.max_linear_v
+            twist.angular.z = 0
+         
         pub.publish(twist)
         rate.sleep()
 
-main()
+if __name__ == '__main__':
+    rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
+    main()

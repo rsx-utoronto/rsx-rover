@@ -1,0 +1,88 @@
+# final_state_machine file params
+RUN_STATES:
+  - GNSS1
+  - GNSS2
+  - AR1
+  - AR2
+  - AR3
+  - OBJ1
+  - OBJ2
+
+  
+#  - GNSS1
+ # - AR3
+ # - OBJ1
+  #- OBJ2
+ # - GNSS2
+
+origin_pose: [0.0, 0.0]
+heading_vector: [1.1, 0.0]
+
+straight_line_approach_lin_vel: 2.7 # 2.7
+straight_line_approach_ang_vel: 0.3 # 0.3
+
+straight_line_obstacle_lin_vel: 1.5
+straight_line_obstacle_ang_vel: 0.3
+
+AR_grid_search_w: 40
+AR_grid_search_h: 40
+AR_grid_search_tol: 4
+# if we're using realsense, change this to 2
+
+AR_grid_search_obstacle_avoidance_w: 40
+AR_grid_search_obstacle_avoidance_h: 40
+AR_grid_search_obstacle_avoidance_tol: 2
+
+OBJ_grid_search_w: 20
+OBJ_grid_search_h: 20
+OBJ_grid_search_tol: 2
+# don't change this unless it's realsense
+
+GS_Traversal_lin_vel: 2.5
+GS_Traversal_ang_vel: 0.3
+
+run_in_order : TRUE #false means we find shortest path, true means it takes in the same order as states_run_in_order
+#If you set this to true, make sure you do not skip any states
+
+States_run_in_order:
+  - AR1
+  - AR2
+  - AR3
+  - OBJ1
+  - OBJ2
+  - GNSS1
+  - GNSS2
+
+#- OBJ2
+
+# optimal_path_file params
+difficulty: # priority rank!
+  GNSS1: 1
+  GNSS2: 1
+  AR1: 1
+  AR2: 1
+  AR3: 1
+  OBJ1: 1
+  OBJ2: 1
+
+# sm_grid_search params
+Ar_homing_lin_vel: 1.8 #1.8
+Ar_homing_ang_vel: 0.5 #0.8
+
+Obj_homing_lin_vel: 1 #1
+Obj_homing_ang_vel: 0.5 #0.5
+
+drive_param_grid_search: 'drive'
+pose_param_grid_search: '/pose'
+
+# sm_straight_line params
+drive_param_straight_line: '/drive'
+pose_param_straight_line: '/pose'
+
+zed_detection_image_topic: '/zed_node/rgb/image_rect_color'
+zed_detection_info_topic: '/zed_node/rgb/camera_info'
+
+#Change the below flag into true to get data from realsense for item detection
+realsense_detection: True
+realsense_detection_image_topic: '/camera2/camera/color/image_raw'
+realsense_detection_info_topic: '/camera2/camera/color/camera_info' # for rs, it is 168

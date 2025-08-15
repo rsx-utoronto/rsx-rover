@@ -63,6 +63,7 @@ class Stitcher:
         # cv.imshow('result', pano)
     
         print('Done')
+        return pano
  
  
 # if __name__ == '__main__':
