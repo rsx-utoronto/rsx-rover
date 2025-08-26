@@ -1013,7 +1013,7 @@ class RoverGUI(QMainWindow):
         # Initialize QTabWidget
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
-        self.velocity_control = VelocityControl(self)
+        self.velocity_control = VelocityControl(node)
         # self.gui_status_sub = self.node.('gui_status', String, self.string_callback)
         # self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
         self.gui_status_sub=node.create_subscription(String, 'gui_status', self.string_callback, 10)
@@ -1113,7 +1113,7 @@ class RoverGUI(QMainWindow):
 
         # ROS functionality
         self.camerasplitter_cams_tab = QSplitter(Qt.Horizontal)
-        self.camera_feed_cams_tab = CameraFeed(self, self.camera_label1_cams_tab, self.camera_label2_cams_tab, self.camera_label3_cams_tab, self.camera_label4_cams_tab, self.camerasplitter_cams_tab)
+        self.camera_feed_cams_tab = CameraFeed(node, self.camera_label1_cams_tab, self.camera_label2_cams_tab, self.camera_label3_cams_tab, self.camera_label4_cams_tab, self.camerasplitter_cams_tab)
         self.camerasplitter_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         
@@ -1186,11 +1186,11 @@ class RoverGUI(QMainWindow):
         # self.controlTab.setLayout(control_tab_layout)
 
     def setup_lngLat_tab(self):
-        self.lngLatEntry = LngLatEntryBar(self, self.map_overlay_splitter)
-        self.lngLatFile = LngLatEntryFromFile(self, self.map_overlay_splitter)
+        self.lngLatEntry = LngLatEntryBar(node, self.map_overlay_splitter)
+        self.lngLatFile = LngLatEntryFromFile(node, self.map_overlay_splitter)
         self.lngLatDeliveryFile = LngLatDeliveryEntryFromFile(self.map_overlay_splitter)
-        self.stateMachineDialog = StateMachineStatus(self)
-        self.arucoBox = ArucoWidget(self)
+        self.stateMachineDialog = StateMachineStatus(node)
+        self.arucoBox = ArucoWidget(node)
         
 
         # Create a group box for the ArucoWidget
@@ -1313,8 +1313,8 @@ class RoverGUI(QMainWindow):
         detection_group.setMaximumHeight(150)  # Increase from 120 to 150
         
         # Create components
-        self.aruco_bar = ArucoBar(self)
-        self.object_bar = ObjectBar(self)
+        self.aruco_bar = ArucoBar(node)
+        self.object_bar = ObjectBar(node)
         
         # Add components to horizontal layout
         detection_layout.addWidget(self.aruco_bar)
@@ -1350,7 +1350,7 @@ class RoverGUI(QMainWindow):
 
         # ROS functionality
         self.camerasplitter = QSplitter(Qt.Horizontal)
-        self.camera_feed = CameraFeed(self, self.camera_label1, self.camera_label2, self.camera_label3, self.camera_label4, self.camerasplitter)
+        self.camera_feed = CameraFeed( node,self.camera_label1, self.camera_label2, self.camera_label3, self.camera_label4, self.camerasplitter)
         self.camerasplitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         
@@ -1374,7 +1374,7 @@ class RoverGUI(QMainWindow):
         # Add map to the splitter
         map_group = QGroupBox("Map")
         map_layout = QVBoxLayout()
-        self.map_overlay_splitter = mapOverlay(self)
+        self.map_overlay_splitter = mapOverlay(node)
         self.map_overlay_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.checkbox_setting_splitter = QCheckBox("Recentre map when rover offscreen")
         self.checkbox_setting_splitter.setChecked(False)  # Set the default state to unchecked

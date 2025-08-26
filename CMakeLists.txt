@@ -211,6 +211,11 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  scripts/GUI/map_viewer.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   rover/autonomy/scripts/led_light.py
   DESTINATION lib/${PROJECT_NAME}
 )
