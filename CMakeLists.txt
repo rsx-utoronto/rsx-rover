@@ -37,6 +37,7 @@ set(srv_files
 
 # PCL Configuration ====================================================
 find_package(PCL 1.10 REQUIRED)  # Use updated version for ROS 2
+find_package(PCL 1.10 REQUIRED)  # Use updated version for ROS 2
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
@@ -146,9 +147,9 @@ install(TARGETS
 #   DESTINATION include
 # )
 
-install(DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}
-)
+# install(DIRECTORY launch
+#   DESTINATION share/${PROJECT_NAME}
+# )
 
 # Python scripts installation (adjust for ROS 2)
 # install(PROGRAMS

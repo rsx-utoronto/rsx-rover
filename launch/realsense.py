@@ -14,7 +14,7 @@ def generate_launch_description():
     return LaunchDescription([
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                os.path.join(realsense_launch_dir, 'rs_camera.launch.py')
+                os.path.join(realsense_launch_dir, 'rs_launch.py')
             ),
             launch_arguments={
                 'enable_infra': 'true',
