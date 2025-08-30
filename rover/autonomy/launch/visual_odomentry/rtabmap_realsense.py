@@ -2,8 +2,10 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import ThisLaunchFileDir, FindPackageShare
+from launch.substitutions import ThisLaunchFileDir
+from launch_ros.substitutions import FindPackageShare
 import os
+
 
 def generate_launch_description():
     rtabmap_launch_dir = os.path.join(
@@ -14,7 +16,7 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='imu_filter_madgwick',
-            executable='imu_filter_node',
+            executable='imu_filter_madgwick_node',
             name='imu_filter',
             output='screen',
             parameters=[{
