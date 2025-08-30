@@ -156,27 +156,6 @@ install(TARGETS
 #   DESTINATION lib/${PROJECT_NAME}
 # )
 
-# Install top-level launch directory (if you have one)
-install(
-  DIRECTORY launch/
-  DESTINATION share/${PROJECT_NAME}/launch
-  FILES_MATCHING PATTERN "*.py"
-)
-
-# Install autonomy launch files (with subfolders)
-install(
-  DIRECTORY rover/autonomy/launch/
-  DESTINATION share/${PROJECT_NAME}/launch/autonomy
-  FILES_MATCHING PATTERN "*.py"
-)
-
-# Install drive launch files (with subfolders)
-install(
-  DIRECTORY rover/drive/launch/
-  DESTINATION share/${PROJECT_NAME}/launch/drive
-  FILES_MATCHING PATTERN "*.py"
-)
-
 # Required ROS 2 macro
 install(PROGRAMS
   scripts/manual_switch.py
@@ -218,6 +197,16 @@ install(PROGRAMS
 )
 install(PROGRAMS
   rover/autonomy/scripts/science_arduino_transform.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/state_machine_new/state_machine.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/state_machine_new/optimal_path.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

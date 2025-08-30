@@ -3,7 +3,7 @@
 Code for the state machine
 
 """
-import rospy
+import rclpy
 import smach
 import smach_ros
 import time 
@@ -307,8 +307,8 @@ class TasksEnded(smach.State):
 
 
 def main():
-
-    rospy.init_node('RSX_Rover')
+    rclpy.init()
+    node=rclpy.create_node('RSX_Rover')
     sm = smach.StateMachine(outcomes = ["Tasks Ended"])
     
     with sm:
