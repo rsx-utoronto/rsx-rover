@@ -146,15 +146,36 @@ install(TARGETS
 #   DESTINATION include
 # )
 
-install(DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}
-)
+# install(DIRECTORY launch
+#   DESTINATION share/${PROJECT_NAME}
+# )
 
 # Python scripts installation (adjust for ROS 2)
 # install(PROGRAMS
 #   rover/autonomy/scripts/state_machine_node.py
 #   DESTINATION lib/${PROJECT_NAME}
 # )
+
+# Install top-level launch directory (if you have one)
+install(
+  DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
+  FILES_MATCHING PATTERN "*.py"
+)
+
+# Install autonomy launch files (with subfolders)
+install(
+  DIRECTORY rover/autonomy/launch/
+  DESTINATION share/${PROJECT_NAME}/launch/autonomy
+  FILES_MATCHING PATTERN "*.py"
+)
+
+# Install drive launch files (with subfolders)
+install(
+  DIRECTORY rover/drive/launch/
+  DESTINATION share/${PROJECT_NAME}/launch/drive
+  FILES_MATCHING PATTERN "*.py"
+)
 
 # Required ROS 2 macro
 install(PROGRAMS
@@ -231,47 +252,47 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(
-  DIRECTORY rover/autonomy/launch/lidar_slam
-  DESTINATION share/${PROJECT_NAME}/
-  FILES_MATCHING PATTERN "*.py"
-)
+# install(
+#   DIRECTORY rover/autonomy/launch/lidar_slam
+#   DESTINATION share/${PROJECT_NAME}/
+#   FILES_MATCHING PATTERN "*.py"
+# )
 
-install(
-  DIRECTORY rover/autonomy/launch/mapping
-  DESTINATION share/${PROJECT_NAME}/
-  FILES_MATCHING PATTERN "*.py"
-)
+# install(
+#   DIRECTORY rover/autonomy/launch/mapping
+#   DESTINATION share/${PROJECT_NAME}/
+#   FILES_MATCHING PATTERN "*.py"
+# )
 
-install(
-  DIRECTORY rover/autonomy/launch/planner
-  DESTINATION share/${PROJECT_NAME}/
-  FILES_MATCHING PATTERN "*.py"
-)
+# install(
+#   DIRECTORY rover/autonomy/launch/planner
+#   DESTINATION share/${PROJECT_NAME}/
+#   FILES_MATCHING PATTERN "*.py"
+# )
 
-install(
-  DIRECTORY rover/autonomy/launch/visual_odometry
-  DESTINATION share/${PROJECT_NAME}/
-  FILES_MATCHING PATTERN "*.py"
-)
+# install(
+#   DIRECTORY rover/autonomy/launch/visual_odometry
+#   DESTINATION share/${PROJECT_NAME}/
+#   FILES_MATCHING PATTERN "*.py"
+# )
 
 
-install(
-  DIRECTORY rover/autonomy/launch
-  DESTINATION share/${PROJECT_NAME}/
-  FILES_MATCHING PATTERN "*.py"
-)
+# install(
+#   DIRECTORY rover/autonomy/launch
+#   DESTINATION share/${PROJECT_NAME}/
+#   FILES_MATCHING PATTERN "*.py"
+# )
 
 install(DIRECTORY rover/
   DESTINATION share/${PROJECT_NAME}
   FILES_MATCHING PATTERN "*.yaml"
 )
 
-install(
-  DIRECTORY rover/drive/launch
-  DESTINATION share/${PROJECT_NAME}/
-  FILES_MATCHING PATTERN "*.py"
-)
+# install(
+#   DIRECTORY rover/drive/launch
+#   DESTINATION share/${PROJECT_NAME}/
+#   FILES_MATCHING PATTERN "*.py"
+# )
 
 install(
   DIRECTORY rover/drive/launch
