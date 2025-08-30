@@ -36,7 +36,7 @@ set(srv_files
 
 
 # PCL Configuration ====================================================
-find_package(PCL 1.12 REQUIRED)  # Use updated version for ROS 2
+find_package(PCL 1.10 REQUIRED)  # Use updated version for ROS 2
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
@@ -174,6 +174,11 @@ install(PROGRAMS
 install(PROGRAMS
   scripts/check_zed.py
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  Files rover/drive/config/goose.yaml
+  DESTINATION share/${PROJECT_NAME}/config
 )
 
 ament_package()
