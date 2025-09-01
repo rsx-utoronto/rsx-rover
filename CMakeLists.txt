@@ -164,6 +164,11 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  scripts/manual_control
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   rover/autonomy/scripts/imu_to_enu.py
   DESTINATION lib/${PROJECT_NAME}
 )
