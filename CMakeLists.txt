@@ -177,9 +177,9 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(
-  Files rover/drive/config/goose.yaml
-  DESTINATION share/${PROJECT_NAME}/config
-)
+# install(
+#   Files rover/drive/config/goose.yaml
+#   DESTINATION share/${PROJECT_NAME}/config
+# )
 
 ament_package()
