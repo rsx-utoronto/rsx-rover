@@ -164,6 +164,11 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  scripts/manual_control
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   rover/autonomy/scripts/imu_to_enu.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -182,9 +187,9 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-#install(
-#  Files rover/drive/config/goose.yaml
-#  DESTINATION share/${PROJECT_NAME}/config
-#)
+# install(
+#   Files rover/drive/config/goose.yaml
+#   DESTINATION share/${PROJECT_NAME}/config
+# )
 
 ament_package()
