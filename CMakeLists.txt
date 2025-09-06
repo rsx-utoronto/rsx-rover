@@ -168,6 +168,11 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 install(PROGRAMS
+  rover/autonomy/scripts/final_state_machine_new.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   rover/science/scripts/geniecamerapublisher.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -177,9 +182,9 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(
-  Files rover/drive/config/goose.yaml
-  DESTINATION share/${PROJECT_NAME}/config
-)
+#install(
+#  Files rover/drive/config/goose.yaml
+#  DESTINATION share/${PROJECT_NAME}/config
+#)
 
 ament_package()
