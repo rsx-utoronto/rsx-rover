@@ -28,9 +28,9 @@ import ar_detection_node
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
-
 import yaml
 import os
+import threading
 
 print("I am in the final state machine file")
 file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
@@ -92,9 +92,10 @@ def shortest_path(start: str, locations: dict) -> list:
 # [For publishing messages for led to light on]
 # Subscribers : pose(PoseStamped) [Gets the pose/location data], /long_lat_goal_array(Float32MultiArray) [Gets the GPS coordinates of task points]
 
+
 class GLOB_MSGS(Node):
     def __init__(self):
-        super().__init__('glob_msgs')
+        super().__init__('glob_msgs_node')
         self.pub = self.create_publisher(String, "gui_status", 10)
         self.state_publisher = self.create_publisher(String, "state", 10)
         self.led_publisher = self.create_publisher(String, "led_light", 10)
@@ -152,7 +153,7 @@ class GLOB_MSGS(Node):
         return self.current_position
 
     def coord_callback(self, data): 
-        self.pub_state(String(data="Received GPS coordinates callback"))
+        self.pub_state(String(data="In GPS coordinates callback"))
         location_data = data 
         if (len(location_data.data) == 16): #Process all 8 GPS coordinates
 
@@ -166,7 +167,7 @@ class GLOB_MSGS(Node):
             
             self.locations = locations #assign the GPS coordinate dict to locations
         
-        self.pub_state("Received GPS coordinates")
+        self.pub_state(String(data="Received GPS coordinates"))
 
     def pub_state(self, state): #for publishing a message through the state publisher
         self.pub.publish(state)
@@ -192,7 +193,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
 
     def initialize(self, userdata): # main init function
 
-        self.glob_msg.create_subscription(Float32MultiArray, '/long_lat_goal_array', self.glob_msg.coord_callback, 10)
+        #self.coord_array_sub = self.glob_msg.create_subscription(Float32MultiArray, '/long_lat_goal_array', self.glob_msg.coord_callback, 10)
         #self.create_subscription(Float32MultiArray, "/long_lat_goal_array",  self.glob_msg.coord_callback) #Subcribes to the gui location publisher 
         #We already have the subscriber in glsob_msgs class, shouldnt need to do it again here
         while (self.glob_msg.locations is None and rclpy.ok()): #Waits for all GPS locations to be received
@@ -946,7 +947,7 @@ class TasksEnded(smach.State):
 
 def main(args=None):
     rclpy.init(args=args)
-    glob_msg_node = GLOB_MSGS()
+    #glob_msg_node = GLOB_MSGS()
 
     # rospy.init_node('RSX_Rover')
     #gui_status = rospy.Publisher('gui_status', String, queue_size=10) #where should be used?
@@ -1126,11 +1127,12 @@ def main(args=None):
             "Task Ended",
             tasks_ended
         )
-        
-
-    sm.execute()
-    rclpy.spin(glob_msg_node)  
-    glob_msg_node.destroy_node()
+    
+    spin_thread = threading.Thread(target=rclpy.spin, args=(glob_msg,), daemon=True)
+    spin_thread.start()
+    sm.execute() 
+    #rclpy.spin(glob_msg) 
+    glob_msg.destroy_node()
     rclpy.shutdown()
     
 
