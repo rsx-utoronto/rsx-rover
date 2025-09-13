@@ -147,9 +147,9 @@ install(TARGETS
 #   DESTINATION include
 # )
 
-# install(DIRECTORY launch
-#   DESTINATION share/${PROJECT_NAME}
-# )
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
 
 # Python scripts installation (adjust for ROS 2)
 # install(PROGRAMS
