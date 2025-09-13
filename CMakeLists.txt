@@ -173,6 +173,11 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 install(PROGRAMS
+  rover/autonomy/scripts/final_state_machine_new.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   rover/science/scripts/geniecamerapublisher.py
   DESTINATION lib/${PROJECT_NAME}
 )
