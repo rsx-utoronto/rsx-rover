@@ -121,7 +121,7 @@ class ARucoTagDetectionNode(Node):
 
 
             best_detection = ids[0][0]
-            rospy.loginfo(f"ar_detection_node: An AR tag was detected with the ID {best_detection}")
+            self.get_logger().info(f"ar_detection_node: An AR tag was detected with the ID {best_detection}")
             #self.scanned_state_smg.AR_SCANNED = True
             bboxs = bboxs[0]
             

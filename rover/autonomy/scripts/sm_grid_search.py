@@ -14,7 +14,8 @@ import yaml
 import os
 import time
 
-file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+#file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
@@ -170,7 +171,7 @@ class GS_Traversal(Node):
         first_time=True
         
         # print("In move to target")
-        while (not rospy.is_shutdown()) and (self.abort_check is False):
+        while (rclpy.ok()) and (self.abort_check is False):
             obj = self.mallet_found or self.waterbottle_found
             mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
@@ -242,7 +243,7 @@ class GS_Traversal(Node):
                 elif state == "OBJ1" or state == "OBJ2":
                     #add realsense check here
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
-                    rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
+                    self.create_subscription(Float64MultiArray, 'object/bbox', aimer.rosUpdate, 10)
                     print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
                 # rate = rospy.Rate(10) #this code needs to be adjusted
                 
@@ -254,8 +255,8 @@ class GS_Traversal(Node):
                 last_detection_time = time.time()
                 detection_memory_duration = 2.0  # 2 seconds of memory
                 detection_active = False
-                
-                while (not rospy.is_shutdown()) and (self.abort_check is False):
+
+                while (rclpy.ok()) and (self.abort_check is False):
                     twist = Twist()
                     
                     # Check if we have valid values from the aimer
@@ -276,7 +277,7 @@ class GS_Traversal(Node):
                                 msg.linear.x=self.lin_vel
                                 pub.publish(msg)
                                 print("final homing movement",abs(initial_time-time.time()) )
-                                rate.sleep()
+                                rclpy.timer.Rate(1).sleep()
                             twist.linear.x = 0.0
                             twist.angular.z = 0.0
                             pub.publish(twist)
@@ -308,14 +309,13 @@ class GS_Traversal(Node):
                             break
                     
                     pub.publish(twist)
-                    rate.sleep()
-              
+                    rclpy.timer.Rate(1).sleep()
                 break
            
                 
             # print("publishing grid search velocity")
             self.drive_publisher.publish(msg)
-            rate.sleep()
+            rclpy.timer.Rate(1).sleep()
 
     def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
         
@@ -331,7 +331,7 @@ class GS_Traversal(Node):
                 print("self.abort is true!")
                 break
 
-            rospy.sleep(1)
+            rclpy.timer.Rate(1).sleep()
 
         if self.found_objects[self.state]:
             
@@ -439,7 +439,7 @@ def main():
     gs_traversal_object.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10)  # modified to use rclpy
     # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
     
-    while not rospy.is_shutdown():
+    while rclpy.ok():
         twist = Twist()
         if aimer.linear_v == 0 and aimer.angular_v == 0:
             print ("at weird", aimer.linear_v, aimer.angular_v)

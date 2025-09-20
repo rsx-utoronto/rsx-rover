@@ -17,7 +17,9 @@ import ar_detection_node as ar_detect
 import yaml
 import os
 
-file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+#file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
+
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
@@ -252,12 +254,12 @@ class StraightLineApproachNew(Node):
                         aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     else: 
                         aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
-                    
-                    rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+
+                    self.create_subscription(Float64MultiArray, 'aruco_node/bbox', callback=aimer.rosUpdate) # change topic name
                     #print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                 elif state == "OBJ1" or state == "OBJ2":
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
-                    rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
+                    self.create_subscription(Float64MultiArray, 'object/bbox', callback=aimer.rosUpdate)
                     #print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
                  #this code needs to be adjusted
                 
@@ -270,7 +272,7 @@ class StraightLineApproachNew(Node):
                 detection_memory_duration = 2.0  # 2 seconds of memory
                 detection_active = False
                 
-                while (not rospy.is_shutdown()) and (self.abort_check is False):
+                while (rclpy.ok()) and (self.abort_check is False):
                     twist = Twist()
                     
                     # Check if we have valid values from the aimer
@@ -291,7 +293,7 @@ class StraightLineApproachNew(Node):
                                 msg.linear.x=self.lin_vel
                                 pub.publish(msg)
                                 print("final homing movement",abs(initial_time-time.time()) )
-                                rate.sleep()
+                                rclpy.timer.Rate(1).sleep()
                             twist.linear.x = 0.0
                             msgg=True
                             self.done_early.publish(msgg)
