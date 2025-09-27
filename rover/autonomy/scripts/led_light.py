@@ -81,7 +81,7 @@ class LedLight(Node):
                                 stderr=subprocess.PIPE,
                                 text=True)
         if result.returncode != 0:
-            rospy.logerr(f"Error running {script_path}: {result.stderr.strip()}")
+            self.get_logger().error(f"Error running {script_path}: {result.stderr.strip()}")
             return ''
         stdout = result.stdout
         print("stdout", stdout)
@@ -114,7 +114,7 @@ class LedLight(Node):
       print("Serial Port:", serial_port)
       # serial_port = "/dev/ttyUSB5" #Find out the serial_port
       self.board = serial.Serial(port=serial_port, baudrate=115200, timeout=1)
-      rospy.sleep(2)
+      rclpy.timer.Rate(1).sleep()
       self.board.write(bytes('blue\n', 'utf-8'))
       print("I'm initialized!")
       

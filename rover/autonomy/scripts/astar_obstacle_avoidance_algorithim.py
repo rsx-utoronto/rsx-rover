@@ -310,7 +310,7 @@ class AstarObstacleAvoidance(Node):
         # Points marker for waypoints (larger size)
         points_marker = Marker()
         points_marker.header.frame_id = "map"
-        points_marker.header.stamp = rospy.Time.now()
+        points_marker.header.stamp =  self.get_clock().now()
         points_marker.ns = "astar_points"
         points_marker.id = 0
         points_marker.type = Marker.POINTS
@@ -321,12 +321,12 @@ class AstarObstacleAvoidance(Node):
         points_marker.color.g = 0.0
         points_marker.color.b = 0.0
         points_marker.color.a = 1.0
-        points_marker.lifetime = rospy.Duration(0)
+        points_marker.lifetime = rclpy.duration.Duration(seconds=0)
 
         # Line strip connecting waypoints
         line_marker = Marker()
         line_marker.header.frame_id = "map"
-        line_marker.header.stamp = rospy.Time.now()
+        line_marker.header.stamp = self.get_clock().now().to_msg()
         line_marker.ns = "astar_line"
         line_marker.id = 1
         line_marker.type = Marker.LINE_STRIP
@@ -337,7 +337,7 @@ class AstarObstacleAvoidance(Node):
         line_marker.color.b = 0.0
         line_marker.color.a = 1.0
         line_marker.pose.orientation.w = 1.0
-        line_marker.lifetime = rospy.Duration(0)
+        line_marker.lifetime = rclpy.duration.Duration(seconds=0)
 
         # Populate both markers with waypoints
         for index in range(0, len(waypoints), 2):
@@ -358,7 +358,7 @@ class AstarObstacleAvoidance(Node):
         # note there is an older publish bounding box function that just makes a box around the rover..
         marker = Marker()
         marker.header.frame_id = "map"  
-        marker.header.stamp = rospy.Time.now()
+        marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = "rover_bounding_box"
         marker.id = 0
         marker.type = Marker.LINE_STRIP
@@ -455,8 +455,8 @@ class AstarObstacleAvoidance(Node):
                     g_score[neighbor] = tentative_g
                     f_score[neighbor] = tentative_g + self.heuristic(neighbor, goal)
                     open_set.put((f_score[neighbor], neighbor))
-           
-        rospy.logwarn("A* failed to find a path")
+
+        self.get_logger().warn("A* failed to find a path")
         return []
          
     def is_pose_valid(self, pose):
@@ -493,9 +493,9 @@ class AstarObstacleAvoidance(Node):
     def publish_invalid_pose_marker(self, x, y, z=0.1):
         marker = Marker()
         marker.header.frame_id = "map"
-        marker.header.stamp = rospy.Time.now()
+        marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = "invalid_pose"
-        marker.id = int(rospy.Time.now().to_sec() * 1000) % 1000000  # give it a semi-unique ID
+        marker.id = int(self.get_clock().now().to_sec() * 1000) % 1000000  # give it a semi-unique ID
         marker.type = Marker.CUBE
         marker.action = Marker.ADD
         marker.pose.position.x = x
@@ -512,7 +512,7 @@ class AstarObstacleAvoidance(Node):
         marker.color.g = 1.0
         marker.color.b = 0.0
         marker.color.a = 1.0
-        marker.lifetime = rospy.Duration(8.0)  # markers disappear after 2 seconds
+        marker.lifetime = rclpy.duration.Duration(seconds=8.0)  # markers disappear after 8 seconds
 
         self.invaliid_pose_sub.publish(marker)
 

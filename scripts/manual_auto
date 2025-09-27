@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Source ROS 2 environment
-source /opt/ros/humble/setup.bash && source /home/rsx/rover_ws/install/setup.bash
+source /opt/ros/humble/setup.bash && source /home/rsx/ros2_ws/install/setup.bash
 
 sleep 1
 
@@ -9,7 +9,7 @@ sleep 1
 tmux new-session -d -s manual
 
 # Window 1: Setup CAN and launch falcons
-tmux new-window -t manual:1 'bash -c "source /home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh && sleep 2 && ros2 launch rover falcons.py; exec bash"'
+tmux new-window -t manual:1 'bash -c "source /home/rsx/ros2_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh && sleep 2 && ros2 launch ros_phoenix falcons.launch.py; exec bash"'
 
 # Window 2: Run drive_sender_node (must be a ROS 2 node!)
 tmux new-window -t manual:2 'bash -c "ros2 run rover drive_sender_node; exec bash"'

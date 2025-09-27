@@ -7,14 +7,14 @@ Code for the state machine
 """
 import rclpy
 from rclpy.node import Node 
-import object_subscriber_node
-# import led_light
+#import object_subscriber_node
+#import led_light
 import smach
 import time
 import math
 from optimal_path import OPmain
 #from thomas_grid_search import thomasgrid
-import ar_detection_node  
+#import ar_detection_node  
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
@@ -28,9 +28,9 @@ import ar_detection_node
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
-
 import yaml
 import os
+import threading
 
 print("I am in the final state machine file")
 #file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
@@ -92,9 +92,10 @@ def shortest_path(start: str, locations: dict) -> list:
 # [For publishing messages for led to light on]
 # Subscribers : pose(PoseStamped) [Gets the pose/location data], /long_lat_goal_array(Float32MultiArray) [Gets the GPS coordinates of task points]
 
+
 class GLOB_MSGS(Node):
     def __init__(self):
-        super().__init__('glob_msgs')
+        super().__init__('glob_msgs_node')
         self.pub = self.create_publisher(String, "gui_status", 10)
         self.state_publisher = self.create_publisher(String, "state", 10)
         self.led_publisher = self.create_publisher(String, "led_light", 10)
@@ -152,7 +153,7 @@ class GLOB_MSGS(Node):
         return self.current_position
 
     def coord_callback(self, data): 
-        self.pub_state(String(data="Received GPS coordinates callback"))
+        self.pub_state(String(data="In GPS coordinates callback"))
         location_data = data 
         if (len(location_data.data) == 16): #Process all 8 GPS coordinates
 
@@ -166,7 +167,7 @@ class GLOB_MSGS(Node):
             
             self.locations = locations #assign the GPS coordinate dict to locations
         
-        self.pub_state("Received GPS coordinates")
+        self.pub_state(String(data="Received GPS coordinates"))
 
     def pub_state(self, state): #for publishing a message through the state publisher
         self.pub.publish(state)
@@ -192,7 +193,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
 
     def initialize(self, userdata): # main init function
 
-        self.glob_msg.create_subscription(Float32MultiArray, '/long_lat_goal_array', self.glob_msg.coord_callback, 10)
+        #self.coord_array_sub = self.glob_msg.create_subscription(Float32MultiArray, '/long_lat_goal_array', self.glob_msg.coord_callback, 10)
         #self.create_subscription(Float32MultiArray, "/long_lat_goal_array",  self.glob_msg.coord_callback) #Subcribes to the gui location publisher 
         #We already have the subscriber in glsob_msgs class, shouldnt need to do it again here
         while (self.glob_msg.locations is None and rclpy.ok()): #Waits for all GPS locations to be received
@@ -433,7 +434,7 @@ class AR1(smach.State): #State for AR1
                 gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
                 targets = gs.square_target() #Generates multiple points for grid search
                 gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR1") #Starts grid search traversal
-                self.create_subscription("aruco_found", Bool, self.aruco_callback) #Subscribes to aruco found to determine whether its found or not
+                aruco_sub = self.glob_msg.create_subscription("aruco_found", Bool, self.aruco_callback, 10) #Subscribes to aruco found to determine whether its found or not
                 self.glob_msg.pub_state(String(data="Starting AR1 grid search"))
                 ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the generated grid search targets
                 print("ar in correct loc", ar_in_correct_loc)
@@ -442,6 +443,7 @@ class AR1(smach.State): #State for AR1
                         self.glob_msg.pub_state(String(data="Aborting for state AR1"))
                         userdata.aborted_state = "AR1"
                         self.glob_msg.pub_state_name(String(data=""))
+                        aruco_sub.destroy_subscription()
                         return "ABORT"
                 
                 if ar_in_correct_loc:
@@ -459,6 +461,7 @@ class AR1(smach.State): #State for AR1
                         self.glob_msg.pub_state(String(data="Aborting for state AR1"))
                         userdata.aborted_state = "AR1"
                         self.glob_msg.pub_state_name(String(data=""))
+                        aruco_sub.destroy_subscription()
                         return "ABORT"
 
                 self.glob_msg.pub_state_name(String(data=""))
@@ -488,6 +491,7 @@ class AR1(smach.State): #State for AR1
             time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light(String(data="auto"))
+        aruco_sub.destroy_subscription()
         return "Location Selection"
                     
 
@@ -528,7 +532,7 @@ class AR2(smach.State): #State for AR2
                 targets = gs.square_target() #generates multiple grid search targets 
             
                 gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
-                self.create_subscription( Bool, "aruco_found", self.aruco_callback,10)
+                aruco_sub = self.glob_msg.create_subscription( Bool, "aruco_found", self.aruco_callback,10)
                 self.glob_msg.pub_state(String(data="Starting AR2 grid search"))
                 ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
                 self.glob_msg.pub_state(String(data="End of AR2 grid search"))
@@ -536,6 +540,7 @@ class AR2(smach.State): #State for AR2
                         self.glob_msg.pub_state(String(data="Aborting for state AR2"))
                         userdata.aborted_state = "AR2"
                         self.glob_msg.pub_state_name(String(data=""))
+                        aruco_sub.destroy_subscription()
                         return "ABORT"
                 
                 
@@ -554,6 +559,7 @@ class AR2(smach.State): #State for AR2
                         self.glob_msg.pub_state(String(data="Aborting for state AR2"))
                         userdata.aborted_state = "AR2"
                         self.glob_msg.pub_state_name(String(data=""))
+                        aruco_sub.destroy_subscription()
                         return "ABORT"
                 self.glob_msg.pub_state_name(String(data=""))
 
@@ -582,6 +588,7 @@ class AR2(smach.State): #State for AR2
             time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light(String(data="auto"))
+        aruco_sub.destroy_subscription()
         return "Location Selection"
 
 class AR3(smach.State): #State for AR3
@@ -620,7 +627,7 @@ class AR3(smach.State): #State for AR3
                 gs =  astar_obstacle_avoidance_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR3"][0], userdata.rem_loc_dict["AR3"][1])  # define multiple target points here: cartesian
                 targets = gs.square_target() #generates multiple targets 
                 gs_traversal_object = astar_obstacle_avoidance_grid_search.AstarObstacleAvoidance_GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR3")
-                self.create_subscription( Bool, "aruco_found", self.aruco_callback,10)
+                aruco_sub = self.glob_msg.create_subscription( Bool, "aruco_found", self.aruco_callback,10) #Test out to see if this works
                 self.glob_msg.pub_state(String(data="Starting AR3 grid search"))
                 ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
                 self.glob_msg.pub_state(String(data="End of AR3 grid search"))
@@ -628,9 +635,10 @@ class AR3(smach.State): #State for AR3
                         self.glob_msg.pub_state(String(data="Aborting for state AR3"))
                         userdata.aborted_state = "AR3"
                         self.glob_msg.pub_state_name(String(data=""))
+                        aruco_sub.destroy_subscription()
                         return "ABORT"
-                
-                if self.aruco_found:
+        
+                if self.aruco_found: #Why is this statement different from the other 2 AR states?? 
                     self.glob_msg.pub_state(String(data="Grid Search did find AR3")) #Will publish the messages afterwards but there are topics to publish when detected
                     # if ar_in_correct_loc:
                     #self.glgob_msg.pub_led_light("auto")
@@ -641,6 +649,7 @@ class AR3(smach.State): #State for AR3
                         self.glob_msg.pub_state(String(data="Aborting for state AR3"))
                         userdata.aborted_state = "AR3"
                         self.glob_msg.pub_state_name(String(data=""))
+                        aruco_sub.destroy_subscription()
                         return "ABORT"
 
                 self.glob_msg.pub_state_name(String(data=""))
@@ -671,6 +680,7 @@ class AR3(smach.State): #State for AR3
             time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light(String(data="auto"))
+        aruco_sub.destroy_subscription()
         return "Location Selection"
 
 class OBJ1(smach.State): #State for mallet
@@ -711,8 +721,8 @@ class OBJ1(smach.State): #State for mallet
                 gs = sm_grid_search.GridSearch(sm_config.get("OBJ_grid_search_w"), sm_config.get("OBJ_grid_search_h"), sm_config.get("OBJ_grid_search_tol"), userdata.rem_loc_dict["OBJ1"][0], userdata.rem_loc_dict["OBJ1"][1])  # define multiple target points here: cartesian
                 targets = gs.square_target() #Generates grid search targets
                 gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ1")
-                self.create_subscription( Bool, "mallet_detected",self.mallet_callback)
-                self.create_subscription( Bool, "waterbottle_detected", self.waterbottle_callback)
+                mallet_sub = self.glob_msg.create_subscription( Bool, "mallet_detected",self.mallet_callback)
+                waterbottle_sub = self.glob_msg.create_subscription( Bool, "waterbottle_detected", self.waterbottle_callback)
 
                 self.glob_msg.pub_state(String(data="Starting OBJ1 grid search"))
                 obj1_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
@@ -721,6 +731,8 @@ class OBJ1(smach.State): #State for mallet
                     self.glob_msg.pub_state(String(data="Aborting for state OBJ1"))
                     userdata.aborted_state = "OBJ1"
                     self.glob_msg.pub_state_name(String(data=""))
+                    mallet_sub.destroy_subscription()
+                    waterbottle_sub.destroy_subscription()
                     return "ABORT"     
 
                 if self.mallet_found or self.waterbottle_found:
@@ -741,6 +753,8 @@ class OBJ1(smach.State): #State for mallet
                             self.glob_msg.pub_state(String(data="Aborting for state OBJ1"))
                             userdata.aborted_state = "OBJ1"
                             self.glob_msg.pub_state_name(String(data=""))
+                            mallet_sub.destroy_subscription()
+                            waterbottle_sub.destroy_subscription()
                             return "ABORT"
                 
                 self.glob_msg.pub_state_name(String(data=""))
@@ -770,6 +784,8 @@ class OBJ1(smach.State): #State for mallet
             time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light(String(data="auto"))
+        mallet_sub.destroy_subscription()
+        waterbottle_sub.destroy_subscription()
         return "Location Selection"
     
 class OBJ2(smach.State): #State for waterbottle
@@ -811,9 +827,9 @@ class OBJ2(smach.State): #State for waterbottle
                 targets = gs.square_target()
                 gs_traversal_object = astar_obstacle_avoidance_grid_search.AstarObstacleAvoidance_GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ2")
                 gs_traversal_object = astar_obstacle_avoidance_grid_search.AstarObstacleAvoidance_GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ2")
-                
-                self.create_subscription( Bool, "mallet_detected", self.mallet_callback,10)
-                self.create_subscription( Bool, "waterbottle_detected", self.waterbottle_callback,10)
+
+                mallet_sub = self.glob_msg.create_subscription( Bool, "mallet_detected", self.mallet_callback,10)
+                waterbottle_sub = self.glob_msg.create_subscription( Bool, "waterbottle_detected", self.waterbottle_callback,10)
 
                 self.glob_msg.pub_state(String(data="Starting OBJ2 grid search"))
                 obj1_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
@@ -822,6 +838,8 @@ class OBJ2(smach.State): #State for waterbottle
                     self.glob_msg.pub_state(String(data="Aborting for state OBJ2"))
                     userdata.aborted_state = "OBJ2"
                     self.glob_msg.pub_state_name(String(data=""))
+                    mallet_sub.destroy_subscription()
+                    waterbottle_sub.destroy_subscription()
                     return "ABORT"
 
                 if self.mallet_found or self.waterbottle_found:
@@ -841,6 +859,8 @@ class OBJ2(smach.State): #State for waterbottle
                             self.glob_msg.pub_state(String(data="Aborting for state OBJ2"))
                             userdata.aborted_state = "OBJ2"
                             self.glob_msg.pub_state_name(String(data=""))
+                            mallet_sub.destroy_subscription()
+                            waterbottle_sub.destroy_subscription()
                             return "ABORT"
 
 
@@ -871,6 +891,8 @@ class OBJ2(smach.State): #State for waterbottle
             time.sleep(1)
         self.glob_msg.next_task_check = False
         self.glob_msg.pub_led_light(String(data="auto"))
+        mallet_sub.destroy_subscription()
+        waterbottle_sub.destroy_subscription()
         return "Location Selection"
     
     
@@ -946,7 +968,7 @@ class TasksEnded(smach.State):
 
 def main(args=None):
     rclpy.init(args=args)
-    glob_msg_node = GLOB_MSGS()
+    #glob_msg_node = GLOB_MSGS()
 
     # rospy.init_node('RSX_Rover')
     #gui_status = rospy.Publisher('gui_status', String, queue_size=10) #where should be used?
@@ -1126,11 +1148,12 @@ def main(args=None):
             "Task Ended",
             tasks_ended
         )
-        
-
-    sm.execute()
-    rclpy.spin(glob_msg_node)  
-    glob_msg_node.destroy_node()
+    
+    spin_thread = threading.Thread(target=rclpy.spin, args=(glob_msg,), daemon=True)
+    spin_thread.start()
+    sm.execute() 
+    #rclpy.spin(glob_msg) 
+    glob_msg.destroy_node()
     rclpy.shutdown()
     
 
