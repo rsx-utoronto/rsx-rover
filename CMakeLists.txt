@@ -174,6 +174,7 @@ install(PROGRAMS
 )
 install(PROGRAMS
   rover/autonomy/scripts/final_state_machine_new.py
+  rover/autonomy/scripts/sm_config.yaml
   DESTINATION lib/${PROJECT_NAME}
 )
 
