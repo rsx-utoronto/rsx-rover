@@ -40,7 +40,7 @@ science_arduino_board_name = None #Glob variable for board name, SHOULD BE CHANG
 
 #map widget that has map viewer 
 class mapOverlay(QWidget):
-    def __init__(self, node):
+    def __init__(self, node: Node):
         super().__init__()
         self.node=node
         
@@ -1175,7 +1175,7 @@ class CameraFeed:
 class RoverGUI(QMainWindow):
     statusSignal = pyqtSignal(str)
     probeUpdateSignal = pyqtSignal(bool)
-    def __init__(self, node):
+    def __init__(self, node:Node):
         self.node=node
         super().__init__()
         self.statusTerminal = statusTerminal()
@@ -1184,8 +1184,8 @@ class RoverGUI(QMainWindow):
         # Initialize QTabWidget
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
-        self.velocity_control = VelocityControl(self)
-        self.gui_status_sub = node.create_subscription('gui_status', String, self.string_callback)
+        self.velocity_control = VelocityControl(node)
+        self.gui_status_sub = node.create_subscription(String, 'gui_status', self.string_callback, 5)
         # self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
         # self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
         self.science_serial_controller = node.create_publisher( String, '/science_serial_control',5)
@@ -1300,7 +1300,7 @@ class RoverGUI(QMainWindow):
 
         # ROS functionality
         self.camerasplitter_cams_tab = QSplitter(Qt.Horizontal)
-        self.camera_feed_cams_tab = CameraFeed(self, self.camera_label1_cams_tab, self.camera_label2_cams_tab, self.camera_label3_cams_tab, self.camera_label4_cams_tab, self.camera_label5_cams_tab, self.camerasplitter_cams_tab)
+        self.camera_feed_cams_tab = CameraFeed(self.node, self.camera_label1_cams_tab, self.camera_label2_cams_tab, self.camera_label3_cams_tab, self.camera_label4_cams_tab, self.camera_label5_cams_tab, self.camerasplitter_cams_tab)
         self.camerasplitter_cams_tab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         
@@ -1374,11 +1374,11 @@ class RoverGUI(QMainWindow):
         # self.controlTab.setLayout(control_tab_layout)
 
     def setup_lngLat_tab(self):
-        self.lngLatEntry = LngLatEntryBar(self, self.map_overlay)
-        self.lngLatFile = LngLatEntryFromFile(self, self.map_overlay)
+        self.lngLatEntry = LngLatEntryBar(self.node, self.map_overlay)
+        self.lngLatFile = LngLatEntryFromFile(self.node, self.map_overlay)
         self.lngLatDeliveryFile = LngLatDeliveryEntryFromFile(self.map_overlay)
-        self.stateMachineDialog = StateMachineStatus(self)
-        self.arucoBox = ArucoWidget(self)
+        self.stateMachineDialog = StateMachineStatus(self.node)
+        self.arucoBox = ArucoWidget(self.node)
         
 
         # Create a group box for the ArucoWidget
@@ -1524,7 +1524,7 @@ class RoverGUI(QMainWindow):
         right_top_layout = QVBoxLayout()
         
         # Create a separate map overlay for the science tab
-        self.map_overlay = mapOverlay(self)
+        self.map_overlay = mapOverlay(self.node)
         self.map_overlay.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         # Create science-specific map controls
@@ -1585,7 +1585,7 @@ class RoverGUI(QMainWindow):
 
         # ROS functionality
         self.camerasplitter = QSplitter(Qt.Horizontal)
-        self.camera_feed = CameraFeed(self, self.camera_label1, self.camera_label2, self.camera_label3, self.camera_label4, self.camera_label5, self.camerasplitter)
+        self.camera_feed = CameraFeed(self.node, self.camera_label1, self.camera_label2, self.camera_label3, self.camera_label4, self.camera_label5, self.camerasplitter)
         self.camerasplitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.select_splitter = QSplitter(Qt.Horizontal)
@@ -1597,7 +1597,7 @@ class RoverGUI(QMainWindow):
         self.camera_selector.cameras_changed.connect(self.update_active_cameras_science)
         self.camera_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # Ensure this is minimal height
 
-        self.genieControl = GenieControl(self)
+        self.genieControl = GenieControl(self.node, self)
         self.genieControl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # Ensure this is minimal height
 
         self.select_splitter.addWidget(self.camera_selector)
@@ -2678,7 +2678,7 @@ class CameraSelect(QWidget):
 
 if __name__ == '__main__':
     rclpy.init()
-    node=rclpy.create_node('rover_gui', anonymous=False)
+    node=rclpy.create_node('rover_gui')
     # rospy.init_node('rover_gui', anonymous=False)
     app = QApplication(sys.argv)
     gui = RoverGUI(node)
