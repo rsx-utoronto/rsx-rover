@@ -171,7 +171,7 @@ class GS_Traversal(Node):
         first_time=True
         
         # print("In move to target")
-        while (rclpy.ok()) and (self.abort_check is False):
+        while (rclpy.ok()) and (self.abort_check is False): 
             obj = self.mallet_found or self.waterbottle_found
             mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
@@ -218,7 +218,7 @@ class GS_Traversal(Node):
                         
                 # print("angular velocity", msg.angular.z)
 
-            else: #if mapping[state] is True --> if the object is found
+            else: #if mapping[state] is True --> if the object is found, 
                 print("mapping state is true!")
                 print("IN HOMING")
                 message="In Homing"
@@ -232,7 +232,7 @@ class GS_Traversal(Node):
                     # this sees which camera it is using and then uses the parameters accordingly.
                     if sm_config.get("realsense_detection"):
                         aimer = aruco_homing.AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
-                    else: 
+                    else: #For zed camera
                         aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                         
                     print("DONE HOMING before burst")
@@ -255,10 +255,12 @@ class GS_Traversal(Node):
                 last_detection_time = time.time()
                 detection_memory_duration = 2.0  # 2 seconds of memory
                 detection_active = False
+                
 
                 while (rclpy.ok()) and (self.abort_check is False):
                     twist = Twist()
-                    
+                    aimer.update(aimer.aruco_top_left, aimer.aruco_top_right, aimer.aruco_bottom_left, aimer.aruco_bottom_right)
+
                     # Check if we have valid values from the aimer
                     if aimer.linear_v is not None and aimer.angular_v is not None:
                         # We have a detection, update the timer
@@ -296,18 +298,29 @@ class GS_Traversal(Node):
                             print ("second check",aimer.max_linear_v)
                             twist.linear.x = float(aimer.max_linear_v)
                             twist.angular.z = 0.0
+                        
+                        last_detectionp_linear_velocity = float(twist.linear.x) #this line to be used when we are scaling the speed.
+                        last_detectionp_angular_velocity = float(twist.angular.z) #this line to be used when we are scaling the speed.
+
+                        #last_detectionp_aruco_tl = aimer.aruco_top_left
+                        #last_detectionp_aruco_tr = aimer.aruco_top_right
+                        #last_detectionp_aruco_br = aimer.aruco_bottom_right
+                        #last_detectionp_aruco_bl = aimer.aruco_bottom_left
+                        #can be used in the future
+
                     else:
                         # No detection, check if we're within memory duration
                         if detection_active and time.time() - last_detection_time < detection_memory_duration:
-                            print("Using last movement commands from memory")
-                            # Continue with last valid movement
-                            # (twist values are already set from previous iteration)
+                            twist.linear.x = last_detectionp_linear_velocity * -1
+                            twist.angular.z = last_detectionp_angular_velocity * -1
+                            print("Going back or turning the angle back when no detection and still in within the memory duration") 
                         else:
                             # Memory expired, go back to grid search
                             print("Detection lost and memory expired, returning to grid search")
                             detection_active = False
                             break
                     
+                        
                     pub.publish(twist)
                     rclpy.timer.Rate(1).sleep()
                 break
@@ -319,8 +332,17 @@ class GS_Traversal(Node):
 
     def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
         
+        twist = Twist()
+        initz_heading = self.heading[2]
+        while ((self.heading-initz_heading) > 5.9): #If the angle difference is 20degrees
+            twist.angular.z = self.ang_vel
+            self.drive_publisher(twist)
+            if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
+                    print(f"Object detected during navigation: {self.found_objects[self.state]}")
+                    return True
+        
         for target_x, target_y in self.targets:
-            print('self target lenght', len(self.targets), self.targets, target_x,target_y)
+            print('self target length', len(self.targets), self.targets, target_x,target_y)
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
                 print(f"Object detected during navigation: {self.found_objects[self.state]}")
                 return True
@@ -346,7 +368,7 @@ class GridSearch(Node):
                 - if this is unequal, take the smallest tolerance
     '''
     def __init__(self, w, h, tolerance, start_x, start_y): # AR1, OR AR2 (cartesian - fixed)
-        super().__init__('grid_search_node')
+        super().__init__('grid_seaout_rch_node')
         self.x = w 
         self.y = h
         self.tol = tolerance 
