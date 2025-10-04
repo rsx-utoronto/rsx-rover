@@ -331,6 +331,18 @@ def dist(latlong1, latlong2):
 
 	return math.sqrt((latlong1[0] - latlong2[0])**2 + (latlong1[1] - latlong2[1])**2)
 
+def display_elevation():
+	# Needs to display the elevation map on top of the current map
+	# maybe apply some colour filter over the map... may cause an issue bc it'll be dark tho 
+
+	# set the ranges of elevation (should this change as we zoom?)
+
+	
+
+
+
+
+
 if __name__ == "__main__":
     import sys
 
