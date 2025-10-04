@@ -11,7 +11,7 @@ def generate_launch_description():
         SetLaunchConfiguration('use_sim_time', 'false'),
 
         Node(
-            package='tf2',
+            package='tf2_ros',
             executable='static_transform_publisher',
             name='gps_broadcaster_base_to_gps',
             arguments=['-0.2', '-0.355', '0.18', '0', '0', '0', '1', 'base_link', 'gps', '100'],
@@ -84,7 +84,7 @@ def generate_launch_description():
 
         Node(
             package='robot_localization',
-            executable='ekf_localization_node',
+            executable='ekf_node',
             name='ekf_local_node',
             output='screen',
             parameters=[{
@@ -113,7 +113,7 @@ def generate_launch_description():
 
         Node(
             package='robot_localization',
-            executable='ekf_localization_node',
+            executable='ekf_node',
             name='ekf_global_node',
             output='screen',
             parameters=[{
@@ -159,7 +159,7 @@ def generate_launch_description():
                 'magnetic_declination_radians': -0.177764053,
                 'yaw_offset': 0.0,
                 'wait_for_datum': True,
-                'datum': [43.660517, -79.396553, 0.0, 'map', 'base_link']
+                'datum': ['43.660517', '-79.396553', '0.0', 'map', 'base_link']
             }],
             remappings=[
                 ('/imu/data', '/fused_heading'),

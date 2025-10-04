@@ -227,6 +227,24 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+#added to test EKF
+install(PROGRAMS
+  rover/autonomy/scripts/ekf_odom_to_pose.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/override_covariance.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/heading_filter.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+#end added to test EKF
+
+
 # install(
 #   Files rover/drive/config/goose.yaml
 #   DESTINATION share/${PROJECT_NAME}/config
