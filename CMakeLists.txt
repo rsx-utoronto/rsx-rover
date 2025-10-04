@@ -21,6 +21,7 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(rosidl_default_generators REQUIRED)  # Replaces message_generation
+find_package(ouster_ros REQUIRED)
 
 
 set(msg_files
@@ -227,8 +228,13 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+  rover/launch/tflaunch.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # install(
-#   Files rover/drive/config/goose.yaml
+#   Files rover/cdrive/config/goose.yaml
 #   DESTINATION share/${PROJECT_NAME}/config
 # )
 
