@@ -242,6 +242,11 @@ install(PROGRAMS
   rover/autonomy/scripts/heading_filter.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
+install(PROGRAMS
+  rover/autonomy/scripts/gps_conversion_functions.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 #end added to test EKF
 
 

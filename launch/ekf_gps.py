@@ -14,7 +14,7 @@ def generate_launch_description():
             package='tf2_ros',
             executable='static_transform_publisher',
             name='gps_broadcaster_base_to_gps',
-            arguments=['-0.2', '-0.355', '0.18', '0', '0', '0', '1', 'base_link', 'gps', '100'],
+            arguments=['-0.2', '-0.355', '0.18', '0', '0', '0', '1', 'base_link', 'gps'],
         ),
 
         Node(
@@ -44,12 +44,12 @@ def generate_launch_description():
             name='override_covariance',
             output='screen',
             parameters=[{
-                'imu_orien_cov_multiplier': 10,
-                'imu_ang_vel_cov_multiplier': 10,
-                'imu_lin_acc_cov_multiplier': 10,
-                'gps_cov_multiplier': 1,
-                'odom_pose_cov_multiplier': 100000,
-                'odom_twist_cov_multiplier': 10000
+                'imu_orien_cov_multiplier': 10.0,
+                'imu_ang_vel_cov_multiplier': 10.0,
+                'imu_lin_acc_cov_multiplier': 10.0,
+                'gps_cov_multiplier': 1.0,
+                'odom_pose_cov_multiplier': 100000.0,
+                'odom_twist_cov_multiplier': 10000.0
             }]
         ),
 
@@ -159,7 +159,7 @@ def generate_launch_description():
                 'magnetic_declination_radians': -0.177764053,
                 'yaw_offset': 0.0,
                 'wait_for_datum': True,
-                'datum': ['43.660517', '-79.396553', '0.0', 'map', 'base_link']
+                'datum': [43.660517, -79.396553, 0.0] # deleted frame transformation paras for compatibility
             }],
             remappings=[
                 ('/imu/data', '/fused_heading'),
