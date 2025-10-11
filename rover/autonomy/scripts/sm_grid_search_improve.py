@@ -218,7 +218,7 @@ class GS_Traversal(Node):
                         
                 # print("angular velocity", msg.angular.z)
 
-            else: #if mapping[state] is True --> if the object is found, 
+            elif mapping[state] and (state != "OBJ1" and state != "OBJ2"): #if mapping[state] is True --> if the object is found,
                 print("mapping state is true!")
                 print("IN HOMING")
                 message="In Homing"
@@ -228,24 +228,19 @@ class GS_Traversal(Node):
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 # pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
                 pub = self.create_publisher(Twist, 'drive', 10)  # modified to use rclpy
-                if state == "AR1" or state == "AR2" or state == "AR3":
-                    # this sees which camera it is using and then uses the parameters accordingly.
-                    if sm_config.get("realsense_detection"):
-                        aimer = aruco_homing.AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
-                    else: #For zed camera
-                        aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
-                        
-                    print("DONE HOMING before burst")
+
+                # this sees which camera it is using and then uses the parameters accordingly.
+                if sm_config.get("realsense_detection"):
+                    aimer = aruco_homing.AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+                else: #For zed camera
+                    aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     
-                    # rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
-                    self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10)  # modified to use rclpy
-                    print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
-                elif state == "OBJ1" or state == "OBJ2":
-                    #add realsense check here
-                    aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
-                    self.create_subscription(Float64MultiArray, 'object/bbox', aimer.rosUpdate, 10)
-                    print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
-                # rate = rospy.Rate(10) #this code needs to be adjusted
+                print("DONE HOMING before burst")
+                
+                # rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+                self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10)  # modified to use rclpy
+                print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
+            
                 
                 # Wait a bit for initial detection
                 for i in range(50):
@@ -324,6 +319,9 @@ class GS_Traversal(Node):
                     pub.publish(twist)
                     rclpy.timer.Rate(1).sleep()
                 break
+            
+            else:
+                pass
            
                 
             # print("publishing grid search velocity")
@@ -332,14 +330,21 @@ class GS_Traversal(Node):
 
     def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
         
-        twist = Twist()
+        twist = Twist() #code for spinning in a circle initially
         initz_heading = self.heading[2]
         while ((self.heading-initz_heading) > 5.9): #If the angle difference is 20degrees
             twist.angular.z = self.ang_vel
             self.drive_publisher(twist)
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
-                    print(f"Object detected during navigation: {self.found_objects[self.state]}")
-                    return True
+                    if self.state == "OBJ1" or self.state == "OBJ2": #if objects detected are the an Object
+                        print(f"Object detected during navigation: {self.found_objects[self.state]}")
+                        return True
+                    else:   #if objects detected are an aruco, should be tested 
+                        self.move_to_target(self.x, self.y) #Will aruco found return false? self.x and self.y won't be used
+                        if self.found_objects[self.state]: #should be aruco
+                            print(f"Object detected during navigation: {self.found_objects[self.state]}")
+                            return True 
+                                  
         
         for target_x, target_y in self.targets:
             print('self target length', len(self.targets), self.targets, target_x,target_y)

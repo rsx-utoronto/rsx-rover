@@ -94,11 +94,14 @@ class Aimer: #
         return quadrilateral_area
     
     #scaling velocity code, when aruco_distance_est near 0, velocity near 1, when aruco_distance_est near min_aruco_area, velocity equals 0
-    #def scale_velocity(self, aruco_distance_est: float):
-    #    velocity = int((5*(self.min_aruco_area - aruco_distance_est)) / self.min_aruco_area)
-    #    velocity = velocity / 5
-    #    
-    #    return velocity
+    def scale_velocity(self, velocity_type: bool, aruco_distance_est: float):
+        velocity = int((5*(self.min_aruco_area - aruco_distance_est)) / self.min_aruco_area)
+        velocity = velocity / 5
+
+        if velocity_type: #true = angular, false = linear
+            return velocity*self.max_angular_v
+        else:
+            return velocity*self.max_linear_v
     
 
 
@@ -258,7 +261,22 @@ def main(args=None): #Assuming that we already detect aruco/waterbottle/mallet
                 pub.publish(twist)
                 
                 return
-                
+            
+            # Scaling velocity homing behavior
+            aruco_distance_est = Aimer.calculate_area(Aimer.aruco_top_left, Aimer.aruco_top_right, Aimer.aruco_bottom_left, Aimer.aruco_bottom_right)
+            if aimer.angular_v == 1:
+                twist.angular.z = float(aimer.scale_velocity(True, aruco_distance_est))
+                print ("firstd if",aimer.scale_velocity(True, aruco_distance_est))
+                twist.linear.x = 0.0
+            elif aimer.angular_v == -1:
+                twist.angular.z = float(-aimer.scale_velocity(True, aruco_distance_est))
+                twist.linear.x = 0.0
+            elif aimer.linear_v == 1:
+                print ("second check",aimer.scale_velocity(False, aruco_distance_est))
+                twist.linear.x = float(aimer.scale_velocity(False, aruco_distance_est))
+                twist.angular.z = 0.0
+
+            '''
             # Normal homing behavior
             if aimer.angular_v == 1:
                 twist.angular.z = float(aimer.max_angular_v)
@@ -271,7 +289,7 @@ def main(args=None): #Assuming that we already detect aruco/waterbottle/mallet
                 print ("second check",aimer.max_linear_v)
                 twist.linear.x = float(aimer.max_linear_v)
                 twist.angular.z = 0.0
-            
+            '''
             last_detectionp_linear_velocity = float(twist.linear.x) #this line to be used when we are scaling the speed.
             last_detectionp_angular_velocity = float(twist.angular.z) #this line to be used when we are scaling the speed.
 
