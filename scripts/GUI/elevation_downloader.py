@@ -1,14 +1,25 @@
 import json
+import math
 from pathlib import Path
 import urllib.request
 
 ELEV_API_LIMIT = 100
-GRID_PRECISION = 0.01
+GRID_PRECISION = 0.001
 
 
-area = [
+# area = [
+#   (43.658313, -79.398170),
+#   (44.652854, -79.424138)
+# ]
+
+front_campus = [
   (43.658313, -79.398170),
-  (44.652854, -79.424138)
+  (43.662854, -79.394138)
+]
+
+woodbine_beach = [
+  (43.670502, -79.3165272),
+  (43.6598290, -79.2778141)
 ]
 
 API_URL = 'https://api.open-meteo.com/v1/elevation'
@@ -24,7 +35,8 @@ def getElevFromPoints(lats: list[float], longs: list[float]) -> list[float]:
       return res_json["elevation"]
     return [-1.0]
 
-def main():
+def process_area(area):
+  """Process a rectangular area defined by two corner coordinates."""
   
   # Extract corner coordinates
   # Determine min and max for each dimension
@@ -38,8 +50,7 @@ def main():
   
   elevation_data = {}
 
-  lats = []
-  longs = []
+  lats_longs = []
 
   lat = min_lat
   while lat <= max_lat:
@@ -47,29 +58,45 @@ def main():
     while lon <= max_lon:
 
       # start a fetch if there are 100 coords
-      if len(lats) == ELEV_API_LIMIT:
-        elevations = getElevFromPoints(lats, longs)
+      if len(lats_longs) == ELEV_API_LIMIT:
+        print(lats_longs)
+        elevations = getElevFromPoints(
+          [p[0] for p in lats_longs], [p[1] for p in lats_longs]
+        )
         for i in range(len(elevations)):
-          elevation_data[f"{lats[i]},{longs[i]}"] = elevations[i]
-        lats.clear()
-        longs.clear()
+          elevation_data[f"{lats_longs[i][0]},{lats_longs[i][1]}"] = elevations[i]
+        lats_longs.clear()
 
-      lat_rounded = round(lat, 2)
-      lon_rounded = round(lon, 2)
-      
-      lats.append(lat_rounded)
-      longs.append(lon_rounded)
-      
+      decimals = -int(math.log10(GRID_PRECISION))
+      lat_rounded = round(lat, decimals)
+      lon_rounded = round(lon, decimals)
+      print(lat, lat_rounded, lon, lon_rounded)
+      lats_longs.append((lat_rounded, lon_rounded))      
       lon += GRID_PRECISION
     lat += GRID_PRECISION
   
-  output_file = Path(__file__).parent.resolve() / "elevation.json"
-  with open(output_file, 'x') as f:
-    json.dump(elevation_data, f, indent=2)
-  
-  print(f"\nElevation data saved to {output_file}")
-  print(f"Total coordinates processed: {len(elevation_data)}")
+  if len(lats_longs) > 0:
+    elevations = getElevFromPoints(
+      [p[0] for p in lats_longs], [p[1] for p in lats_longs]
+    )
+    for i in range(len(elevations)):
+      elevation_data[f"{lats_longs[i][0]},{lats_longs[i][1]}"] = elevations[i]
+  return elevation_data
+
 
 if __name__ == "__main__":
-  main()
+  areas = [
+    front_campus,
+    # woodbine_beach
+  ]
+  elevation_data_all = {}
+  for area in areas:
+    elevation_data_all.update(process_area(area))
+
+  output_file = Path(__file__).parent.resolve() / "elevation.json"
+  with open(output_file, 'x' if not output_file.exists() else "w") as f:
+    json.dump(elevation_data_all, f, indent=2)
+  
+  print(f"\nElevation data saved to {output_file}")
+  print(f"Total coordinates processed: {len(elevation_data_all)}")
   
