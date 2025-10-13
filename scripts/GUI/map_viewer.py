@@ -6,6 +6,7 @@ The marker widget shows a collection of Marker objects onscreen
 relative to the robot's position.
 """
 
+import json
 import math
 
 import os
@@ -70,6 +71,8 @@ class MapViewer(QWidget):
 	# Default settings
 	DEFAULT_ZOOM = 18
 
+	ELEVATION_GRID_PRECISION = 0.001
+
 	headingSignal = pyqtSignal(float)
 
 	def __init__(self, *args, **kwargs) -> None:
@@ -92,6 +95,12 @@ class MapViewer(QWidget):
 		self.selected_marker: dict[str, L.circle] = {}
 		self.show_selected_marker: dict[str, bool] = {}
 		self.circle_color: dict[str, str] = {}
+
+		# initialize elevation data
+		self.elevation_data: dict = {}
+		self.elevation_layer = None
+		self.elevation_min: float = 0
+		self.elevation_max: float = 0
 
 	"""
 	INIT METHODS
@@ -308,11 +317,11 @@ class MapViewer(QWidget):
 		# Clear all layer lines
 		for layer, points in self.map_points.items():
 			# Use JavaScript to clear the polyline points
-			self.map.runJavaScript(f'{self.points_line[layer].jsName}.setLatLngs([]);', 0)
+			map_js_snnipets.map_marker_set_lat_lng_points(self.map, [], self.points_line[layer].jsName)
 			self.points_layer[layer].clearLayers()
 		
 		# Clear robot path line
-		self.map.runJavaScript(f'{self.robot_line.jsName}.setLatLngs([]);', 0)
+		map_js_snnipets.map_marker_set_lat_lng_points(self.map, [], self.robot_line.jsName)
 		
 		# Get current robot position
 		current_pos = None
@@ -323,17 +332,115 @@ class MapViewer(QWidget):
 		self.last_drawn_robot_position = current_pos
 		
 		# Force update the map to clear all visible lines
-		self.map.runJavaScript(f'{self.robot_line.jsName}.redraw();', 0)
+		map_js_snnipets.map_line_redraw(self.map, self.robot_line.jsName)
 
 	"""
-	ELEVATION TODO- FINISH
+	ELEVATION
 	"""
-	def display_elevation():
-		# Needs to display the elevation map on top of the current map
-		# maybe apply some colour filter over the map... may cause an issue bc it'll be dark tho 
+	def set_elevation_source(self, file_path: str) -> None:
+		"""Load elevation data from a JSON file."""
+		try:
+			with open(file_path, 'r') as f:
+				raw_data = json.load(f)
+			
+			self.elevation_data = {}
+			elevations = []
+			
+			for coord_key, elevation in raw_data.items():
+				lat_str, long_str = coord_key.split(',')
+				self.elevation_data[(float(lat_str), float(long_str))] = float(elevation)
+				elevations.append(elevation)
+			
+			# Calculate min and max elevation values for color mapping
+			if elevations:
+				self.elevation_min = min(elevations)
+				self.elevation_max = max(elevations)
+				print(f"Elevation data loaded: {len(elevations)} points")
+				print(f"Elevation range: {self.elevation_min:.2f} to {self.elevation_max:.2f}")
+		
+		except FileNotFoundError:
+			print(f"Error: Elevation file not found, run elevation_downloader to get some data: {file_path}")
+		except json.JSONDecodeError:
+			print(f"Error: Invalid JSON format in {file_path}")
+		except Exception as e:
+			print(f"Error loading elevation data: {e}")
 
-		# set the ranges of elevation (should this change as we zoom?)
-	
+	def _elevation_to_color(self, elevation: float, color: tuple[int,int,int] = (255, 0, 0)) -> str:
+		"""Convert elevation value to a color (darker (low) ---> brighter (high)). Return the hex value."""
+		r, g, b = color
+		if self.elevation_max == self.elevation_min:
+			return f"#{r:02x}{g:02x}{b:02x}"
+		
+		# Normalize elevation to 0-1 range
+		normalized = (elevation - self.elevation_min) / (self.elevation_max - self.elevation_min)
+		
+		r_out = int(normalized * r)
+		g_out = int(normalized * g)
+		b_out = int(normalized * b)
+		
+		return f"#{r_out:02x}{g_out:02x}{b_out:02x}"
+
+	def display_elevation(self) -> None:
+		"""
+		Start elevation data as colored dots on the map.
+		Iterates through all coordinates in the current viewport with a interval
+		and draws dots colored by elevation
+		Will refresh on move and zoom.
+		"""
+		if not self.elevation_data:
+			return
+		
+		# Remove existing elevation layer if present
+		if self.elevation_layer:
+			self.map.removeLayer(self.elevation_layer)
+		
+		# Create new layer group for elevation dots
+		self.elevation_layer = L.layerGroup()
+		self.elevation_layer.addTo(self.map)
+		
+		# Get current map bounds
+		def process_bounds(bounds):
+			south = bounds['_southWest']['lat']
+			north = bounds['_northEast']['lat']
+			west = bounds['_southWest']['lng']
+			east = bounds['_northEast']['lng']
+			
+			print(f"Rendering elevation for bounds:")
+			print(f"  Latitude: {south:.4f} to {north:.4f}")
+			print(f"  Longitude: {west:.4f} to {east:.4f}")
+			
+			dot_count = 0
+			
+			# Iterate through coordinates 
+			lat = south
+			while lat <= north:
+				long = west
+				while long <= east:
+					decimals = -int(math.log10(self.ELEVATION_GRID_PRECISION))
+					coord_key = (round(lat, decimals), round(long, decimals))
+					
+					# Check if we have elevation data for this coordinate
+					if coord_key in self.elevation_data:
+						elevation = self.elevation_data[coord_key]
+						color = self._elevation_to_color(elevation)
+						
+						circlemarker = L.circleMarker(list(coord_key), {
+							"radius": 10,
+							"fillColor": color,
+							"color": color,
+							"weight": 3,
+						})
+						# need to add before bind popup
+						circlemarker.addTo(self.elevation_layer)
+						circlemarker.bindPopup(elevation)
+						dot_count += 1
+					long += self.ELEVATION_GRID_PRECISION
+				lat += self.ELEVATION_GRID_PRECISION
+			
+			print(f"Rendered {dot_count} dots")
+		
+		# Get bounds asynchronously and process them
+		self.map.getBounds(process_bounds)
 
 if __name__ == "__main__":
 	import sys
@@ -345,9 +452,19 @@ if __name__ == "__main__":
 	viewer.set_map_server(
 		str(CACHE_DIR) + '/arcgis_world_imagery/{z}/{y}/{x}.jpg', 19
 	)
-	viewer.set_robot_position(38.4,-110.78)
+	viewer.set_robot_position(43.658,-79.398)
+
+	viewer.set_elevation_source(resolve_path("elevation.json"))
+	from PyQt5.QtCore import QTimer
+	def show_elevation():
+		print("Displaying elevation data...")
+		viewer.display_elevation()
 	
-	viewer.set_robot_position(38.5,-110.78)
+	QTimer.singleShot(1000, show_elevation)
+
+	viewer.map.zoom.connect(show_elevation)
+	
+	# viewer.set_robot_position(38.5,-110.78)
 
 	
 	
