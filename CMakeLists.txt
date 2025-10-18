@@ -178,6 +178,11 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  scripts/GUI/gui_pyqt.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   rover/autonomy/scripts/sm_grid_search.py
   DESTINATION lib/${PROJECT_NAME}
 )
