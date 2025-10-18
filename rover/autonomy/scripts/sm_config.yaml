@@ -4,9 +4,9 @@ RUN_STATES:
   - GNSS2
   - AR1
   - AR2
-  - AR3
   - OBJ1
   - OBJ2
+  - OBJ3
 
   
 #  - GNSS1
@@ -47,9 +47,9 @@ run_in_order : TRUE #false means we find shortest path, true means it takes in t
 States_run_in_order:
   - AR1
   - AR2
-  - AR3
   - OBJ1
   - OBJ2
+  - OBJ3
   - GNSS1
   - GNSS2
 
@@ -61,9 +61,9 @@ difficulty: # priority rank!
   GNSS2: 1
   AR1: 1
   AR2: 1
-  AR3: 1
   OBJ1: 1
   OBJ2: 1
+  OBJ3: 1
 
 # sm_grid_search params
 Ar_homing_lin_vel: 1.8 #1.8
