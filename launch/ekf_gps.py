@@ -106,7 +106,16 @@ def generate_launch_description():
                                 True, True, True,
                                 False, False, False,
                                 False, False, False,
-                                False, False, False]
+                                False, False, False],
+                "odom0": "/rtabmap/odom/override",
+                "odom0_differential": False,
+                "odom0_relative": False,
+                "odom0_queue_size": 10,
+                "odom0_config": [True, True, True,
+                                 False, False, False, 
+                                 False, False, False,
+                                 False, False, False, 
+                                 False, False, False],
             }],
             remappings=[('odometry/filtered', '/odom/ekf')]
         ),
@@ -136,6 +145,15 @@ def generate_launch_description():
                                 False, False, False,
                                 False, False, False,
                                 False, False, False],
+                "odom0": "/rtabmap/odom/override", # added odom0 input
+                "odom0_differential": False,
+                "odom0_relative": False,
+                "odom0_queue_size": 10,
+                "odom0_config": [True, True, True, 
+                                 False, False, False,
+                                 False, False, False,
+                                 False, False, False, 
+                                 False, False, False],
                 'odom1': '/navsat/gps',
                 'odom1_differential': False,
                 'odom1_relative': False,
@@ -146,7 +164,9 @@ def generate_launch_description():
                                  True, True, True,
                                  False, False, False]
             }],
-            remappings=[('odometry/filtered', '/map/ekf')]
+            remappings=[
+                ('odometry/filtered', '/map/ekf')
+                ]
         ),
 
         Node(
@@ -157,15 +177,18 @@ def generate_launch_description():
             parameters=[{
                 'frequency': 5.0,
                 'magnetic_declination_radians': -0.177764053,
+                'use_odometry_yaw': False,
                 'yaw_offset': 0.0,
-                'wait_for_datum': True,
-                'datum': [43.660517, -79.396553, 0.0] # deleted frame transformation paras for compatibility
+                # had to comment out these lines to make the node sub to imu
+                # 'wait_for_datum': True,
+                # 'datum': [43.660517, -79.396553, 0.0] # deleted frame transformation paras for compatibility
             }],
             remappings=[
-                ('/imu/data', '/fused_heading'),
-                ('/gps/fix', '/calian_gnss/gps/override'),
-                ('/odometry/filtered', '/map/ekf'),
-                ('/odometry/gps', '/navsat/gps')
+                ('imu', '/fused_heading'),
+                ('gps/fix', '/calian_gnss/gps/override'),
+                ('odometry/filtered', '/map/ekf'),
+
+                ('odometry/gps', '/navsat/gps') # feedback to ekf
             ]
         ),
     ])
