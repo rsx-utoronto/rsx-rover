@@ -17,7 +17,7 @@ class ManualSwitch(Node):
             self.callback,
             10
         )
-        self.manual_script_path = '/home/rsx/ros2_ws/src/rsx-rover/scripts/manual_auto'
+        self.manual_script_path = '/home/rsx/rover_ws/src/rsx-rover/scripts/manual_auto'
         self.switch_pressed = False
         # self.PS = 0
         # print("Waiting for the switch to be pressed")

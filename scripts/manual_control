@@ -5,7 +5,7 @@
 # It also launches the zed camera file on the jetson to allow for visual aid in manual control
 # To kill, run the command `tmux kill-session -t manual`
 
-source /opt/ros/humble/setup.bash && source /home/rsx/ros2_ws/install/setup.bash
+source /opt/ros/humble/setup.bash && source /home/rsx/rover_ws/install/setup.bash
 
 # roscore&
 
@@ -13,7 +13,7 @@ sleep 1
 
 tmux new-session -d -s manual
 
-tmux new-window -t manual:1 'bash -c "source /home/rsx/ros2_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh && sleep 2 && ros2 launch ros_phoenix falcons.launch.py; exec bash"'
+tmux new-window -t manual:1 'bash -c "source /home/rsx/rover_ws/src/rsx-rover/scripts/utils/gen/setup_can.sh && sleep 2 && ros2 launch ros_phoenix falcons.launch.py; exec bash"'
 tmux new-window -t manual:2 'bash -c "ros2 run rover drive_sender_node; exec bash"'
 # tmux new-window -t manual:3 'bash -c "ros2 launch rover realsense.launch; exec bash"'
 # tmux new-window -t manual:4 'bash -c "ros2 launch rover joy.launch; exec bash"'

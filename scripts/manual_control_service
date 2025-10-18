@@ -48,7 +48,7 @@
 
 ###########################################################################################################
 
-source /opt/ros/humble/setup.bash && source /home/rsx/ros2_ws/install/setup.bash
+source /opt/ros/humble/setup.bash && source /home/rsx/rover_ws/install/setup.bash
 
 echo "Starting controller switch"
 ros2 launch rover manual_auto.py
