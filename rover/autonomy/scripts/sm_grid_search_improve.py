@@ -6,7 +6,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped, Twist
 from std_msgs.msg import Float64MultiArray, Bool, String
 import math
-import aruco_homing as aruco_homing
+import aruco_homing_improve
 import ar_detection_node as ar_detect
 import sm_straight_line as StraightLineApproach
 
@@ -231,9 +231,9 @@ class GS_Traversal(Node):
 
                 # this sees which camera it is using and then uses the parameters accordingly.
                 if sm_config.get("realsense_detection"):
-                    aimer = aruco_homing.AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+                    aimer = aruco_homing_improve.AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                 else: #For zed camera
-                    aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+                    aimer = aruco_homing_improve.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     
                 print("DONE HOMING before burst")
                 
@@ -459,7 +459,7 @@ def main():
     # pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
     pub = gs_traversal_object.create_publisher(Twist, 'drive', 10)  # modified to use rclpy
     # frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v
-    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 1.5, 0.3) # FOR ARUCO
+    aimer = aruco_homing_improve.AimerROS(640, 360, 1000, 100, 100, 1.5, 0.3) # FOR ARUCO
     
     # aimer = aruco_homing.AimerROS(50, 50, 1450, 10, 50, 1.0, 0.5) # FOR WATER BOTTLE
     # rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
