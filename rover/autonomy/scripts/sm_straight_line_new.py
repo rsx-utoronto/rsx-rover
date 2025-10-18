@@ -74,9 +74,9 @@ class StraightLineApproachNew(Node):
         # self.odom_sub = self.create_subscription(Odometry, '/rtabmap/odom', self.odom_callback, 10)
         self.found_objects = {"AR1":False, 
                    "AR2":False,
-                   "AR3":False,
                    "OBJ1":False,
-                   "OBJ2":False}
+                   "OBJ2":False,
+                   "OBJ3":False}
         self.aruco_found = False
         self.mallet_found = False
         self.waterbottle_found = False
@@ -184,9 +184,9 @@ class StraightLineApproachNew(Node):
         
         mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
-                   "AR3":self.aruco_found,
                    "OBJ1":obj,
-                   "OBJ2":obj}
+                   "OBJ2":obj,
+                   "OBJ3":obj}
         
         first_time=True
         
@@ -202,9 +202,9 @@ class StraightLineApproachNew(Node):
             obj = self.mallet_found or self.waterbottle_found
             mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
-                   "AR3":self.aruco_found,
                    "OBJ1":obj,
-                   "OBJ2":obj}
+                   "OBJ2":obj,
+                   "OBJ3":obj}
             print("state is mapping[state]", mapping[state], state)
             if mapping[state] is False:
                 #nomral operation
@@ -250,7 +250,7 @@ class StraightLineApproachNew(Node):
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 # pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
                 pub=self.create_publisher(Twist, 'drive', 10) # change topic name
-                if state == "AR1" or state == "AR2" or state == "AR3":
+                if state == "AR1" or state == "AR2":
                     # this sees which camera it is using and then uses the parameters accordingly.
                     if sm_config.get("realsense_detection"):
                         aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
@@ -259,7 +259,7 @@ class StraightLineApproachNew(Node):
 
                     self.create_subscription(Float64MultiArray, 'aruco_node/bbox', callback=aimer.rosUpdate) # change topic name
                     #print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
-                elif state == "OBJ1" or state == "OBJ2":
+                elif state == "OBJ1" or state == "OBJ2" or state == "OBJ3":
                     # aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
                     self.create_subscription(Float64MultiArray, 'object/bbox', callback=aimer.rosUpdate)
                     #print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
