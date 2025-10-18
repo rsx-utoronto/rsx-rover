@@ -613,6 +613,7 @@ class AstarObstacleAvoidance(Node):
             
             # if this isn't working, try world_final_goal_distance
             # if final_goal_target_distance < threshold_goal or target_reached_flag:
+        
             if world_final_goal_target_distance < threshold_goal or target_reached_flag:
                 print("final goal target distance", final_goal_target_distance)
                 target_reached_flag=True

@@ -14,8 +14,8 @@ import yaml
 import os
 import time
 
-#file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
-file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+# file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
@@ -240,11 +240,11 @@ class GS_Traversal(Node):
                     # rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
                     self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10)  # modified to use rclpy
                     print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
-                elif state == "OBJ1" or state == "OBJ2":
-                    #add realsense check here
-                    aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
-                    self.create_subscription(Float64MultiArray, 'object/bbox', aimer.rosUpdate, 10)
-                    print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
+                # elif state == "OBJ1" or state == "OBJ2":
+                #     #add realsense check here
+                #     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
+                #     self.create_subscription(Float64MultiArray, 'object/bbox', aimer.rosUpdate, 10)
+                #     print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
                 # rate = rospy.Rate(10) #this code needs to be adjusted
                 
                 # Wait a bit for initial detection

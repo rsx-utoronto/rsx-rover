@@ -184,6 +184,31 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  rover/autonomy/scripts/optimal_path.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/aruco_homing.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/gps_conversion_functions.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/GUI/gui_pyqt.py
+)
+
+install(PROGRAMS
+  scripts/tile_scraper.py
+  DESTINATION lib/${PROJECT_NAME}
+  )
+
+
+install(PROGRAMS
   rover/autonomy/scripts/led_light.py
   DESTINATION lib/${PROJECT_NAME}
 )

@@ -17,8 +17,8 @@ import ar_detection_node as ar_detect
 import yaml
 import os
 
-#file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
-file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+# file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
 
 
 with open(file_path, "r") as f:
@@ -144,30 +144,32 @@ class StraightLineApproachNew(Node):
                     self.count += 1
     
     def mallet_detection_callback(self, data):
-        time_now=time.time()
-        if abs(self.timer-time_now) >5:
-            self.timer=time_now
-            self.count=0
-        if data.data:
-            if self.count <= 4:
-                self.count += 1
-            else:
-                self.mallet_found = data.data
-                self.found_objects[self.state] = data.data
-                self.count += 1
+        if self.start_looking:
+            time_now=time.time()
+            if abs(self.timer-time_now) >5:
+                self.timer=time_now
+                self.count=0
+            if data.data:
+                if self.count <= 4:
+                    self.count += 1
+                else:
+                    self.mallet_found = data.data
+                    self.found_objects[self.state] = data.data
+                    self.count += 1
 
     def waterbottle_detection_callback(self, data):
-        time_now=time.time()
-        if abs(self.timer-time_now) >5:
-            self.timer=time_now
-            self.count=0
-        if data.data:
-            if self.count <= 4:
-                self.count += 1
-            else:
-                self.waterbottle_found = data.data
-                self.found_objects[self.state] = data.data
-                self.count += 1
+        if self.start_looking:
+            time_now=time.time()
+            if abs(self.timer-time_now) >5:
+                self.timer=time_now
+                self.count=0
+            if data.data:
+                if self.count <= 4:
+                    self.count += 1
+                else:
+                    self.waterbottle_found = data.data
+                    self.found_objects[self.state] = data.data
+                    self.count += 1
     
     def detection_callback(self, data):
         self.found = data
@@ -258,7 +260,7 @@ class StraightLineApproachNew(Node):
                     self.create_subscription(Float64MultiArray, 'aruco_node/bbox', callback=aimer.rosUpdate) # change topic name
                     #print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                 elif state == "OBJ1" or state == "OBJ2":
-                    aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
+                    # aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
                     self.create_subscription(Float64MultiArray, 'object/bbox', callback=aimer.rosUpdate)
                     #print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
                  #this code needs to be adjusted
