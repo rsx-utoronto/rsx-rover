@@ -49,16 +49,30 @@ class PointcloudProcessor(Node):
 
 
     def listener_callback(self, msg):
-        self.get_logger().info('I heard: %s' % msg.data)
+        # Step 1: filtering
+        filtered_cloud = self.filterCloud(msg)
+        if filtered_cloud is not None:
+            self.filtered_pub.publish(filtered_cloud)
 
-    def filterCloud(self):
-        pass
+        ground_removed_cloud = self.removeGround(msg)
+        if ground_removed_cloud is not None:
+            self.ground_removed_pub.publish(ground_removed_cloud)
 
-    def removeGround(self):
-        pass
+        obstacles_cloud = self.detectObstacles(msg)
+        if obstacles_cloud is not None:
+            self.obstacles_pub.publish(obstacles_cloud)
 
-    def detectObstacles(self):
-        pass
+        self.get_logger().info('Processed one frame of Lidar Data')
+
+
+    def filterCloud(self, cloud):
+        return cloud
+
+    def removeGround(self, cloud):
+        return cloud
+
+    def detectObstacles(self, cloud):
+        return cloud
 
 def main(args=None):
     rclpy.init(args=args)
