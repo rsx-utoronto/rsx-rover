@@ -25,20 +25,41 @@ class PointcloudProcessor(Node):
             callback=self.listener_callback,
             qos_profile=qos_profile),
 
-        self.subscription  # prevent unused variable warning
+        self.subscription  # prevent uanused variable warning
+
+        self.filtered_pub = self.create_publisher(
+            PointCloud2,
+            '/filtered_points',
+            qos_profile
+        )
+
+        self.ground_removed_pub = self.create_publisher(
+            PointCloud2,
+            '/ground_removed',
+            qos_profile
+        )
+
+        self.obstacles_pub = self.create_publisher(
+            PointCloud2,
+            '/obstacles',
+            qos_profile
+        )
+
+        self.get_logger().info('pointcloud_processor node initialized successfully')
+
 
     def listener_callback(self, msg):
         self.get_logger().info('I heard: %s' % msg.data)
 
-    def filterCloud():
+    def filterCloud(self):
         pass
 
-    def removeGround():
+    def removeGround(self):
         pass
 
-    def detectObstacles():
+    def detectObstacles(self):
         pass
-    
+
 def main(args=None):
     rclpy.init(args=args)
 
