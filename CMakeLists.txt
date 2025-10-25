@@ -229,7 +229,7 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-  rover/lidar/scripts/subscriber_node.py
+  rover/autonomy/scripts/lidar/subscriber_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
