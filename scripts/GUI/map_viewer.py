@@ -434,10 +434,26 @@ class MapViewer(QWidget):
 						circlemarker.addTo(self.elevation_layer)
 						circlemarker.bindPopup(elevation)
 						dot_count += 1
+						
+						def on_right_click(event, coord=coord_key):
+							menu = QMenu()
+							store_goal = menu.addAction("Store as Goal")
+							store_obstacle = menu.addAction("Store as Obstacle")
+							action = menu.popup(QCursor.pos())
+
+							if action == store_goal:
+								# TO DO: Need to add some logic here to store to XML or JSON for state machine processing
+								QMessageBox.information(None, "Action", f"Stored {coord} as Goal!")
+							elif action == store_obstacle:
+								QMessageBox.information(None, "Action", f"Stored {coord} as Obstacle!")
+
+						circlemarker.bindPopup(self.on_right_click)
+
 					long += self.ELEVATION_GRID_PRECISION
 				lat += self.ELEVATION_GRID_PRECISION
 			
 			print(f"Rendered {dot_count} dots")
+
 		
 		# Get bounds asynchronously and process them
 		self.map.getBounds(process_bounds)
@@ -466,6 +482,5 @@ if __name__ == "__main__":
 	
 	# viewer.set_robot_position(38.5,-110.78)
 
-	
 	
 	sys.exit(app.exec_())
