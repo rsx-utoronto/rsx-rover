@@ -31,7 +31,7 @@ class Aimer: #
         self.linear_v = None
         self.angular_v = None
 
-    def update(self, aruco_top_left: tuple, aruco_top_right: tuple, 
+    def update(self, aruco_top_left: tuple, aruco_top_right: tuple,  #determines what the speeds should be
                aruco_bottom_left: tuple, aruco_bottom_right: tuple) -> None: # update linear_v, angular_v
         # if aruco_top_left == None or aruco_top_right == None or aruco_bottom_left == None or aruco_bottom_right == None:
         #    self.linear_v, self.angular_v = 0, 0
@@ -115,13 +115,13 @@ class AimerROS(Aimer):  #updates coords continuously
                  max_linear_v: float, max_angular_v: float) -> None:
         super().__init__(frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v)
         
-    def rosUpdate(self, data: Int32MultiArray) -> None:
+    def rosUpdate(self, data: Int32MultiArray) -> None: #Callback function for recieving data of the bbox
         print ("\nDATA FROM AIMER ", data)
         aruco_top_left = (data.data[0], data.data[1])
         aruco_top_right = (data.data[2], data.data[3])
         aruco_bottom_left = (data.data[4], data.data[5])
         aruco_bottom_right = (data.data[6], data.data[7])
-        self.update(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right)
+        self.update(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right) #Have to take this out
         
 
 

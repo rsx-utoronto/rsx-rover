@@ -12,18 +12,20 @@ from rclpy.node import Node
 import smach
 import time
 import math
-from optimal_path import OPmain
+from optimal_path_improved import OPmain
+
 #from thomas_grid_search import thomasgrid
 #import ar_detection_node  
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
-from sm_straight_line_new import StraightLineApproachNew
+# from sm_straight_line_new import StraightLineApproachNew
+from sm_straight_line_improved import StraightLineApproachNew
 from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
 import astar_obstacle_avoidance_grid_search 
 import gps_conversion_functions as functions
 import gps_to_pose as gps_to_pose
-import sm_grid_search
+import sm_grid_search_improve
 import ar_detection_node
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
@@ -33,8 +35,8 @@ import os
 import threading
 
 print("I am in the final state machine file")
-#file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
-file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+# file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
+os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
@@ -431,9 +433,9 @@ class AR1(smach.State): #State for AR1
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             
             if not self.glob_msg.done_early: #If the done early button is pressed, we will not do the grid search
-                gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
+                gs = sm_grid_search_improve.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
                 targets = gs.square_target() #Generates multiple points for grid search
-                gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR1") #Starts grid search traversal
+                gs_traversal_object = sm_grid_search_improve.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR1") #Starts grid search traversal
                 aruco_sub = self.glob_msg.create_subscription("aruco_found", Bool, self.aruco_callback, 10) #Subscribes to aruco found to determine whether its found or not
                 self.glob_msg.pub_state(String(data="Starting AR1 grid search"))
                 ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the generated grid search targets
@@ -527,11 +529,11 @@ class AR2(smach.State): #State for AR2
             self.glob_msg.pub_state_name(String(data="AR2"))
             if not self.glob_msg.done_early:
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
-                gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
+                gs = sm_grid_search_improve.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
                 print(sm_config.get("AR_grid_search_w"))
                 targets = gs.square_target() #generates multiple grid search targets 
             
-                gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
+                gs_traversal_object = sm_grid_search_improve.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
                 aruco_sub = self.glob_msg.create_subscription( Bool, "aruco_found", self.aruco_callback,10)
                 self.glob_msg.pub_state(String(data="Starting AR2 grid search"))
                 ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
@@ -630,7 +632,7 @@ class OBJ1(smach.State): #State for mallet
             if self.glob_msg.abort_check:
                 gs = sm_grid_search.GridSearch(sm_config.get("OBJ_grid_search_w"), sm_config.get("OBJ_grid_search_h"), sm_config.get("OBJ_grid_search_tol"), userdata.rem_loc_dict["OBJ1"][0], userdata.rem_loc_dict["OBJ1"][1])  # define multiple target points here: cartesian
                 targets = gs.square_target() #Generates grid search targets
-                gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ1")
+                gs_traversal_object = sm_grid_search_improve.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "OBJ1")
                 mallet_sub = self.glob_msg.create_subscription( Bool, "mallet_detected",self.mallet_callback)
                 waterbottle_sub = self.glob_msg.create_subscription( Bool, "waterbottle_detected", self.waterbottle_callback)
 
