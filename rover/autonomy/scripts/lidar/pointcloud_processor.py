@@ -72,8 +72,6 @@ class PointcloudProcessor(Node):
         # for field in msg.fields:
         #     self.get_logger().info(field.name)
 
-
-
         filtered_cloud = self.filterCloud(msg)
         if filtered_cloud is not None:
             self.filtered_pub.publish(filtered_cloud)
@@ -86,24 +84,25 @@ class PointcloudProcessor(Node):
         if obstacles_cloud is not None:
             self.obstacles_pub.publish(obstacles_cloud)
 
-        # self.get_logger().info('Processed one frame of Lidar Data')
+        self.get_logger().info('Processed one frame of Lidar Data')
 
 
     def filterCloud(self, cloud):
         # Only include points in a specific range
         points = np.array([
-            [p[0], p[1], p[2]]
+            [p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8]]
             for p in point_cloud2.read_points(
-                cloud, field_names=('x', 'y', 'z'), skip_nans=True
+                cloud, field_names=('x', 'y', 'z', 'intensity', 't', 'reflectivity', 'ring', 'ambient', 'range'), skip_nans=True
             )
         ], dtype=np.float32)
 
         if points.size == 0:
             self.get_logger().warn("Empty cloud received")
 
-        x_min, x_max = -1.0, 2.0
-        y_min, y_max = -1.0, 2.0
-        z_min, z_max = -1.0, 2.0
+        # Mask to only include points in a certain range
+        x_min, x_max = -10.0, 10.0
+        y_min, y_max = -10.0, 10.0
+        z_min, z_max = -10.0, 10.0
 
         in_x = (points[:, 0] >= x_min) & (points[:, 0] <= x_max)
         in_y = (points[:, 1] >= y_min) & (points[:, 1] <= y_max)
@@ -112,17 +111,27 @@ class PointcloudProcessor(Node):
         mask = in_x & in_y & in_z
         filtered_points = points[mask]
 
+        # Mask to exclude points in a certain range
+        x_min, x_max = -0.1, 0.1
+        y_min, y_max = -0.1, 0.1
+        z_min, z_max = -0.1, 0.1
+
+        # in_x = (points[:, 0] <= x_min) | (points[:, 0] >= x_max)
+        # in_y = (points[:, 1] <= y_min) | (points[:, 1] >= y_max)
+        # in_z = (points[:, 2] <= z_min) | (points[:, 2] >= z_max)
+
+        # mask = in_x & in_y & in_z
+
+        mask = ((points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2) > 0.5)
+        filtered_points = points[mask]
+
+
         # Define PointFields using official datatypes (FLOAT32 = 7)
-        fields = [
-            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
-            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
-            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
-        ]
 
         # Create a new PointCloud2 message using the filtered points
         filtered_msg = point_cloud2.create_cloud(
             header=cloud.header,
-            fields=fields,
+            fields=cloud.fields,
             points=filtered_points.tolist(),
         )
 
