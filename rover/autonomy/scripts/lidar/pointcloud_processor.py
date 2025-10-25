@@ -3,8 +3,9 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
-
-from sensor_msgs.msg import PointCloud2
+from sensor_msgs_py import point_cloud2
+from sensor_msgs.msg import PointCloud2, PointField
+import numpy as np
 
 
 class PointcloudProcessor(Node):
@@ -49,7 +50,6 @@ class PointcloudProcessor(Node):
 
 
     def listener_callback(self, msg):
-        # Step 1: filtering
         filtered_cloud = self.filterCloud(msg)
         if filtered_cloud is not None:
             self.filtered_pub.publish(filtered_cloud)
@@ -66,7 +66,43 @@ class PointcloudProcessor(Node):
 
 
     def filterCloud(self, cloud):
-        return cloud
+        # Only include points in a specific range
+        points = np.array([
+            [p[0], p[1], p[2]]
+            for p in point_cloud2.read_points(
+                cloud, field_names=('x', 'y', 'z'), skip_nans=True
+            )
+        ], dtype=np.float32)
+
+        if points.size == 0:
+            self.get_logger().warn("Empty cloud received")
+
+        x_min, x_max = -1.0, 2.0
+        y_min, y_max = -1.0, 2.0
+        z_min, z_max = -1.0, 2.0
+
+        in_x = (points[:, 0] >= x_min) & (points[:, 0] <= x_max)
+        in_y = (points[:, 1] >= y_min) & (points[:, 1] <= y_max)
+        in_z = (points[:, 2] >= z_min) & (points[:, 2] <= z_max)
+
+        mask = in_x & in_y & in_z
+        filtered_points = points[mask]
+
+        # Define PointFields using official datatypes (FLOAT32 = 7)
+        fields = [
+            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+        ]
+
+        # Create a new PointCloud2 message using the filtered points
+        filtered_msg = point_cloud2.create_cloud(
+            header=cloud.header,
+            fields=fields,
+            points=filtered_points.tolist(),
+        )
+
+        return filtered_msg
 
     def removeGround(self, cloud):
         return cloud
