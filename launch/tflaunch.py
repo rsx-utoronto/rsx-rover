@@ -18,6 +18,12 @@ def generate_launch_description():
 
     return LaunchDescription([
         Node(
+            package='rover',
+            executable='subscriber_node.py',  # Renamed from 'manual_control'
+            name='lidar_subscriber',
+            output='screen'
+        ),
+        Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
             name='robot_state_publisher',

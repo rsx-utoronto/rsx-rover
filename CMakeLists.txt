@@ -229,6 +229,11 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  rover/lidar/scripts/subscriber_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   launch/tflaunch.py
   DESTINATION lib/${PROJECT_NAME}
 )
