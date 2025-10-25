@@ -49,7 +49,31 @@ class PointcloudProcessor(Node):
         self.get_logger().info('pointcloud_processor node initialized successfully')
 
 
+    """
+    PointCloud2 message:
+    Height: 64
+    Width:: 1024
+    Fields:
+    - x
+    - y
+    - z
+    - intensity
+    - t
+    - reflectivity
+    - ring
+    - ambient
+    - range
+    
+    """
     def listener_callback(self, msg):
+        # self.get_logger().info("--POINTCLOUD RECIEVED--")
+        # self.get_logger().info(f"Height: {msg.height}  Width: {msg.width}")
+        # self.get_logger().info("FIELDS:")
+        # for field in msg.fields:
+        #     self.get_logger().info(field.name)
+
+
+
         filtered_cloud = self.filterCloud(msg)
         if filtered_cloud is not None:
             self.filtered_pub.publish(filtered_cloud)
@@ -62,7 +86,7 @@ class PointcloudProcessor(Node):
         if obstacles_cloud is not None:
             self.obstacles_pub.publish(obstacles_cloud)
 
-        self.get_logger().info('Processed one frame of Lidar Data')
+        # self.get_logger().info('Processed one frame of Lidar Data')
 
 
     def filterCloud(self, cloud):
