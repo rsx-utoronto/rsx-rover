@@ -229,7 +229,7 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-  rover/autonomy/scripts/lidar/subscriber_node.py
+  rover/autonomy/scripts/lidar/pointcloud_processor.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
