@@ -30,7 +30,15 @@ class PointcloudProcessor(Node):
     def listener_callback(self, msg):
         self.get_logger().info('I heard: %s' % msg.data)
 
+    def filterCloud():
+        pass
 
+    def removeGround():
+        pass
+
+    def detectObstacles():
+        pass
+    
 def main(args=None):
     rclpy.init(args=args)
 
