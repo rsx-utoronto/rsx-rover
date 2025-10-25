@@ -229,7 +229,7 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-  rover/launch/tflaunch.py
+  launch/tflaunch.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
