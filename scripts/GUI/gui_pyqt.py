@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 
-
 import sys
+import os
+
+# Import cv2 first, then fix the Qt plugin path it sets
+import cv2
+# Remove the Qt plugin path that cv2 sets to avoid conflicts with PyQt5
+if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
+    del os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"]
+
 import rclpy
 from rclpy.node import Node
 import map_viewer as map_viewer
@@ -20,7 +27,6 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix, CompressedImage, Image
 from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
 from cv_bridge import CvBridge
-import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
 
@@ -1560,4 +1566,14 @@ if __name__ == '__main__':
     """)
 
     gui.show()
-    sys.exit(app.exec_())
+    
+    # Create a QTimer to spin ROS2 in the Qt event loop
+    timer = QTimer()
+    timer.timeout.connect(lambda: rclpy.spin_once(node, timeout_sec=0))
+    timer.start(10)  # Spin every 10ms
+    
+    try:
+        sys.exit(app.exec_())
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
