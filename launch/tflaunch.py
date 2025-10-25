@@ -19,8 +19,8 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='rover',
-            executable='subscriber_node.py',  # Renamed from 'manual_control'
-            name='lidar_subscriber',
+            executable='pointcloud_processor.py',  # Renamed from 'manual_control'
+            name='pointcloud_processor',
             output='screen'
         ),
         Node(
