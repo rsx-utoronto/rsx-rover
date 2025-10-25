@@ -112,18 +112,18 @@ class PointcloudProcessor(Node):
         filtered_points = points[mask]
 
         # Mask to exclude points in a certain range
-        x_min, x_max = -0.1, 0.1
-        y_min, y_max = -0.1, 0.1
-        z_min, z_max = -0.1, 0.1
+        x_min, x_max = -0.5, 0.5
+        y_min, y_max = -0.5, 0.5
+        z_min, z_max = -0.5, 0.5
 
-        # in_x = (points[:, 0] <= x_min) | (points[:, 0] >= x_max)
-        # in_y = (points[:, 1] <= y_min) | (points[:, 1] >= y_max)
-        # in_z = (points[:, 2] <= z_min) | (points[:, 2] >= z_max)
+        in_x = (filtered_points[:, 0] <= x_min) | (filtered_points[:, 0] >= x_max)
+        in_y = (filtered_points[:, 1] <= y_min) | (filtered_points[:, 1] >= y_max)
+        in_z = (filtered_points[:, 2] <= z_min) | (filtered_points[:, 2] >= z_max)
 
-        # mask = in_x & in_y & in_z
+        mask = in_x | in_y | in_z
 
-        mask = ((points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2) > 0.5)
-        filtered_points = points[mask]
+        # mask = ((points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2) > 0.5)
+        filtered_points = filtered_points[mask]
 
 
         # Define PointFields using official datatypes (FLOAT32 = 7)
