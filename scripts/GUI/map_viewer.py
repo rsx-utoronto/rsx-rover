@@ -15,6 +15,11 @@ from pathlib import Path
 
 import map_js_snnipets
 
+import csv
+from datetime import datetime
+
+from PyQt5 import QtWebChannel, QtCore
+
 os.environ['QT_API'] = 'pyqt5'
 from pyqtlet2 import L, MapWidget
 
@@ -43,6 +48,11 @@ class MapPoint:
 	radius: float
 	name: str
 
+class JsBridge(QtCore.QObject):
+	pointChosen = QtCore.pyqtSignal(float, float, str)
+	@QtCore.pyqtSlot(float, float, str)
+	def storePoint(self, lat, lng, label):
+		self.pointChosen.emit(lat, lng, label)
 
 class Locations():
 	"""constant locations, lat long  pairs"""
@@ -82,6 +92,26 @@ class MapViewer(QWidget):
 		self._init_map_config()
 		self._init_markers(Locations.engineering)
 
+
+		page = self._get_page()
+		wc = getattr(page, 'webChannel', None)
+		self._channel = (ch := (wc() if callable(wc) else wc)) or QtWebChannel.QWebChannel(page)
+		if ch is None:
+			page.setWebChannel(self._channel)
+		if not hasattr(self, '_bridge'):
+			self._bridge = JsBridge()
+			self._channel.registerObject('pyBridge', self._bridge)
+			
+			# Always overwrite the same CSV on each launch
+			self.stored_points_path = Path.cwd() / 'stored_points.csv'
+			with open(self.stored_points_path, 'w', newline='') as f:
+				writer = csv.DictWriter(f, fieldnames=['timestamp','lat','lng','label'])
+				writer.writeheader()
+
+			self._bridge.pointChosen.connect(self._on_store_point)
+		self._install_right_click_popup()
+
+
 		# signal to be used by other components
 		self.headingSignal.connect(self.set_robot_rotation)
 		
@@ -105,6 +135,134 @@ class MapViewer(QWidget):
 	"""
 	INIT METHODS
 	"""
+	def _get_page(self):
+    # Prefer MapWidget.view.page if present
+		if hasattr(self, 'mapWidget'):
+			view = getattr(self.mapWidget, 'view', None)
+			if view is not None:
+				p = getattr(view, 'page', None)
+				if p is not None:
+					return p() if callable(p) else p
+
+			# Some builds expose .page directly on MapWidget
+			p = getattr(self.mapWidget, 'page', None)
+			if p is not None:
+				return p() if callable(p) else p
+
+		# Fallback: pyqtlet2 Map may expose a view with a page
+		if hasattr(self, 'map') and hasattr(self.map, 'view'):
+			p = getattr(self.map.view, 'page', None)
+			if p is not None:
+				return p() if callable(p) else p
+
+		raise RuntimeError("Could not obtain QWebEnginePage for WebChannel.")
+
+	# --- INTERNAL: handle a stored point from JS (append CSV + draw a marker) ---
+	def _on_store_point(self, lat: float, lng: float, label: str):
+		# Append to CSV (create header if new)
+		new_file = not os.path.exists(self.stored_points_path)
+		with open(self.stored_points_path, 'a', newline='') as f:
+			writer = csv.DictWriter(f, fieldnames=['timestamp','lat','lng','label'])
+			if new_file:
+				writer.writeheader()
+			writer.writerow({
+				'timestamp': datetime.now().isoformat(timespec='seconds'),
+				'lat': f'{lat:.8f}',
+				'lng': f'{lng:.8f}',
+				'label': label
+			})
+
+		# Visual feedback: small colored dot + tooltip
+		color = '#1f77b4' if label.lower() == 'x' else '#d62728'
+		js = f"""
+		(function() {{
+		// Resolve the Leaflet map object robustly
+		var m = window['{self.map.jsName}Object'] || window.map;
+		if (!m) {{ console.error('Leaflet map not found'); return; }}
+
+		window._storedGroup = window._storedGroup || L.layerGroup().addTo(m);
+		L.circleMarker([{lat}, {lng}], {{radius:6, color: '{color}', weight: 2}})
+			.bindTooltip('{label.upper()} ({lat:.5f}, {lng:.5f})')
+			.addTo(window._storedGroup);
+		}})();
+		"""
+		# Run on the raw WebEngine page (not via pyqtlet2 Map)
+		self._get_page().runJavaScript(js)
+
+	# --- INTERNAL: inject right-click popup JS with 2 buttons calling back to Python ---
+	def _install_right_click_popup(self):
+		js = f"""
+		(function() {{
+		// Grab the Leaflet map object from pyqtlet2 (fallback to global 'map')
+		var m = window['{self.map.jsName}Object'] || window.map;
+		if (!m) {{ console.error('Leaflet map not found'); return; }}
+
+		function ensureBridge(ready) {{
+			if (window.pyBridge) {{ ready(); return; }}
+			function start() {{
+			if (window.QWebChannel) {{
+				new QWebChannel(qt.webChannelTransport, function(channel) {{
+				window.pyBridge = channel.objects.pyBridge;
+				ready();
+				}});
+			}} else {{
+				var s = document.createElement('script');
+				s.src = 'qrc:///qtwebchannel/qwebchannel.js';
+				s.onload = function() {{ start(); }};
+				document.head.appendChild(s);
+			}}
+			}}
+			start();
+		}}
+
+		function buildPopup(lat, lng) {{
+			var latStr = lat.toFixed(6), lngStr = lng.toFixed(6);
+			var html =
+			'<div style="min-width:180px">'
+			+ '<div style="font-weight:600; margin-bottom:6px">Store this location?</div>'
+			+ '<div style="font-size:12px; opacity:.8; margin-bottom:8px">(' + latStr + ', ' + lngStr + ')</div>'
+			+ '<div style="display:flex; gap:8px">'
+			+ '  <button id="store-x" style="flex:1">Store as X</button>'
+			+ '  <button id="store-y" style="flex:1">Store as Y</button>'
+			+ '</div>'
+			+ '</div>';
+			return html;
+		}}
+
+		// Right-click (Leaflet 'contextmenu') on the map
+		m.on('contextmenu', function(e) {{
+			var lat = e.latlng.lat, lng = e.latlng.lng;
+
+			var popup = L.popup({{ closeOnClick: true }})
+			.setLatLng(e.latlng)
+			.setContent(buildPopup(lat, lng))
+			.openOn(m);
+
+			// Wire the buttons after the popup is in the DOM
+			setTimeout(function() {{
+			var btnX = document.getElementById('store-x');
+			var btnY = document.getElementById('store-y');
+			function send(label) {{
+				ensureBridge(function() {{
+				if (window.pyBridge && window.pyBridge.storePoint) {{
+					window.pyBridge.storePoint(lat, lng, label);
+				}} else {{
+					console.error('pyBridge not ready');
+				}}
+				}});
+				m.closePopup(popup);
+			}}
+			if (btnX) btnX.addEventListener('click', function(){{ send('x'); }});
+			if (btnY) btnY.addEventListener('click', function(){{ send('y'); }});
+			}}, 0);
+		}});
+		}})();
+		"""
+		# Run on the raw WebEngine page (not via pyqtlet2 Map)
+		self._get_page().runJavaScript(js)
+
+
+	
 	def _init_map_widget(self) -> None:
 		self.mapWidget = MapWidget()
 		layout = QVBoxLayout()
@@ -434,26 +592,10 @@ class MapViewer(QWidget):
 						circlemarker.addTo(self.elevation_layer)
 						circlemarker.bindPopup(elevation)
 						dot_count += 1
-						
-						def on_right_click(event, coord=coord_key):
-							menu = QMenu()
-							store_goal = menu.addAction("Store as Goal")
-							store_obstacle = menu.addAction("Store as Obstacle")
-							action = menu.popup(QCursor.pos())
-
-							if action == store_goal:
-								# TO DO: Need to add some logic here to store to XML or JSON for state machine processing
-								QMessageBox.information(None, "Action", f"Stored {coord} as Goal!")
-							elif action == store_obstacle:
-								QMessageBox.information(None, "Action", f"Stored {coord} as Obstacle!")
-
-						circlemarker.bindPopup(self.on_right_click)
-
 					long += self.ELEVATION_GRID_PRECISION
 				lat += self.ELEVATION_GRID_PRECISION
 			
 			print(f"Rendered {dot_count} dots")
-
 		
 		# Get bounds asynchronously and process them
 		self.map.getBounds(process_bounds)
@@ -482,5 +624,6 @@ if __name__ == "__main__":
 	
 	# viewer.set_robot_position(38.5,-110.78)
 
+	
 	
 	sys.exit(app.exec_())
