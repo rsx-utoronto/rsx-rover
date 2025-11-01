@@ -36,7 +36,7 @@ import threading
 
 print("I am in the final state machine file")
 # file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
-os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
