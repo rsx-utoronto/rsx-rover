@@ -1,0 +1,16 @@
+# Favorite Appetizer Dataset (YOLOv12)
+# Configuration file for training/validation/testing
+
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['food']
+
+roboflow:
+  workspace: rsxobjectdetection
+  project: favoriteappetizer-sftcy
+  version: 2
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/rsxobjectdetection/favoriteappetizer-sftcy/dataset/2
