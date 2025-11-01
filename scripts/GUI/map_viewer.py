@@ -13,6 +13,11 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+import uuid
+import shutil
+import tempfile
+
+
 import map_js_snnipets
 
 import csv
@@ -49,10 +54,16 @@ class MapPoint:
 	name: str
 
 class JsBridge(QtCore.QObject):
-	pointChosen = QtCore.pyqtSignal(float, float, str)
+	pointChosen = QtCore.pyqtSignal(float, float, str)           # lat, lng, label
+	removePointSig = QtCore.pyqtSignal(str, float, float, str)   # id, lat, lng, label
+
 	@QtCore.pyqtSlot(float, float, str)
 	def storePoint(self, lat, lng, label):
 		self.pointChosen.emit(lat, lng, label)
+
+	@QtCore.pyqtSlot(str, float, float, str)
+	def removePoint(self, point_id, lat, lng, label):
+		self.removePointSig.emit(point_id, lat, lng, label)
 
 class Locations():
 	"""constant locations, lat long  pairs"""
@@ -101,14 +112,31 @@ class MapViewer(QWidget):
 		if not hasattr(self, '_bridge'):
 			self._bridge = JsBridge()
 			self._channel.registerObject('pyBridge', self._bridge)
-			
-			# Always overwrite the same CSV on each launch
-			self.stored_points_path = Path.cwd() / 'stored_points.csv'
-			with open(self.stored_points_path, 'w', newline='') as f:
-				writer = csv.DictWriter(f, fieldnames=['timestamp','lat','lng','label'])
-				writer.writeheader()
 
+			# --- three fresh CSVs per app launch (with id column) ---
+			self.session_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+			base = Path.cwd()
+
+			self.csv_perm = base / f'permanent_obstacles_{self.session_id}.csv'
+			self.csv_temp = base / f'temporary_obstacles_{self.session_id}.csv'
+			self.csv_trav = base / f'points_to_traverse_{self.session_id}.csv'
+
+			for p in (self.csv_perm, self.csv_temp, self.csv_trav):
+				with open(p, 'w', newline='') as f:
+					writer = csv.DictWriter(f, fieldnames=['id','timestamp','lat','lng','label'])
+					writer.writeheader()
+
+			# index of live points: id -> (kind, csv_path)
+			self.point_index = {}
+
+			# connect signals
 			self._bridge.pointChosen.connect(self._on_store_point)
+			self._bridge.removePointSig.connect(self._on_remove_point)
+
+			# (Optional) print paths for sanity
+			print("Permanent obstacles CSV:", self.csv_perm)
+			print("Temporary obstacles CSV:", self.csv_temp)
+			print("Points to traverse CSV:", self.csv_trav)
 		self._install_right_click_popup()
 
 
@@ -159,41 +187,141 @@ class MapViewer(QWidget):
 
 	# --- INTERNAL: handle a stored point from JS (append CSV + draw a marker) ---
 	def _on_store_point(self, lat: float, lng: float, label: str):
-		# Append to CSV (create header if new)
-		new_file = not os.path.exists(self.stored_points_path)
-		with open(self.stored_points_path, 'a', newline='') as f:
-			writer = csv.DictWriter(f, fieldnames=['timestamp','lat','lng','label'])
-			if new_file:
-				writer.writeheader()
+		key = (label or '').strip().lower()
+		if key == 'permanent_obstacle':
+			target = self.csv_perm; color = '#d62728'; tip_label = 'Permanent obstacle'; kind = 'perm'
+		elif key == 'temporary_obstacle':
+			target = self.csv_temp; color = '#ff7f0e'; tip_label = 'Temporary obstacle'; kind = 'temp'
+		elif key == 'point_to_traverse':
+			target = self.csv_trav; color = '#1f77b4'; tip_label = 'Point to traverse'; kind = 'trav'
+		else:
+			target = self.csv_temp; color = '#7f7f7f'; tip_label = f'Unknown: {label}'; kind = 'temp'
+
+		# Assign a unique id and persist it
+		pid = str(uuid.uuid4())
+		with open(target, 'a', newline='') as f:
+			writer = csv.DictWriter(f, fieldnames=['id','timestamp','lat','lng','label'])
 			writer.writerow({
+				'id': pid,
 				'timestamp': datetime.now().isoformat(timespec='seconds'),
 				'lat': f'{lat:.8f}',
 				'lng': f'{lng:.8f}',
-				'label': label
+				'label': key
 			})
+		self.point_index[pid] = (kind, str(target))
 
-		# Visual feedback: small colored dot + tooltip
-		color = '#1f77b4' if label.lower() == 'x' else '#d62728'
+		# Draw marker; MIDDLE-CLICK to remove this point
 		js = f"""
 		(function() {{
-		// Resolve the Leaflet map object robustly
 		var m = window['{self.map.jsName}Object'] || window.map;
 		if (!m) {{ console.error('Leaflet map not found'); return; }}
 
+		function ensureBridge(ready) {{
+			if (window.pyBridge) {{ ready(); return; }}
+			function start() {{
+			if (window.QWebChannel) {{
+				new QWebChannel(qt.webChannelTransport, function(channel) {{
+				window.pyBridge = channel.objects.pyBridge; ready();
+				}});
+			}} else {{
+				var s = document.createElement('script');
+				s.src = 'qrc:///qtwebchannel/qwebchannel.js';
+				s.onload = function() {{ start(); }};
+				document.head.appendChild(s);
+			}}
+			}} start();
+		}}
+
 		window._storedGroup = window._storedGroup || L.layerGroup().addTo(m);
-		L.circleMarker([{lat}, {lng}], {{radius:6, color: '{color}', weight: 2}})
-			.bindTooltip('{label.upper()} ({lat:.5f}, {lng:.5f})')
-			.addTo(window._storedGroup);
+		var mk = L.circleMarker([{lat}, {lng}], {{radius:6, color:'{color}', weight:2}});
+		mk.bindTooltip('{tip_label} ({lat:.5f}, {lng:.5f})');
+		mk.options.pid = '{pid}';
+
+		// Middle-click removal: mouse button 1
+		mk.on('mousedown', function(e) {{
+			var oe = e.originalEvent || e;  // DOM MouseEvent
+			if (oe && oe.button === 1) {{
+			if (L && L.DomEvent) {{ L.DomEvent.preventDefault(oe); L.DomEvent.stop(oe); }}
+			ensureBridge(function() {{
+				if (window.pyBridge && window.pyBridge.removePoint) {{
+				window.pyBridge.removePoint('{pid}', {lat}, {lng}, '{key}');
+				}}
+			}});
+			m.removeLayer(mk);
+			}}
+		}});
+
+		mk.addTo(window._storedGroup);
 		}})();
 		"""
-		# Run on the raw WebEngine page (not via pyqtlet2 Map)
 		self._get_page().runJavaScript(js)
+
+	def _on_remove_point(self, pid: str):
+		"""
+		Remove a point from its CSV. Primary key is 'id'. If the CSV has no 'id' column
+		(legacy rows), fall back to matching by lat/lng/label (string-formatted).
+		"""
+		info = self.point_index.get(pid)
+
+		# Try the known file first; otherwise scan all three
+		candidate_paths = [info[1]] if info else [str(self.csv_perm), str(self.csv_temp), str(self.csv_trav)]
+
+		removed = False
+		lat_s = f"{lat:.8f}"
+		lng_s = f"{lng:.8f}"
+		label_s = (label or "").strip().lower()
+
+		for path in candidate_paths:
+			if not os.path.exists(path):
+				continue
+
+			tmp = tempfile.NamedTemporaryFile('w', delete=False, newline='')
+			try:
+				with open(path, 'r', newline='') as src, tmp as out:
+					r = csv.DictReader(src)
+					# Handle legacy files without 'id'
+					fieldnames = r.fieldnames or ['timestamp','lat','lng','label']
+					if 'id' not in fieldnames:
+						fieldnames = ['id','timestamp','lat','lng','label']
+
+					w = csv.DictWriter(out, fieldnames=fieldnames)
+					w.writeheader()
+
+					for row in r:
+						row_id = row.get('id')
+						row_lat = row.get('lat')
+						row_lng = row.get('lng')
+						row_label = (row.get('label') or '').strip().lower()
+
+						match_by_id = (row_id is not None and row_id == pid)
+						match_by_vals = (row_id in (None, '',)) and (row_lat == lat_s and row_lng == lng_s and row_label == label_s)
+
+						if match_by_id or match_by_vals:
+							removed = True
+							continue  # skip (delete)
+						else:
+							# Ensure legacy rows gain an 'id' column on rewrite
+							if 'id' in fieldnames and 'id' not in row:
+								row['id'] = row_id or ''
+							w.writerow(row)
+				shutil.move(out.name, path)
+			finally:
+				try:
+					os.unlink(tmp.name)
+				except Exception:
+					pass
+
+			if removed:
+				break
+
+		# Drop from in-memory index if we knew it
+		if pid in self.point_index:
+			self.point_index.pop(pid, None)
 
 	# --- INTERNAL: inject right-click popup JS with 2 buttons calling back to Python ---
 	def _install_right_click_popup(self):
 		js = f"""
 		(function() {{
-		// Grab the Leaflet map object from pyqtlet2 (fallback to global 'map')
 		var m = window['{self.map.jsName}Object'] || window.map;
 		if (!m) {{ console.error('Leaflet map not found'); return; }}
 
@@ -217,31 +345,26 @@ class MapViewer(QWidget):
 
 		function buildPopup(lat, lng) {{
 			var latStr = lat.toFixed(6), lngStr = lng.toFixed(6);
-			var html =
-			'<div style="min-width:180px">'
-			+ '<div style="font-weight:600; margin-bottom:6px">Store this location?</div>'
-			+ '<div style="font-size:12px; opacity:.8; margin-bottom:8px">(' + latStr + ', ' + lngStr + ')</div>'
-			+ '<div style="display:flex; gap:8px">'
-			+ '  <button id="store-x" style="flex:1">Store as X</button>'
-			+ '  <button id="store-y" style="flex:1">Store as Y</button>'
-			+ '</div>'
+			return ''
+			+ '<div style="min-width:220px">'
+			+ '  <div style="font-weight:600; margin-bottom:6px">Store this location as...</div>'
+			+ '  <div style="font-size:12px; opacity:.8; margin-bottom:8px">(' + latStr + ', ' + lngStr + ')</div>'
+			+ '  <div style="display:flex; gap:6px; flex-direction:column">'
+			+ '    <button id="store-perm" style="padding:6px 8px">Permanent obstacle</button>'
+			+ '    <button id="store-temp" style="padding:6px 8px">Temporary obstacle</button>'
+			+ '    <button id="store-trav" style="padding:6px 8px">Point to traverse</button>'
+			+ '  </div>'
 			+ '</div>';
-			return html;
 		}}
 
-		// Right-click (Leaflet 'contextmenu') on the map
 		m.on('contextmenu', function(e) {{
 			var lat = e.latlng.lat, lng = e.latlng.lng;
-
 			var popup = L.popup({{ closeOnClick: true }})
 			.setLatLng(e.latlng)
 			.setContent(buildPopup(lat, lng))
 			.openOn(m);
 
-			// Wire the buttons after the popup is in the DOM
 			setTimeout(function() {{
-			var btnX = document.getElementById('store-x');
-			var btnY = document.getElementById('store-y');
 			function send(label) {{
 				ensureBridge(function() {{
 				if (window.pyBridge && window.pyBridge.storePoint) {{
@@ -252,8 +375,12 @@ class MapViewer(QWidget):
 				}});
 				m.closePopup(popup);
 			}}
-			if (btnX) btnX.addEventListener('click', function(){{ send('x'); }});
-			if (btnY) btnY.addEventListener('click', function(){{ send('y'); }});
+			var btnPerm = document.getElementById('store-perm');
+			var btnTemp = document.getElementById('store-temp');
+			var btnTrav = document.getElementById('store-trav');
+			if (btnPerm) btnPerm.addEventListener('click', function(){{ send('permanent_obstacle'); }});
+			if (btnTemp) btnTemp.addEventListener('click', function(){{ send('temporary_obstacle'); }});
+			if (btnTrav) btnTrav.addEventListener('click', function(){{ send('point_to_traverse'); }});
 			}}, 0);
 		}});
 		}})();
