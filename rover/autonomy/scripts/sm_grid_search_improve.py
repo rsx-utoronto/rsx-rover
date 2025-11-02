@@ -14,8 +14,8 @@ import yaml
 import os
 import time
 
-#file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
-file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+# file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
@@ -49,9 +49,9 @@ class GS_Traversal(Node):
         # modified code: add dictionary to manage detection flags for multiple objects
         self.found_objects = {"AR1":False, 
                    "AR2":False,
-                   "AR3":False,
                    "OBJ1":False,
-                   "OBJ2":False}
+                   "OBJ2":False,
+                   "OBJ3":False}
         
         # self.odom_subscriber = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         # self.pose_subscriber = rospy.Subscriber('pose', PoseStamped, self.pose_callback)
@@ -165,9 +165,9 @@ class GS_Traversal(Node):
         
         mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
-                   "AR3":self.aruco_found,
                    "OBJ1":obj,
-                   "OBJ2":obj}
+                   "OBJ2":obj,
+                   "OBJ3": obj}
         first_time=True
         
         # print("In move to target")
@@ -175,9 +175,9 @@ class GS_Traversal(Node):
             obj = self.mallet_found or self.waterbottle_found
             mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
-                   "AR3":self.aruco_found,
                    "OBJ1":obj,
-                   "OBJ2":obj}
+                   "OBJ2":obj,
+                   "OBJ3": obj}
             # print("in grid search: mapping state", mapping[state])
             msg = Twist()
             # print("state", state)
@@ -218,7 +218,7 @@ class GS_Traversal(Node):
                         
                 # print("angular velocity", msg.angular.z)
 
-            elif mapping[state] and (state != "OBJ1" and state != "OBJ2"): #if mapping[state] is True --> if the object is found,
+            elif mapping[state] and (state != "OBJ1" and state != "OBJ2" and state!= "OBJ3"): #if mapping[state] is True --> if the object is found,
                 print("mapping state is true!")
                 print("IN HOMING")
                 message="In Homing"
@@ -336,7 +336,7 @@ class GS_Traversal(Node):
             twist.angular.z = self.ang_vel
             self.drive_publisher(twist)
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
-                    if self.state == "OBJ1" or self.state == "OBJ2": #if objects detected are the an Object
+                    if self.state == "OBJ1" or self.state == "OBJ2" or self.state == "OBJ3": #if objects detected are the an Object
                         print(f"Object detected during navigation: {self.found_objects[self.state]}")
                         return True
                     else:   #if objects detected are an aruco, should be tested 

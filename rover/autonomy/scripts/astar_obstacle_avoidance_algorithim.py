@@ -70,14 +70,14 @@ class AstarObstacleAvoidance(Node):
         
         #  parameters with default values
         self.declare_parameter('realsense_detection', False)
-        self.declare_parameter('realsense_pointcloud', '/camera/depth/points')
-        self.declare_parameter('pointcloud_topic', '/zed_node/point_cloud/cloud_registered')
+        self.declare_parameter('realsense_pointcloud', '/camera/depth/points') #obstacle avoidance points from realsense
+        self.declare_parameter('pointcloud_topic', '/zed_node/point_cloud/cloud_registered') #obsatcle avoidance points from zed
 
         realsense_enabled = self.get_parameter('realsense_detection').get_parameter_value().bool_value
         realsense_topic = self.get_parameter('realsense_pointcloud').get_parameter_value().string_value
         fallback_topic = self.get_parameter('pointcloud_topic').get_parameter_value().string_value
 
-        if realsense_enabled:
+        if realsense_enabled: #check which camera we're using
             self.pointcloud_topic = realsense_topic
         else:
             self.pointcloud_topic = fallback_topic
@@ -170,25 +170,25 @@ class AstarObstacleAvoidance(Node):
         #  rospy.loginfo("Received point cloud, processing…")
 
         # xyz = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
-        xyz = np.array([[point[0], point[1], point[2]] for point in point_cloud2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)])
+        xyz = np.array([[point[0], point[1], point[2]] for point in point_cloud2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)]) #getting the points --> from where?
         mask = np.isfinite(xyz).all(axis=1)
-        xyz = xyz[mask]
+        xyz = xyz[mask] #to filtre out non-finite numbers
 
         w,h = self.grid_size
         new_height_grid = np.zeros((h, w), dtype=np.float32)  # heights
         grid= np.zeros((h, w), dtype=np.int8)   # shape = (rows, cols) #confirm shape!!!
 
-        for x,y,z in xyz:
+        for x,y,z in xyz: #go through all points
             if not (self.z_min < z < self.z_max):
                # print("not in threshold", z)
                 continue
 
-            gx,gy=self.world_to_grid(x,y)
+            gx,gy=self.world_to_grid(x,y) #transform the loc into our coord
             if 0 <= gx < w and 0 <= gy < h: #whithin the height threshhold so assign obstacle_threshold
                 grid[gy, gx] = self.obstacle_threshold   # mark as occupied
                 new_height_grid[gy, gx] = z  # Store actual height
-                world_x, world_y = self.grid_to_world(gx, gy)       
-                self.publish_invalid_pose_marker(world_x, world_y)  # Publish invalid pose marker
+                world_x, world_y = self.grid_to_world(gx, gy) #transform back
+                self.publish_invalid_pose_marker(world_x, world_y)  # Publish invalid pose marker --> is it beacuse we've assigned its value to grid?
         
         self.height_grid=new_height_grid
         self.occupancy_grid=grid
@@ -215,7 +215,7 @@ class AstarObstacleAvoidance(Node):
             ])
         
 
-        self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
+        self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, #to roll, pitch, yaw
                                             msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
         self.publish_bounding_box()
     
@@ -398,16 +398,16 @@ class AstarObstacleAvoidance(Node):
         neighbor_gx, neighbor_gy = neighbor
         
         # Check obstacles first
-        if self.occupancy_grid[current_gy, current_gx] >= self.obstacle_threshold:
+        if self.occupancy_grid[current_gy, current_gx] >= self.obstacle_threshold: #if there is an obstacle at this point
             return float('inf')
-        if self.occupancy_grid[neighbor_gy, neighbor_gx] >= self.obstacle_threshold:
+        if self.occupancy_grid[neighbor_gy, neighbor_gx] >= self.obstacle_threshold: #if there is an obstacle at this point
             return float('inf')
         
         # Use actual height difference
         height_diff = abs(self.height_grid[current_gy, current_gx] - self.height_grid[neighbor_gy, neighbor_gx])
         return height_diff + 1  # +1 for base movement cost
         
-    def heuristic(self, node, goal): #h fucntion -> euclidean distance
+    def heuristic(self, node, goal): #h fucntion -> euclidean distance, measures how far apart start and goal are, both in (x, y)
         return np.linalg.norm(np.array(node) - np.array(goal))
 
     def reconstruct_path(self, came_from, current):
@@ -425,11 +425,11 @@ class AstarObstacleAvoidance(Node):
         open_set = PriorityQueue()
         open_set.put((0, start))
         came_from = {}
-        g_score = {start: 0}
-        f_score = {start: self.heuristic(start, goal)}
+        g_score = {start: 0} #keeps track of distance/cost from start
+        f_score = {start: self.heuristic(start, goal)} #keeps track of overall distance/cost from start to goal
         closed = set()
         
-        while not open_set.empty() and not self.abort_check:
+        while not open_set.empty() and not self.abort_check: #while we have points to go to?
             _, current = open_set.get()
           
             # Skip nodes already processed
@@ -440,21 +440,21 @@ class AstarObstacleAvoidance(Node):
 
             if current == goal:
                 #print("in a*, open set is closed", current)
-                return self.reconstruct_path(came_from, current)
+                return self.reconstruct_path(came_from, current) #if processed until goal, return the constructed path
           #  print("in get neighbors in astar", current)
-            for neighbor in self.get_neighbors(current):
+            for neighbor in self.get_neighbors(current): #get coord neighbours
                 
                 if neighbor in closed:
-                    continue  # Skip closed nodes
+                    continue  # Skip closed nodes, has been processed
 
                 height_cost = self.height_cost(current, neighbor)
                 tentative_g = g_score[current] + height_cost
 
-                if tentative_g < g_score.get(neighbor, float('inf')):
+                if tentative_g < g_score.get(neighbor, float('inf')): #if its a shorter path overall to get to this point (may be due to objects), add it to path
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g
-                    f_score[neighbor] = tentative_g + self.heuristic(neighbor, goal)
-                    open_set.put((f_score[neighbor], neighbor))
+                    f_score[neighbor] = tentative_g + self.heuristic(neighbor, goal) #overall path cost
+                    open_set.put((f_score[neighbor], neighbor)) #puts the neighbour in the queue to be inspected
 
         self.get_logger().warn("A* failed to find a path")
         return []
@@ -545,7 +545,7 @@ class AstarObstacleAvoidance(Node):
         
         flattened_waypoints = []
         for gx, gy in waypoints:
-            x, y = self.grid_to_world(gx, gy)
+            x, y = self.grid_to_world(gx, gy) #transform into world coords
             flattened_waypoints.extend([x, y])
             
         msg.data = flattened_waypoints  # Set the data field with the flattened list
@@ -568,7 +568,7 @@ class AstarObstacleAvoidance(Node):
         replan_interval = Duration(seconds=5)
         path_available = False
         first_time = True
-        goal = self.world_to_grid(self.goal[0][0], self.goal[0][1])
+        goal = self.world_to_grid(self.goal[0][0], self.goal[0][1]) #transform points
         world_goal=(self.goal[0][0], self.goal[0][1])
         rate = self.create_rate(50)
         threshold = 0.5  # meters  for each waypoint
@@ -578,14 +578,14 @@ class AstarObstacleAvoidance(Node):
         target_reached_flag=False #when true, stop!
        
        #this makes sure the origin is the right origin before stating to plan
-        while not self.got_callback:
+        while not self.got_callback: #hasn't gotten pose coord yet
             if self.abort_check:
                 print("self.abort is true!")
                 break
             # rate.sleep()
-        self.grid_origin=(self.current_position_x, self.current_position_y)
+        self.grid_origin=(self.current_position_x, self.current_position_y) #set the grid origin to init/curr position
      
-        while rclpy.ok() and not target_reached_flag and not self.abort_check:
+        while rclpy.ok() and not target_reached_flag and not self.abort_check: #while hasn't aborted and hasn't been reached
             print("Self abort check is ", self.abort_check)
             msg = Twist()
             
@@ -593,27 +593,27 @@ class AstarObstacleAvoidance(Node):
                 print("self.abort is true!")
                 break
             
-            if self.occupancy_grid is None: 
+            if self.occupancy_grid is None: #if grid hasn't been init --> should include array with occupied points, init in pointcloud callback
                 if self.abort_check:
                     break
                 print("self.occupancy_grid for straught line is None")
                 rate.sleep()
                 continue
            
-            if self.abort_check or target_reached_flag:
+            if self.abort_check or target_reached_flag: 
                 break
             
-            current_x, current_y = self.world_to_grid(self.current_position_x,self.current_position_y)
-            final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
+            current_x, current_y = self.world_to_grid(self.current_position_x,self.current_position_y) #get transformed curr location 
+            final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2) #transformed 2d distance
             
-            world_final_goal_target_distance = math.sqrt(
+            world_final_goal_target_distance = math.sqrt( #real life 2d distance
                      (world_goal[0] - self.current_position_x) ** 2 +
                      (world_goal[1] - self.current_position_y) ** 2
                  )
             
             # if this isn't working, try world_final_goal_distance
             # if final_goal_target_distance < threshold_goal or target_reached_flag:
-            if world_final_goal_target_distance < threshold_goal or target_reached_flag:
+            if world_final_goal_target_distance < threshold_goal or target_reached_flag: #if within target threshold/reached
                 print("final goal target distance", final_goal_target_distance)
                 target_reached_flag=True
                 msg.linear.x = 0
@@ -623,15 +623,15 @@ class AstarObstacleAvoidance(Node):
                 return
                 # break
             
-            start = self.world_to_grid(self.current_position_x, self.current_position_y)
+            start = self.world_to_grid(self.current_position_x, self.current_position_y) #if target hasn't been reached set a start point from world coords
 
             # replanning conditions
             
             need_replan = False
-            if self.get_clock().now() - last_plan_time > replan_interval:
+            if self.get_clock().now() - last_plan_time > replan_interval: #check whether we need replan based on threashold time
                 need_replan = True
 
-            if last_position:
+            if last_position: #check whether we need replan based on threashold dist diff
                 dx = start[0] - last_position[0]
                 dy = start[1] - last_position[1]
                 if abs(dx) > 6 or abs(dy) > 6:
@@ -646,7 +646,7 @@ class AstarObstacleAvoidance(Node):
                     break
                 print("doing astar", start, goal)
                 
-                path = self.a_star(start, goal)
+                path = self.a_star(start, goal) #generate path
                 if self.abort_check:
                     break
                 if path:
@@ -662,7 +662,7 @@ class AstarObstacleAvoidance(Node):
             #     break
    
             # Follow waypoints
-            while path_available and self.current_path and not self.abort_check and not target_reached_flag:
+            while path_available and self.current_path and not self.abort_check and not target_reached_flag: #while loop to navigate to path points
                 print("self.abort_check in in inner loop is", self.abort_check)
                 current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
                 final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
@@ -709,7 +709,7 @@ class AstarObstacleAvoidance(Node):
                     self.drive_publisher.publish(msg)
                     if self.abort_check:
                         break
-                    if target_reached_flag:
+                    if target_reached_flag: #is redundant can be deleted
                         return
                     self.get_logger().info(f"Reached waypoint. Proceeding to next. There are {len(self.current_path)} waypoints left.")
                     
