@@ -29,6 +29,7 @@ from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
 from cv_bridge import CvBridge
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy, HistoryPolicy
 
 #cache folder of map tiles generated from tile_scraper.py
 CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
@@ -897,8 +898,13 @@ class CameraFeed:
     def register_subscriber1(self):
         if self.image_sub1 is None:
             # self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color/compressed", CompressedImage, self.callback1)
-            self.image_sub1 = node.create_subscription(CompressedImage, "/zed_node/rgb/image_rect_color/compressed", self.callback1, 10)
-            
+            qos = QoSProfile(
+                reliability=QoSReliabilityPolicy.BEST_EFFORT,
+                durability=QoSDurabilityPolicy.VOLATILE, # Messages are stored and delivered to late joiners
+                history=HistoryPolicy.KEEP_LAST, # Only the last message is stored
+                depth=1)
+            self.image_sub1 = node.create_subscription(CompressedImage, "zed/zed_node/rgb/image_rect_color/compressed", self.callback1, qos)
+
     def unregister_subscriber1(self):
         if self.image_sub1:
             self.image_sub1.unregister()

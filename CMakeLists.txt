@@ -151,6 +151,11 @@ install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Install configuration files (e.g., Fast DDS profiles)
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}
+)
+
 # Python scripts installation (adjust for ROS 2)
 # install(PROGRAMS
 #   rover/autonomy/scripts/state_machine_node.py
@@ -206,6 +211,17 @@ install(PROGRAMS
   rover/autonomy/scripts/gps_to_pose.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
+install(PROGRAMS
+  scripts/utils/gen/find_usb.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/utils/gen/setup_can.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 
 install(PROGRAMS
   rover/autonomy/scripts/ar_detection_node.py
