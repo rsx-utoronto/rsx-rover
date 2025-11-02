@@ -25,23 +25,27 @@ def generate_launch_description():
                 os.path.join(
                     get_package_share_directory('zed_wrapper'),
                     'launch',
-                    'zed_no_tf.launch.py'
+                    'zed_camera.launch.py'
                 )
-            )
+            ),
+            launch_arguments={
+                'camera_model': 'zed2i',
+                'sim_mode': 'false'
+            }.items()
         ),
 
         # PointCloud to LaserScan node
-        Node(
-            package='pointcloud_to_laserscan',
-            executable='pointcloud_to_laserscan_node',
-            name='collapse_pointcloud',
-            output='screen',
-            parameters=[{
-                'max_height': 1.0,
-                'min_height': -0.5,
-                'range_min': 0.75,
-                'range_max': 5.0
-            }],
-            remappings=[('cloud_in', '/zed_node/point_cloud/cloud_registered')]
-        )
+        # Node(
+        #     package='pointcloud_to_laserscan',
+        #     executable='pointcloud_to_laserscan_node',
+        #     name='collapse_pointcloud',
+        #     output='screen',
+        #     parameters=[{
+        #         'max_height': 1.0,
+        #         'min_height': -0.5,
+        #         'range_min': 0.75,
+        #         'range_max': 5.0
+        #     }],
+        #     remappings=[('cloud_in', '/zed_node/point_cloud/cloud_registered')]
+        # )
     ])

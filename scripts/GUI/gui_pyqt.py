@@ -891,7 +891,7 @@ class CameraFeed:
     def register_subscriber1(self):
         if self.image_sub1 is None:
             # self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color/compressed", CompressedImage, self.callback1)
-            self.image_sub1 = node.create_subscription(CompressedImage, "/zed_node/rgb/image_rect_color/compressed", self.callback1, 10)
+            self.image_sub1 = node.create_subscription(CompressedImage, "zed/zed_node/rgb/image_rect_color/compressed", self.callback1, 10)
             
     def unregister_subscriber1(self):
         if self.image_sub1:

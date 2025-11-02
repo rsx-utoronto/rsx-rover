@@ -13,7 +13,7 @@ def generate_launch_description():
                 package='joy',
                 executable='joy_node',
                 name='joy_node',
-                parameters=[{'dev': '/dev/input/js1'}]
+                parameters=[{'device_id': 1}]
             )
         ]),
 
@@ -24,7 +24,7 @@ def generate_launch_description():
                 package='joy',
                 executable='joy_node',
                 name='joy_node',
-                parameters=[{'dev': '/dev/input/js0'}]
+                parameters=[{'device_id': 0}]
             )
         ])
     ])

@@ -151,6 +151,11 @@ install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Install configuration files (e.g., Fast DDS profiles)
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}
+)
+
 # Python scripts installation (adjust for ROS 2)
 # install(PROGRAMS
 #   rover/autonomy/scripts/state_machine_node.py
@@ -163,6 +168,7 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+
 install(PROGRAMS
   scripts/manual_control
   DESTINATION lib/${PROJECT_NAME}
@@ -172,6 +178,12 @@ install(PROGRAMS
   rover/autonomy/scripts/imu_to_enu.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
+install(PROGRAMS
+  rover/autonomy/scripts/pub_manual_indicator.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 install(PROGRAMS
   rover/autonomy/scripts/final_state_machine_new.py
   DESTINATION lib/${PROJECT_NAME}
@@ -182,6 +194,20 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+
+install(PROGRAMS
+  rover/science/scripts/webcam.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+install(PROGRAMS
+  scripts/utils/gen/find_usb.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/utils/gen/setup_can.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
 install(PROGRAMS
   rover/autonomy/scripts/led_light.py
   DESTINATION lib/${PROJECT_NAME}

@@ -15,7 +15,7 @@ import os
 import time
 
 #file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
-file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
+file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
