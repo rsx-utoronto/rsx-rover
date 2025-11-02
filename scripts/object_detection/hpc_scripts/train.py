@@ -9,14 +9,14 @@ def main():
     ap.add_argument("--batch", type=int, default=8, help="Batch size")
     ap.add_argument("--imgsz", type=int, default=640, help="Image size")
     ap.add_argument("--device", default="0", help='Device: "0" for GPU or "cpu"')
-    ap.add_argument("--name", default="yolov12s_exp", help="Run name for saving results")
+    ap.add_argument("--name", default="yolov12l_exp", help="Run name for saving results")
     args = ap.parse_args()
 
     # --- print info ---
     print("===================================")
-    print("YOLOv12s Training")
+    print("YOLOv12l Training")
     print("===================================")
-    print(f"Model : yolov12s.pt")
+    print(f"Model : yolo12l.pt")
     print(f"Data  : {args.data}")
     print(f"Epochs: {args.epochs}")
     print(f"Batch : {args.batch}")
@@ -25,7 +25,7 @@ def main():
     print("===================================\n")
 
     # --- load and train model ---
-    model = YOLO("yolov12s.pt")
+    model = YOLO("yolo12l.pt")
 
     model.train(
         data=args.data,
@@ -44,5 +44,5 @@ def main():
     print("\n✅ Training complete! Results are saved in the 'runs/' folder.")
     print("Use model.predict(source='path/to/image_or_folder', save=True) to test your model.\n")
 
-if name == "main":
+if __name__ == "__main__":
     main()
