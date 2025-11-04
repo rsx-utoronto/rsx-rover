@@ -256,66 +256,82 @@ class MapViewer(QWidget):
 		"""
 		self._get_page().runJavaScript(js)
 
-	def _on_remove_point(self, pid: str):
+	def _on_remove_point(self, pid: str, lat: float, lng: float, label: str):
 		"""
-		Remove a point from its CSV. Primary key is 'id'. If the CSV has no 'id' column
-		(legacy rows), fall back to matching by lat/lng/label (string-formatted).
+		Remove a point strictly by pid (row 'id').
+		On success:
+		- Back up the old CSV into a timestamped file in a *_backups/ folder.
+		- Overwrite the original CSV with the filtered rows.
+		NOTE: This will only remove rows that have an 'id' column matching pid.
 		"""
+		# Prefer the known CSV path from our in-memory index; else scan all three.
+		candidate_paths = []
 		info = self.point_index.get(pid)
-
-		# Try the known file first; otherwise scan all three
-		candidate_paths = [info[1]] if info else [str(self.csv_perm), str(self.csv_temp), str(self.csv_trav)]
+		if info:
+			candidate_paths = [info[1]]
+		else:
+			candidate_paths = [str(self.csv_perm), str(self.csv_temp), str(self.csv_trav)]
 
 		removed = False
-		lat_s = f"{lat:.8f}"
-		lng_s = f"{lng:.8f}"
-		label_s = (label or "").strip().lower()
 
 		for path in candidate_paths:
 			if not os.path.exists(path):
 				continue
 
-			tmp = tempfile.NamedTemporaryFile('w', delete=False, newline='')
+			# Read and filter by pid
 			try:
-				with open(path, 'r', newline='') as src, tmp as out:
+				with open(path, 'r', newline='') as src:
 					r = csv.DictReader(src)
-					# Handle legacy files without 'id'
-					fieldnames = r.fieldnames or ['timestamp','lat','lng','label']
-					if 'id' not in fieldnames:
-						fieldnames = ['id','timestamp','lat','lng','label']
-
-					w = csv.DictWriter(out, fieldnames=fieldnames)
-					w.writeheader()
+					fieldnames = r.fieldnames or ['id', 'timestamp', 'lat', 'lng', 'label']
+					filtered_rows = []
+					removed_here = False
 
 					for row in r:
-						row_id = row.get('id')
-						row_lat = row.get('lat')
-						row_lng = row.get('lng')
-						row_label = (row.get('label') or '').strip().lower()
+						if row.get('id') == pid:
+							removed_here = True
+							continue
+						filtered_rows.append(row)
+			except Exception as e:
+				print(f"[error] Failed reading {path}: {e}")
+				continue
 
-						match_by_id = (row_id is not None and row_id == pid)
-						match_by_vals = (row_id in (None, '',)) and (row_lat == lat_s and row_lng == lng_s and row_label == label_s)
+			if not removed_here:
+				# Nothing to remove in this file; try the next one
+				continue
 
-						if match_by_id or match_by_vals:
-							removed = True
-							continue  # skip (delete)
-						else:
-							# Ensure legacy rows gain an 'id' column on rewrite
-							if 'id' in fieldnames and 'id' not in row:
-								row['id'] = row_id or ''
-							w.writerow(row)
-				shutil.move(out.name, path)
-			finally:
-				try:
-					os.unlink(tmp.name)
-				except Exception:
-					pass
+			# (1) Backup the old CSV before overwriting
+			try:
+				backups_dir = Path(path).parent / (Path(path).stem + "_backups")
+				backups_dir.mkdir(parents=True, exist_ok=True)
+				ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+				backup_path = backups_dir / f"{Path(path).stem}_{ts}.csv"
+				shutil.copy2(path, backup_path)
+			except Exception as e:
+				print(f"[warn] Could not create CSV backup for {path}: {e}")
 
-			if removed:
-				break
+			# (2) Overwrite with filtered content
+			try:
+				# Ensure 'id' stays in the header if it already existed
+				if 'id' not in fieldnames:
+					fieldnames = ['id', 'timestamp', 'lat', 'lng', 'label']
+					# also normalize rows to include the id key (blank) when rewriting
+					for row in filtered_rows:
+						row.setdefault('id', '')
 
-		# Drop from in-memory index if we knew it
-		if pid in self.point_index:
+				with open(path, 'w', newline='') as out:
+					w = csv.DictWriter(out, fieldnames=fieldnames)
+					w.writeheader()
+					for row in filtered_rows:
+						w.writerow(row)
+			except Exception as e:
+				print(f"[error] Failed writing {path}: {e}")
+				continue
+
+			removed = True
+			break  # we found and removed the pid; done
+
+		# Clean up in-memory index if present
+		if removed and pid in self.point_index:
 			self.point_index.pop(pid, None)
 
 	# --- INTERNAL: inject right-click popup JS with 2 buttons calling back to Python ---
