@@ -258,21 +258,14 @@ class MapViewer(QWidget):
 
 	def _on_remove_point(self, pid: str, lat: float, lng: float, label: str):
 		"""
-		Remove a point strictly by pid (row 'id').
-		On success:
-		- Back up the old CSV into a timestamped file in a *_backups/ folder.
-		- Overwrite the original CSV with the filtered rows.
-		NOTE: This will only remove rows that have an 'id' column matching pid.
+		Remove strictly by pid:
+		1) copy the old CSV into a *_backups/ folder,
+		2) overwrite the original CSV without the pid row,
+		3) delete the *_backups/ folder after the write succeeds.
 		"""
 		# Prefer the known CSV path from our in-memory index; else scan all three.
-		candidate_paths = []
 		info = self.point_index.get(pid)
-		if info:
-			candidate_paths = [info[1]]
-		else:
-			candidate_paths = [str(self.csv_perm), str(self.csv_temp), str(self.csv_trav)]
-
-		removed = False
+		candidate_paths = [info[1]] if info else [str(self.csv_perm), str(self.csv_temp), str(self.csv_trav)]
 
 		for path in candidate_paths:
 			if not os.path.exists(path):
@@ -285,7 +278,6 @@ class MapViewer(QWidget):
 					fieldnames = r.fieldnames or ['id', 'timestamp', 'lat', 'lng', 'label']
 					filtered_rows = []
 					removed_here = False
-
 					for row in r:
 						if row.get('id') == pid:
 							removed_here = True
@@ -300,6 +292,7 @@ class MapViewer(QWidget):
 				continue
 
 			# (1) Backup the old CSV before overwriting
+			backups_dir = None
 			try:
 				backups_dir = Path(path).parent / (Path(path).stem + "_backups")
 				backups_dir.mkdir(parents=True, exist_ok=True)
@@ -311,10 +304,9 @@ class MapViewer(QWidget):
 
 			# (2) Overwrite with filtered content
 			try:
-				# Ensure 'id' stays in the header if it already existed
+				# Ensure 'id' remains in header
 				if 'id' not in fieldnames:
 					fieldnames = ['id', 'timestamp', 'lat', 'lng', 'label']
-					# also normalize rows to include the id key (blank) when rewriting
 					for row in filtered_rows:
 						row.setdefault('id', '')
 
@@ -323,16 +315,24 @@ class MapViewer(QWidget):
 					w.writeheader()
 					for row in filtered_rows:
 						w.writerow(row)
+
+				# (3) Delete the backup folder now that the write succeeded
+				if backups_dir and backups_dir.exists():
+					try:
+						shutil.rmtree(backups_dir, ignore_errors=True)
+					except Exception as e:
+						# Non-fatal: file may be locked on some systems; ignore
+						print(f"[warn] Could not remove backup folder {backups_dir}: {e}")
+
 			except Exception as e:
 				print(f"[error] Failed writing {path}: {e}")
+				# If write fails, we keep the backup folder.
 				continue
 
-			removed = True
-			break  # we found and removed the pid; done
-
-		# Clean up in-memory index if present
-		if removed and pid in self.point_index:
-			self.point_index.pop(pid, None)
+			# Success: clean up in-memory index and stop
+			if pid in self.point_index:
+				self.point_index.pop(pid, None)
+			break
 
 	# --- INTERNAL: inject right-click popup JS with 2 buttons calling back to Python ---
 	def _install_right_click_popup(self):
