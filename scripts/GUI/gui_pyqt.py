@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 
-
 import sys
+import os
+
+# Import cv2 first, then fix the Qt plugin path it sets
+import cv2
+# Remove the Qt plugin path that cv2 sets to avoid conflicts with PyQt5
+if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
+    del os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"]
+
 import rclpy
 from rclpy.node import Node
 import map_viewer as map_viewer
@@ -20,9 +27,9 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix, CompressedImage, Image
 from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
 from cv_bridge import CvBridge
-import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy, HistoryPolicy
 
 #cache folder of map tiles generated from tile_scraper.py
 CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
@@ -891,8 +898,13 @@ class CameraFeed:
     def register_subscriber1(self):
         if self.image_sub1 is None:
             # self.image_sub1 = rospy.Subscriber("/zed_node/rgb/image_rect_color/compressed", CompressedImage, self.callback1)
-            self.image_sub1 = node.create_subscription(CompressedImage, "zed/zed_node/rgb/image_rect_color/compressed", self.callback1, 10)
-            
+            qos = QoSProfile(
+                reliability=QoSReliabilityPolicy.BEST_EFFORT,
+                durability=QoSDurabilityPolicy.VOLATILE, # Messages are stored and delivered to late joiners
+                history=HistoryPolicy.KEEP_LAST, # Only the last message is stored
+                depth=1)
+            self.image_sub1 = node.create_subscription(CompressedImage, "zed/zed_node/rgb/image_rect_color/compressed", self.callback1, qos)
+
     def unregister_subscriber1(self):
         if self.image_sub1:
             self.image_sub1.unregister()
@@ -1560,4 +1572,14 @@ if __name__ == '__main__':
     """)
 
     gui.show()
-    sys.exit(app.exec_())
+    
+    # Create a QTimer to spin ROS2 in the Qt event loop
+    timer = QTimer()
+    timer.timeout.connect(lambda: rclpy.spin_once(node, timeout_sec=0))
+    timer.start(10)  # Spin every 10ms
+    
+    try:
+        sys.exit(app.exec_())
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
