@@ -285,6 +285,12 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  rover/autonomy/scripts/lidar/visualize_groundsep.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+install(PROGRAMS
   launch/tflaunch.py
   DESTINATION lib/${PROJECT_NAME}
 )
