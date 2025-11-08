@@ -5,8 +5,8 @@ RUN_STATES:
   - AR1
   - AR2
   - OBJ1
+  - AR3
   - OBJ2
-  - OBJ3
 
   
 #  - GNSS1
