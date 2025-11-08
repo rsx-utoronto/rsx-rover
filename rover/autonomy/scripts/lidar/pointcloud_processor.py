@@ -266,34 +266,44 @@ class PointcloudProcessor(Node):
 
             clusters.append(np.asarray(curr_cluster, dtype=np.int32))
         if len(clusters):
-            self.get_logger().info(f'There are {len(clusters)} clusters with numbers of points: {[len(c) for c in clusters]}')
-        
-        # Costmap Settings
-        cm_resolution = 0.05 # size of grid spaces
-        # Limit of the world coordinates that the costmap takes in
-        cm_xmin, cm_xmax = -10.0, 10.0
-        cm_ymin, cm_ymax = -10.0, 10.0
-        # Size of costmap grid indices
-        cm_width  = int((cm_xmax - cm_xmin) / cm_resolution)
-        cm_height = int((cm_ymax - cm_ymin) / cm_resolution)
+            self.get_logger().info(f'There are {len(clusters)} clusters with numbers of points: {[len(c) for c in clusters]}')        
 
-        cm = np.zeros((cm_height, cm_width), dtype=np.int8)  # 0 free
+        # # Costmap Settings
+        # cm_resolution = 0.05 # size of grid spaces
+        # # Limit of the world coordinates that the costmap takes in
+        # cm_xmin, cm_xmax = -10.0, 10.0
+        # cm_ymin, cm_ymax = -10.0, 10.0
+        # # Size of costmap grid indices
+        # cm_width  = int((cm_xmax - cm_xmin) / cm_resolution)
+        # cm_height = int((cm_ymax - cm_ymin) / cm_resolution)
 
-        def world_to_map(x, y): # Converts an x, y coordinate into a grid coordinate on the costmap
-            mx = np.floor((x - cm_xmin) / cm_resolution).astype(np.int32)
-            my = np.floor((y - cm_ymin) / cm_resolution).astype(np.int32)
-            return mx, my
+        # cm = np.zeros((cm_height, cm_width), dtype=np.int8)  # 0 free
 
-        # mark occupied cells
-        for i in clusters:
-            if len(i) <= 100: # Ignore clusters that are too small  
-                continue
-            xy = points[i] # Get all points in the cluster
-            mx, my = world_to_map(xy[:, 0], xy[:, 1]) # Get x, y coordinate
-            mask = (mx >= 0) & (mx < cm_width) & (my >= 0) & (my < cm_height) # Exclude any points that are not within the range
-            cm[my[mask], mx[mask]] = 100  # 100 = occupied
+        # def world_to_map(x, y): # Converts an x, y coordinate into a grid coordinate on the costmap
+        #     mx = np.floor((x - cm_xmin) / cm_resolution).astype(np.int32)
+        #     my = np.floor((y - cm_ymin) / cm_resolution).astype(np.int32)
+        #     return mx, my
 
-        return cloud
+        # # mark occupied cells
+        # for i in clusters:
+        #     if len(i) <= 100: # Ignore clusters that are too small  
+        #         continue
+        #     xy = points[i] # Get all points in the cluster
+        #     mx, my = world_to_map(xy[:, 0], xy[:, 1]) # Get x, y coordinate
+        #     mask = (mx >= 0) & (mx < cm_width) & (my >= 0) & (my < cm_height) # Exclude any points that are not within the range
+        #     cm[my[mask], mx[mask]] = 100  # 100 = occupied
+
+        # grid = OccupancyGrid()
+        # grid.header = cloud.header
+        # grid.info.resolution = float(self.cm_resolution)
+        # grid.info.width  = self.cm_width
+        # grid.info.height = self.cm_height
+        # grid.info.origin = Pose(
+        #     position=Point(x=self.cm_xmin, y=self.cm_ymin, z=0.0),
+        #     orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
+        # )
+        # grid.data = cm.flatten(order='C').tolist()
+        # return grid
 
 def main(args=None):
     rclpy.init(args=args)
