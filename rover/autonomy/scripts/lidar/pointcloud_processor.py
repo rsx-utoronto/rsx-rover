@@ -6,6 +6,10 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPo
 from sensor_msgs_py import point_cloud2
 from sensor_msgs.msg import PointCloud2, PointField
 import numpy as np
+from scipy.spatial import cKDTree
+from nav_msgs.msg import OccupancyGrid
+from geometry_msgs.msg import Pose, Point, Quaternion
+
 
 
 class PointcloudProcessor(Node):
@@ -220,6 +224,48 @@ class PointcloudProcessor(Node):
         return filtered_msg
 
     def detectObstacles(self, cloud):
+        tolerance = 0.3
+        points = [
+            [float(p[0]), float(p[1]), float(p[2]),
+             float(p[3]) if p[3] is not None else 0.0,
+             float(p[4]) if p[4] is not None else 0.0,
+             float(p[5]) if p[5] is not None else 0.0,
+             float(p[6]) if p[6] is not None else 0.0,
+             float(p[7]) if p[7] is not None else 0.0,
+             float(p[8]) if p[8] is not None else 0.0]
+            for p in point_cloud2.read_points(
+                cloud,
+                field_names=('x', 'y', 'z', 'intensity', 't', 'reflectivity', 'ring', 'ambient', 'range'),
+                skip_nans=True
+            )
+        ]
+
+        xy = points[:, :2] # Get only the x, y, and z of the points
+        tree = cKDTree(xy)
+        visited = np.zeros(xy.shape[0], dtype=bool)
+        clusters = [] # List of lists of the indices of points that are clustered together.
+
+        for i in range(xy.shape[0]):
+            if visited[i]:
+                continue
+
+            stack = [i]
+            visited[i] = True
+            curr_cluster = []
+
+            # DFS for euclidean clustering
+            while stack:
+                curr_index = stack.pop()
+                curr_cluster.append(curr_index)
+
+                nearby_points = tree.query_ball_point(xy[curr_index], tolerance) # Finds all indices of points within tolerance
+                for j in nearby_points:
+                    if not visited[j]:
+                        visited[j] = True
+                        stack.append(j)
+
+            clusters.append(np.asarray(curr_cluster, dtype=np.int32))
+        
         return cloud
 
 def main(args=None):
