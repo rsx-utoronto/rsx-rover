@@ -286,7 +286,7 @@ class PointcloudProcessor(Node):
 
         # mark occupied cells
         for i in clusters:
-            if len(i) == 0: 
+            if len(i) <= 100: # Ignore clusters that are too small  
                 continue
             xy = points[i] # Get all points in the cluster
             mx, my = world_to_map(xy[:, 0], xy[:, 1]) # Get x, y coordinate
