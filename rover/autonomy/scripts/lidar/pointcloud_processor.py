@@ -265,7 +265,8 @@ class PointcloudProcessor(Node):
                         stack.append(j)
 
             clusters.append(np.asarray(curr_cluster, dtype=np.int32))
-        self.get_logger().info(clusters)
+        if len(clusters):
+            self.get_logger().info(f'There are {len(clusters)} clusters with numbers of points: {[len(c) for c in clusters]}')
         return cloud
 
 def main(args=None):
