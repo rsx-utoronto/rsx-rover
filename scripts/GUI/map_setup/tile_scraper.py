@@ -10,7 +10,7 @@ import urllib.error
 
 from global_mercator import GlobalMercator
 
-CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
+CACHE_DIR = Path(__file__).parent.parent.resolve() / "tile_cache"
 tile_q = queue.Queue()
 
 @dataclass

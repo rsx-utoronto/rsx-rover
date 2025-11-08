@@ -93,7 +93,7 @@ if __name__ == "__main__":
   for area in areas:
     elevation_data_all.update(process_area(area))
 
-  output_file = Path(__file__).parent.resolve() / "elevation.json"
+  output_file = Path(__file__).parent.parent.resolve() / "elevation.json"
   with open(output_file, 'x' if not output_file.exists() else "w") as f:
     json.dump(elevation_data_all, f, indent=2)
   

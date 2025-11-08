@@ -13,15 +13,16 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-import map_js_snnipets
+from map_viewer import map_js_snnipets
 
 os.environ['QT_API'] = 'pyqt5'
 from pyqtlet2 import L, MapWidget
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QApplication
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QApplication, QMenu, QMessageBox
+from PyQt5.QtGui import QCursor
 
-CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
+CACHE_DIR = Path(__file__).parent.parent.resolve() / "tile_cache"
 
 """
 HELPERS
@@ -33,7 +34,7 @@ def dist(latlong1, latlong2):
 
 def resolve_path(short_path):
 	"""append the parent folder's abs path to the short path"""
-	return str(Path(__file__).parent.resolve() / short_path)
+	return str(Path(__file__).parent.parent.resolve() / short_path)
 
 
 @dataclass
@@ -121,6 +122,23 @@ class MapViewer(QWidget):
 				"maxBountsViscosity": 1.0,
 			}
 		)
+		def eee(e):
+			ptx = e['layerPoint']['x']
+			pty = e['layerPoint']['y']
+			circlemarker = L.circleMarker([ptx, pty], {
+				"radius": 10,
+				"fillColor": "00ff00",
+				"color": "00ff00",
+				"weight": 3,
+			})
+			# need to add before bind popup
+			circlemarker.addTo(self.map)
+			# if action == store_goal:
+			# 	# TO DO: Need to add some logic here to store to XML or JSON for state machine processing
+			# 	QMessageBox.information(None, "Action", f"Stored {coord} as Goal!")
+			# elif action == store_obstacle:
+			# 	QMessageBox.information(None, "Action", f"Stored {coord} as Obstacle!")
+		self.map.right_mouse_clicked.connect(lambda event: eee(event))
 
 		# initialize view and cursor
 		self.map.setView(Locations.mdrs, self.DEFAULT_ZOOM)
@@ -442,6 +460,15 @@ class MapViewer(QWidget):
 		# Get bounds asynchronously and process them
 		self.map.getBounds(process_bounds)
 
+		self.map.zoom.connect(show_elevation)
+
+	def hide_elevation(self):
+		"""Hide the elevation layer from the map."""
+		if self.elevation_layer:
+			self.map.removeLayer(self.elevation_layer)
+			self.elevation_layer = None
+
+
 if __name__ == "__main__":
 	import sys
 
@@ -462,7 +489,6 @@ if __name__ == "__main__":
 	
 	QTimer.singleShot(1000, show_elevation)
 
-	viewer.map.zoom.connect(show_elevation)
 	
 	# viewer.set_robot_position(38.5,-110.78)
 

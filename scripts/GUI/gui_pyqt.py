@@ -4,7 +4,7 @@
 import sys
 import rclpy
 from rclpy.node import Node
-import map_viewer as map_viewer
+from map_viewer import map_viewer
 from pathlib import Path
 import numpy as np
 
