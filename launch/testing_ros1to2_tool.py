@@ -3,7 +3,7 @@ from ros2_launch_file_migrator import LaunchFileMigrator
 
 
 zed_odom = ("<launch>\n"
-                             '<node pkg="tf" type="static_transform_publisher" name="zed_broadcaster" args="0.33 0.0 0.0 0 0 0 base_link zed2_base_link 100" />\n'
+                             '<node pkg="tf" type="static_transform_publisher" name="zed_broadcaster" args="0.33 0.0 0.0 0 0 0 1 base_link zed2_base_link 100" />\n'
                              '<include file="$(find zed_wrapper)/launch/zed_no_tf.launch"/>\n'
                              '<node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="collapse_pointcloud" output="screen" >\n'
                              '<param name="max_height" value="1" />\n'

@@ -13,9 +13,10 @@ def generate_launch_description():
             executable='static_transform_publisher',
             name='zed_broadcaster',
             arguments=[
-                '0.33', '0.0', '0.0',  # x y z
-                '0', '0', '0',         # roll pitch yaw
-                'base_link', 'zed2_base_link', '100'
+                '--x', '0.33', '--y', '0.0', '--z', '0.0',
+                '--roll', '0', '--pitch', '0', '--yaw', '0',
+                '--frame-id', 'base_link', '--child-frame-id', 'zed2_base_link'
+                # Note: rate not required for static TF; if needed: '--rate', '10.0'
             ]
         ),
 
