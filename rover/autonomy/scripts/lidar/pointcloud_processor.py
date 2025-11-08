@@ -239,7 +239,7 @@ class PointcloudProcessor(Node):
                 skip_nans=True
             )
         ]
-
+        points = np.asarray(points, dtype=np.float32)
         xy = points[:, :2] # Get only the x, y, and z of the points
         tree = cKDTree(xy)
         visited = np.zeros(xy.shape[0], dtype=bool)
@@ -265,7 +265,7 @@ class PointcloudProcessor(Node):
                         stack.append(j)
 
             clusters.append(np.asarray(curr_cluster, dtype=np.int32))
-        
+        self.get_logger().info(clusters)
         return cloud
 
 def main(args=None):
