@@ -85,13 +85,14 @@ class PointcloudProcessor(Node):
 
     def filterCloud(self, cloud):
         # Efficient structured array read
-        points_list = list(point_cloud2.read_points(
-            cloud, 
-            field_names=('x', 'y', 'z', 'intensity', 't', 'reflectivity', 'ring', 'ambient', 'range'), 
-            skip_nans=True
-        ))
+        points_list = np.array([
+            [p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8]]
+            for p in point_cloud2.read_points(
+                cloud, field_names=('x', 'y', 'z', 'intensity', 't', 'reflectivity', 'ring', 'ambient', 'range'), skip_nans=True
+            )
+        ], dtype=np.float32)
         
-        if not points_list:
+        if not points_list.size:
             self.get_logger().warn("Empty cloud received")
             return None
             
@@ -132,13 +133,14 @@ class PointcloudProcessor(Node):
 
     def removeGround(self, cloud, distance_threshold=0.2, max_iterations=50):
         # Reduced iterations for speed
-        points_list = list(point_cloud2.read_points(
-            cloud,
-            field_names=('x', 'y', 'z', 'intensity', 't', 'reflectivity', 'ring', 'ambient', 'range'),
-            skip_nans=True
-        ))
+        points_list = np.array([
+            [p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8]]
+            for p in point_cloud2.read_points(
+                cloud, field_names=('x', 'y', 'z', 'intensity', 't', 'reflectivity', 'ring', 'ambient', 'range'), skip_nans=True
+            )
+        ], dtype=np.float32)
 
-        if not points_list:
+        if not points_list.size:
             self.get_logger().warning("removeGround: empty cloud")
             return None
 
@@ -205,16 +207,17 @@ class PointcloudProcessor(Node):
         return filtered_msg
 
     def detectObstacles(self, cloud):
-        tolerance = 0.3
+        tolerance = 0.1
         min_cluster_size = 20
         
-        points_list = list(point_cloud2.read_points(
-            cloud,
-            field_names=('x', 'y', 'z', 'intensity', 't', 'reflectivity', 'ring', 'ambient', 'range'),
-            skip_nans=True
-        ))
+        points_list = np.array([
+            [p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8]]
+            for p in point_cloud2.read_points(
+                cloud, field_names=('x', 'y', 'z', 'intensity', 't', 'reflectivity', 'ring', 'ambient', 'range'), skip_nans=True
+            )
+        ], dtype=np.float32)
         
-        if not points_list:
+        if not points_list.size:
             self.get_logger().info("detectObstacles: empty cloud")
             return None
 
@@ -233,6 +236,7 @@ class PointcloudProcessor(Node):
             idx_map = np.arange(len(points))
         
         tree = cKDTree(xy_clustered)
+        neighbors = tree.query_ball_tree(tree, r=tolerance)
         visited = np.zeros(len(xy_clustered), dtype=bool)
         clusters = []
 
@@ -248,8 +252,7 @@ class PointcloudProcessor(Node):
                 curr_index = stack.pop()
                 curr_cluster.append(curr_index)
 
-                nearby_points = tree.query_ball_point(xy_clustered[curr_index], tolerance)
-                for j in nearby_points:
+                for j in neighbors[curr_index]:
                     if not visited[j]:
                         visited[j] = True
                         stack.append(j)
