@@ -86,7 +86,7 @@ def shortest_path(start: str, locations: dict) -> list:
 # [For publishing messages for led to light on]
 # Subscribers : pose(PoseStamped) [Gets the pose/location data], /long_lat_goal_array(Float32MultiArray) [Gets the GPS coordinates of task points]
 
-class GLOB_MSGS:
+class GLOB_MSGS(Node):
     def __init__(self):
         super().__init__('glob_msgs')
         self.pub = self.create_publisher(String, "gui_status", 10)

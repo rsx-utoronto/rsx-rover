@@ -42,7 +42,7 @@ class GPSToPose(Node):
         self.mag_declination_rad = -10.04 * pi / 180
 
         # ROS 2-style publishers/subscribers
-        self.pose_pub = self.create_publisher(PoseStamped, 'pose', 10)
+        self.pose_pub = self.create_publisher(PoseStamped, '/pose', 10)
         self.imu_sub = self.create_subscription(Imu, '/imu/orient', self.imu_callback, 10)
 
         self.gps1 = message_filters.Subscriber(self, GnssSignalStatus, "calian_gnss/gps_extended")
@@ -109,13 +109,14 @@ class GPSToPose(Node):
         # current gps location as the origin
         # note that we consider north (or 0.0 as a calculated gps heading on the -pi to pi scale) to be the
         # positive y direction for our coordinate system 
-        if self.origin_coordinates is None:
+        self.get_logger().info(f"{self.origin_coordinates}")
+        if self.origin_coordinates == [0.0, 0.0]:
             # note that since the gps antenna locations are fixed distances from the origin, to not have to
             # we use the coordinates for antenna one, then apply a fix based of where antenna 1 is from the
             # center of the rover if needed afterwards
             self.origin_coordinates = (lat1, long1)
-            x = 0
-            y = 0
+            self.x = 0.0
+            self.y = 0.0
         else:
             # it is difficult to calculate from decimal degrees the x and y distance between two points
             # this is because a degree of longitude at te equator is a different distance that at 23 degree

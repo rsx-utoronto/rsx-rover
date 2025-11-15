@@ -191,7 +191,7 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-  rover/autonomy/scripts/final_state_machine_improved.py
+  rover/autonomy/scripts/state_machine_remAR3_addObj3.py
   rover/autonomy/scripts/optimal_path_improved.py
   rover/autonomy/scripts/sm_grid_search_improve.py
   rover/autonomy/scripts/sm_straight_line_improved.py

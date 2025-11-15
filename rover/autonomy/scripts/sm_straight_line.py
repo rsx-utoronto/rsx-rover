@@ -9,7 +9,7 @@ from std_msgs.msg import Float64MultiArray, Bool
 import math
 import time
 import ar_detection_node as adn
-
+import threading
 import yaml
 import os
 
@@ -37,12 +37,12 @@ class StraightLineApproach(Node):
         # self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
         # self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
         # self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
-        self.pose_subscriber = self.create_subscription(PoseStamped, '/pose', self.pose_callback, 10)
-        self.target_subscriber = self.create_subscription(Float64MultiArray, 'target', self.target_callback, 10)
+        self.pose_subscriber = self.create_subscription(PoseStamped, '/pose', self.pose_callback, 1)
+        self.target_subscriber = self.create_subscription(Float64MultiArray, '/target', self.target_callback, 1)
         self.drive_publisher = self.create_publisher(Twist, '/drive', 10)
-        self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
+        self.abort_sub = self.create_subscription(Bool, "/auto_abort_check", self.abort_callback, 1)
         self.aruco_found = False
-        self.aruco_sub = self.create_subscription(Bool, "aruco_found", self.detection_callback, 10)
+        self.aruco_sub = self.create_subscription(Bool, "/aruco_found", self.detection_callback, 1)
         #new additions
         # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
      
@@ -59,7 +59,8 @@ class StraightLineApproach(Node):
         self.y = msg.pose.position.y
         self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
                                             msg.pose.orientation.y, msg.pose.orientation.z)[2]
-
+        self.get_logger().info(f"x: {self.x}, y {self.y}, heading {self.heading}")
+    
     def abort_callback(self,msg):
         self.abort_check = msg.data
         
@@ -68,13 +69,14 @@ class StraightLineApproach(Node):
         self.y = msg.pose.pose.position.y
         self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
                                             msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
+        self.get_logger().info(f"x: {self.x}, y {self.y}, heading {self.heading}")
 
     def target_callback(self, msg):
         self.target_x = msg.data[0]
         self.target_y = msg.data[1]
 
     def to_euler_angles(self, w, x, y, z):
-        angles = [0, 0, 0]  # [roll, pitch, yaw]
+        angles = [0.0, 0.0, 0.0]  # [roll, pitch, yaw]
 
         # Roll (x-axis rotation)
         sinr_cosp = 2 * (w * x + y * z)
@@ -102,6 +104,7 @@ class StraightLineApproach(Node):
         angle_threshold = 0.2
 
         while (rclpy.ok()) and (self.abort_check is False):
+            # rclpy.spin_once(self, timeout_sec=0.1)
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
@@ -109,7 +112,9 @@ class StraightLineApproach(Node):
             target_heading = math.atan2(target_y - self.y, target_x - self.x)
             target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
             # print(f"Current Position: ({self.x}, {self.y})")
-            print("Target Heading:", math.degrees(target_heading), " Target Distance:", target_distance)
+            # print("Target Heading:", math.degrees(target_heading), " Target Distance:", target_distance)
+            # print(f"x: {self.x}, y {self.y}, heading {self.heading}")
+
             angle_diff = target_heading - self.heading
             
             # print ( f"angle_diff: {angle_diff}")
@@ -141,6 +146,7 @@ class StraightLineApproach(Node):
             time.sleep(1/50)
 
     def navigate(self, state="Location Selection"): #navigate needs to take in a state value as well
+        print("self.targets", self.targets)
         for target_x, target_y in self.targets:
             print(f"Moving towards target: ({target_x}, {target_y})")
             self.move_to_target(target_x, target_y)
@@ -153,16 +159,9 @@ if __name__ == '__main__':
     targets = [(9, 2)]  # Define multiple target points
     rclpy.init(args=None)
     try:
-        
         approach = StraightLineApproach(1.5, 0.5, targets)
+        # spin_thread=threading.Thread(target=rclpy.spin, args=(approach,), daemon=True)
+        # spin_thread.start()
         approach.navigate()
-    except rclpy.exceptions.ROSInterruptException:
-        pass
-
-    gs = GridSearch(4, 4, 1, x, y)  # define multiple target points here: cartesian
-    target = gs.square_target()
-    print(target)
-    try:
-        straight_line_approach(1, 0.5, target) #LOOK HERE
     except rclpy.exceptions.ROSInterruptException:
         pass
