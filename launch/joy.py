@@ -12,11 +12,11 @@ def generate_launch_description():
 
     return LaunchDescription([
         # Force Fast DDS and restrict to LAN interface via profiles file
-        SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_fastrtps_cpp'),
-        SetEnvironmentVariable(name='ROS_LOCALHOST_ONLY', value='0'),
+        # SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_fastrtps_cpp'),
+        # SetEnvironmentVariable(name='ROS_LOCALHOST_ONLY', value='0'),
         # Support both env names used by different Fast DDS versions
-        SetEnvironmentVariable(name='FASTDDS_DEFAULT_PROFILES_FILE', value=fastdds_profile),
-        SetEnvironmentVariable(name='FASTRTPS_DEFAULT_PROFILES_FILE', value=fastdds_profile),
+        # SetEnvironmentVariable(name='FASTDDS_DEFAULT_PROFILES_FILE', value=fastdds_profile),
+        # SetEnvironmentVariable(name='FASTRTPS_DEFAULT_PROFILES_FILE', value=fastdds_profile),
 
         # Group for arm namespace with /dev/input/js1
         GroupAction([
