@@ -20,7 +20,7 @@ class PointcloudProcessor(Node):
 
         qos_profile = QoSProfile(
             depth=10,
-            reliability=ReliabilityPolicy.BEST_EFFORT,
+            reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE,
             history=HistoryPolicy.KEEP_LAST
         )
@@ -207,7 +207,7 @@ class PointcloudProcessor(Node):
         return filtered_msg
 
     def detectObstacles(self, cloud):
-        tolerance = 0.1
+        tolerance = 0.10
         min_cluster_size = 20
         
         points_list = np.array([
