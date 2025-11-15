@@ -6,6 +6,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Bool
+from rover.msg import MissionState
 import math
 import time
 import ar_detection_node as adn
@@ -52,7 +53,17 @@ class StraightLineApproach(Node):
         # self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
         # self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
         # self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
-
+        self.pub = self.create_publisher(MissionState, 'mission_state', 10)
+        self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
+     
+    
+    def feedback_callback(self, msg):
+        if msg.state == "STRAIGHT_LINE":
+            self.active = True
+            self.target = msg.current_goal
+            self.get_logger().info("Straight line behavior ACTIVE")
+        else:
+            self.active = False
     
     def pose_callback(self, msg):
         self.x = msg.pose.position.x
