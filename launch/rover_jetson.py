@@ -1,6 +1,6 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, SetEnvironmentVariable
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 import os
@@ -10,8 +10,16 @@ def generate_launch_description():
 
     rover_launch_dir = os.path.join(get_package_share_directory('rover'), 'launch')
     gnss_launch_dir = os.path.join(get_package_share_directory('calian_gnss_ros2'), 'launch')
+    pkg_share = get_package_share_directory('rover')
+    fastdds_profile = os.path.join(pkg_share, 'config', 'fastdds_lan_only.xml')
 
     return LaunchDescription([
+        # Force Fast DDS and restrict to LAN interface via profiles file
+        # SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_fastrtps_cpp'),
+        # SetEnvironmentVariable(name='ROS_LOCALHOST_ONLY', value='0'),
+        # Support both env names used by different Fast DDS versions
+        # SetEnvironmentVariable(name='FASTDDS_DEFAULT_PROFILES_FILE', value=fastdds_profile),
+        # SetEnvironmentVariable(name='FASTRTPS_DEFAULT_PROFILES_FILE', value=fastdds_profile),
 
         # Manual Control
         Node(
@@ -22,11 +30,11 @@ def generate_launch_description():
         ),
 
         # RealSense Camera
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(rover_launch_dir, 'rs_multiple_devices.py')
-            )
-        ),
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         os.path.join(rover_launch_dir, 'rs_multiple_devices.py')
+        #     )
+        # ),
 
         # IMU to ENU Conversion
         Node(
@@ -49,18 +57,25 @@ def generate_launch_description():
                 'orientation_stddev': 0.2
             }],
             remappings=[
-                ('imu/mag', '/zed_node/imu/mag'),
+                ('imu/mag', '/zed/zed_node/imu/mag'),
                 ('imu/data_raw', '/imu/enu'),
                 ('imu/data', '/imu/orient')
             ]
         ),
 
-        # # GNSS RTK
-        # IncludeLaunchDescription(
-        #     PythonLaunchDescriptionSource(
-        #         os.path.join(gnss_launch_dir, 'moving_baseline_rtk.py')
-        #     )
-        # ),
+        # GNSS RTK
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(gnss_launch_dir, 'moving_baseline_rtk.launch.py')
+            )
+        ),
+
+        # ZED Camera Launch
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(rover_launch_dir, 'zed_odom.py')
+            )
+        ),
 
         # LED Light Node
         Node(
@@ -76,15 +91,15 @@ def generate_launch_description():
             executable='pub_manual_indicator.py',
             name='pub_manual_indicator',
             output='screen'
-        ),
+        )#,
 
         # Webcam nodes (for the arm)
-        Node(
-            package='rover',
-            executable='webcam.py',
-            name='webcam_node',
-            output='screen'
-        )
+        # Node(
+        #     package='rover',
+        #     executable='webcam.py',
+        #     name='webcam_node',
+        #     output='screen'
+        # )
         # ,
         # Node(
         #     package='rover',

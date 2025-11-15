@@ -8,7 +8,7 @@ def generate_launch_description():
             executable='joy_node',
             name='joy_node',
             namespace='software',  # Equivalent to <group ns="software">
-            parameters=[{'dev': '/dev/input/js1'}],
+            parameters=[{'device_id': 1}],
             output='screen'
         )
     ])

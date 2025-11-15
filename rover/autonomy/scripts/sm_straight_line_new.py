@@ -18,7 +18,7 @@ import yaml
 import os
 
 #file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
-file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
+file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
 
 
 with open(file_path, "r") as f:
