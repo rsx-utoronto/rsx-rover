@@ -292,11 +292,11 @@ class LocationSelection(smach.State): #State for determining which mission/state
                         msg.state = "START_SL"
                         msg.current_goal = [target]
                         self.mission_state_pub.publish(msg)
-                        #NOTE: CALL m_config.get("straight_line_approach_lin_vel") in the straight line file instead
+                        
                         # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                     else:
                         sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target], target_name) 
-                sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
+                # sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 if self.glob_msg.abort_check: #Checks if abort button is pressed
                     userdata.aborted_state = list(path.items())[0][0]
                     return "ABORT"
