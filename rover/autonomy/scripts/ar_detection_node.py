@@ -36,6 +36,7 @@ class ARucoTagDetectionNode(Node):
             
         else:
             self.image_topic = sm_config.get("zed_detection_image_topic") 
+            print("zed topic:", self.image_topic)
             self.info_topic = sm_config.get("zed_detection_info_topic")
        
         self.state_topic = "state"
@@ -69,6 +70,7 @@ class ARucoTagDetectionNode(Node):
         self.found = False
 
     def image_callback(self, ros_image):
+        print("in image callback")
         try:
             cv_image = self.bridge.imgmsg_to_cv2(ros_image,"bgr8")
         except CvBridgeError as e:
@@ -77,14 +79,17 @@ class ARucoTagDetectionNode(Node):
             # Do we need to undistort?    
          
             if self.curr_state == "AR1" or self.curr_state == "AR2" or self.curr_state == "AR3":
+                print("calling findArucoMarkers")
                 self.findArucoMarkers(cv_image)
     
     def info_callback(self, info_msg):
-        self.D = np.array(info_msg.D)
-        self.K = np.array(info_msg.K)
+        print("in info callback")
+        self.D = np.array(info_msg.d)
+        self.K = np.array(info_msg.k)
         self.K = self.K.reshape(3,3)
 
     def state_callback(self, state):
+        print("in state callback")
         self.curr_state = state.data
 
 
@@ -136,6 +141,7 @@ class ARucoTagDetectionNode(Node):
                     print(bbox[0][0],bbox[0][1],bbox[2][0],bbox[2][1])
                     self.array=[bbox[0,0], bbox[0,1], bbox[2,0], bbox[0,1], bbox[0,0], bbox[2,1], bbox[2,0], bbox[2,1]]
                     data = Float64MultiArray(data=self.array)
+                    
                     self.bbox_pub.publish(data)
                     
                     # first two numbers are top left corner, second two are bottom right corner
@@ -174,7 +180,8 @@ class ARucoTagDetectionNode(Node):
             self.found = False
 
         #self.aruco_pub.publish(self.updated_state_msg)
-        self.aruco_pub.publish(self.found)
+        # self.aruco_pub.publish(self.found)
+        self.aruco_pub.publish(Bool(data=self.found))
         #self.scanned_pub.publish(self.scanned_state_smg)
      
     def is_found(self):
@@ -185,8 +192,10 @@ def main(args=None):
     node = ARucoTagDetectionNode()
     node.curr_state = "AR1"
     rclpy.spin(node)
+    print("spinning node")
     node.destroy_node()
     rclpy.shutdown()
+    print("shut down")
     # rospy.init_node('aruco_tag_detector', anonymous=True)
     # AR_detector = ARucoTagDetectionNode()
     
