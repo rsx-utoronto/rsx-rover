@@ -67,7 +67,7 @@ class mapOverlay(QWidget):
             self.viewer.center_on_gps( gps_point) 
 
     def update_gps_heading(self, msg):
-        self.viewer.headingSignal.emit(msg.heading)
+        self.viewer.headingSignal.emit(-msg.heading)
 
     def clear_map(self):
         self.viewer.clear_lines()
@@ -585,7 +585,7 @@ class LngLatEntryFromFile(QWidget):
 
     def collect_data(self):
         # Read data from the file
-        file_path = Path(__file__).parent.parent.parent.resolve() / "long_lat_goal.csv"
+        file_path = Path(__file__).parent.resolve() / "long_lat_goal.csv"
         with open(file_path, 'r') as file:
             lines = file.readlines()
 
@@ -1466,7 +1466,9 @@ class RoverGUI(QMainWindow):
         self.camera_feed.exposure_value = value
 
     def pub_next_state(self):
-        self.next_state_pub.publish(True)
+        p = Bool()
+        p.data = True
+        self.next_state_pub.publish(p)
         self.setStyleSheet("background-color: #FFFFFF")
         self.status_label.setText("")
 
@@ -1474,7 +1476,9 @@ class RoverGUI(QMainWindow):
     #     self.manual_abort_pub.publish(True)
 
     def pub_auto_abort(self):
-        self.auto_abort_pub.publish(True)
+        p = Bool()
+        p.data = True
+        self.auto_abort_pub.publish(p)
         self.setStyleSheet("background-color: #FFFFFF")
         self.status_label.setText("")
 

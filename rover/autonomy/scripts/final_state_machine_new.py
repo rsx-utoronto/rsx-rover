@@ -100,7 +100,7 @@ class GLOB_MSGS(Node):
         self.pub = self.create_publisher(String, "gui_status", 10)
         self.state_publisher = self.create_publisher(String, "state", 10) # what is this for?
         self.led_publisher = self.create_publisher(String, "led_light", 10)
-        self.sub = self.create_subscription(PoseStamped, "pose", self.pose_callback, 10)
+        self.sub = self.create_subscription(PoseStamped, "/pose", self.pose_callback, 10)
         self.odom_sub = self.create_subscription(Odometry, "/rtabmap/odom", self.odom_callback, 10)
         self.gui_loc = self.create_subscription(Float32MultiArray, '/long_lat_goal_array', self.coord_callback, 10)
         self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
@@ -114,7 +114,7 @@ class GLOB_MSGS(Node):
         self.cartesian = None
         self.odom_zero = None
         self.done_early = False
-        self.pose = None
+        self.pose = PoseStamped()
         self.odom = None
         self.current_position = None
     
@@ -123,7 +123,7 @@ class GLOB_MSGS(Node):
         
     def pose_callback(self, msg):
         self.pose = msg
-        # print(self.pose.header.stamp.secs, "in pose_callback")
+        # print(self.pose, "in pose_callback")
 
     def abort_callback(self,msg):
         self.abort_check = msg.data
@@ -141,6 +141,7 @@ class GLOB_MSGS(Node):
         return self.next_task_check
         
     def get_pose(self):
+        self.get_logger().info(f"get pose called \n {self.pose}")
         return self.pose
     
     def odom_callback(self, data): #Callback function for the odometry subscriber
@@ -240,7 +241,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         
         self.glob_msg.cartesian = cartesian_dict #assigns the cartesian dict to cartesian to make it a global variable 
         
-        gps_to_pose.GPSToPose(self.glob_msg.locations['start'], tuple(sm_config.get("origin_pose", [0.0,0.0])), tuple(sm_config.get("heading_vector", [1.0, 0.0]))) #creates an instance of GPSToPose to start publishing pose
+        # gps_to_pose.GPSToPose(self.glob_msg.locations['start'], tuple(sm_config.get("origin_pose", [0.0,0.0])), tuple(sm_config.get("heading_vector", [1.0, 0.0]))) #creates an instance of GPSToPose to start publishing pose
     
     def execute(self, userdata): 
         self.glob_msg.pub_led_light(String(data="auto")) #Initializes red led light
@@ -277,6 +278,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 self.glob_msg.pub_state(String(data=f"Navigating to {list(path.items())[0][0]}")) 
                 self.glob_msg.pub_state(String(data=f"Navigating to {self.glob_msg.cartesian[list(path.items())[0][0]]}")) 
                 target = path[list(path.items())[0][0]]
+                print("target in final stm:", target)
                 target_name = list(path.items())[0][0]
                 self.glob_msg.pub_state_name(String(data=target_name)) 
                 print("target_name", target_name) # add check for if it's going to AR3, OBJ2 or leaving from those!
@@ -288,15 +290,14 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     #sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                    # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                     if target_name=="GNSS1" or target_name=="GNSS2" or target_name=="start":
-                        msg = MissionState()
-                        msg.state = "START_SL"
-                        msg.current_goal = [target]
-                        self.mission_state_pub.publish(msg)
-                        
-                        # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
+                        print("checkpoint1", sm_config.get("straight_line_approach_lin_vel"), [target])
+                        sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
+                        print("checkpoint 2")
                     else:
                         sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target], target_name) 
-                # sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
+                print("before nav in fms")
+                sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
+                print("after navigate")
                 if self.glob_msg.abort_check: #Checks if abort button is pressed
                     userdata.aborted_state = list(path.items())[0][0]
                     return "ABORT"
@@ -305,6 +306,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 if self.glob_msg.abort_check:
                     userdata.aborted_state = list(path.items())[0][0]
                     return "ABORT"
+            self.glob_msg.get_logger().info(f"get next state: {list(path.items())[0][0]}")
             return list(path.items())[0][0]
         else: #all tasks have been done
             self.glob_msg.pub_state(String(data="Going to tasks ended"))
@@ -321,12 +323,15 @@ class GNSS1(smach.State): #State for GNSS1
         self.glob_msg = glob_msg
         
     def execute(self, userdata):
+        self.glob_msg.get_logger().info("Performing GNSS 1")
         self.glob_msg.pub_state(String(data="Performing GNSS 1"))        
         current_location_data = self.glob_msg.get_pose()
 
         current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["GNSS1"][0])**2 + 
                             (current_location_data.pose.position.y - userdata.rem_loc_dict["GNSS1"][1])**2)**(1/2) #Comparing how far we are from the target location
         
+        self.glob_msg.get_logger().info(f"current distance, {current_distance}")
+
         if self.glob_msg.abort_check:
             self.glob_msg.pub_state(String(data="Aborting for state GNSS1"))
             userdata.aborted_state = "GNSS1"
