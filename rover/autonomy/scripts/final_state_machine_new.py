@@ -290,11 +290,15 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     #sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                    # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                     if target_name=="GNSS1" or target_name=="GNSS2" or target_name=="start":
-                        print("checkpoint1", sm_config.get("straight_line_approach_lin_vel"), [target])
-                        sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
-                        print("checkpoint 2")
+                        msg = MissionState()
+                        msg.state = "START_SL"
+                        msg.current_goal = [target]
+                        self.mission_state_pub.publish(msg)
+                        
+                        # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                     else:
                         sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target], target_name) 
+                # sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 print("before nav in fms")
                 sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 print("after navigate")
