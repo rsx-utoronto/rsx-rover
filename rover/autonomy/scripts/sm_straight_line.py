@@ -6,6 +6,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Bool
+from rover.msg import MissionState
 import math
 import time
 import ar_detection_node as adn
@@ -24,11 +25,11 @@ with open(file_path, "r") as f:
 # and heading to determine the angular and linear velocities. When the target distance is within the threshold it breaks out of the loop to return.
     
 class StraightLineApproach(Node):
-    def __init__(self, lin_vel, ang_vel, targets):
+    def __init__(self):
         super().__init__('straight_line_approach_node')
-        self.lin_vel = lin_vel
-        self.ang_vel = ang_vel
-        self.targets = targets
+        # self.lin_vel = lin_vel
+        # self.ang_vel = ang_vel
+        # self.targets = targets
         self.found = False
         self.abort_check = False
         self.x = -100000
@@ -52,7 +53,21 @@ class StraightLineApproach(Node):
         # self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
         # self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
         # self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
-
+        self.pub = self.create_publisher(MissionState, 'mission_state', 10)
+        self.lin_vel= sm_config.get("straight_line_approach_lin_vel")
+        self.anf_vel = sm_config.get("straight_line_approach_ang_vel")
+        self.active = False
+        self.target = None
+        self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
+        
+    def feedback_callback(self, msg):
+        if msg.state == "START_SL":
+            self.active = True
+            self.target = msg.current_goal
+            self.get_logger().info("Straight line behavior ACTIVE")
+            self.navigate()
+        else:
+            self.active = False
     
     def pose_callback(self, msg):
         self.x = msg.pose.position.x

@@ -17,6 +17,7 @@ from optimal_path import OPmain
 #import ar_detection_node  
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
+from rover.msg import MissionState
 from sm_straight_line import StraightLineApproach
 from sm_straight_line_new import StraightLineApproachNew
 from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
@@ -97,7 +98,7 @@ class GLOB_MSGS(Node):
     def __init__(self):
         super().__init__('glob_msgs_node')
         self.pub = self.create_publisher(String, "gui_status", 10)
-        self.state_publisher = self.create_publisher(String, "state", 10)
+        self.state_publisher = self.create_publisher(String, "state", 10) # what is this for?
         self.led_publisher = self.create_publisher(String, "led_light", 10)
         self.sub = self.create_subscription(PoseStamped, "/pose", self.pose_callback, 10)
         self.odom_sub = self.create_subscription(Odometry, "/rtabmap/odom", self.odom_callback, 10)
@@ -105,6 +106,8 @@ class GLOB_MSGS(Node):
         self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
         self.next_state_sub = self.create_subscription(Bool, "/next_state", self.next_task_callback, 10)
         self.done_early_sub = self.create_subscription(Bool, "done_early", self.done_early_callback, 10)
+        self.mission_state_pub = self.create_publisher(MissionState, 'mission_state', 10)
+        self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
         self.next_task_check = False
         self.abort_check = False
         self.locations = None
@@ -114,6 +117,9 @@ class GLOB_MSGS(Node):
         self.pose = PoseStamped()
         self.odom = None
         self.current_position = None
+    
+    def feedback_callback(self, msg):
+        self.get_logger().info(f"Received feedback: {msg.state}")
         
     def pose_callback(self, msg):
         self.pose = msg

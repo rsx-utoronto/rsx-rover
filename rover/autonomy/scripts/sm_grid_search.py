@@ -5,6 +5,7 @@ from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped, Twist
 from std_msgs.msg import Float64MultiArray, Bool, String
+from rover.msg import MissionState
 import math
 import aruco_homing as aruco_homing
 import ar_detection_node as ar_detect
@@ -73,7 +74,16 @@ class GS_Traversal(Node):
         self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
         self.message_pub = self.create_publisher(String, "gui_status", 10)
         # self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        
+        self.pub = self.create_publisher(MissionState, 'mission_state', 10)
+        self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
+    
+    def feedback_callback(self, msg):
+        if msg.state == "GRID_SEARCH":
+            self.active = True
+            self.get_logger().info("Grid Search behavior ACTIVE")
+        else:
+            self.active = False
+            
     def pose_callback(self, msg):
         self.x = msg.pose.position.x
         self.y = msg.pose.position.y
