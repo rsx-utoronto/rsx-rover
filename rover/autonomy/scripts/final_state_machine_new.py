@@ -17,7 +17,6 @@ from optimal_path import OPmain
 #import ar_detection_node  
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
-from rover.msg import MissionState
 from sm_straight_line import StraightLineApproach
 from sm_straight_line_new import StraightLineApproachNew
 from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
@@ -32,10 +31,10 @@ from nav_msgs.msg import Odometry
 import yaml
 import os
 import threading
-
+from rover.msg import MissionState
 print("I am in the final state machine file")
-file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
-#os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+# file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
+file_path=os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
@@ -581,16 +580,36 @@ class AR2(smach.State): #State for AR2
             self.glob_msg.pub_state_name(String(data="AR2"))
             if not self.glob_msg.done_early:
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
-                gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
+                msg = MissionState()
+                msg.state="START_GS"
+                msg.starting_point = [userdata.rem_loc_dict["AR2"]] # need to break down in the grid search class
+                self.mission_state_pub.publish(msg)
+                
+                # gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  #Creates an instance of the grid search class
+                # targets = gs.square_target() #Generates multiple points for grid search
+                msg = MissionState()
+                msg.state="START_GS_TRAV"
+                msg.current_state = "AR2" # need to break down in the grid search class
+                self.mission_state_pub.publish(msg)
+
+                # gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR2"][0], userdata.rem_loc_dict["AR2"][1])  # define multiple target points here: cartesian
                 print(sm_config.get("AR_grid_search_w"))
-                targets = gs.square_target() #generates multiple grid search targets 
+                # targets = gs.square_target() #generates multiple grid search targets 
             
-                gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
+                # gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR2")
                 aruco_sub = self.glob_msg.create_subscription( Bool, "aruco_found", self.aruco_callback,10)
                 self.glob_msg.pub_state(String(data="Starting AR2 grid search"))
-                ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
+                # ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the grid search targets
+                if msg.state=="ARUCO_FOUND":
+                    ar_in_correct_loc=True
+                else:
+                    ar_in_correct_loc=False
+                    
                 self.glob_msg.pub_state(String(data="End of AR2 grid search"))
                 if self.glob_msg.abort_check:
+                        msg = MissionState()
+                        msg.state = "ABORT"
+                        self.mission_state_pub.publish(msg)
                         self.glob_msg.pub_state(String(data="Aborting for state AR2"))
                         userdata.aborted_state = "AR2"
                         self.glob_msg.pub_state_name(String(data=""))

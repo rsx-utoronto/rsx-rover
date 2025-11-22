@@ -14,8 +14,8 @@ import threading
 import yaml
 import os
 
-#file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
-file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml"
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+#file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml"
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
@@ -170,13 +170,16 @@ class StraightLineApproach(Node):
                 break
             time.sleep(1)
 
-if __name__ == '__main__':
-    targets = [(9, 2)]  # Define multiple target points
-    rclpy.init(args=None)
+def main():
+    import rclpy
+    rclpy.init()
+    node = rclpy.create_node('sm_straight_line_idle')
+    node.get_logger().info('sm_straight_line alive (idle)')
     try:
-        approach = StraightLineApproach(1.5, 0.5, targets)
-        # spin_thread=threading.Thread(target=rclpy.spin, args=(approach,), daemon=True)
-        # spin_thread.start()
-        approach.navigate()
-    except rclpy.exceptions.ROSInterruptException:
-        pass
+        rclpy.spin(node)  # stays active
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from calian_gnss_ros2_msg import msg
 import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
@@ -15,8 +16,8 @@ import yaml
 import os
 import time
 
-#file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
-file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
+file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+#file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
@@ -433,50 +434,15 @@ class GridSearch(Node):
         return targets
 
 def main():
+    import rclpy
     rclpy.init()
-    targets = [(2, 0)]  # Define multiple target points
+    node = rclpy.create_node('sm_grid_search_idle')
+    node.get_logger().info('sm_grid_search alive (idle)')
     try:
-        approach = StraightLineApproach.StraightLineApproach(1.5, 0.5, targets)
-        approach.navigate()
-    except rclpy.exceptions.ROSInterruptException:
-        pass
+        rclpy.spin(node)
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
-    gs = GridSearch(10, 10, 1, 0, 0)  # define multiple target points here: cartesian
-    targets = gs.square_target() #generates multiple targets 
-    gs_traversal_object = GS_Traversal(0.6, 0.3, targets, "AR1")
-    gs_traversal_object.navigate() #should be one of aruco, mallet, waterbottle
-    
-    # pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
-    pub = gs_traversal_object.create_publisher(Twist, 'drive', 10)  # modified to use rclpy
-    # frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v
-    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 1.5, 0.3) # FOR ARUCO
-    
-    # aimer = aruco_homing.AimerROS(50, 50, 1450, 10, 50, 1.0, 0.5) # FOR WATER BOTTLE
-    # rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
-    gs_traversal_object.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10)  # modified to use rclpy
-    # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
-    
-    while rclpy.ok():
-        twist = Twist()
-        if aimer.linear_v == 0 and aimer.angular_v == 0:
-            print ("at weird", aimer.linear_v, aimer.angular_v)
-            twist.linear.x = 0
-            twist.angular.z = 0
-            pub.publish(twist)
-            return True
-        if aimer.angular_v == 1:
-            twist.angular.z = aimer.max_angular_v
-            twist.linear.x = 0
-        elif aimer.angular_v == -1:
-            twist.angular.z = -aimer.max_angular_v
-            twist.linear.x = 0
-        elif aimer.linear_v == 1:
-            twist.linear.x = aimer.max_linear_v
-            twist.angular.z = 0
-         
-        pub.publish(twist)
-        time.sleep(0.1) 
-    
-    
 if __name__ == '__main__':
     main()

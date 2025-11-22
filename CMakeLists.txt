@@ -25,6 +25,7 @@ find_package(rosidl_default_generators REQUIRED)  # Replaces message_generation
 
 set(msg_files
   "msg/ArmInputs.msg"
+  "msg/MissionState.msg"
 )
 
 set(srv_files
