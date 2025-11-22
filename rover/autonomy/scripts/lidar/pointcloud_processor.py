@@ -20,7 +20,7 @@ class PointcloudProcessor(Node):
 
         qos_profile = QoSProfile(
             depth=10,
-            reliability=ReliabilityPolicy.RELIABLE,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
             durability=DurabilityPolicy.VOLATILE,
             history=HistoryPolicy.KEEP_LAST
         )
