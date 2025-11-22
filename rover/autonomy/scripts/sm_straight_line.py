@@ -5,7 +5,7 @@ from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Float64MultiArray, Bool
+from std_msgs.msg import Float64MultiArray, Bool, String
 from rover.msg import MissionState
 import math
 import time
@@ -13,6 +13,8 @@ import ar_detection_node as adn
 import threading
 import yaml
 import os
+import numpy as np
+import threading
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 #file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml"
@@ -29,47 +31,55 @@ class StraightLineApproach(Node):
         super().__init__('straight_line_approach_node')
         # self.lin_vel = lin_vel
         # self.ang_vel = ang_vel
+        print("sm_straight_line initialized")
         # self.targets = targets
         self.found = False
         self.abort_check = False
-        self.x = -100000
-        self.y = -100000
+        self.x = 0#-100000
+        self.y = 0#-100000
         self.heading = 0
-        # self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
-        # self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        # self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
-        self.pose_subscriber = self.create_subscription(PoseStamped, '/pose', self.pose_callback, 1)
-        self.target_subscriber = self.create_subscription(Float64MultiArray, '/target', self.target_callback, 1)
+        self.active = False
+        self.target = None
+        self.sub = self.create_subscription(String, 'chatter', self.callback, 10)
+        # Use QoS depth 10 and add callback logging
+        self.pose_subscriber = self.create_subscription(
+            PoseStamped, '/pose', self.pose_callback, 10)
+        self.target_subscriber = self.create_subscription(
+            Float64MultiArray, '/target', self.target_callback, 10)
         self.drive_publisher = self.create_publisher(Twist, '/drive', 10)
-        self.abort_sub = self.create_subscription(Bool, "/auto_abort_check", self.abort_callback, 1)
-        self.aruco_found = False
-        self.aruco_sub = self.create_subscription(Bool, "/aruco_found", self.detection_callback, 1)
-        #new additions
-        # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-     
-        # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-
-        #new additions
-        # self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
-        # self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
-        # self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
+        self.abort_sub = self.create_subscription(
+            Bool, "/auto_abort_check", self.abort_callback, 10)
+        self.aruco_sub = self.create_subscription(
+            Bool, "/aruco_found", self.detection_callback, 10)
+        
         self.pub = self.create_publisher(MissionState, 'mission_state', 10)
         self.lin_vel= sm_config.get("straight_line_approach_lin_vel")
         self.ang_vel = sm_config.get("straight_line_approach_ang_vel")
         self.active = False
         self.target = None
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
-        
+    
+    def callback(self, msg):
+        #print("I heard: ", msg.data)
+        pass
+
     def feedback_callback(self, msg):
+        print("in SL feedback callback, msg.state:", msg.state)
+        self.get_logger().info(f"in SL feedback callback, msg.state: {msg.state}")
+
         if msg.state == "START_SL":
             self.active = True
-            self.target = msg.current_goal
+            print("in SL msg.current_goal", msg.current_goal)
+            target_x = msg.current_goal.pose.position.x
+            target_y = msg.current_goal.pose.position.y
+            self.target = [(target_x, target_y)]
             self.get_logger().info("Straight line behavior ACTIVE")
             self.navigate()
         else:
             self.active = False
     
     def pose_callback(self, msg):
+        print("in SL pose callback")
         self.x = msg.pose.position.x
         self.y = msg.pose.position.y
         self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
@@ -80,6 +90,7 @@ class StraightLineApproach(Node):
         self.abort_check = msg.data
         
     def odom_callback(self, msg):
+        print("in SL odom callback")
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
         self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
@@ -117,9 +128,11 @@ class StraightLineApproach(Node):
         kp = 0.5
         threshold = 0.5
         angle_threshold = 0.2
-
+        print(f"Starting move_to_target towards: ({target_x}, {target_y})")
+        print(self.x, self.y, self.heading)
         while (rclpy.ok()) and (self.abort_check is False):
             # rclpy.spin_once(self, timeout_sec=0.1)
+            print("in move to target loop", self.x, self.y)
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
@@ -161,24 +174,31 @@ class StraightLineApproach(Node):
             time.sleep(1/50)
 
     def navigate(self, state="Location Selection"): #navigate needs to take in a state value as well
-        print("self.targets", self.targets)
-        for target_x, target_y in self.targets:
+        print("self.targets", self.target)
+        for target_x, target_y in self.target:
             print(f"Moving towards target: ({target_x}, {target_y})")
             self.move_to_target(target_x, target_y)
             if self.abort_check:
                 self.abort_check = False
                 break
             time.sleep(1)
+        if (np.abs(self.x - self.target[0][0]) < 0.5) and (np.abs(self.y - self.target[0][1]) < 0.5):
+            sla_msg = MissionState()
+            sla_msg.state = "SLA_DONE"
+        else:
+            sla_msg = MissionState()
+            sla_msg.state = "SLA_FAILED"
+        self.pub.publish(sla_msg)
 
 def main():
     import rclpy
-    rclpy.init()
-    node = rclpy.create_node('sm_straight_line_idle')
-    node.get_logger().info('sm_straight_line alive (idle)')
-    try:
-        rclpy.spin(node)  # stays active
-    finally:
-        node.destroy_node()
+    rclpy.init(args=None)
+    sla = StraightLineApproach()
+    try: 
+        print("spinning sla node")
+        rclpy.spin(sla)
+    finally: 
+        sla.destroy_node()
         rclpy.shutdown()
 
 if __name__ == '__main__':

@@ -25,7 +25,7 @@ import gps_conversion_functions as functions
 import gps_to_pose as gps_to_pose
 import sm_grid_search
 import ar_detection_node
-from std_msgs.msg import String
+from std_msgs.msg import String, Float32MultiArray
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 import yaml
@@ -116,9 +116,20 @@ class GLOB_MSGS(Node):
         self.pose = PoseStamped()
         self.odom = None
         self.current_position = None
+        self.sla_status = None
+        self.gs_targets = []
+        self.gs_status = None
     
     def feedback_callback(self, msg):
         self.get_logger().info(f"Received feedback: {msg.state}")
+        if msg.state == "SLA_DONE":
+            self.sla_status = "SLA_DONE"
+        if msg.gs_targets:
+            self.gs_targets = msg.gs_targets.data
+        if msg.state == "ARUCO_FOUND":
+            self.gs_status = "ARUCO_FOUND"
+        if msg.state == "ARUCO_NOT_FOUND":
+            self.gs_status = "ARUCO_NOT_FOUND"
         
     def pose_callback(self, msg):
         self.pose = msg
@@ -184,7 +195,7 @@ class GLOB_MSGS(Node):
     def pub_led_light(self, msg): #for publishing signals for the leds
         self.led_publisher.publish(msg)
     
-
+    
 class InitializeAutonomousNavigation(smach.State): #State for initialization
     def __init__(self):
         smach.State.__init__(self, 
@@ -230,10 +241,12 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         
         if sm_config.get("run_in_order"): #If indicated, we assign the path same as the one in the yaml file
             cartesian_list = sm_config.get("States_run_in_order") 
+            
         else: 
             cartesian_list = shortest_path('start', cartesian) #Else create optimal path
     
         for cart in cartesian_list:
+            # if cart in cartesian is not "OBJ3": #Excludes OBJ3 if it is not in the gps coordinates received
             cartesian_dict[cart] = cartesian[cart]
             
         print("At CARTESIAN", cartesian_dict)
@@ -286,25 +299,39 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     sla = AstarObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                 else:
                     print("Not Doing Obstalce Avoidance")
+                    print("Print to figure out last print 0")
                     #sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                    # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                     if target_name=="GNSS1" or target_name=="GNSS2" or target_name=="start":
+                        print("Print to figure out last print 1")
                         msg = MissionState()
                         msg.state = "START_SL"
-                        msg.current_goal = [target]
-                        self.mission_state_pub.publish(msg)
+                        print("publishing start_sl", msg.state)
+                        print(target)
+                        msg.current_goal = PoseStamped()
+                        msg.current_goal.pose.position.x = target[0]
+                        msg.current_goal.pose.position.y = target[1]
+                        print("Print to figure out last print 2")
+                        self.glob_msg.mission_state_pub.publish(msg)
+                        print("Print to figure out last print 3")
                         
                         # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                     else:
                         msg = MissionState()
                         msg.state = "START_SL_NEW"
-                        msg.current_goal = [target]
+                        msg.current_goal = PoseStamped()
+                        msg.current_goal.pose.position.x = target[0]
+                        msg.current_goal.pose.position.y = target[1]
                         msg.target_name = target_name
-                        self.mission_state_pub.publish(msg)
+                        self.glob_msg.mission_state_pub.publish(msg)
                         # sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target], target_name) 
                 # sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 print("before nav in fms")
-                sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
+                while self.glob_msg.sla_status != "SLA_DONE" and rclpy.ok():
+                    time.sleep(1)
+                    print("waiting for sla status", msg.state)
+                self.glob_msg.sla_status = None
+                #sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 print("after navigate")
                 if self.glob_msg.abort_check: #Checks if abort button is pressed
                     msg = MissionState()
@@ -313,6 +340,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     userdata.aborted_state = list(path.items())[0][0]
                     return "ABORT"
             except Exception:
+                print("ROS Interrupt Exception during Location Selection")
                 self.glob_msg.pub_state(String(data="ROS Interrupt Exception during Location Selection"))
                 if self.glob_msg.abort_check:
                     msg = MissionState()
@@ -463,8 +491,13 @@ class AR1(smach.State): #State for AR1
             if not self.glob_msg.done_early: #If the done early button is pressed, we will not do the grid search
                 msg = MissionState()
                 msg.state="START_GS"
-                msg.starting_point = [userdata.rem_loc_dict["AR1"]] # need to break down in the grid search class
+                msg.starting_point = PoseStamped()
+                msg.starting_point.pose.position.x = userdata.rem_loc_dict["AR1"][0]
+                msg.starting_point.pose.position.y = userdata.rem_loc_dict["AR1"][1]
                 self.mission_state_pub.publish(msg)
+                while (self.glob_msg.gs_targets == []) and rclpy.ok(): #Waits for all GPS locations are received
+                    time.sleep(1)
+                    self.glob_msg.pub_state(String(data="Waiting for grid search targets"))
                 
                 # gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
                 # targets = gs.square_target() #Generates multiple points for grid search
@@ -472,15 +505,20 @@ class AR1(smach.State): #State for AR1
                 msg.state="START_GS_TRAV"
                 msg.current_state = "AR1" # need to break down in the grid search class
                 self.mission_state_pub.publish(msg)
-                
                 # gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR1") #Starts grid search traversal
                 aruco_sub = self.glob_msg.create_subscription("aruco_found", Bool, self.aruco_callback, 10) #Subscribes to aruco found to determine whether its found or not
                 self.glob_msg.pub_state(String(data="Starting AR1 grid search"))
+                while self.glob_msg.gs_status is None and rclpy.ok(): #Waits for all GPS locations are received
+                    time.sleep(1)
+                    self.glob_msg.pub_state(String(data="Waiting for grid search status"))
+                
                 # ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the generated grid search targets
-                if msg.state=="ARUCO_FOUND":
+                if self.glob_msg.gs_status=="ARUCO_FOUND":
                     ar_in_correct_loc=True
                 else:
                     ar_in_correct_loc=False
+                self.glob_msg.gs_status = None
+                self.glob_msg.gs_targets = []
                 print("ar in correct loc", ar_in_correct_loc)
                 self.glob_msg.pub_state(String(data="End of AR1 grid search"))
                 if self.glob_msg.abort_check:

@@ -365,7 +365,7 @@ class GridSearch(Node):
             self.start_x = msg.starting_point[0]
             self.start_y = msg.starting_point[1]
             self.targets = self.square_target()
-            msg.targets =  self.targets
+            msg.gs_targets =  self.targets
             self.pub.publish(msg)
         else:
             self.active = False

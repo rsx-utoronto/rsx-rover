@@ -200,10 +200,10 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY 
-  scripts/GUI/tile_cache 
-  DESTINATION lib/${PROJECT_NAME}
-)
+# install(DIRECTORY 
+#   scripts/GUI/tile_cache 
+#   DESTINATION lib/${PROJECT_NAME}
+# )
 
 install(PROGRAMS
   scripts/GUI/gui_pyqt.py
