@@ -838,7 +838,6 @@ class MapViewer(QWidget):
 		# Run on the raw WebEngine page (not via pyqtlet2 Map)
 		self._get_page().runJavaScript(js)
 
-
 	
 	def _init_map_widget(self) -> None:
 		self.mapWidget = MapWidget()
@@ -947,6 +946,39 @@ class MapViewer(QWidget):
 		popup_marker = L.marker(location)
 		popup_marker.bindPopup(popup_message)
 		popup_marker.addTo(self.map)
+
+	def arm_radius(self, point: MapPoint):
+		# grab data from the row that has Astronout (need to make sure that there is actually points stored on delivery_lat_long_goal)
+		# go to that coordinate on the map, draw a circle with radius X 
+		# Question: how does this function get called? 
+
+		delivery_path = Path.cwd() + "/delivery_lat_lon_goal.csv"
+
+		try:
+			with open(delivery_path, newline="") as f:
+				print("LOOKING FOR CSV")
+				reader = csv.reader(f)
+				for row in reader:
+					if row[0] == "Astronaut 2":    
+						target_lat = row[1]
+						target_long = row[2]
+
+				
+			print("DRAWING CIRCLEEEEEE")
+			c = L.circle([point.latitude, point.longitude], point.radius, {'weight': 4})
+
+			if point.name:
+				map_js_snnipets.map_layer_bind_tooltip(c, point.name, {'permanent': True, 'direction': 'down'})
+			self.points_layer[layer].addLayer(c)
+			self.point.addTo(self.map)
+
+			self.draw_line_through_points(layer, points)
+			
+
+		except:
+			print("No data is stored, please press Delivery button")
+
+	
 
 	"""
 	POINT LAYER
