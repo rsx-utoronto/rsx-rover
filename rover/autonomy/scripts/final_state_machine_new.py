@@ -297,17 +297,28 @@ class LocationSelection(smach.State): #State for determining which mission/state
                         
                         # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                     else:
-                        sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target], target_name) 
+                        msg = MissionState()
+                        msg.state = "START_SL_NEW"
+                        msg.current_goal = [target]
+                        msg.target_name = target_name
+                        self.mission_state_pub.publish(msg)
+                        # sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target], target_name) 
                 # sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 print("before nav in fms")
                 sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 print("after navigate")
                 if self.glob_msg.abort_check: #Checks if abort button is pressed
+                    msg = MissionState()
+                    msg.state = "START_SL"
+                    self.mission_state_pub.publish(msg)
                     userdata.aborted_state = list(path.items())[0][0]
                     return "ABORT"
             except Exception:
                 self.glob_msg.pub_state(String(data="ROS Interrupt Exception during Location Selection"))
                 if self.glob_msg.abort_check:
+                    msg = MissionState()
+                    msg.state = "START_SL"
+                    self.mission_state_pub.publish(msg)
                     userdata.aborted_state = list(path.items())[0][0]
                     return "ABORT"
             self.glob_msg.get_logger().info(f"get next state: {list(path.items())[0][0]}")
@@ -451,15 +462,32 @@ class AR1(smach.State): #State for AR1
             #ar_detector = ar_detection_node.ARucoTagDetectionNode() #calls the detection node
             
             if not self.glob_msg.done_early: #If the done early button is pressed, we will not do the grid search
-                gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
-                targets = gs.square_target() #Generates multiple points for grid search
-                gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR1") #Starts grid search traversal
+                msg = MissionState()
+                msg.state="START_GS"
+                msg.starting_point = [userdata.rem_loc_dict["AR1"]] # need to break down in the grid search class
+                self.mission_state_pub.publish(msg)
+                
+                # gs = sm_grid_search.GridSearch(sm_config.get("AR_grid_search_w"), sm_config.get("AR_grid_search_h"), sm_config.get("AR_grid_search_tol"), userdata.rem_loc_dict["AR1"][0], userdata.rem_loc_dict["AR1"][1])  #Creates an instance of the grid search class
+                # targets = gs.square_target() #Generates multiple points for grid search
+                msg = MissionState()
+                msg.state="START_GS_TRAV"
+                msg.current_state = "AR1" # need to break down in the grid search class
+                self.mission_state_pub.publish(msg)
+                
+                # gs_traversal_object = sm_grid_search.GS_Traversal(sm_config.get("GS_Traversal_lin_vel"), sm_config.get("GS_Traversal_ang_vel"), targets, "AR1") #Starts grid search traversal
                 aruco_sub = self.glob_msg.create_subscription("aruco_found", Bool, self.aruco_callback, 10) #Subscribes to aruco found to determine whether its found or not
                 self.glob_msg.pub_state(String(data="Starting AR1 grid search"))
-                ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the generated grid search targets
+                # ar_in_correct_loc = gs_traversal_object.navigate() #Navigates to the generated grid search targets
+                if msg.state=="ARUCO_FOUND":
+                    ar_in_correct_loc=True
+                else:
+                    ar_in_correct_loc=False
                 print("ar in correct loc", ar_in_correct_loc)
                 self.glob_msg.pub_state(String(data="End of AR1 grid search"))
                 if self.glob_msg.abort_check:
+                        msg = MissionState()
+                        msg.state = "ABORT"
+                        self.mission_state_pub.publish(msg)
                         self.glob_msg.pub_state(String(data="Aborting for state AR1"))
                         userdata.aborted_state = "AR1"
                         self.glob_msg.pub_state_name(String(data=""))
@@ -478,6 +506,9 @@ class AR1(smach.State): #State for AR1
                 else:
                     self.glob_msg.pub_state(String(data="Grid Search did not find AR1"))
                     if self.glob_msg.abort_check:
+                        msg = MissionState()
+                        msg.state = "ABORT"
+                        self.mission_state_pub.publish(msg)
                         self.glob_msg.pub_state(String(data="Aborting for state AR1"))
                         userdata.aborted_state = "AR1"
                         self.glob_msg.pub_state_name(String(data=""))
@@ -493,6 +524,9 @@ class AR1(smach.State): #State for AR1
                 self.done_early=False
                 
                 if self.glob_msg.abort_check:
+                    msg = MissionState()
+                    msg.state = "ABORT"
+                    self.mission_state_pub.publish(msg)
                     self.glob_msg.pub_state(String(data="Aborting for state AR1"))
                     userdata.aborted_state = "AR1"
                     return "ABORT"

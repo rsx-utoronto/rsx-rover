@@ -55,7 +55,7 @@ class StraightLineApproach(Node):
         # self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
         self.pub = self.create_publisher(MissionState, 'mission_state', 10)
         self.lin_vel= sm_config.get("straight_line_approach_lin_vel")
-        self.anf_vel = sm_config.get("straight_line_approach_ang_vel")
+        self.ang_vel = sm_config.get("straight_line_approach_ang_vel")
         self.active = False
         self.target = None
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)

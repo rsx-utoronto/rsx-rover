@@ -22,7 +22,7 @@ class grid_search_class(Node):
         self.sub = self.create_subscription(Odometry, "/rtabmap/odom", self.newOdom, 10)
         self.pub = self.create_publisher(Twist, "drive", 10)
         self.pub_error = self.create_publisher(Float32, "/robot_base_velocity_controller/error", 10)
-       
+        
         self.speed = Twist()
         # self.roll=euler_from_quaternion([0])
         # self.pitch=euler_from_quaternion([1])

@@ -30,8 +30,8 @@ with open(file_path, "r") as f:
 class GS_Traversal(Node):
     def __init__(self, lin_vel, ang_vel, targets, state):
         super().__init__('gs_traversal_node')
-        self.lin_vel = lin_vel
-        self.ang_vel = ang_vel
+        self.lin_vel = sm_config.get("GS_Traversal_lin_vel") 
+        self.ang_vel = sm_config.get("GS_Traversal_ang_vel")
         self.targets = targets
         self.found = False 
         self.abort_check = False
@@ -43,6 +43,7 @@ class GS_Traversal(Node):
         self.count = 0
         self.timer=0
         
+        
         self.aruco_found = False
         self.mallet_found = False
         self.waterbottle_found = False
@@ -53,21 +54,10 @@ class GS_Traversal(Node):
                    "AR3":False,
                    "OBJ1":False,
                    "OBJ2":False}
-        
-        # self.odom_subscriber = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        # self.pose_subscriber = rospy.Subscriber('pose', PoseStamped, self.pose_callback)
-        # self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        # self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
         self.odom_subscriber = self.create_subscription(Odometry, '/rtabmap/odom', self.odom_callback, 10)  # modified to use rclpy
         self.pose_subscriber = self.create_subscription(PoseStamped, 'pose', self.pose_callback, 10)    
         self.target_subscriber = self.create_subscription(Float64MultiArray, 'target', self.target_callback, 10)
         self.drive_publisher = self.create_publisher(Twist, '/drive', 10)  # modified to use rclpy
-        #new additions
-        # self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
-        # self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
-        # self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
-        # self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
-        # self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
         self.aruco_sub = self.create_subscription(Bool, "aruco_found", self.aruco_detection_callback, 10)
         self.mallet_sub = self.create_subscription(Bool, 'mallet_detected', self.mallet_detection_callback, 10)
         self.waterbottle_sub = self.create_subscription(Bool, 'waterbottle_detected', self.waterbottle_detection_callback, 10)
@@ -78,9 +68,10 @@ class GS_Traversal(Node):
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
     
     def feedback_callback(self, msg):
-        if msg.state == "GRID_SEARCH":
+        if msg.state == "START_GS_TRAV":
             self.active = True
             self.get_logger().info("Grid Search behavior ACTIVE")
+            self.navigate()
         else:
             self.active = False
             
@@ -342,10 +333,13 @@ class GS_Traversal(Node):
                 break
 
             rclpy.timer.Rate(1).sleep()
-
+        msg= MissionState()
         if self.found_objects[self.state]:
-            
+            msg.state="ARUCO_FOUND"
+            self.pub.publish(msg)
             return True
+        msg.state="ARUCO_NOT_FOUND"
+        self.pub.publish(msg)
         return False #Signalling that grid search has been done
 
 class GridSearch(Node):
@@ -355,14 +349,27 @@ class GridSearch(Node):
     tolerance   - this is the limitation of our own equipment, ie. from camera, aruco only detected left right and dist of 3 m
                 - if this is unequal, take the smallest tolerance
     '''
-    def __init__(self, w, h, tolerance, start_x, start_y): # AR1, OR AR2 (cartesian - fixed)
+    def __init__(self, w=0, h=0, tolerance=0, start_x=0, start_y=0): # AR1, OR AR2 (cartesian - fixed)
         super().__init__('grid_search_node')
-        self.x = w 
-        self.y = h
-        self.tol = tolerance 
+        self.w = sm_config.get("AR_grid_search_w")
+        self.h = sm_config.get("AR_grid_search_h")
+        self.tol = sm_config.get("AR_grid_search_tol")
+        self.pub = self.create_publisher(MissionState, 'mission_state', 10)
+        self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
+    
+    def feedback_callback(self, msg):
+        if msg.state == "START_GS":
+            self.active = True
+            self.get_logger().info("Grid Search behavior ACTIVE")
+            self.start_x = msg.starting_point[0]
+            self.start_y = msg.starting_point[1]
+            self.targets = self.square_target()
+            msg.targets =  self.targets
+            self.pub.publish(msg)
+        else:
+            self.active = False
         # print(self.tol)
-        self.start_x = start_x
-        self.start_y = start_y
+        
         # rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) # change topic name
 
     '''
