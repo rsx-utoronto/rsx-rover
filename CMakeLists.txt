@@ -295,6 +295,12 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+  launch/groundseplaunch.py
+  DESTINATION lib/${PROJECT_NAME}
+
+)
+
 # install(
 #   Files rover/cdrive/config/goose.yaml
 #   DESTINATION share/${PROJECT_NAME}/config

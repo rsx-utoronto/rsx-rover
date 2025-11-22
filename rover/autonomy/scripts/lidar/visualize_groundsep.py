@@ -1,5 +1,4 @@
-# Copyright 2023 Ouster,now RSX Inc.
-#
+#!/usr/bin/env python3
 
 from pathlib import Path
 from launch import LaunchDescription

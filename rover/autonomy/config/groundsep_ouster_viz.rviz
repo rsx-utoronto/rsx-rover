@@ -67,7 +67,7 @@ Visualization Manager:
         Min Value: -10
         Value: true
       Axis: Z
-      Channel Name: range
+      Channel Name: intensity
       Class: rviz_default_plugins/PointCloud2
       Color: 255; 121; 128
       Color Transformer: FlatColor
@@ -81,9 +81,8 @@ Visualization Manager:
       Name: nonground
       Position Transformer: XYZ
       Selectable: true
-      Selectable: true
       Size (Pixels): 3
-      Size (m): 0.009999999776482582
+      Size (m): 0.01
       Style: Flat Squares
       Topic:
         Depth: 5
@@ -93,7 +92,7 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /patchworkpp/nonground
       Use Fixed Frame: true
-      Use rainbow: true
+      Use rainbow: false
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: false
@@ -102,7 +101,7 @@ Visualization Manager:
         Min Value: -10
         Value: true
       Axis: Z
-      Channel Name: range
+      Channel Name: intensity
       Class: rviz_default_plugins/PointCloud2
       Color: 166; 255; 206
       Color Transformer: FlatColor
@@ -116,9 +115,8 @@ Visualization Manager:
       Name: ground
       Position Transformer: XYZ
       Selectable: true
-      Selectable: true
       Size (Pixels): 3
-      Size (m): 0.009999999776482582
+      Size (m): 0.01
       Style: Flat Squares
       Topic:
         Depth: 5
@@ -128,7 +126,7 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /patchworkpp/ground
       Use Fixed Frame: true
-      Use rainbow: true
+      Use rainbow: false
       Value: true
     - Class: rviz_default_plugins/TF
       Enabled: true
