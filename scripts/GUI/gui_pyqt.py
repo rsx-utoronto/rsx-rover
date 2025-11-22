@@ -39,6 +39,8 @@ class mapOverlay(QWidget):
         )
         self.setLayout(self.initOverlayout())
         self.centreOnRover = False
+	    
+        self.viewer.set_elevation_source(str(Path(__file__).parent.resolve() / "elevation.json"))
         
         # ROS Subscriber for GPS coordinates
         # rospy.Subscriber('/calian_gnss/gps', NavSatFix, self.update_gps_coordinates)
@@ -1380,8 +1382,15 @@ class RoverGUI(QMainWindow):
         self.checkbox_setting_splitter.setChecked(False)  # Set the default state to unchecked
         # self.checkbox_setting_splitter.stateChanged.connect(self.on_checkbox_state_changed)
         self.checkbox_setting_splitter.stateChanged.connect(
-            lambda state: self.on_checkbox_state_changed(state, self.map_overlay_splitter)
+            lambda state: self.on_checkbox_state_changed(state, self.map_overlay_splitter, "recenter")
         )
+        
+        self.checkbox_show_elevation = QCheckBox("Show Elevation Points")
+        self.checkbox_show_elevation.setChecked(False)
+        self.checkbox_show_elevation.stateChanged.connect(   
+            lambda state: self.on_checkbox_state_changed(state, self.map_overlay_splitter, "elevation")
+        )
+        
         self.clear_map_button = QPushButton("Clear Map")
         self.clear_map_button.setStyleSheet(button_style)
         self.clear_map_button.clicked.connect(self.map_overlay_splitter.clear_map)
@@ -1389,6 +1398,7 @@ class RoverGUI(QMainWindow):
         # Create horizontal layout for checkbox and clear button
         checkbox_layout = QHBoxLayout()
         checkbox_layout.addWidget(self.checkbox_setting_splitter)
+        checkbox_layout.addWidget(self.checkbox_show_elevation)
         checkbox_layout.addStretch(1)  # This pushes the checkbox left and button right
         checkbox_layout.addWidget(self.clear_map_button)
         
@@ -1436,13 +1446,19 @@ class RoverGUI(QMainWindow):
         # split_screen_layout.addWidget(self.statusTermGroupBox) 
         self.split_screen_tab.setLayout(split_screen_layout)
 
-    def on_checkbox_state_changed(self, state,map_overlay):
-        if state == Qt.Checked:
-            map_overlay.centreOnRover = True
-            # Perform actions for the checked state
-        else:
-            map_overlay.centreOnRover = False
-            # Perform actions for the unchecked state
+    def on_checkbox_state_changed(self, state, map_overlay: mapOverlay, cb_name):
+        if cb_name == "recenter":
+            if state == Qt.Checked:
+                map_overlay.centreOnRover = True
+                # Perform actions for the checked state
+            else:
+                map_overlay.centreOnRover = False
+                # Perform actions for the unchecked state
+        if cb_name == "elevation":
+            if state == Qt.Checked:
+                map_overlay.viewer.display_elevation()
+            else:
+                map_overlay.viewer.hide_elevation()
 
     def change_gear(self, value):
         self.velocity_control.set_gear(value/10+1)

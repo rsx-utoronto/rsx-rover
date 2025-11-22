@@ -1177,6 +1177,15 @@ class MapViewer(QWidget):
 		# Get bounds asynchronously and process them
 		self.map.getBounds(process_bounds)
 
+	def hide_elevation(self):
+		"""Remove elevation layer from the map."""
+		if self.elevation_layer:
+			self.map.removeLayer(self.elevation_layer)
+			self.elevation_data: dict = {}
+			self.elevation_layer = None
+			self.elevation_min: float = 0
+			self.elevation_max: float = 0
+
 if __name__ == "__main__":
 	import sys
 
