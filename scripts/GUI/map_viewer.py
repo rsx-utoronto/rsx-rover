@@ -1555,7 +1555,7 @@ class MapViewer(QWidget):
 		popup_marker.bindPopup(popup_message)
 		popup_marker.addTo(self.map)
 
-	def arm_radius(self, point: MapPoint):
+	'''def arm_radius(self, point: MapPoint):
 		# grab data from the row that has Astronout (need to make sure that there is actually points stored on delivery_lat_long_goal)
 		# go to that coordinate on the map, draw a circle with radius X 
 		# Question: how does this function get called? 
@@ -1570,7 +1570,6 @@ class MapViewer(QWidget):
 					if row[0] == "Astronaut 2":    
 						target_lat = row[1]
 						target_long = row[2]
-
 				
 			print("DRAWING CIRCLEEEEEE")
 			c = L.circle([point.latitude, point.longitude], point.radius, {'weight': 4})
@@ -1584,9 +1583,75 @@ class MapViewer(QWidget):
 			
 
 		except:
-			print("No data is stored, please press Delivery button")
+			print("No data is stored, please press Delivery button")'''
 
-	
+	def arm_radius(self):
+		"""
+		Reads the delivery_lat_lon_goal.csv file, finds the row for 'Astronaut 2',
+		and draws a circle at that coordinate with the configured point radius.
+		"""
+
+		delivery_path = Path.cwd() / "delivery_lat_lon_goal.csv"
+
+		try:
+			target_lat = None
+			target_long = None
+
+			print("LOOKING FOR CSV")
+
+			with open(delivery_path, newline="") as f:
+				reader = csv.reader(f)
+
+				for row in reader:
+					# CSV format assumed: name, lat, lon
+					if row[0] == "Astronaut 2":
+						target_lat = float(row[1])
+						target_long = float(row[2])
+						break
+
+			if target_lat is None:
+				print("Astronaut 2 not found in CSV")
+				return
+
+			print("DRAWING CIRCLE")
+
+			# Create a new layer for this marker if needed
+			if not hasattr(self, "arm_layer"):
+				self.arm_layer = L.layerGroup()
+				self.arm_layer.addTo(self.map)
+			else:
+				# Clear previous marker
+				self.map.removeLayer(self.arm_layer)
+				self.arm_layer = L.layerGroup()
+				self.arm_layer.addTo(self.map)
+
+			target_lat = 43.6571
+			target_long = -77.3997
+
+			# Draw the circle
+			circle = L.circle(
+				[target_lat, target_long],
+				{
+					"radius":  20,   # point.radius must exist
+					"color":   "red",
+					"weight":  4
+				}
+			)
+
+			circle.addTo(self.arm_layer)
+
+			# Optional tooltip
+			if point.name:
+				map_js_snnipets.map_layer_bind_tooltip(
+					circle, 
+					point.name,
+					{"permanent": True, "direction": "down"}
+				)
+
+		except Exception as e:
+			print("Error:", e)
+			print("No data is stored — please press Delivery button")
+
 
 	"""
 	POINT LAYER
@@ -1847,9 +1912,15 @@ if __name__ == "__main__":
 	QTimer.singleShot(1000, show_elevation)
 
 	viewer.map.zoom.connect(show_elevation)
+	#viewer.arm_radius()
+
+	print("Calling arm_radius...")
+	viewer.arm_radius()
+	print("Returned from arm_radius.")
+
+
 	
 	# viewer.set_robot_position(38.5,-110.78)
 
-	
 	
 	sys.exit(app.exec_())
