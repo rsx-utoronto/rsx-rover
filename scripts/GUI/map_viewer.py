@@ -1625,9 +1625,6 @@ class MapViewer(QWidget):
 				self.arm_layer = L.layerGroup()
 				self.arm_layer.addTo(self.map)
 
-			target_lat = 43.6571
-			target_long = -77.3997
-
 			# Draw the circle
 			circle = L.circle(
 				[target_lat, target_long],
@@ -1640,13 +1637,13 @@ class MapViewer(QWidget):
 
 			circle.addTo(self.arm_layer)
 
-			# Optional tooltip
+			'''# Optional tooltip
 			if point.name:
 				map_js_snnipets.map_layer_bind_tooltip(
 					circle, 
 					point.name,
 					{"permanent": True, "direction": "down"}
-				)
+				)'''
 
 		except Exception as e:
 			print("Error:", e)
