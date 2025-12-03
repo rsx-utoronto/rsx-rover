@@ -14,10 +14,7 @@ import threading
 import yaml
 import os
 import numpy as np
-<<<<<<< HEAD
-=======
 import threading
->>>>>>> a73775d7afc0124f12f61e1821296d96ca4e6f99
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 #file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml"
@@ -38,12 +35,12 @@ class StraightLineApproach(Node):
         # self.targets = targets
         self.found = False
         self.abort_check = False
-        self.x = -100000
-        self.y = -100000
+        self.x = 0#-100000
+        self.y = 0#-100000
         self.heading = 0
         self.active = False
         self.target = None
-        
+        self.sub = self.create_subscription(String, 'chatter', self.callback, 10)
         # Use QoS depth 10 and add callback logging
         self.pose_subscriber = self.create_subscription(
             PoseStamped, '/pose', self.pose_callback, 10)
@@ -62,7 +59,11 @@ class StraightLineApproach(Node):
         self.active = False
         self.target = None
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
-        
+    
+    def callback(self, msg):
+        #print("I heard: ", msg.data)
+        pass
+
     def feedback_callback(self, msg):
         print("in SL feedback callback, msg.state:", msg.state)
         self.get_logger().info(f"in SL feedback callback, msg.state: {msg.state}")
@@ -70,7 +71,9 @@ class StraightLineApproach(Node):
         if msg.state == "START_SL":
             self.active = True
             print("in SL msg.current_goal", msg.current_goal)
-            self.target = msg.current_goal
+            target_x = msg.current_goal.pose.position.x
+            target_y = msg.current_goal.pose.position.y
+            self.target = [(target_x, target_y)]
             self.get_logger().info("Straight line behavior ACTIVE")
             self.navigate()
         else:
@@ -126,9 +129,11 @@ class StraightLineApproach(Node):
         kp = 0.5
         threshold = 0.5
         angle_threshold = 0.2
-
+        print(f"Starting move_to_target towards: ({target_x}, {target_y})")
+        print(self.x, self.y, self.heading)
         while (rclpy.ok()) and (self.abort_check is False):
             # rclpy.spin_once(self, timeout_sec=0.1)
+            print("in move to target loop", self.x, self.y)
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
@@ -170,30 +175,30 @@ class StraightLineApproach(Node):
             time.sleep(1/50)
 
     def navigate(self, state="Location Selection"): #navigate needs to take in a state value as well
-        print("self.targets", self.targets)
-        for target_x, target_y in self.targets:
+        print("self.targets", self.target)
+        for target_x, target_y in self.target:
             print(f"Moving towards target: ({target_x}, {target_y})")
             self.move_to_target(target_x, target_y)
             if self.abort_check:
                 self.abort_check = False
                 break
             time.sleep(1)
-        if (np.abs(self.x - self.target[0]) < 0.5) and (np.abs(self.y - self.target[1]) < 0.5):
-            sla_msg = String()
-            sla_msg.data = "SL_SUCCESS"
+        if (np.abs(self.x - self.target[0][0]) < 0.5) and (np.abs(self.y - self.target[0][1]) < 0.5):
+            sla_msg = MissionState()
+            sla_msg.state = "SLA_DONE"
         else:
-            sla_msg = String()
-            sla_msg.data = "SL_FAILED"
-        self.sla_pub.publish(sla_msg)
+            sla_msg = MissionState()
+            sla_msg.state = "SLA_FAILED"
+        self.pub.publish(sla_msg)
 
 def main():
     import rclpy
     rclpy.init(args=None)
     sla = StraightLineApproach()
-    try:
-        print("spinning SL node")
-        rclpy.spin(sla)  # stays active
-    finally:
+    try: 
+        print("spinning sla node")
+        rclpy.spin(sla)
+    finally: 
         sla.destroy_node()
         rclpy.shutdown()
 
