@@ -286,13 +286,17 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     sla = AstarObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                 else:
                     print("Not Doing Obstalce Avoidance")
+                    print("Print to cehck last print 0")
                     #sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                    # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                     if target_name=="GNSS1" or target_name=="GNSS2" or target_name=="start":
+                        print("Print to cehck last print 1")
                         msg = MissionState()
                         msg.state = "START_SL"
                         msg.current_goal = [target]
+                        print("Print to cehck last print 2")
                         self.mission_state_pub.publish(msg)
+                        print("Print to cehck last print 3")
                         
                         # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
                     else:
@@ -304,6 +308,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                         # sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target], target_name) 
                 # sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 print("before nav in fms")
+                print("Starting straight line approach to next target")
                 sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 print("after navigate")
                 if self.glob_msg.abort_check: #Checks if abort button is pressed
@@ -1201,7 +1206,7 @@ def main(args=None):
             if "OBJ3" in RUN_STATES:
                 smach.StateMachine.add(
                     "OBJ3",
-                    obj2,
+                    obj3,
                     transitions={"Location Selection": "Location Selection",
                                  "ABORT" : "ABORT"},
                     remapping={
