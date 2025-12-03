@@ -14,6 +14,10 @@ import threading
 import yaml
 import os
 import numpy as np
+<<<<<<< HEAD
+=======
+import threading
+>>>>>>> a73775d7afc0124f12f61e1821296d96ca4e6f99
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 #file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml"
