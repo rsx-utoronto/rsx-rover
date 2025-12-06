@@ -12,3 +12,4 @@ science_data/
 build/
 install/
 log/
+venv/
