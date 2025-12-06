@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-import rospy
+import rclpy
+from rclpy.node import Node
 import cv2
 import time
 from sensor_msgs.msg import Image, CameraInfo
@@ -17,14 +18,16 @@ with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
 
 
-class ObjectDetectionNode():
+class ObjectDetectionNode(Node):
     def __init__(self):
+        super().__init__('object_detector')
         if sm_config.get("realsense_detection"):
             self.image_topic = sm_config.get("realsense_detection_image_topic") 
             self.info_topic = sm_config.get("realsense_detection_info_topic")
         else:
             self.image_topic = sm_config.get("zed_detection_image_topic") 
             self.info_topic = sm_config.get("zed_detection_info_topic")    
+            
         self.state_topic = "state"
         self.curr_state = "Start"
         t = time.time()
@@ -36,13 +39,13 @@ class ObjectDetectionNode():
         print("Object Detection Node Initialized\n\n\n\n")
 
 
-        self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
-        self.cam_info_sub = rospy.Subscriber(self.info_topic, CameraInfo, self.info_callback)
-        self.state_sub = rospy.Subscriber(self.state_topic, String, self.state_callback)
-        self.mallet_pub = rospy.Publisher('mallet_detected', Bool, queue_size=1)
-        self.waterbottle_pub = rospy.Publisher('waterbottle_detected', Bool, queue_size=1)
-        self.bbox_pub = rospy.Publisher('object/bbox', Float64MultiArray, queue_size=10)
-        self.vis_pub = rospy.Publisher('vis/object_detections', Image, queue_size=10)
+        self.image_sub = self.create_subscription( Image,self.image_topic, self.image_callback,10)
+        self.cam_info_sub = self.create_subscription(CameraInfo, self.info_topic, self.info_callback,10)
+        self.state_sub = self.create_subscription(String, self.state_topic, self.state_callback, 10)
+        self.mallet_pub = self.create_publisher(Bool, 'mallet_detected', 1)
+        self.waterbottle_pub = self.create_publisher(Bool, 'waterbottle_detected', 1)
+        self.bbox_pub = self.create_publisher(Float64MultiArray, 'object/bbox', 10)
+        self.vis_pub = self.create_publisher(Image, 'vis/object_detections', 10)
         self.mallet_found = False
         self.waterbottle_found = False
     
@@ -66,7 +69,7 @@ class ObjectDetectionNode():
         try:
             cv_image = self.bridge.imgmsg_to_cv2(ros_image, "bgr8")
         except CvBridgeError as e:
-            rospy.logerr(f"Failed to convert ROS image to CV2: {e}")
+            self.get_logger().error(f"Failed to convert ROS image to CV2: {e}")
             return
         if self.curr_state == "OBJ1" or self.curr_state == "OBJ2":
             self.detect_objects(cv_image)
@@ -117,9 +120,11 @@ class ObjectDetectionNode():
 
 
 def main():
-    rospy.init_node('object_detector', anonymous=True)
+    rclpy.init()
     object_detector = ObjectDetectionNode()
-    rospy.spin()
+    rclpy.spin(object_detector)
+    object_detector.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == "__main__":
     main()

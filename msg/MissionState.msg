@@ -1,0 +1,2 @@
+string state
+geometry_msgs/PoseStamped current_goal

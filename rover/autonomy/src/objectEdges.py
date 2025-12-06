@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from sensor_msgs.msg import Image  # Import Image message type from sensor_msgs package
 from cv_bridge import CvBridge
 import cv2 
@@ -11,11 +12,12 @@ PUBLISH_RATE = 5
 INPUT_TOPIC = '/zed2i/zed_node/rgb/image_rect_color'
 OUTPUT_TOPIC = 'object_stream'
 
-class objectsImage():
+class objectsImage(Node):
 
     def __init__(self):
-        self.inStream = rospy.Subscriber(INPUT_TOPIC, Image, self.callback, queue_size = 1)
-        self.outStream = rospy.Publisher(OUTPUT_TOPIC, Image, queue_size=1)
+        super().__init__('object_edges')
+        self.inStream = self.create_subscription( Image, INPUT_TOPIC,self.callback,  1)
+        self.outStream = self.create_publisher(Image, OUTPUT_TOPIC, 1)
         self.bridge = CvBridge()
         self.objects = Image()
 
@@ -33,7 +35,13 @@ class objectsImage():
     def publish(self):
         self.outStream.publish(self.objects)
 
-if __name__ == '__main__':
-    rospy.init_node('object_edges', anonymous=True)
+def main(args=None):
+    rclpy.init(args=args)
     objects_image = objectsImage()
-    rospy.spin()
+    rclpy.spin(objects_image)
+    objects_image.destroy_node()
+    rclpy.shutdown()
+    
+if __name__ == '__main__':
+    main()
+    

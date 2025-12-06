@@ -1,10 +1,14 @@
 #!/usr/bin/python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray
 import math
+import time
+rate_hz = 50
+rate_duration = 1.0 / rate_hz
 
 def ToEulerAngles(w, x, y, z):
     angles = [0, 0, 0] # [roll, pitch, yaw]
@@ -41,12 +45,16 @@ def target_callback(msg):
     target_y = msg.data[1]
 
 def straight_line_approach(lin_vel, ang_vel):
-    rospy.Subscriber('/rtabmap/odom', Odometry, callback=odom_callback) # change topic name
-    rospy.Subscriber('target', Float64MultiArray, callback=target_callback) # change topic name
-    # float64[2] data format: [x, y]
-    pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
-    rospy.init_node('straight_line_approach')
-    rate = rospy.Rate(50)
+    
+    rclpy.init()
+    node = rclpy.create_node('straight_line_approach')
+
+    pub = node.create_publisher(Twist, 'drive', 10)
+    node.create_subscription(Odometry, '/rtabmap/odom', odom_callback, 10)
+    node.create_subscription(Float64MultiArray, 'target', target_callback, 10)
+   
+    # rate = node.create_rate(50)
+    
     threshold = 0.1 # this threshold is for distance and angle 
     kp = 0.5
     kd = 0.5
@@ -55,8 +63,8 @@ def straight_line_approach(lin_vel, ang_vel):
     err_threshold = 50 # acc_error resets to 0 when it gets to 50
     angle_diff = 0 # because prev_angle_diff needs a value to start
 
-    print("till here works")
-    while not rospy.is_shutdown():
+    
+    while rclpy.ok():
 
         msg = Twist()
         if target_x == None or target_y == None or x == None or y == None:
@@ -64,7 +72,7 @@ def straight_line_approach(lin_vel, ang_vel):
         target_heading = math.atan2(target_y - y, target_x - x) # in radians #1. Switch places, 
         print("target heading", target_heading)  
         target_distance = math.sqrt((target_x - x) ** 2 + (target_y - y) ** 2)
-
+        time.sleep(rate_duration)
         print("target_distance", target_distance)
         print(x,y)
         
@@ -83,8 +91,8 @@ def straight_line_approach(lin_vel, ang_vel):
         diff_err = abs(prev_angle_diff - angle_diff) # old - new angle difference
 
         if target_distance < threshold:
-            msg.linear.x=0
-            msg.angular.z=0
+            msg.linear.x=float(0)
+            msg.angular.z=float(0)
             print("stoping")
             pub.publish(msg)
             # next = True
@@ -96,7 +104,7 @@ def straight_line_approach(lin_vel, ang_vel):
             print("target_reached_x",delta)
             print("current_X", x)
             #if delta is negative, go to negative velocity.
-            msg.linear.x = lin_vel
+            msg.linear.x = float(lin_vel)
             msg.angular.z = 0
 
         else:
@@ -121,7 +129,11 @@ if __name__ == '__main__':
     heading = 0
     target_x = 7
     target_y = -3
+    
+    
     try:
-        straight_line_approach(1.5, 0.5) # change linear and angular velocities
-    except rospy.ROSInterruptException:
-        pass  
+        straight_line_approach(1.5, 0.5)  # your function
+    except KeyboardInterrupt:
+        print("Interrupted by user")
+    finally:
+        rclpy.shutdown()

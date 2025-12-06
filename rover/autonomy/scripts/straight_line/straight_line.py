@@ -1,7 +1,10 @@
+# NOTE DID NOT CONVERT TO ROS2 AS WE DO NOT USE THIS FILE
+
 import rospy
 from sensor_msgs.msg import NavSatFix
 from geopy.distance import geodesic
 from math import * 
+
 
 def gps_to_cartesian(start_lat, start_lon, target_lat, target_lon):
     # Use geopy to calculate the distance and bearing

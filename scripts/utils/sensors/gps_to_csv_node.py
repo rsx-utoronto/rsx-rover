@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix
 import csv
 
@@ -17,10 +18,11 @@ def callback(data):
     f.close()
     
 def start():
-
-    rospy.init_node('gps_to_csv', anonymous=True)
-    rospy.Subscriber("/fix", NavSatFix, callback)
-    rospy.spin()
+    rclpy.init()
+    node=rclpy.create_node('gps_to_csv_node')
+    # rospy.init_node('gps_to_csv', anonymous=True)
+    node.create_subscription(NavSatFix, "/fix", callback, 10)
+    rclpy.spin(node)
 
 if __name__ == '__main__':
     start()

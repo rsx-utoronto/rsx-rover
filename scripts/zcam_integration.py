@@ -1,14 +1,16 @@
 #!/usr/bin/python3
 
 import numpy as np
-import rospy
+import rclpy
+from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32MultiArray, Float64MultiArray
 
-class Aimer:
+class Aimer(Node):
     def __init__(self, frame_width: int, frame_height: int, min_aruco_area: float, 
                  aruco_min_x_uncert: float, aruco_min_area_uncert: float,
                  max_linear_v: float, max_angular_v: float) -> None:
+        super().__init__('aimer_node')
         self.target_x = frame_width / 2
         self.target_y = frame_height / 2
         self.max_linear_v = max_linear_v
@@ -101,8 +103,12 @@ class AimerROS(Aimer):
 
 
 def main():
-    rospy.init_node('aruco_homing', anonymous=True)
-    pub = rospy.Publisher('drive', Twist, queue_size=10)
+    
+    rclpy.init(args=None)
+    node= rclpy.create_node('zcam_integration_node')    
+    node.
+    # pub = rospy.Publisher('drive', Twist, queue_size=10)
+    
     aimer = AimerROS(640, 360, 1000, 100, 100, 0.5, 0.5)
     rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate)
     rate = rospy.Rate(10)

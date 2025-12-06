@@ -1,9 +1,12 @@
 #! /usr/bin/env python3
-import rospy 
+import rclpy
+from rclpy.node import Node 
 from sensor_msgs.msg import Image 
 import cv2 
+import time
 from cv_bridge import CvBridge 
 
+rclpy.init(args=None)
 # create the name of publisher node 
 publisher_name = "camera_sensor_publisher"
 
@@ -11,14 +14,16 @@ publisher_name = "camera_sensor_publisher"
 topicName = "video_topic"
 
 # initialize the node 
-rospy.init_node(publisher_name, anonymous=True)
+# rospy.init_node(publisher_name, anonymous=True)
+node=rclpy.create_node(publisher_name)
 
 # create a publisher object, specify the name of the topic, a tpye of message beign sent (Image), 
 # and define the buffer size (queue_size)
-publisher = rospy.Publisher(topicName, Image, queue_size=60)
+# publisher = rospy.Publisher(topicName, Image, queue_size=60)
+publisher = node.create_publisher(Image, topicName, 60)
 
 # rate of transmitting the messages 
-rate = rospy.Rate(60)
+
 
 video = cv2.VideoCapture(0)
 
@@ -26,13 +31,14 @@ video = cv2.VideoCapture(0)
 bridgeObject = CvBridge()
 
 # captures the iamges and transmits them through the topic
-while not rospy.is_shutdown():
+while rclpy.ok():
     returnValue, capturesFrame = video.read()
     if returnValue:
-        rospy.loginfo('Video Frame captured and published')
+        # rospy.loginfo('Video Frame captured and published')
+        
         # convert OpenCV to ROS image message
         imageToTransmit = bridgeObject.cv2_to_imgmsg(capturesFrame)
         # pubish the converted image throught the topic
         publisher.publish(imageToTransmit)
 
-    rate.sleep()
+    time.sleep(1/60)

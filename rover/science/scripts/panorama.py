@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 
 import stitcher
-import rospy
+import rclpy
+from rclpy.node import Node
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
 import time
 
 # ros subscriber
-class Subscriber:
-    def __init__(self):
-        self.sub = rospy.Subscriber('/zed_node/rgb/image_rect_color', Image, self.callback)
+class Subscriber():
+    def __init__(self, node: Node):
+        self.node = node
+        # self.sub = rospy.Subscriber('/zed_node/rgb/image_rect_color', Image, self.callback)
+        self.sub = self.node.create_subscription(Image, '/zed_node/rgb/image_rect_color', self.callback, 10)
         self.imgfiles = []
         self.save = False
     
@@ -22,7 +26,6 @@ class Subscriber:
             print('Image ' + str(len(self.imgfiles)))
             self.imgfiles.append(data)
             #cv2.imshow('image', CvBridge().imgmsg_to_cv2(data, "bgr8"))
-
 
     def save1(self):
         self.save = True
@@ -35,8 +38,9 @@ class Subscriber:
         
 # ros publisher
 class Publisher:
-    def __init__(self):
-        self.pub = rospy.Publisher('/drive', Twist, queue_size=100)
+    def __init__(self, node: Node):
+        # self.pub = rospy.Publisher('/drive', Twist, queue_size=100)
+        self.pub = node.create_publisher(Twist, '/drive', 10)
 
     def turn(self, angular_vel):
         twist = Twist()
@@ -51,10 +55,17 @@ class Publisher:
         self.pub.publish(twist)
 
 
-class Panorama:
-    def __init__(self, sub: Subscriber, pub: Publisher):
-        self.sub:Subscriber = sub
-        self.pub:Publisher = pub
+class Panorama(Node):
+    def __init__(self):
+        super().__init__("panorama")
+        self.sub:Subscriber = Subscriber(self)
+        self.pub:Publisher = Publisher(self)
+        # self.receive_control = rospy.Subscriber("/pano_control", Bool, self.callback)
+        # self.pano_img = rospy.Publisher('/pano_img', Image, queue_size=100)
+        # self.result_pub = rospy.Publisher("/pano_result", Image, queue_size=100)
+        self.receive_control = self.create_subscription(Bool, "/pano_control", self.callback, 10)
+        self.pano_img = self.create_publisher(Image, '/pano_img', 10)
+        self.result_pub = self.create_publisher(Image, "/pano_result", 10)
         self.stitcher = stitcher.Stitcher()
 
     def start(self, num_images):
@@ -75,16 +86,46 @@ class Panorama:
             time.sleep(1)
         #exit out of loop by not saving photos
         self.sub.stop()
+        
         #pass stitcher class the list of images to stitch together
-        self.stitcher.stitch(self.sub.imgfiles)
+        res = self.stitcher.stitch(self.sub.imgfiles)
+        if res is None:
+            print("Stitching failed")
+            return
+        else:
+            print("Stitching succeeded")
+            
+            stitched_image = res
+            
+            # Convert OpenCV image to ROS Image message
+            bridge = CvBridge()
+            try:
+                # Convert the stitched image to a ROS Image message
+                ros_image = bridge.cv2_to_imgmsg(stitched_image, "bgr8")
+                # Publish the ROS Image message
+                self.result_pub.publish(ros_image)
+
+                # Publish the panorama images as ROS Images
+                for img in self.sub.imgfiles:
+                    ros_image = bridge.cv2_to_imgmsg(img, "bgr8")
+                    self.pano_img.publish(ros_image)
+
+            except CvBridgeError as e:
+                print(e)
+                
         print('Panorama completed')
+    
+    def callback(self, data):
+        if data.data:
+            print('Received control')
+            self.start(15)
 
 def main():
-    rospy.init_node('panorama')
-    sub = Subscriber()
-    pub = Publisher()
-    pan = Panorama(sub, pub)
-    pan.start(10)
+    rclpy.init(args=None)
+    # sub = Subscriber()
+    # pub = Publisher()
+    pan = Panorama()
+    rclpy.spin(pan)
 
 if __name__ == '__main__':
     main()

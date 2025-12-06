@@ -1,5 +1,13 @@
 #!/bin/bash
-rosnode kill /zed_node
-sleep 40 #seconds after killing zed_node and then relaunch 
-ssh jetson 'source /opt/ros/noetic/setup.bash && source ~/rover_ws/devel/setup.bash && export ROS_MASTER_URI=http://192.168.0.99:11311 && export ROS_IP=192.168.0.250  && roslaunch rover zed_odom.launch && exit'
 
+# Kill the zed_node process on your local machine (replace with actual node/process name)
+pkill -f zed_node
+
+sleep 40 # wait before relaunching
+
+# Relaunch zed_node on Jetson with ROS 2 environment
+ssh jetson '
+  source /opt/ros/humble/setup.bash &&
+  source ~/rover_ws/install/setup.bash &&
+  ros2 launch rover zed_odom.launch.py
+'

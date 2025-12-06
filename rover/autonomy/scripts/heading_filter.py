@@ -2,25 +2,34 @@
 
 # gps and magnetometer heading filter
 
-import rospy
+import rclpy 
+from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Imu
 import math
 import time
+from math import atan2, pi, sin, cos, radians
 
-class HeadingFilter:
+class HeadingFilter(Node):
     def __init__(self):
-        self.gnss_sub = rospy.Subscriber('/pose', PoseStamped, self.gnss_callback)
-        self.imu_sub = rospy.Subscriber('/imu/orient', Imu, self.imu_callback)
-        self.heading_pub = rospy.Publisher('/fused_heading', Imu, queue_size=1)
+        super().__init__('heading_filter')
+        self.gnss_sub = self.create_subscription( PoseStamped,'/pose', self.gnss_callback,10)
+        self.imu_sub = self.create_subscription(Imu, '/imu/orient', self.imu_callback,10)
+        self.heading_pub = self.create_publisher( Imu, '/fused_heading', 1)
         self.orientation = Quaternion()
         self.orientation_covariance = [0] * 9
         self.imu = Imu()
         self.gnss_fix = False
         self.accuracy_2d = 1000000
         # self.accuracy_3d = 1000000
-        self.mag_declination = rospy.get_param('~magnetic_declination_radians')
-        self.armlength = rospy.get_param('~armlength')
+        # self.mag_declination = rospy.get_param('~magnetic_declination_radians')
+        # self.armlength = rospy.get_param('~armlength')
+        
+        self.declare_parameter('magnetic_declination_radians', -10.04 * pi / 180)  # optional default
+        self.declare_parameter('armlength', 1.0)  # default if not passed in
+        
+        self.mag_declination = self.get_parameter('magnetic_declination_radians').value
+        self.armlength = self.get_parameter('armlength').value
     
     def gnss_callback(self, data):
         self.orientation.set_heading_to_quaternion(self.orientation.quaternion_to_heading(data.pose.orientation) + self.mag_declination)
@@ -74,12 +83,30 @@ class Quaternion:
         self.w = w
         return self
     
+# if __name__ == '__main__':
+#     rospy.init_node('heading_filter')
+#     # rate = rospy.Rate(10)
+#     heading_filter = HeadingFilter()
+#     while not rospy.is_shutdown():
+#         heading_filter.publish_heading()
+#         time.sleep(0.1)
+#         # rospy.loginfo('published heading:', heading_filter.imu.orientation)
+#         # rate.sleep()
+        
+        
+def main(args=None):
+    rclpy.init(args=args)
+    node = HeadingFilter()
+    try:
+        while rclpy.ok():
+            node.publish_heading()
+            time.sleep(0.1)
+            # node.get_logger().info(f'Published heading: {node.imu.orientation}')
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
 if __name__ == '__main__':
-    rospy.init_node('heading_filter')
-    # rate = rospy.Rate(10)
-    heading_filter = HeadingFilter()
-    while not rospy.is_shutdown():
-        heading_filter.publish_heading()
-        time.sleep(0.1)
-        # rospy.loginfo('published heading:', heading_filter.imu.orientation)
-        # rate.sleep()
+    main()

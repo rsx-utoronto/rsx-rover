@@ -1,0 +1,13 @@
+<CycloneDDS>
+  <Domain id="any">
+    <General>
+      <NetworkInterfaceAddress>enp45s0</NetworkInterfaceAddress>
+      <AllowMulticast>true</AllowMulticast>
+    </General>
+    <!-- <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>0</MaxAutoParticipantIndex>
+    </Discovery> -->
+    <Tracing><Verbosity>config</Verbosity></Tracing>
+  </Domain>
+</CycloneDDS>

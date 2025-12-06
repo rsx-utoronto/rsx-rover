@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from sensor_msgs.msg import Imu
-import tf
+from transforms3d.euler import quat2euler, euler2quat
 
 
-class ImuDataToENU:
+class ImuDataToENU(Node):
     def __init__(self):
+        super().__init__('imu_to_enu')
+        # self.sub = rospy.Subscriber('/zed_node/imu/data', Imu, self.imu_callback)
+        # self.pub = rospy.Publisher('/imu/enu', Imu, queue_size=1)
+        # rospy.spin()
+        self.sub= self.create_subscription(Imu, '/zed/zed_node/imu/data', self.imu_callback, 10)
+        self.pub = self.create_publisher(Imu, '/imu/enu', 1)
         
-        self.sub = rospy.Subscriber('/zed_node/imu/data', Imu, self.imu_callback)
-        self.pub = rospy.Publisher('/imu/enu', Imu, queue_size=1)
-        rospy.spin()
 
     def imu_callback(self, data):
         transformed = Imu()
@@ -33,8 +37,8 @@ class ImuDataToENU:
         self.pub.publish(transformed)
 
     def transform_orientation(self, orientation):
-        rpy = tf.transformations.euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
-        new_orientation = tf.transformations.quaternion_from_euler(-rpy[1], rpy[0], rpy[2])
+        rpy = quat2euler([orientation.x, orientation.y, orientation.z, orientation.w])
+        new_orientation = euler2quat(-rpy[1], rpy[0], rpy[2])
         return new_orientation
 
     def transform_covariance(self, covariance):
@@ -51,5 +55,12 @@ class ImuDataToENU:
         return new_covariance
 
 if __name__ == '__main__':
-    rospy.init_node('imu_to_enu')
-    ImuDataToENU()
+    rclpy.init(args=None)
+    try:
+        imu_to_enu = ImuDataToENU()
+        rclpy.spin(imu_to_enu)
+    except rclpy.exceptions.ROSInterruptException:
+        pass
+    finally:
+        rclpy.shutdown()
+    

@@ -2,13 +2,19 @@
 """
 Gives goals to move_base
 """
-import rospy
-import actionlib
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+import rclpy
+from rclpy.node import Node
+#  import actionlib Ros 1 only
+# from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal Ros 1 only
+from rclpy.action import ActionClient
+from nav2_msgs.action import NavigateToPose
 
-class MoveBaseGoalSet():
+
+class MoveBaseGoalSet(Node):
     def __init__(self):
-        self.client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
+        super().__init__('move_base_goal_set')
+        # self.client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
+        self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
         self.client.wait_for_server()
 
         self.goal = MoveBaseGoal()
@@ -30,13 +36,27 @@ class MoveBaseGoalSet():
         self.client.send_goal(self.goal)
         wait = self.client.wait_for_result()
         if not wait:
-            rospy.logerr("Action server not available!")
-            rospy.signal_shutdown("Action server not available!")
+            # rospy.logerr("Action server not available!")
+            self.get_logger().error("Action server not available!")
+            rclpy.shutdown("Action server not available!")
+            
         else:
             self.client.get_result()
-            rospy.loginfo("Goal execution done!")
+            # rospy.loginfo("Goal execution done!")
+            self.get_logger().info("Goal execution done!")
+            
 if __name__ == '__main__':
-    rospy.init_node('move_base_goal', anonymous=True)
-
-    move_base_goal = MoveBaseGoalSet()
-    move_base_goal.send_goal(1, 1)
+    rclpy.init(args=None)
+    move_base_goal= None
+    try:
+        move_base_goal = MoveBaseGoalSet()
+        move_base_goal.send_goal(1, 1)
+        rclpy.spin_once(move_base_goal)  # or spin(), depending on how you implemented goal feedback
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if move_base_goal is not None:
+           
+            move_base_goal.destroy_node()
+  
+        rclpy.shutdown()

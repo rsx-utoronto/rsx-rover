@@ -5,13 +5,21 @@ import serial
 import subprocess 
 import serial.tools.list_ports
 from std_msgs.msg import String
-import rospy
+import rclpy
+from rclpy.node import Node
+import os
+import rospkg
+from ament_index_python.packages import get_package_share_directory
 
 #For Windows
-class LedLight():
+class LedLight(Node):
     def __init__(self):
-      self.led_sub = rospy.Subscriber("led_light", String, self.state_callback)
+      super().__init__('led_light_node')
+      self.led_sub = self.create_subscription(String, "led_light", self.state_callback, 10)
+  
       self.board = None
+      self.done_pre = False
+      self.mode = "off"
       self.init_board()
 
     def list_all_ports(self):
@@ -57,16 +65,26 @@ class LedLight():
               return port
         
     def linux_get_led_port(self):
-        # Run the v4l2-ctl command and capture the output
-        #journalctl -k | grep -i usb
-
-        command = 'rover_ws/src/rsx-rover/scripts/utils/gen/find_usb.sh'
-
-        output = subprocess.run(['bash', command], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        # Get the output and errors from the script
-        stdout = output.stdout.decode()
-
+        # locate the find_usb.sh script in the rsx-rover package
+        rospack = rospkg.RosPack()
+        # pkg_path = rospack.get_path('rover')
+        pkg_path = get_package_share_directory('rover')
+        
+        script_path = os.path.join(pkg_path, 'scripts/utils/gen/find_usb.sh')
+        if not os.path.isfile(script_path):
+            self.get_logger().error(f"Script not found: {script_path}")
+            # rospy.logerr(f"LED port finder script not found: {script_path}")
+            return ''
+        
+        result = subprocess.run(['bash', script_path],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                text=True)
+        if result.returncode != 0:
+            self.get_logger().error(f"Error running {script_path}: {result.stderr.strip()}")
+            return ''
+        stdout = result.stdout
+        print("stdout", stdout)
         # Split the output into lines
         lines = stdout.splitlines()
         
@@ -94,13 +112,13 @@ class LedLight():
     def init_board(self):
       serial_port =  self.linux_get_led_port().strip() #only works when accessing with sudo
       print("Serial Port:", serial_port)
-      #serial_port = "/dev/ttyUSB0" #Find out the seriel_port
+      # serial_port = "/dev/ttyUSB5" #Find out the serial_port
       self.board = serial.Serial(port=serial_port, baudrate=115200, timeout=1)
-      rospy.sleep(2)
+      rclpy.timer.Rate(1).sleep()
       self.board.write(bytes('blue\n', 'utf-8'))
       print("I'm initialized!")
       
-
+      
     def state_callback(self, msg):
       mode = msg.data.strip()
       # mode = msg.data
@@ -113,7 +131,7 @@ class LedLight():
           #if i > 0:
             #self.board.open()
         self.board.write(bytes(res, 'utf-8')) 
-          #board.close()
+          #board.close() #dont need a while loop because board does it automatically!
           #time.sleep(0.3) 
           #board.open()   
           #board.write(bytes('off\n', 'utf-8'))
@@ -140,10 +158,14 @@ class LedLight():
 
 if __name__ == "__main__":
     # Initialize the ROS node
-    rospy.init_node('led_listener', anonymous=True)
+    rclpy.init(args=None)
+    led=None
     try:
         led = LedLight()
-        rospy.spin()
-    except rospy.ROSInterruptException:
+        rclpy.spin(led)
+    except rclpy.exceptions.ROSInterruptException:
         pass
-    
+    finally:
+        if led is not None:
+            led.board.close()
+        rclpy.shutdown()

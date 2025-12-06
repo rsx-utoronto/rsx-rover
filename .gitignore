@@ -8,4 +8,8 @@ __pycache__/
 rover/arm/scripts/__pycache__/
 scripts/GUI/tile_cache/
 genie_pics/
+science_data/
+build/
+install/
+log/
 venv/
