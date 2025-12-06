@@ -13,6 +13,7 @@ from std_msgs.msg import Float64MultiArray
 from std_msgs.msg import Bool
 from std_msgs.msg import String
 from cv_bridge import CvBridge, CvBridgeError
+from rover.msg import MissionState
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 

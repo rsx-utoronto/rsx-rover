@@ -9,7 +9,6 @@ from std_msgs.msg import Float64MultiArray, Bool, String
 from rover.msg import MissionState
 import math
 import time
-import ar_detection_node as adn
 import threading
 import yaml
 import os
@@ -56,7 +55,6 @@ class StraightLineApproach(Node):
         self.sla_pub = self.create_publisher(String, 'sla_pub', 10)
         self.lin_vel= sm_config.get("straight_line_approach_lin_vel")
         self.ang_vel = sm_config.get("straight_line_approach_ang_vel")
-        self.active = False
         self.target = None
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
     
@@ -186,10 +184,13 @@ class StraightLineApproach(Node):
         if (np.abs(self.x - self.target[0][0]) < 0.5) and (np.abs(self.y - self.target[0][1]) < 0.5):
             sla_msg = MissionState()
             sla_msg.state = "SLA_DONE"
+            self.active = False
         else:
             sla_msg = MissionState()
             sla_msg.state = "SLA_FAILED"
+            self.active = False
         self.pub.publish(sla_msg)
+        
 
 def main():
     import rclpy

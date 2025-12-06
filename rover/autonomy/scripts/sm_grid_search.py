@@ -9,8 +9,6 @@ from std_msgs.msg import Float64MultiArray, Bool, String
 from rover.msg import MissionState
 import math
 import aruco_homing as aruco_homing
-import ar_detection_node as ar_detect
-import sm_straight_line as StraightLineApproach
 
 import yaml
 import os
@@ -49,12 +47,15 @@ class GS_Traversal(Node):
         self.mallet_found = False
         self.waterbottle_found = False
 
+        # NEW: status reported back from homing node
+        self.homing_status = None
+
         # modified code: add dictionary to manage detection flags for multiple objects
         self.found_objects = {"AR1":False, 
                    "AR2":False,
-                   "AR3":False,
                    "OBJ1":False,
-                   "OBJ2":False}
+                   "OBJ2":False, 
+                   "OBJ3":False}
         self.odom_subscriber = self.create_subscription(Odometry, '/rtabmap/odom', self.odom_callback, 10)  # modified to use rclpy
         self.pose_subscriber = self.create_subscription(PoseStamped, 'pose', self.pose_callback, 10)    
         self.target_subscriber = self.create_subscription(Float64MultiArray, 'target', self.target_callback, 10)
@@ -69,10 +70,14 @@ class GS_Traversal(Node):
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
     
     def feedback_callback(self, msg):
+        # existing START_GS_TRAV handling
         if msg.state == "START_GS_TRAV":
             self.active = True
             self.get_logger().info("Grid Search behavior ACTIVE")
             self.navigate()
+        # NEW: homing result handling
+        elif msg.state in ("HOMING_DONE", "HOMING_SUCCESS", "HOMING_FAILED"):
+            self.homing_status = msg.state
         else:
             self.active = False
             
@@ -167,9 +172,9 @@ class GS_Traversal(Node):
         
         mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
-                   "AR3":self.aruco_found,
                    "OBJ1":obj,
-                   "OBJ2":obj}
+                   "OBJ2":obj, 
+                   "OBJ3":obj}
         first_time=True
         
         # print("In move to target")
@@ -177,9 +182,9 @@ class GS_Traversal(Node):
             obj = self.mallet_found or self.waterbottle_found
             mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
-                   "AR3":self.aruco_found,
                    "OBJ1":obj,
-                   "OBJ2":obj}
+                   "OBJ2":obj, 
+                   "OBJ3":obj}
             # print("in grid search: mapping state", mapping[state])
             msg = Twist()
             # print("state", state)
@@ -230,9 +235,10 @@ class GS_Traversal(Node):
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 # pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
                 pub = self.create_publisher(Twist, 'drive', 10)  # modified to use rclpy
-                if state == "AR1" or state == "AR2" or state == "AR3":
+                if state == "AR1" or state == "AR2":
                     # this sees which camera it is using and then uses the parameters accordingly.
                     if sm_config.get("realsense_detection"):
+                        
                         aimer = aruco_homing.AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     else: 
                         aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
@@ -242,7 +248,7 @@ class GS_Traversal(Node):
                     # rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
                     self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10)  # modified to use rclpy
                     print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
-                elif state == "OBJ1" or state == "OBJ2":
+                elif state == "OBJ1" or state == "OBJ2" or state == "OBJ3" :
                     #add realsense check here
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
                     self.create_subscription(Float64MultiArray, 'object/bbox', aimer.rosUpdate, 10)
@@ -320,11 +326,13 @@ class GS_Traversal(Node):
             rclpy.timer.Rate(1).sleep()
 
     def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
-        
+        msg= MissionState()
         for target_x, target_y in self.targets:
             print('self target lenght', len(self.targets), self.targets, target_x,target_y)
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
                 print(f"Object detected during navigation: {self.found_objects[self.state]}")
+                msg.state="ARUCO_FOUND"
+                self.pub.publish(msg)
                 return True
             
             print("Going to target", target_x, target_y)

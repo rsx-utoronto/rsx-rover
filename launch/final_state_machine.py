@@ -25,6 +25,21 @@ def generate_launch_description():
             output='screen'
         )
         
+        # Node(
+        #     package='rover',
+        #     executable='aruco_detection_node.py',
+        #     name='aruco_detector',
+        #     output='screen'
+        # ), 
+        
+        # Node(
+        #     package='rover',
+        #     executable='aruco_homing.py',
+        #     name='aruco_homing',
+        #     output='screen'
+        # )
+        
+        
         #add asar obstacle avoidance node here later
         
         
