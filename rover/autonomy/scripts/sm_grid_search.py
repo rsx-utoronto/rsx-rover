@@ -41,6 +41,11 @@ class GS_Traversal(Node):
         self.state = state
         self.count = 0
         self.timer=0
+        self.w = sm_config.get("AR_grid_search_w")
+        self.h = sm_config.get("AR_grid_search_h")
+        self.tol = sm_config.get("AR_grid_search_tol")
+        self.start_x=0
+        self.start_y=0
         
         
         self.aruco_found = False
@@ -70,16 +75,23 @@ class GS_Traversal(Node):
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
     
     def feedback_callback(self, msg):
+        print("in GS traversal feedback callback, msg.state:", msg.state)
         # existing START_GS_TRAV handling
         if msg.state == "START_GS_TRAV":
+            print("Starting point:", self.start_x, self.start_y)
             self.active = True
             self.get_logger().info("Grid Search behavior ACTIVE")
+            self.start_x = msg.current_goal.pose.position.x
+            self.start_y = msg.current_goal.pose.position.y
+            
             self.navigate()
         # NEW: homing result handling
         elif msg.state in ("HOMING_DONE", "HOMING_SUCCESS", "HOMING_FAILED"):
             self.homing_status = msg.state
         else:
+            print("Setting GS traversal inactive")
             self.active = False
+       
             
     def pose_callback(self, msg):
         self.x = msg.pose.position.x
@@ -98,7 +110,38 @@ class GS_Traversal(Node):
     def target_callback(self, msg):
         self.target_x = msg.data[0]
         self.target_y = msg.data[1]
+    
+    def square_target(self):
+        print("Generating square grid search targets...")
+        # dx, dy indicates direction (goes "up" first)
+        dx, dy = 0, 1
+        # while self.start_x == None:
+        #     # print("Waiting for odom...")
+        #     # rospy.loginfo("Waiting for odom...")
+        #     continue
+        targets = [(self.start_x,self.start_y)]
+        step = 1
+        out_of_bounds = False
 
+        while len(targets) < self.w**2 - 1:
+            for i in range(2):  # 1, 1, 2, 2, 3, 3... etc
+                for j in range(step):
+                    if step*self.tol > self.w: 
+                        print ("step is outside of accepted width: step*tol=", step*self.tol, "\tself.x=",self.w)
+                        out_of_bounds = True
+                        break
+                    self.start_x, self.start_y = self.start_x + (self.tol*dx), self.start_y + (self.tol*dy)
+                    targets.append((self.start_x, self.start_y))
+                dx, dy = -dy, dx
+                if out_of_bounds:
+                    break
+            step += 1 
+            if out_of_bounds:
+                break
+        print ("these are the final targets", targets) 
+        print("Published gs_targets")
+        return targets
+    
     def to_euler_angles(self, w, x, y, z):
         angles = [0, 0, 0]  # [roll, pitch, yaw]
 
@@ -326,7 +369,10 @@ class GS_Traversal(Node):
             rclpy.timer.Rate(1).sleep()
 
     def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
-        msg= MissionState()
+        print("in gs navigate")
+        self.targets = self.square_target()
+        print("targets generated:", self.targets)
+        msg = MissionState()
         for target_x, target_y in self.targets:
             print('self target lenght', len(self.targets), self.targets, target_x,target_y)
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
@@ -342,7 +388,7 @@ class GS_Traversal(Node):
                 break
 
             rclpy.timer.Rate(1).sleep()
-        msg= MissionState()
+        msg = MissionState()
         if self.found_objects[self.state]:
             msg.state="ARUCO_FOUND"
             self.pub.publish(msg)
@@ -365,15 +411,19 @@ class GridSearch(Node):
         self.tol = sm_config.get("AR_grid_search_tol")
         self.pub = self.create_publisher(MissionState, 'mission_state', 10)
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
+        self.start_x=0
+        self.start_y=0
+        
     
     def feedback_callback(self, msg):
+        print("in GS feedback callback, msg.state:", msg.state, msg.starting_point)
         if msg.state == "START_GS":
             self.active = True
             self.get_logger().info("Grid Search behavior ACTIVE")
-            self.start_x = msg.starting_point[0]
-            self.start_y = msg.starting_point[1]
-            self.targets = self.square_target()
-            msg.gs_targets =  self.targets
+            self.start_x = msg.current_goal.pose.position.x
+            self.start_y = msg.current_goal.pose.position.y
+            # self.targets = [(0,0), (0,0)] #self.square_target()\
+            msg.gs_targets = self.square_target()
             self.pub.publish(msg)
         else:
             self.active = False
@@ -385,6 +435,7 @@ class GridSearch(Node):
     Generates a list of targets for square straight line approach.
     '''
     def square_target(self):
+        print("Generating square grid search targets...")
         # dx, dy indicates direction (goes "up" first)
         dx, dy = 0, 1
         # while self.start_x == None:
@@ -395,11 +446,11 @@ class GridSearch(Node):
         step = 1
         out_of_bounds = False
 
-        while len(targets) < self.x**2 - 1:
+        while len(targets) < self.w**2 - 1:
             for i in range(2):  # 1, 1, 2, 2, 3, 3... etc
                 for j in range(step):
-                    if step*self.tol > self.x: 
-                        print ("step is outside of accepted width: step*tol=", step*self.tol, "\tself.x=",self.x)
+                    if step*self.tol > self.w: 
+                        print ("step is outside of accepted width: step*tol=", step*self.tol, "\tself.x=",self.w)
                         out_of_bounds = True
                         break
                     self.start_x, self.start_y = self.start_x + (self.tol*dx), self.start_y + (self.tol*dy)
@@ -411,6 +462,10 @@ class GridSearch(Node):
             if out_of_bounds:
                 break
         print ("these are the final targets", targets) 
+        msg = MissionState()
+        msg.gs_targets = targets
+        self.pub.publish(msg)
+        print("Published gs_targets")
         return targets
 
     #Which function should be used?
@@ -423,20 +478,20 @@ class GridSearch(Node):
         targets = [(self.start_x,self.start_y)]
         step = 1
         # notice, up/down is odd amount, left/right is even amount        
-        while len(targets) < self.x: # 1, 2, 3, 4, 5... sol 
+        while len(targets) < self.w: # 1, 2, 3, 4, 5... sol 
             if step%2==1: # moving up/down
                 for i in range (step):
                     # move up if %4==1, down if %4 ==3 from the pattern
                     self.start_y+=1 if step%4 ==1 else -1
                     targets.append((self.start_x,self.start_y))
-                    if len(targets)==self.x:
+                    if len(targets)==self.w:
                         return targets
             else: 
                 for i in range (step):
                 # move right if %4==2, left if %4 ==0 
                     self.start_x+=1 if step%4==2 else -1
                     targets.append((self.start_x,self.start_y))
-                    if len(targets)==self.x:
+                    if len(targets)==self.w:
                         return targets
             step += 1  # Increase step size after two edges
         return targets
@@ -444,12 +499,11 @@ class GridSearch(Node):
 def main():
     import rclpy
     rclpy.init()
-    node = rclpy.create_node('sm_grid_search_idle')
-    node.get_logger().info('sm_grid_search alive (idle)')
+    gs= GridSearch()
     try:
-        rclpy.spin(node)
+        rclpy.spin(gs)
     finally:
-        node.destroy_node()
+        gs.destroy_node()
         rclpy.shutdown()
 
 if __name__ == '__main__':
