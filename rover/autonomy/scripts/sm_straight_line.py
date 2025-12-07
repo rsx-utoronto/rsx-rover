@@ -28,10 +28,6 @@ with open(file_path, "r") as f:
 class StraightLineApproach(Node):
     def __init__(self):
         super().__init__('straight_line_approach_node')
-        # self.lin_vel = lin_vel
-        # self.ang_vel = ang_vel
-        print("sm_straight_line initialized")
-        # self.targets = targets
         self.found = False
         self.abort_check = False
         self.x = 0#-100000

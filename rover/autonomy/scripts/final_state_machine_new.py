@@ -124,18 +124,13 @@ class GLOB_MSGS(Node):
         self.odom = None
         self.current_position = (0,0,0)
         self.sla_status = None
-        self.gs_targets = []
         self.gs_status = None
     
     def feedback_callback(self, msg):
         self.get_logger().info(f"Received feedback: {msg.state}")
         
         if msg.state == "SLA_DONE":
-            self.sla_status = "SLA_DONE"
-        # if hasattr(msg, 'gs_targets') and msg.gs_targets and hasattr(msg.gs_targets, 'data'):
-        #     self.gs_targets = list(msg.gs_targets.data)
-        #     self.get_logger().info(f"Received gs_targets: {len(self.gs_targets)} points")
-        
+            self.sla_status = "SLA_DONE"    
         if msg.state == "ARUCO_FOUND":
             self.gs_status = "ARUCO_FOUND"
         if msg.state == "ARUCO_NOT_FOUND":
@@ -502,11 +497,6 @@ class ARSearchState(smach.State):
                 msg.current_state = self.state_name
                 self.glob_msg.mission_state_pub.publish(msg)
 
-                # # wait for grid-search targets
-                # while (self.glob_msg.gs_targets == []) and rclpy.ok():
-                #     time.sleep(1)
-                #     self.glob_msg.pub_state(String(data="Waiting for grid search targets"))
-
                 # subscribe to aruco detection and wait for gs_status
                 self._subscribe_aruco()
                 self.glob_msg.pub_state(String(data=f"Starting {self.state_name} grid search"))
@@ -516,7 +506,6 @@ class ARSearchState(smach.State):
 
                 ar_in_correct_loc = (self.glob_msg.gs_status == "ARUCO_FOUND")
                 self.glob_msg.gs_status = None
-                # self.glob_msg.gs_targets = []
                 self.glob_msg.pub_state(String(data=f"End of {self.state_name} grid search"))
 
                 if self.glob_msg.abort_check:
@@ -670,17 +659,6 @@ class ObjectSearchState(smach.State):
                 msg.starting_point.pose.position.y = float(target[1])
                 msg.current_state = self.state_name
                 self.glob_msg.mission_state_pub.publish(msg)
-
-                # wait for grid-search targets to be published back to glob_msg
-                # while (self.glob_msg.gs_targets == []) and rclpy.ok():
-                #     time.sleep(1)
-                #     self.glob_msg.pub_state(String(data="Waiting for grid search targets"))
-
-                # # publish traversal start
-                # msg = MissionState()
-                # msg.state = "START_GS_TRAV"
-                # msg.current_state = self.state_name
-                # self.glob_msg.mission_state_pub.publish(msg)
 
                 # subscribe object detectors and wait for gs_status from grid-search
                 self._subscribe_object_topics()

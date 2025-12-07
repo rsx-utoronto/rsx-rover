@@ -3,4 +3,3 @@ string current_state
 geometry_msgs/PoseStamped current_goal
 string target_name
 geometry_msgs/PoseStamped starting_point
-float32[] gs_targets
