@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 import rclpy 
 from rclpy.node import Node
 import cv2
@@ -13,6 +12,7 @@ from std_msgs.msg import Float64MultiArray
 from std_msgs.msg import Bool
 from std_msgs.msg import String
 from cv_bridge import CvBridge, CvBridgeError
+from rover.msg import MissionState
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
@@ -42,8 +42,8 @@ class ARucoTagDetectionNode(Node):
         self.state_topic = "state"
         # self.image_sub = rospy.Subscriber(self.image_topic, Image, self.image_callback)
         self.image_sub = self.create_subscription(Image,self.image_topic, self.image_callback,10)
-        self.cam_info_sub = self.create_subscription( CameraInfo,self.info_topic, self.info_callback, 10)
-        self.state_sub = self.create_subscription( String,self.state_topic, self.state_callback, 10)
+        self.cam_info_sub = self.create_subscription(CameraInfo,self.info_topic, self.info_callback, 10)
+        self.state_sub = self.create_subscription(String,self.state_topic, self.state_callback, 10)
         #self.state_sub = rospy.Subscriber('rover_state', StateMsg, self.state_callback)
         #self.aruco_pub = rospy.Publisher('aruco_node/rover_state', StateMsg, queue_size=10)
         #self.scanned_pub = rospy.Publisher('aruco_scanned_node/rover_state', StateMsg, queue_size=10)
@@ -51,6 +51,8 @@ class ARucoTagDetectionNode(Node):
         self.aruco_pub = self.create_publisher(Bool,'aruco_found', 10)
         self.vis_pub = self.create_publisher(Image, 'vis/current_aruco_detections', 10)
         self.bbox_pub = self.create_publisher(Float64MultiArray,'aruco_node/bbox', 10)
+        self.mission_state_pub = self.create_publisher(MissionState, 'mission_state', 10)
+        self.create_subscription(MissionState,'mission_state',self.mission_state_callback, 10)
     
         t = time.time()
         
@@ -70,18 +72,23 @@ class ARucoTagDetectionNode(Node):
         self.found = False
 
     def image_callback(self, ros_image):
-        print("in image callback")
+        print("in aruco node detection image callback")
         try:
             cv_image = self.bridge.imgmsg_to_cv2(ros_image,"bgr8")
         except CvBridgeError as e:
             print(e)
         else:
-            # Do we need to undistort?    
-         
-            if self.curr_state == "AR1" or self.curr_state == "AR2" or self.curr_state == "AR3":
+            if self.curr_state == "AR1" or self.curr_state == "AR2":
                 print("calling findArucoMarkers")
                 self.findArucoMarkers(cv_image)
-    
+            
+    def mission_state_callback(self, msg):
+        print("in mission state callback")
+        self.mission_state_msg = msg.state
+        if self.mission_state_msg == "START_GS_TRAV":
+                print("calling findArucoMarkers")
+                self.findArucoMarkers(cv_image)
+        
     def info_callback(self, info_msg):
         print("in info callback")
         self.D = np.array(info_msg.d)
@@ -127,7 +134,6 @@ class ARucoTagDetectionNode(Node):
 
             best_detection = ids[0][0]
             self.get_logger().info(f"ar_detection_node: An AR tag was detected with the ID {best_detection}")
-            #self.scanned_state_smg.AR_SCANNED = True
             bboxs = bboxs[0]
             
             if draw:
@@ -136,7 +142,6 @@ class ARucoTagDetectionNode(Node):
                     print(type(bbox[0,0]))
 
                     cv2.rectangle(img, (int(bbox[0,0]), int(bbox[0,1])) , (int(bbox[2,0]), int(bbox[2,1])), (0,255,0), 4)
-                    # font
 
                     print(bbox[0][0],bbox[0][1],bbox[2][0],bbox[2][1])
                     self.array=[bbox[0,0], bbox[0,1], bbox[2,0], bbox[0,1], bbox[0,0], bbox[2,1], bbox[2,0], bbox[2,1]]
@@ -158,48 +163,28 @@ class ARucoTagDetectionNode(Node):
             
             img_msg = self.bridge.cv2_to_imgmsg(img, encoding="passthrough")
             self.vis_pub.publish(img_msg)
-            
-        #self.updated_state_msg = self.current_state
 
         if ids is not None:
             print(self.aruco_locations)
-            #self.updated_state_msg.AR_TAG_DETECTED = True
-            #self.updated_state_msg.curr_AR_ID = int(best_detection)
-
-            # Transform into a goal in the odom frame
-
-            # lookup baselink to camera link transform 
-            # lookup baselink to odom transform 
-            # transform the 4x4 pose to the odom frame and publish below
-
-            #self.scanned_state_smg.AR_SCANNED = False
             self.found = True
         else:
-            #self.updated_state_msg.AR_TAG_DETECTED = False
-            #self.updated_state_msg.curr_AR_ID = -1
             self.found = False
-
-        #self.aruco_pub.publish(self.updated_state_msg)
-        # self.aruco_pub.publish(self.found)
         self.aruco_pub.publish(Bool(data=self.found))
-        #self.scanned_pub.publish(self.scanned_state_smg)
+
      
     def is_found(self):
         return self.found
 
 def main(args=None):
-    rclpy.init(args=args)
+    import rclpy
+    rclpy.init()
     node = ARucoTagDetectionNode()
-    node.curr_state = "AR1"
-    rclpy.spin(node)
-    print("spinning node")
-    node.destroy_node()
-    rclpy.shutdown()
-    print("shut down")
-    # rospy.init_node('aruco_tag_detector', anonymous=True)
-    # AR_detector = ARucoTagDetectionNode()
-    
-    # rospy.spin()
+    try:
+        rclpy.spin(node)
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

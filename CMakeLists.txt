@@ -25,6 +25,7 @@ find_package(rosidl_default_generators REQUIRED)  # Replaces message_generation
 
 set(msg_files
   "msg/ArmInputs.msg"
+  "msg/MissionState.msg"
 )
 
 set(srv_files
@@ -199,10 +200,10 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY 
-  scripts/GUI/tile_cache 
-  DESTINATION lib/${PROJECT_NAME}
-)
+# install(DIRECTORY 
+#   scripts/GUI/tile_cache 
+#   DESTINATION lib/${PROJECT_NAME}
+# )
 
 install(PROGRAMS
   scripts/GUI/gui_pyqt.py

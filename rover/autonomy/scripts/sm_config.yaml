@@ -2,11 +2,11 @@
 RUN_STATES:
   - GNSS1
   - GNSS2
+  - OBJ1
+  - OBJ2
+  - OBJ3
   - AR1
   - AR2
-  - OBJ1
-  - AR3
-  - OBJ2
 
   
 #  - GNSS1
@@ -52,7 +52,9 @@ States_run_in_order:
   - OBJ1
   - OBJ2
   - OBJ3
- 
+
+
+  
 
 #- OBJ2
 

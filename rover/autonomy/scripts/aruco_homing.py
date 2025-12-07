@@ -6,6 +6,7 @@ from rclpy.node import Node
 import time
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32MultiArray, Float64MultiArray
+from rover.msg import MissionState
 
 class Aimer: # 
 

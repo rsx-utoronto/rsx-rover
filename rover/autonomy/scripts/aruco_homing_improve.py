@@ -7,6 +7,10 @@ import time
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32MultiArray, Float64MultiArray
 import yaml
+import threading
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy, HistoryPolicy
 
 file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
 
@@ -134,16 +138,26 @@ class AimerROS(Aimer):  #updates coords continuously
                  aruco_min_x_uncert: float, aruco_min_area_uncert: float,
                  max_linear_v: float, max_angular_v: float) -> None:
         super().__init__(frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v)
-        
-    def rosUpdate(self, data: Int32MultiArray) -> None: #Callback function for recieving data of the bbox
-        print ("\nDATA FROM AIMER ", data)
-        self.aruco_top_left = (data.data[0], data.data[1])
-        self.aruco_top_right = (data.data[2], data.data[3])
-        self.aruco_bottom_left = (data.data[4], data.data[5])
-        self.aruco_bottom_right = (data.data[6], data.data[7])
-        #self.update(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right) #Have to take this out
-        
+        self._lock = threading.Lock()
+        self._have_bbox = False
 
+    def rosUpdate(self, data: Float64MultiArray) -> None:
+        # Keep the callback tiny: just copy the latest bbox safely
+        arr = list(data.data) if hasattr(data, "data") else []
+        if len(arr) < 8:
+            return
+        with self._lock:
+            self.aruco_top_left = (arr[0], arr[1])
+            self.aruco_top_right = (arr[2], arr[3])
+            self.aruco_bottom_left = (arr[4], arr[5])
+            self.aruco_bottom_right = (arr[6], arr[7])
+            self._have_bbox = True
+
+    def snapshot_bbox(self):
+        with self._lock:
+            if not self._have_bbox:
+                return None
+            return (self.aruco_top_left, self.aruco_top_right, self.aruco_bottom_left, self.aruco_bottom_right)
 
 class ArucoHomingNode(Node):
     def __init__(self):
