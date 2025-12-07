@@ -8,13 +8,6 @@ RUN_STATES:
   - AR1
   - AR2
 
-  
-#  - GNSS1
- # - AR3
- # - OBJ1
-  #- OBJ2
- # - GNSS2
-
 origin_pose: [0.0, 0.0]
 heading_vector: [1.1, 0.0]
 

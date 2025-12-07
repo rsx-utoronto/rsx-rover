@@ -5,7 +5,7 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='rover',
-            executable='final_state_machine_new.py',
+            executable='state_machine.py',
             name='rover_state_machine',
             output='screen'
         ), 
