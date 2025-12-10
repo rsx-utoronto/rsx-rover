@@ -67,14 +67,15 @@ class ARucoTagDetectionNode(Node):
         self.permanent_thresh = 10
         self.K = None
         self.D = None
+        self.last_cv_image = None
         #self.updated_state_msg = StateMsg()
         #self.scanned_state_smg = StateMsg()
         self.found = False
 
     def image_callback(self, ros_image):
-        print("in aruco node detection image callback")
         try:
             cv_image = self.bridge.imgmsg_to_cv2(ros_image,"bgr8")
+            self.last_cv_image=cv_image
         except CvBridgeError as e:
             print(e)
         else:
@@ -86,11 +87,13 @@ class ARucoTagDetectionNode(Node):
         print("in mission state callback")
         self.mission_state_msg = msg.state
         if self.mission_state_msg == "START_GS_TRAV":
+            if getattr(self, 'last_cv_image') is not None:
                 print("calling findArucoMarkers")
-                self.findArucoMarkers(cv_image)
-        
+                self.findArucoMarkers(self.last_cv_image)
+            else: 
+                self.get_logger().info("ar_detection_node: No image received yet for AR detection.")
+            
     def info_callback(self, info_msg):
-        print("in info callback")
         self.D = np.array(info_msg.d)
         self.K = np.array(info_msg.k)
         self.K = self.K.reshape(3,3)
@@ -166,6 +169,9 @@ class ARucoTagDetectionNode(Node):
 
         if ids is not None:
             print(self.aruco_locations)
+            msg=MissionState()
+            msg.state = "ARUCO_FOUND"
+            self.mission_state_pub.publish(msg)
             self.found = True
         else:
             self.found = False

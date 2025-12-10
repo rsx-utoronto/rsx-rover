@@ -38,13 +38,13 @@ run_in_order : TRUE #false means we find shortest path, true means it takes in t
 #If you set this to true, make sure you do not skip any states
 
 States_run_in_order:
-  - GNSS1
-  - GNSS2
-  - AR1
-  - AR2
   - OBJ1
   - OBJ2
   - OBJ3
+  - AR1
+  - AR2
+  - GNSS1
+  - GNSS2
 
 
   

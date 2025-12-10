@@ -229,17 +229,17 @@ class GS_Traversal(Node):
                     angle_diff += 2 * math.pi
 
                 if target_distance < threshold:
-                    msg.linear.x = 0
-                    msg.angular.z = 0
+                    msg.linear.x = float(0)
+                    msg.angular.z = float(0)
                     self.drive_publisher.publish(msg)
                     print(f"Reached target: ({target_x}, {target_y})")
                     break 
 
                 if abs(angle_diff) <= angle_threshold:
                     msg.linear.x = self.lin_vel
-                    msg.angular.z = 0
+                    msg.angular.z = float(0)
                 else:
-                    msg.linear.x = 0
+                    msg.linear.x = float(0)
                     msg.angular.z = angle_diff * kp
                     if abs(msg.angular.z) < 0.3:
                         msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
@@ -294,7 +294,7 @@ class GS_Traversal(Node):
                                 msg.linear.x=self.lin_vel
                                 self.drive_publisher.publish(msg)
                                 print("final homing movement",abs(initial_time-time.time()) )
-                                rclpy.timer.Rate(1).sleep()
+                                time.sleep(0.1)
                             twist.linear.x = 0.0
                             twist.angular.z = 0.0
                             self.drive_publisher.publish(twist)
@@ -319,11 +319,13 @@ class GS_Traversal(Node):
                             break
                     
                     self.drive_publisher.publish(twist)
-                    rclpy.timer.Rate(1).sleep()
+                    # time.sleep(0.1)
+                    time.sleep(0.1)
                 break
 
             self.drive_publisher.publish(msg)
-            rclpy.timer.Rate(1).sleep()
+            # time.sleep(0.1)
+            time.sleep(0.1)
 
     def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
         print("in gs navigate")
@@ -331,18 +333,21 @@ class GS_Traversal(Node):
         print("targets generated:", self.targets)
         msg = MissionState()
         for target_x, target_y in self.targets:
-            print('self target lenght', len(self.targets), self.targets, target_x,target_y)
+            # print('self target lenght', len(self.targets), self.targets, target_x,target_y)
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
                 print(f"Object detected during navigation: {self.found_objects[self.state]}")
                 msg.state="ARUCO_FOUND"
+                msg.search_result="OBJ_FOUND"
                 self.pub.publish(msg)
                 return True
-            print("Going to target", target_x, target_y)
+            # print("Going to target", target_x, target_y)
             self.move_to_target(target_x, target_y, self.state) #changed from navigate_to_target
             if self.abort_check:
                 print("self.abort is true!")
                 break
-            rclpy.timer.Rate(1).sleep()
+            # time.sleep(0.1)
+            time.sleep(1)  # Small delay between targets
+
         
         msg = MissionState()
         if self.found_objects[self.state]:

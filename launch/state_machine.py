@@ -27,8 +27,15 @@ def generate_launch_description():
         
         Node(
             package='rover',
-            executable='aruco_detection_node.py',
+            executable='ar_detection_node.py',
             name='aruco_detector',
+            output='screen'
+        ), 
+
+        Node(
+            package='rover',
+            executable='object_subscriber_node.py',
+            name='object_subscriber',
             output='screen'
         )
         

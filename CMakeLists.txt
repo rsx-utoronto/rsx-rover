@@ -186,7 +186,7 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-  rover/autonomy/scripts/final_state_machine_new.py
+  rover/autonomy/scripts/state_machine.py
   rover/autonomy/scripts/sm_config.yaml
   long_lat_goal.csv
   DESTINATION lib/${PROJECT_NAME}
@@ -262,6 +262,17 @@ install(PROGRAMS
 
 install(PROGRAMS
   rover/autonomy/scripts/ar_detection_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/object_subscriber_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+install(PROGRAMS
+  rover/autonomy/scripts/mallet.pt
   DESTINATION lib/${PROJECT_NAME}
 )
 

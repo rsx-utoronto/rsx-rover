@@ -125,12 +125,15 @@ class GLOB_MSGS(Node):
         self.current_position = (0,0,0)
         self.sla_status = None
         self.gs_status = None
+        self.search_result = None
     
     def feedback_callback(self, msg):
         self.get_logger().info(f"Received feedback: {msg.state}")
         
         if msg.state == "SLA_DONE":
-            self.sla_status = "SLA_DONE"    
+            self.sla_status = "SLA_DONE"   
+    
+        self.search_result = msg.search_result
         if msg.state == "ARUCO_FOUND":
             self.gs_status = "ARUCO_FOUND"
         if msg.state == "ARUCO_NOT_FOUND":
@@ -502,7 +505,7 @@ class ARSearchState(smach.State):
                 self.glob_msg.pub_state(String(data=f"Starting {self.state_name} grid search"))
                 while self.glob_msg.gs_status is None and rclpy.ok():
                     time.sleep(1)
-                    self.glob_msg.pub_state(String(data="Waiting for grid search status"))
+                    self.glob_msg.pub_state(String(data=f"Waiting for grid search status, global gs_status {self.glob_msg.gs_status}"))
 
                 ar_in_correct_loc = (self.glob_msg.gs_status == "ARUCO_FOUND")
                 self.glob_msg.gs_status = None
@@ -649,8 +652,10 @@ class ObjectSearchState(smach.State):
         if current_distance < 5:
             self.glob_msg.pub_state(String(data=f"Reached {self.state_name} GNSS"))
             self.glob_msg.pub_state_name(String(data=self.state_name))
+            print("checkpoint 1")
 
             if not self.glob_msg.done_early:
+                print("checkpoint 2")
                 # publish START_GS (let grid-search node instantiate traversal)
                 msg = MissionState()
                 msg.state = "START_GS_TRAV"
@@ -662,15 +667,15 @@ class ObjectSearchState(smach.State):
 
                 # subscribe object detectors and wait for gs_status from grid-search
                 self._subscribe_object_topics()
-                self.glob_msg.pub_state(String(data=f"Starting {self.state_name} grid search"))
-                while self.glob_msg.gs_status is None and rclpy.ok():
+                self.glob_msg.pub_state(String(data=f"Starting {self.state_name} grid search {self.glob_msg.search_result}"))
+                while self.glob_msg.search_result not in {"OBJ_FOUND", "OBJ_NOT_FOUND"} and rclpy.ok():
                     time.sleep(1)
-                    self.glob_msg.pub_state(String(data="Waiting for grid search status"))
+                    self.glob_msg.pub_state(String(data=f"Waiting for grid search status, global gs_status {self.glob_msg.search_result}"))
 
                 # interpret grid-search result
-                in_correct_loc = (self.glob_msg.gs_status == "ARUCO_FOUND" or self.glob_msg.gs_status == "OBJ_FOUND")
+                in_correct_loc = (self.glob_msg.search_result == "OBJ_FOUND")
                 # reset shared status/targets
-                self.glob_msg.gs_status = None
+                self.glob_msg.search_result = None
                 # self.glob_msg.gs_targets = []
                 self.glob_msg.pub_state(String(data=f"End of {self.state_name} grid search"))
 
@@ -683,7 +688,8 @@ class ObjectSearchState(smach.State):
                     self._destroy_object_topics()
                     return "ABORT"
 
-                if self.mallet_found or self.waterbottle_found:
+
+                if self.mallet_found or self.waterbottle_found or in_correct_loc:
                     if self.mallet_found:
                         self.glob_msg.pub_state(String(data="Grid Search did find Mallet"))
                     if self.waterbottle_found:

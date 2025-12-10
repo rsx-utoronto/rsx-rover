@@ -1,4 +1,5 @@
 string state
+string search_result
 string current_state
 geometry_msgs/PoseStamped current_goal
 string target_name
