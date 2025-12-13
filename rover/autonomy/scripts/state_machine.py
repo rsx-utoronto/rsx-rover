@@ -122,13 +122,14 @@ class GLOB_MSGS(Node):
         self.done_early = False
         self.pose = PoseStamped()
         self.odom = None
-        self.current_position = (0,0,0)
+        self.current_position = None
         self.sla_status = None
         self.gs_status = None
+        self.state_message=None
     
     def feedback_callback(self, msg):
         self.get_logger().info(f"Received feedback: {msg.state}")
-        
+        self.state_message=msg
         if msg.state == "SLA_DONE":
             self.sla_status = "SLA_DONE"   
     
@@ -240,7 +241,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
                 y = distance * math.cos(theta)
 
                 cartesian[el] = (x,y) 
-                cartesian[el] =(0,0) #Temporary for testing, remove later 
+                # cartesian[el] =(0,0) #Temporary for testing, remove later 
                 self.glob_msg.pub_state(String(data=str(cartesian[el])))
 
         print("Before CARTESIAN", cartesian)
@@ -295,7 +296,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
         if path != {}: #Checks if all locations are visited
             
             try:
-                self.glob_msg.pub_state(String(data=f"Navigating to {list(path.items())[0][0]} and current location is {self.glob_msg.get_odom()}")) 
+                self.glob_msg.pub_state(String(data=f"Navigating to {list(path.items())[0][0]} and current location is {self.glob_msg.get_pose()}")) 
                 self.glob_msg.pub_state(String(data=f"Navigating to {self.glob_msg.cartesian[list(path.items())[0][0]]}")) 
                 target = path[list(path.items())[0][0]]
                 print("target in final stm:", target)
@@ -666,7 +667,7 @@ class ObjectSearchState(smach.State):
 
                 # subscribe object detectors and wait for gs_status from grid-search
                 self._subscribe_object_topics()
-                self.glob_msg.pub_state(String(data=f"Starting {self.state_name} grid search, {self.glob_msg.gs_status}"))
+                self.glob_msg.pub_state(String(data=f"Starting {self.state_name} grid search, {self.glob_msg.gs_status}, {self.glob_msg.state_message}"))
                 while self.glob_msg.gs_status not in {"OBJ_FOUND", "OBJ_NOT_FOUND"} and rclpy.ok():
                     time.sleep(1)
                     self.glob_msg.pub_state(String(data=f"Waiting for grid search status, global gs_status {self.glob_msg.gs_status}"))

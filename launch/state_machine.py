@@ -5,6 +5,13 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='rover',
+            executable='gps_to_pose.py',
+            name='gps_to_pose',
+            output='screen'
+        ),
+
+        Node(
+            package='rover',
             executable='state_machine.py',
             name='rover_state_machine',
             output='screen'
@@ -25,12 +32,12 @@ def generate_launch_description():
             output='screen'
         ),
         
-        Node(
-            package='rover',
+         Node(
+             package='rover',
             executable='ar_detection_node.py',
             name='aruco_detector',
             output='screen'
-        ), 
+         ), 
 
         Node(
             package='rover',
@@ -40,7 +47,7 @@ def generate_launch_description():
         )
         
         # Node(
-        #     package='rover',
+            #  package='rover',
         #     executable='aruco_homing.py',
         #     name='aruco_homing',
         #     output='screen'

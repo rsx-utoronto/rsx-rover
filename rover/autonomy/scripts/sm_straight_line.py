@@ -53,6 +53,7 @@ class StraightLineApproach(Node):
         self.ang_vel = sm_config.get("straight_line_approach_ang_vel")
         self.target = None
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
+        self._nav_thread = None
     
     def callback(self, msg):
         #print("I heard: ", msg.data)
@@ -68,8 +69,10 @@ class StraightLineApproach(Node):
             target_x = msg.current_goal.pose.position.x
             target_y = msg.current_goal.pose.position.y
             self.target = [(target_x, target_y)]
-            self.get_logger().info("Straight line behavior ACTIVE")
-            self.navigate()
+
+            if self._nav_thread is None or not self._nav_thread.is_alive():
+                self._nav_thread = threading.Thread(target=self.navigate, daemon=True)
+                self._nav_thread.start()
         else:
             self.active = False
     
@@ -79,7 +82,7 @@ class StraightLineApproach(Node):
         self.y = msg.pose.position.y
         self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
                                             msg.pose.orientation.y, msg.pose.orientation.z)[2]
-        self.get_logger().info(f"x: {self.x}, y {self.y}, heading {self.heading}")
+        # self.get_logger().info(f"x: {self.x}, y {self.y}, heading {self.heading}")
     
     def abort_callback(self,msg):
         self.abort_check = msg.data
@@ -127,7 +130,7 @@ class StraightLineApproach(Node):
         print(self.x, self.y, self.heading)
         while (rclpy.ok()) and (self.abort_check is False):
             # rclpy.spin_once(self, timeout_sec=0.1)
-            print("in move to target loop", self.x, self.y)
+            print("in move to target loop", self.x, self.y, self.heading)
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
@@ -148,13 +151,14 @@ class StraightLineApproach(Node):
                 angle_diff += 2 * math.pi
                 
             # print (f"diff in heading: {angle_diff}", f"target_distance: {target_distance}")
+            rclpy.spin_once(self, timeout_sec=0.1)
 
             if target_distance < threshold:
                 msg.linear.x = 0.0
                 msg.angular.z = 0.0
                 self.drive_publisher.publish(msg)
                 print(f"Reached target: ({target_x}, {target_y})")
-                break
+                return
 
             if abs(angle_diff) <= angle_threshold:
                 msg.linear.x = self.lin_vel
@@ -189,7 +193,6 @@ class StraightLineApproach(Node):
         
 
 def main():
-    import rclpy
     rclpy.init(args=None)
     sla = StraightLineApproach()
     try: 

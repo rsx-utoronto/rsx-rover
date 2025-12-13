@@ -13,6 +13,7 @@ import aruco_homing as aruco_homing
 
 import yaml
 import os
+import threading
 import time
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
@@ -68,7 +69,8 @@ class GS_Traversal(Node):
         # self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.pub = self.create_publisher(MissionState, 'mission_state', 10)
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
-    
+        self._nav_thread = None
+
     def feedback_callback(self, msg):
         print("in GS traversal feedback callback, msg.state:", msg.state)
         if msg.state == "START_GS_TRAV":
@@ -77,7 +79,9 @@ class GS_Traversal(Node):
             self.get_logger().info("Grid Search behavior ACTIVE")
             self.start_x = msg.current_goal.pose.position.x
             self.start_y = msg.current_goal.pose.position.y
-            self.navigate()
+            if self._nav_thread is None or not self._nav_thread.is_alive():
+                self._nav_thread = threading.Thread(target=self.navigate, daemon=True)
+                self._nav_thread.start()
         # elif msg.state in ("HOMING_DONE", "HOMING_SUCCESS", "HOMING_FAILED"):
         #     self.homing_status = msg.state
         else:
