@@ -22,6 +22,9 @@
   <depend>tf2</depend>
   <depend>message_filters</depend>
 
+  <build_depend>eigen3_cmake_module</build_depend>
+  <build_depend>Eigen3</build_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>

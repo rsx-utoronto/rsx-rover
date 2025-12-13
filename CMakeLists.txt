@@ -22,6 +22,9 @@ find_package(tf2 REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(rosidl_default_generators REQUIRED)  # Replaces message_generation
 
+find_package(eigen3_cmake_module REQUIRED)
+find_package(Eigen3 REQUIRED)
+
 
 set(msg_files
   "msg/ArmInputs.msg"
@@ -92,6 +95,16 @@ ament_target_dependencies(drive_sender_node
   message_filters
 )
 
+add_executable(ekf_core rover/autonomy/src/ekf_core.cpp)
+ament_target_dependencies(ekf_core
+  rclcpp
+  std_msgs
+  geometry_msgs
+  sensor_msgs
+  tf2
+  tf2_ros
+  Eigen3
+)
 # target_link_libraries(drive_sender_node PUBLIC
 #   rclcpp::rclcpp
 #   ${std_msgs_TARGETS}
@@ -137,6 +150,7 @@ target_include_directories(drive_sender_node PUBLIC
 # Install Targets =====================================================
 install(TARGETS 
   drive_sender_node
+  ekf_core
 #   arm_point_cloud_assembler
   # Add other executables here
   DESTINATION lib/${PROJECT_NAME}
