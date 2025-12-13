@@ -118,7 +118,7 @@ class StraightLineApproach(Node):
     def detection_callback(self, data):
         self.found = data
 
-    def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISHIT)
+    def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISH IT)
         
         kp = 0.5
         threshold = 0.5

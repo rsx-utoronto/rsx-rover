@@ -125,7 +125,6 @@ class GLOB_MSGS(Node):
         self.current_position = (0,0,0)
         self.sla_status = None
         self.gs_status = None
-        self.search_result = None
     
     def feedback_callback(self, msg):
         self.get_logger().info(f"Received feedback: {msg.state}")
@@ -133,11 +132,10 @@ class GLOB_MSGS(Node):
         if msg.state == "SLA_DONE":
             self.sla_status = "SLA_DONE"   
     
-        self.search_result = msg.search_result
-        if msg.state == "ARUCO_FOUND":
-            self.gs_status = "ARUCO_FOUND"
-        if msg.state == "ARUCO_NOT_FOUND":
-            self.gs_status = "ARUCO_NOT_FOUND"
+        if msg.state == "OBJ_FOUND":
+            self.gs_status = "OBJ_FOUND"
+        if msg.state == "OBJ_NOT_FOUND":
+            self.gs_status = "OBJ_NOT_FOUND"
         
     def pose_callback(self, msg):
         self.pose = msg
@@ -332,7 +330,6 @@ class LocationSelection(smach.State): #State for determining which mission/state
                         msg.current_goal = PoseStamped()
                         msg.current_goal.pose.position.x = target[0]
                         msg.current_goal.pose.position.y = target[1]
-                        msg.target_name = target_name
                         self.glob_msg.mission_state_pub.publish(msg)
                         # sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target], target_name) 
                 # sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
@@ -494,9 +491,9 @@ class ARSearchState(smach.State):
                 # publish START_GS with starting_point
                 msg = MissionState()
                 msg.state = "START_GS_TRAV"
-                msg.starting_point = PoseStamped()
-                msg.starting_point.pose.position.x = float(target[0])
-                msg.starting_point.pose.position.y = float(target[1])
+                # msg.starting_point = PoseStamped()
+                # msg.starting_point.pose.position.x = float(target[0])
+                # msg.starting_point.pose.position.y = float(target[1])
                 msg.current_state = self.state_name
                 self.glob_msg.mission_state_pub.publish(msg)
 
@@ -507,7 +504,7 @@ class ARSearchState(smach.State):
                     time.sleep(1)
                     self.glob_msg.pub_state(String(data=f"Waiting for grid search status, global gs_status {self.glob_msg.gs_status}"))
 
-                ar_in_correct_loc = (self.glob_msg.gs_status == "ARUCO_FOUND")
+                ar_in_correct_loc = (self.glob_msg.gs_status == "OBJ_FOUND")
                 self.glob_msg.gs_status = None
                 self.glob_msg.pub_state(String(data=f"End of {self.state_name} grid search"))
 
@@ -563,6 +560,7 @@ class ARSearchState(smach.State):
         self.glob_msg.pub_led_light(String(data="auto"))
 
         # cleanup aruco subscription if it exists
+        self.glob_msg.gs_status = None
         self._destroy_aruco()
         return "Location Selection"
 
@@ -625,6 +623,7 @@ class ObjectSearchState(smach.State):
                         pass
         finally:
             self._waterbottle_sub = None
+        self.glob_msg.gs_status = None
 
     def execute(self, userdata):
         # canonical state message
@@ -659,23 +658,23 @@ class ObjectSearchState(smach.State):
                 # publish START_GS (let grid-search node instantiate traversal)
                 msg = MissionState()
                 msg.state = "START_GS_TRAV"
-                msg.starting_point = PoseStamped()
-                msg.starting_point.pose.position.x = float(target[0])
-                msg.starting_point.pose.position.y = float(target[1])
+                # msg.starting_point = PoseStamped()
+                # msg.starting_point.pose.position.x = float(target[0])
+                # msg.starting_point.pose.position.y = float(target[1])
                 msg.current_state = self.state_name
                 self.glob_msg.mission_state_pub.publish(msg)
 
                 # subscribe object detectors and wait for gs_status from grid-search
                 self._subscribe_object_topics()
-                self.glob_msg.pub_state(String(data=f"Starting {self.state_name} grid search {self.glob_msg.search_result}"))
-                while self.glob_msg.search_result not in {"OBJ_FOUND", "OBJ_NOT_FOUND"} and rclpy.ok():
+                self.glob_msg.pub_state(String(data=f"Starting {self.state_name} grid search, {self.glob_msg.gs_status}"))
+                while self.glob_msg.gs_status not in {"OBJ_FOUND", "OBJ_NOT_FOUND"} and rclpy.ok():
                     time.sleep(1)
-                    self.glob_msg.pub_state(String(data=f"Waiting for grid search status, global gs_status {self.glob_msg.search_result}"))
+                    self.glob_msg.pub_state(String(data=f"Waiting for grid search status, global gs_status {self.glob_msg.gs_status}"))
 
                 # interpret grid-search result
-                in_correct_loc = (self.glob_msg.search_result == "OBJ_FOUND")
+                in_correct_loc = (self.glob_msg.gs_status == "OBJ_FOUND")
                 # reset shared status/targets
-                self.glob_msg.search_result = None
+                self.glob_msg.gs_status = None
                 # self.glob_msg.gs_targets = []
                 self.glob_msg.pub_state(String(data=f"End of {self.state_name} grid search"))
 
@@ -736,6 +735,7 @@ class ObjectSearchState(smach.State):
         self.glob_msg.pub_led_light(String(data="auto"))
 
         # cleanup subscriptions
+        self.glob_msg.gs_status = None
         self._destroy_object_topics()
         return "Location Selection"
 

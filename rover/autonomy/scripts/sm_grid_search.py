@@ -336,8 +336,8 @@ class GS_Traversal(Node):
             # print('self target lenght', len(self.targets), self.targets, target_x,target_y)
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
                 print(f"Object detected during navigation: {self.found_objects[self.state]}")
-                msg.state="ARUCO_FOUND"
-                msg.search_result="OBJ_FOUND"
+                msg.state="OBJ_FOUND"
+                # msg.search_result="OBJ_FOUND"
                 self.pub.publish(msg)
                 return True
             # print("Going to target", target_x, target_y)
@@ -351,10 +351,10 @@ class GS_Traversal(Node):
         
         msg = MissionState()
         if self.found_objects[self.state]:
-            msg.state="ARUCO_FOUND"
+            msg.state="OBJ_FOUND"
             self.pub.publish(msg)
             return True
-        msg.state="ARUCO_NOT_FOUND"
+        msg.state="OBJ_NOT_FOUND"
         self.pub.publish(msg)
         return False 
     
