@@ -101,9 +101,11 @@ class GPSToPose(Node):
         """
         
         # let's first transform our heading (also changing it to anti-clockwise being positive, east is 0.0)
-        heading = 2*pi - radians(gps1.heading) # + pi
+        # heading = 2*pi - radians(gps1.heading) # + pi
+        heading = - pi/2 - radians(gps1.heading)
         
         rover_heading = self.transform_heading(heading)
+        # self.get_logger().info(f"heading: {rover_heading}")
         qx,qy,qz,qw = functions.eulerToQuaternion(0.0, 0.0, rover_heading)        
 
         # now let's get our coordinate

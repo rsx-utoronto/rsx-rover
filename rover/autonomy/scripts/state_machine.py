@@ -173,6 +173,7 @@ class GLOB_MSGS(Node):
         relative_z = data.pose.pose.position.z - self.odom_zero.z
 
         self.current_position = (relative_x, relative_y, relative_z)
+        self.current_position =(0,0,0) # CHANGE WHEN TESTING OUTSIDE
             
     
     def get_odom(self):
@@ -248,7 +249,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
                 y = distance * math.cos(theta)
 
                 cartesian[el] = (x,y) 
-                # cartesian[el] =(0,0) #Temporary for testing, remove later 
+                cartesian[el] =(0,0) #Temporary for testing, remove later 
                 self.glob_msg.pub_state(String(data=str(cartesian[el])))
 
         print("Before CARTESIAN", cartesian)

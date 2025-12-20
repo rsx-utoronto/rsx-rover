@@ -70,6 +70,10 @@ class GS_Traversal(Node):
         self.pub = self.create_publisher(MissionState, 'mission_state', 10)
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
         self._nav_thread = None
+        self.aimer_aruco=None
+        self.aimer_object=None
+        self.aruco_bbox_sub=None
+        self.object_bbox_sub=None
 
     def feedback_callback(self, msg):
         print("in GS traversal feedback callback, msg.state:", msg.state)
@@ -266,7 +270,7 @@ class GS_Traversal(Node):
                     msg.linear.x = float(0)
                     msg.angular.z = angle_diff * kp
                     if abs(msg.angular.z) < 0.3:
-                        msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
+                        msg.angular.z = 0 #0.3 if msg.angular.z > 0 else -0.3 CHANGE WHEN TESTING OUSTIDE
 
             else: #if mapping[state] is True --> if the object is found
                 print("mapping state is true!")
@@ -282,12 +286,14 @@ class GS_Traversal(Node):
                         aimer = aruco_homing.AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     else: 
                         aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
-                    self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10) 
-                    print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
+                    if self.aruco_bbox_sub is None:
+                        self.aruco_bbox_sub= self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10) 
+                        print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                     
                 elif state == "OBJ1" or state == "OBJ2" or state == "OBJ3" :
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE, MALLET
-                    self.create_subscription(Float64MultiArray, 'object/bbox', aimer.rosUpdate, 10)
+                    if self.object_bbox_sub is None:
+                        self.object_bbox_sub= self.create_subscription(Float64MultiArray, 'object/bbox', aimer.rosUpdate, 10)
                     print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
               
                 # Wait a bit for initial detection
