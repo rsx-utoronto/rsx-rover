@@ -125,45 +125,62 @@ class GS_Traversal(Node):
         return angles
     
     def aruco_detection_callback(self, data):
-        time_now=time.time()
-        if abs(self.timer-time_now) >5:
-            self.timer=time_now
-            self.count=0
-        print("count,",self.count)
-        if data.data:
-            if self.count <= 4:
-                self.count +=1
-            else:
-                self.aruco_found = data.data
-                self.found_objects[self.state] = data.data
-                self.count += 1
+        try:
+            time_now = time.time()
+            if abs(self.timer - time_now) > 5:
+                self.timer = time_now
+                self.count = 0
+            print("count,", self.count)
+            if data.data:
+                if self.count <= 4:
+                    self.count += 1
+                else:
+                    self.aruco_found = data.data
+                    if self.state in self.found_objects:
+                        self.found_objects[self.state] = data.data
+                    else:
+                        self.get_logger().warn(f"aruco_detection_callback: state '{self.state}' not in found_objects keys")
+                    self.count += 1
+        except Exception as e:
+            self.get_logger().error(f"Exception in aruco_detection_callback: {e}")
     
     def mallet_detection_callback(self, data):
-        time_now=time.time()
-        if abs(self.timer-time_now) >5:
-            self.timer=time_now
-            self.count=0
-        if data.data:
-            if self.count <= 4:
-                self.count += 1
-            else:
-                self.mallet_found = data.data
-                self.found_objects[self.state] = data.data
-                self.count += 1
+        try:
+            time_now = time.time()
+            if abs(self.timer - time_now) > 5:
+                self.timer = time_now
+                self.count = 0
+            if data.data:
+                if self.count <= 4:
+                    self.count += 1
+                else:
+                    self.mallet_found = data.data
+                    if self.state in self.found_objects:
+                        self.found_objects[self.state] = data.data
+                    else:
+                        self.get_logger().warn(f"mallet_detection_callback: state '{self.state}' not in found_objects keys")
+                    self.count += 1
+        except Exception as e:
+            self.get_logger().error(f"Exception in mallet_detection_callback: {e}")
 
     def waterbottle_detection_callback(self, data):
-        time_now=time.time()
-        if abs(self.timer-time_now) >5:
-            self.timer=time_now
-            self.count=0
-        if data.data:
-            if self.count <= 4:
-                self.count += 1
-            else:
-                    
-                self.waterbottle_found = data.data
-                self.found_objects[self.state] = data.data
-                self.count += 1
+        try:
+            time_now = time.time()
+            if abs(self.timer - time_now) > 5:
+                self.timer = time_now
+                self.count = 0
+            if data.data:
+                if self.count <= 4:
+                    self.count += 1
+                else:
+                    self.waterbottle_found = data.data
+                    if self.state in self.found_objects:
+                        self.found_objects[self.state] = data.data
+                    else:
+                        self.get_logger().warn(f"waterbottle_detection_callback: state '{self.state}' not in found_objects keys")
+                    self.count += 1
+        except Exception as e:
+            self.get_logger().error(f"Exception in waterbottle_detection_callback: {e}")
 
     def square_target(self):
         print("Generating square grid search targets...")
@@ -209,6 +226,9 @@ class GS_Traversal(Node):
         first_time=True
         
         while (rclpy.ok()) and (self.abort_check is False):
+            # Allow ROS callbacks to process during the tight loop
+            rclpy.spin_once(self, timeout_sec=0.01)
+            
             obj = self.mallet_found or self.waterbottle_found
             mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
@@ -272,6 +292,7 @@ class GS_Traversal(Node):
               
                 # Wait a bit for initial detection
                 for i in range(50):
+                    rclpy.spin_once(self, timeout_sec=0.01)
                     time.sleep(0.1)
                 
                 # Add variables for tracking detection memory
@@ -280,6 +301,9 @@ class GS_Traversal(Node):
                 detection_active = False
 
                 while (rclpy.ok()) and (self.abort_check is False):
+                    # Allow ROS callbacks to process
+                    rclpy.spin_once(self, timeout_sec=0.01)
+                    
                     twist = Twist()
                     
                     # Check if we have valid values from the aimer
@@ -295,6 +319,7 @@ class GS_Traversal(Node):
                                 initial_time=time.time()
                             
                             while abs(initial_time-time.time()) < 0.7:
+                                rclpy.spin_once(self, timeout_sec=0.01)
                                 msg.linear.x=self.lin_vel
                                 self.drive_publisher.publish(msg)
                                 print("final homing movement",abs(initial_time-time.time()) )
