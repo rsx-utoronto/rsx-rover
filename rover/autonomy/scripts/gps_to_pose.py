@@ -3,7 +3,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, Imu
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Pose
 from math import atan2, pi, sin, cos, radians
 import gps_conversion_functions as functions
 import message_filters
@@ -43,6 +43,7 @@ class GPSToPose(Node):
         # ROS 2-style publishers/subscribers
         self.pose_pub = self.create_publisher(PoseStamped, '/pose', 10)
         self.imu_sub = self.create_subscription(Imu, '/imu/orient', self.imu_callback, 10)
+        self.set_origin_sub = self.create_subscription(Pose, '/set_origin', self.set_origin, 10)
 
         self.gps1 = message_filters.Subscriber(self, GnssSignalStatus, "calian_gnss/gps_extended")
         self.gps2 = message_filters.Subscriber(self, GnssSignalStatus, "calian_gnss/base_gps_extended")
@@ -148,6 +149,9 @@ class GPSToPose(Node):
             msg.pose.orientation.z = qz
             msg.pose.orientation.w = qw
         self.pose_pub.publish(msg)
+
+    def set_origin(self, msg: Pose):
+        self.origin_coordinates = (msg.position.x, msg.position.y)
 
     def imu_callback(self, msg):
         # Convert quaternion to Euler angles (roll, pitch, yaw)

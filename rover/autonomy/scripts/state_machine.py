@@ -26,7 +26,7 @@ import gps_to_pose as gps_to_pose
 import sm_grid_search
 import ar_detection_node
 from std_msgs.msg import String, Float32MultiArray
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Pose
 from nav_msgs.msg import Odometry
 import yaml
 import os
@@ -106,6 +106,7 @@ class GLOB_MSGS(Node):
         qos = QoSProfile(depth=10)
         qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
         self.mission_state_pub = self.create_publisher(MissionState, 'mission_state', qos) #remember that this is different
+        self.set_origin_pub = self.create_publisher(Pose, '/set_origin', 10)
 
         self.sub = self.create_subscription(PoseStamped, "/pose", self.pose_callback, 10)
         self.odom_sub = self.create_subscription(Odometry, "/rtabmap/odom", self.odom_callback, 10)
@@ -227,6 +228,12 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
             self.glob_msg.pub_state(String(data="Waiting for GPS coordinates"))
 
         cartesian_path = self.glob_msg.locations
+
+        pose_msg = Pose()
+        pose_msg.position.x = self.glob_msg.locations['start'][0]
+        pose_msg.position.y = self.glob_msg.locations['start'][1]
+        self.set_origin_pub.publish(pose_msg)
+
         # cartesian_path = shortest_path('start', self.glob_msg.locations) #Generates the optimal path 
         # print(cartesian_path)
 
