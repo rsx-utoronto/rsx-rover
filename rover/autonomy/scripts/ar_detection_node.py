@@ -75,6 +75,7 @@ class ARucoTagDetectionNode(Node):
         self._nav_thread = None
 
     def image_callback(self, ros_image):
+        # print("in ar callback")
         try:
             cv_image = self.bridge.imgmsg_to_cv2(ros_image,"bgr8")
             self.last_cv_image=cv_image
@@ -99,6 +100,7 @@ class ARucoTagDetectionNode(Node):
                 self.get_logger().info("ar_detection_node: No image received yet for AR detection.")
             
     def info_callback(self, info_msg):
+        # print("info_callback")
         self.D = np.array(info_msg.d)
         self.K = np.array(info_msg.k)
         self.K = self.K.reshape(3,3)
