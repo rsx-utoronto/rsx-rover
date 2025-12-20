@@ -174,6 +174,7 @@ class GS_Traversal(Node):
             self.get_logger().error(f"Exception in mallet_detection_callback: {e}")
 
     def waterbottle_detection_callback(self, data):
+        print("in waterbottle detection callback")
         try:
             time_now=time.time()
             if abs(self.timer-time_now) >5:

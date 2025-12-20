@@ -128,16 +128,16 @@ class ObjectDetectionNode(Node):
                 if obj_name == "mallet":
                     print("Mallet found")
                     mallet_found = True
-                    msg.search_result="OBJ_FOUND"
+                    msg.state="OBJ_FOUND"
                     self.mission_state_pub.publish(msg)      
                 elif obj_name == "waterbottle":
                     print("Waterbottle found")
                     waterbottle_found = True
-                    msg.search_result="OBJ_FOUND"
+                    msg.state="OBJ_FOUND"
                     self.mission_state_pub.publish(msg)      
                 else:
                     print("No object detected")
-                    msg.search_result="OBJ_NOT_FOUND"
+                    msg.state="OBJ_NOT_FOUND"
                     self.mission_state_pub.publish(msg)      
             # Publish detection status
             self.mallet_pub.publish(Bool(data=mallet_found))

@@ -106,7 +106,7 @@ class GLOB_MSGS(Node):
         qos = QoSProfile(depth=10)
         qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
         self.mission_state_pub = self.create_publisher(MissionState, 'mission_state', qos) #remember that this is different
-        self.set_origin_pub = self.create_publisher(Pose, '/set_origin', 10)
+        self.set_origin_pub = self.create_publisher(Pose, '/set_origin', 10) #EDWARD FIX PLEASE
 
         self.sub = self.create_subscription(PoseStamped, "/pose", self.pose_callback, 10)
         self.odom_sub = self.create_subscription(Odometry, "/rtabmap/odom", self.odom_callback, 10)
@@ -133,7 +133,8 @@ class GLOB_MSGS(Node):
         self.state_message=msg
         if msg.state == "SLA_DONE":
             self.sla_status = "SLA_DONE"   
-    
+        if msg.state == "ARUCO_FOUND":
+            self.gs_status = "ARUCO_FOUND"
         if msg.state == "OBJ_FOUND":
             self.gs_status = "OBJ_FOUND"
         if msg.state == "OBJ_NOT_FOUND":
@@ -213,6 +214,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
                              input_keys = ["cartesian", "start_location"],
                              output_keys = ["cartesian", "start_location"])
         self.glob_msg = None
+        # self.set_origin_pub = self.create_publisher(Pose, '/set_origin', 10) 
         
     def set_msg(self, glob_msg: GLOB_MSGS):
         self.glob_msg = glob_msg
@@ -233,7 +235,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
         pose_msg = Pose()
         pose_msg.position.x = self.glob_msg.locations['start'][0]
         pose_msg.position.y = self.glob_msg.locations['start'][1]
-        self.set_origin_pub.publish(pose_msg)
+        # self.set_origin_pub.publish(pose_msg)
 
         # cartesian_path = shortest_path('start', self.glob_msg.locations) #Generates the optimal path 
         # print(cartesian_path)
@@ -506,7 +508,7 @@ class ARSearchState(smach.State):
                     time.sleep(1)
                     self.glob_msg.pub_state(String(data=f"Waiting for grid search status, global gs_status {self.glob_msg.gs_status}"))
 
-                ar_in_correct_loc = (self.glob_msg.gs_status == "OBJ_FOUND")
+                ar_in_correct_loc = (self.glob_msg.gs_status == "ARUCO_FOUND")
                 self.glob_msg.gs_status = None
                 self.glob_msg.pub_state(String(data=f"End of {self.state_name} grid search"))
 
