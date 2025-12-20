@@ -2,18 +2,11 @@
 RUN_STATES:
   - GNSS1
   - GNSS2
-  - AR1
-  - AR2
-  - AR3
   - OBJ1
   - OBJ2
-
-  
-#  - GNSS1
- # - AR3
- # - OBJ1
-  #- OBJ2
- # - GNSS2
+  - OBJ3
+  - AR1
+  - AR2
 
 origin_pose: [0.0, 0.0]
 heading_vector: [1.1, 0.0]
@@ -45,13 +38,15 @@ run_in_order : TRUE #false means we find shortest path, true means it takes in t
 #If you set this to true, make sure you do not skip any states
 
 States_run_in_order:
-  - AR1
-  - AR2
-  - AR3
-  - OBJ1
-  - OBJ2
   - GNSS1
   - GNSS2
+  - OBJ1
+  - OBJ2
+  - OBJ3
+  - AR1
+  - AR2
+
+  
 
 #- OBJ2
 
@@ -61,9 +56,9 @@ difficulty: # priority rank!
   GNSS2: 1
   AR1: 1
   AR2: 1
-  AR3: 1
   OBJ1: 1
   OBJ2: 1
+  OBJ3: 1
 
 # sm_grid_search params
 Ar_homing_lin_vel: 1.8 #1.8
@@ -79,10 +74,10 @@ pose_param_grid_search: '/pose'
 drive_param_straight_line: '/drive'
 pose_param_straight_line: '/pose'
 
-zed_detection_image_topic: '/zed_node/rgb/image_rect_color'
-zed_detection_info_topic: '/zed_node/rgb/camera_info'
+zed_detection_image_topic: '/zed/zed_node/rgb/image_rect_color'
+zed_detection_info_topic: '/zed/zed_node/rgb/camera_info'
 
 #Change the below flag into true to get data from realsense for item detection
-realsense_detection: True
+realsense_detection: False
 realsense_detection_image_topic: '/camera2/camera/color/image_raw'
 realsense_detection_info_topic: '/camera2/camera/color/camera_info' # for rs, it is 168

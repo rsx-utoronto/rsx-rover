@@ -1,5 +1,6 @@
 
-import rospy 
+import rclpy
+from rclpy.node import Node 
 import serial 
 
 

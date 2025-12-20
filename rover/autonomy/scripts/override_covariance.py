@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import NavSatFix
@@ -8,22 +9,37 @@ from nav_msgs.msg import Odometry
 from heading_filter import Quaternion
 import math
 
-class OverrideCovariance:
+class OverrideCovariance(Node):
     def __init__(self):
-        rospy.init_node('override_covariance', anonymous=True)
-        self.imu_sub = rospy.Subscriber('/imu/orient', Imu, self.imu_callback)
-        self.gnss_sub = rospy.Subscriber('/calian_gnss/gps', NavSatFix, self.gnss_callback)
-        self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        self.imu_pub = rospy.Publisher('/imu/orient/override', Imu, queue_size=1)
-        self.gnss_pub = rospy.Publisher('/calian_gnss/gps/override', NavSatFix, queue_size=1)  
-        self.odom_pub = rospy.Publisher('/rtabmap/odom/override', Odometry, queue_size=1)
-        self.heading_pub = rospy.Publisher("/imu/rpy", Float32, queue_size=10)
-        self.imu_orien_cov_multiplier = rospy.get_param('~imu_orien_cov_multiplier', 1.0)
-        self.imu_ang_vel_cov_multiplier = rospy.get_param('~imu_ang_vel_cov_multiplier', 1.0)
-        self.imu_lin_acc_cov_multiplier = rospy.get_param('~imu_lin_acc_cov_multiplier', 1.0)
-        self.gnss_cov_multiplier = rospy.get_param('~gnss_cov_multiplier', 1.0)
-        self.odom_pose_cov_multiplier = rospy.get_param('~odom_pose_cov_multiplier', 1.0)
-        self.odom_twist_cov_multiplier = rospy.get_param('~odom_twist_cov_multiplier', 1.0)
+        super().__init__('override_covariance')
+        # self.imu_sub = rospy.Subscriber('/imu/orient', Imu, self.imu_callback)
+        # self.gnss_sub = rospy.Subscriber('/calian_gnss/gps', NavSatFix, self.gnss_callback)
+        # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
+        self.imu_sub = self.create_subscription(Imu, '/imu/orient', self.imu_callback, 10)
+        self.gnss_sub = self.create_subscription(NavSatFix, '/calian_gnss/gps', self.gnss_callback, 10)
+        self.odom_sub = self.create_subscription(Odometry, '/rtabmap/odom', self.odom_callback, 10)
+        
+        # self.imu_pub = rospy.Publisher('/imu/orient/override', Imu, queue_size=1)
+        # self.gnss_pub = rospy.Publisher('/calian_gnss/gps/override', NavSatFix, queue_size=1)  
+        # self.odom_pub = rospy.Publisher('/rtabmap/odom/override', Odometry, queue_size=1)
+        # self.heading_pub = rospy.Publisher("/imu/rpy", Float32, queue_size=10)
+        self.imu_pub = self.create_publisher(Imu, '/imu/orient/override', 10)
+        self.gnss_pub = self.create_publisher(NavSatFix, '/calian_gnss/gps/override', 10)
+        self.odom_pub = self.create_publisher(Odometry, '/rtabmap/odom/override', 10)
+        self.heading_pub = self.create_publisher(Float32, "/imu/rpy", 10)
+        
+        # self.imu_orien_cov_multiplier = rospy.get_param('~imu_orien_cov_multiplier', 1.0)
+        # self.imu_ang_vel_cov_multiplier = rospy.get_param('~imu_ang_vel_cov_multiplier', 1.0)
+        # self.imu_lin_acc_cov_multiplier = rospy.get_param('~imu_lin_acc_cov_multiplier', 1.0)
+        # self.gnss_cov_multiplier = rospy.get_param('~gnss_cov_multiplier', 1.0)
+        # self.odom_pose_cov_multiplier = rospy.get_param('~odom_pose_cov_multiplier', 1.0)
+        # self.odom_twist_cov_multiplier = rospy.get_param('~odom_twist_cov_multiplier', 1.0)
+        self.imu_orien_cov_multiplier = self.declare_parameter('imu_orien_cov_multiplier', 1.0).value
+        self.imu_ang_vel_cov_multiplier = self.declare_parameter('imu_ang_vel_cov_multiplier', 1.0).value
+        self.imu_lin_acc_cov_multiplier = self.declare_parameter('imu_lin_acc_cov_multiplier', 1.0).value
+        self.gnss_cov_multiplier = self.declare_parameter('gnss_cov_multiplier', 1.0).value     
+        self.odom_pose_cov_multiplier = self.declare_parameter('odom_pose_cov_multiplier', 1.0).value
+        self.odom_twist_cov_multiplier = self.declare_parameter('odom_twist_cov_multiplier', 1.0).value
         print("imu orientation covariance multiplier: ", self.imu_orien_cov_multiplier)
         print("imu angular velocity covariance multiplier: ", self.imu_ang_vel_cov_multiplier)
         print("imu linear acceleration covariance multiplier: ", self.imu_lin_acc_cov_multiplier)
@@ -69,8 +85,10 @@ class OverrideCovariance:
         self.odom_pub.publish(data)
 
 if __name__ == '__main__':
+    rclpy.init(args=None)
+    
     try:
         override_covariance = OverrideCovariance()
-        rospy.spin()
-    except rospy.ROSInterruptException:
+        rclpy.spin(override_covariance)
+    except rclpy.exceptions.ROSInterruptException:
         pass

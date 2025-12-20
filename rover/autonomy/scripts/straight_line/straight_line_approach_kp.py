@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+# NOTE DID NOT CONVERT TO ROS2 AS WE DO NOT USE THIS FILE
+
 import rospy
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist

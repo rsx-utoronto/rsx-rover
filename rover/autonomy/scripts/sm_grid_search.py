@@ -1,16 +1,19 @@
 #!/usr/bin/python3
 
-import rospy
+from calian_gnss_ros2_msg import msg
+import rclpy
+from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped, Twist
 from std_msgs.msg import Float64MultiArray, Bool, String
+from rover.msg import MissionState
+from std_msgs.msg import String as StdString
 import math
 import aruco_homing as aruco_homing
-import ar_detection_node as ar_detect
-import sm_straight_line as StraightLineApproach
 
 import yaml
 import os
+import threading
 import time
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
@@ -24,46 +27,66 @@ with open(file_path, "r") as f:
 # When aruco, waterbottle, or mallet callback functions detect an object in the corresponding state, it calls aruco homing
 # to navigate to the detected item to get close enough
     
-class GS_Traversal:
-    def __init__(self, lin_vel, ang_vel, targets, state):
-        self.lin_vel = lin_vel
-        self.ang_vel = ang_vel
-        self.targets = targets
+class GS_Traversal(Node):
+    def __init__(self):
+        super().__init__('gs_traversal_node')
+        self.lin_vel = sm_config.get("GS_Traversal_lin_vel") 
+        self.ang_vel = sm_config.get("GS_Traversal_ang_vel")
+        self.targets = None
         self.found = False 
         self.abort_check = False
         self.x = 0
         self.timer=0
         self.y = 0
         self.heading = 0
-        self.state = state
+        self.state = None
         self.count = 0
         self.timer=0
-        
+        self.w = sm_config.get("AR_grid_search_w")
+        self.h = sm_config.get("AR_grid_search_h")
+        self.tol = sm_config.get("AR_grid_search_tol")
+        self.start_x=0
+        self.start_y=0
         self.aruco_found = False
         self.mallet_found = False
         self.waterbottle_found = False
-
-        # modified code: add dictionary to manage detection flags for multiple objects
+        self.homing_status = None
         self.found_objects = {"AR1":False, 
                    "AR2":False,
-                   "AR3":False,
                    "OBJ1":False,
-                   "OBJ2":False}
+                   "OBJ2":False, 
+                   "OBJ3":False}
         
-        # self.odom_subscriber = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        self.pose_subscriber = rospy.Subscriber('pose', PoseStamped, self.pose_callback)
-        self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
-
-        #new additions
-        self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
-        self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
-        self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
-        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
-        self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
-
+        self.odom_subscriber = self.create_subscription(Odometry, '/rtabmap/odom', self.odom_callback, 10)  # modified to use rclpy
+        self.pose_subscriber = self.create_subscription(PoseStamped, 'pose', self.pose_callback, 10)    
+        self.target_subscriber = self.create_subscription(Float64MultiArray, 'target', self.target_callback, 10)
+        self.drive_publisher = self.create_publisher(Twist, '/drive', 10)  # modified to use rclpy
+        self.aruco_sub = self.create_subscription(Bool, "aruco_found", self.aruco_detection_callback, 10)
+        self.mallet_sub = self.create_subscription(Bool, 'mallet_detected', self.mallet_detection_callback, 10)
+        self.waterbottle_sub = self.create_subscription(Bool, 'waterbottle_detected', self.waterbottle_detection_callback, 10)
+        self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
+        self.message_pub = self.create_publisher(String, "gui_status", 10)
         # self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        
+        self.pub = self.create_publisher(MissionState, 'mission_state', 10)
+        self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
+        self._nav_thread = None
+
+    def feedback_callback(self, msg):
+        print("in GS traversal feedback callback, msg.state:", msg.state)
+        if msg.state == "START_GS_TRAV":
+            self.active = True
+            self.state= msg.current_state
+            self.get_logger().info("Grid Search behavior ACTIVE")
+            self.start_x = msg.current_goal.pose.position.x
+            self.start_y = msg.current_goal.pose.position.y
+            if self._nav_thread is None or not self._nav_thread.is_alive():
+                self._nav_thread = threading.Thread(target=self.navigate, daemon=True)
+                self._nav_thread.start()
+        # elif msg.state in ("HOMING_DONE", "HOMING_SUCCESS", "HOMING_FAILED"):
+        #     self.homing_status = msg.state
+        else:
+            self.active = False
+       
     def pose_callback(self, msg):
         self.x = msg.pose.position.x
         self.y = msg.pose.position.y
@@ -81,7 +104,7 @@ class GS_Traversal:
     def target_callback(self, msg):
         self.target_x = msg.data[0]
         self.target_y = msg.data[1]
-
+    
     def to_euler_angles(self, w, x, y, z):
         angles = [0, 0, 0]  # [roll, pitch, yaw]
 
@@ -107,7 +130,6 @@ class GS_Traversal:
             self.timer=time_now
             self.count=0
         print("count,",self.count)
-        # print("sm grid search_ data.data", data.data)
         if data.data:
             if self.count <= 4:
                 self.count +=1
@@ -143,8 +165,34 @@ class GS_Traversal:
                 self.found_objects[self.state] = data.data
                 self.count += 1
 
+    def square_target(self):
+        print("Generating square grid search targets...")
+        dx, dy = 0, 1
+        # use local copies so we don't mutate the node's starting point
+        sx, sy = float(self.start_x), float(self.start_y)
+        targets = [(sx, sy)]
+        step = 1
+        out_of_bounds = False
+
+        while len(targets) < int(self.w)**2 - 1:
+            for _ in range(2):
+                for _ in range(step):
+                    if step * float(self.tol) > float(self.w):
+                        out_of_bounds = True
+                        break
+                    sx, sy = sx + (self.tol * dx), sy + (self.tol * dy)
+                    targets.append((sx, sy))
+                dx, dy = -dy, dx
+                if out_of_bounds:
+                    break
+            step += 1
+            if out_of_bounds:
+                break
+
+        print("these are the final targets", targets)
+        return targets
+    
     def move_to_target(self, target_x, target_y, state): #navigate needs to take in a state value as well (FINISHIT)
-        rate = rospy.Rate(50)
         kp = 0.5
         threshold = 1
         angle_threshold = 0.2
@@ -155,24 +203,19 @@ class GS_Traversal:
         
         mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
-                   "AR3":self.aruco_found,
                    "OBJ1":obj,
-                   "OBJ2":obj}
+                   "OBJ2":obj, 
+                   "OBJ3":obj}
         first_time=True
         
-        # print("In move to target")
-        while (not rospy.is_shutdown()) and (self.abort_check is False):
+        while (rclpy.ok()) and (self.abort_check is False):
             obj = self.mallet_found or self.waterbottle_found
             mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
-                   "AR3":self.aruco_found,
                    "OBJ1":obj,
-                   "OBJ2":obj}
-            # print("in grid search: mapping state", mapping[state])
+                   "OBJ2":obj, 
+                   "OBJ3":obj}
             msg = Twist()
-            # print("state", state)
-            # print("mapping state", mapping[state])
-            pub = rospy.Publisher('drive', Twist, queue_size=10)
             if mapping[state] is False: #while not detected
                 # normal operations
                 if target_x is None or target_y is None or self.x is None or self.y is None:
@@ -190,60 +233,53 @@ class GS_Traversal:
                     angle_diff += 2 * math.pi
 
                 if target_distance < threshold:
-                    msg.linear.x = 0
-                    msg.angular.z = 0
+                    msg.linear.x = float(0)
+                    msg.angular.z = float(0)
                     self.drive_publisher.publish(msg)
                     print(f"Reached target: ({target_x}, {target_y})")
                     break 
 
                 if abs(angle_diff) <= angle_threshold:
                     msg.linear.x = self.lin_vel
-                    msg.angular.z = 0
+                    msg.angular.z = float(0)
                 else:
-                    msg.linear.x = 0
+                    msg.linear.x = float(0)
                     msg.angular.z = angle_diff * kp
                     if abs(msg.angular.z) < 0.3:
                         msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
-                        
-                # print("angular velocity", msg.angular.z)
 
             else: #if mapping[state] is True --> if the object is found
                 print("mapping state is true!")
                 print("IN HOMING")
                 message="In Homing"
-                self.message_pub.publish(message)
+                # self.message_pub.publish(message)
+                self.message_pub.publish(StdString(data=message))
                 # call homing
                 # should publish that it is found
-                # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
-                pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
-                if state == "AR1" or state == "AR2" or state == "AR3":
+                if state == "AR1" or state == "AR2":
                     # this sees which camera it is using and then uses the parameters accordingly.
                     if sm_config.get("realsense_detection"):
                         aimer = aruco_homing.AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
                     else: 
                         aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
-                        
-                    print("DONE HOMING before burst")
-                    
-                    rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
+                    self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10) 
                     print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
-                elif state == "OBJ1" or state == "OBJ2":
-                    #add realsense check here
-                    aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
-                    rospy.Subscriber('object/bbox', Float64MultiArray, callback=aimer.rosUpdate)
+                    
+                elif state == "OBJ1" or state == "OBJ2" or state == "OBJ3" :
+                    aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE, MALLET
+                    self.create_subscription(Float64MultiArray, 'object/bbox', aimer.rosUpdate, 10)
                     print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
-                rate = rospy.Rate(10) #this code needs to be adjusted
-                
+              
                 # Wait a bit for initial detection
                 for i in range(50):
-                    rate.sleep()
+                    time.sleep(0.1)
                 
                 # Add variables for tracking detection memory
                 last_detection_time = time.time()
                 detection_memory_duration = 2.0  # 2 seconds of memory
                 detection_active = False
-                
-                while (not rospy.is_shutdown()) and (self.abort_check is False):
+
+                while (rclpy.ok()) and (self.abort_check is False):
                     twist = Twist()
                     
                     # Check if we have valid values from the aimer
@@ -254,197 +290,86 @@ class GS_Traversal:
                         
                         # Check if we've reached the target
                         if aimer.linear_v == 0 and aimer.angular_v == 0:
-                            print ("at weird", aimer.linear_v, aimer.angular_v)
                             if first_time:
                                 first_time=False
                                 initial_time=time.time()
                             
-                            # faking it til you makin it
                             while abs(initial_time-time.time()) < 0.7:
                                 msg.linear.x=self.lin_vel
-                                pub.publish(msg)
+                                self.drive_publisher.publish(msg)
                                 print("final homing movement",abs(initial_time-time.time()) )
-                                rate.sleep()
+                                time.sleep(0.1)
                             twist.linear.x = 0.0
                             twist.angular.z = 0.0
-                            pub.publish(twist)
-                            
+                            self.drive_publisher.publish(twist)
                             return
                             
                         # Normal homing behavior
                         if aimer.angular_v == 1:
                             twist.angular.z = float(aimer.max_angular_v)
-                            print ("first if",aimer.max_angular_v)
                             twist.linear.x = 0.0
                         elif aimer.angular_v == -1:
                             twist.angular.z = float(-aimer.max_angular_v)
                             twist.linear.x = 0.0
                         elif aimer.linear_v == 1:
-                            print ("second check",aimer.max_linear_v)
                             twist.linear.x = float(aimer.max_linear_v)
                             twist.angular.z = 0.0
                     else:
-                        # No detection, check if we're within memory duration
                         if detection_active and time.time() - last_detection_time < detection_memory_duration:
                             print("Using last movement commands from memory")
-                            # Continue with last valid movement
-                            # (twist values are already set from previous iteration)
                         else:
-                            # Memory expired, go back to grid search
                             print("Detection lost and memory expired, returning to grid search")
                             detection_active = False
                             break
                     
-                    pub.publish(twist)
-                    rate.sleep()
-              
+                    self.drive_publisher.publish(twist)
+                    # time.sleep(0.1)
+                    time.sleep(0.1)
                 break
-           
-                
-            # print("publishing grid search velocity")
+
             self.drive_publisher.publish(msg)
-            rate.sleep()
+            # time.sleep(0.1)
+            time.sleep(0.1)
 
     def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
-        
+        print("in gs navigate")
+        self.targets = self.square_target()
+        print("targets generated:", self.targets)
+        msg = MissionState()
         for target_x, target_y in self.targets:
-            print('self target lenght', len(self.targets), self.targets, target_x,target_y)
+            # print('self target lenght', len(self.targets), self.targets, target_x,target_y)
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
                 print(f"Object detected during navigation: {self.found_objects[self.state]}")
+                msg.state="OBJ_FOUND"
+                self.pub.publish(msg)
                 return True
-            
-            print("Going to target", target_x, target_y)
+            # print("Going to target", target_x, target_y)
             self.move_to_target(target_x, target_y, self.state) #changed from navigate_to_target
             if self.abort_check:
                 print("self.abort is true!")
                 break
+            # time.sleep(0.1)
+            time.sleep(1)  # Small delay between targets
 
-            rospy.sleep(1)
-
+        
+        msg = MissionState()
         if self.found_objects[self.state]:
-            
+            msg.state="OBJ_FOUND"
+            self.pub.publish(msg)
             return True
-        return False #Signalling that grid search has been done
-
-class GridSearch:
-    '''
-    All values here should be treated as doubles
-    w, h - refers to grid dimensions, ie. if comp tells us that it is within radius of 20 then our grid would be square with 40 by 40
-    tolerance   - this is the limitation of our own equipment, ie. from camera, aruco only detected left right and dist of 3 m
-                - if this is unequal, take the smallest tolerance
-    '''
-    def __init__(self, w, h, tolerance, start_x, start_y): # AR1, OR AR2 (cartesian - fixed)
-        self.x = w 
-        self.y = h
-        self.tol = tolerance 
-        # print(self.tol)
-        self.start_x = start_x
-        self.start_y = start_y
-        # rospy.Subscriber("/rtabmap/odom", Odometry, self.odom_callback) # change topic name
-
-    '''
-    Generates a list of targets for square straight line approach.
-    '''
-    def square_target(self):
-        # dx, dy indicates direction (goes "up" first)
-        dx, dy = 0, 1
-        # while self.start_x == None:
-        #     # print("Waiting for odom...")
-        #     # rospy.loginfo("Waiting for odom...")
-        #     continue
-        targets = [(self.start_x,self.start_y)]
-        step = 1
-        out_of_bounds = False
-
-        while len(targets) < self.x**2 - 1:
-            for i in range(2):  # 1, 1, 2, 2, 3, 3... etc
-                for j in range(step):
-                    if step*self.tol > self.x: 
-                        print ("step is outside of accepted width: step*tol=", step*self.tol, "\tself.x=",self.x)
-                        out_of_bounds = True
-                        break
-                    self.start_x, self.start_y = self.start_x + (self.tol*dx), self.start_y + (self.tol*dy)
-                    targets.append((self.start_x, self.start_y))
-                dx, dy = -dy, dx
-                if out_of_bounds:
-                    break
-            step += 1 
-            if out_of_bounds:
-                break
-        print ("these are the final targets", targets) 
-        return targets
-
-    #Which function should be used?
-    def alt_gs(self):
-        dx, dy = 0, 1
-        # while self.start_x == None:
-        #     # print("Waiting for odom...")
-        #     # rospy.loginfo("Waiting for odom...")
-        #     continue
-        targets = [(self.start_x,self.start_y)]
-        step = 1
-        # notice, up/down is odd amount, left/right is even amount        
-        while len(targets) < self.x: # 1, 2, 3, 4, 5... sol 
-            if step%2==1: # moving up/down
-                for i in range (step):
-                    # move up if %4==1, down if %4 ==3 from the pattern
-                    self.start_y+=1 if step%4 ==1 else -1
-                    targets.append((self.start_x,self.start_y))
-                    if len(targets)==self.x:
-                        return targets
-            else: 
-                for i in range (step):
-                # move right if %4==2, left if %4 ==0 
-                    self.start_x+=1 if step%4==2 else -1
-                    targets.append((self.start_x,self.start_y))
-                    if len(targets)==self.x:
-                        return targets
-            step += 1  # Increase step size after two edges
-        return targets
-
+        msg.state="OBJ_NOT_FOUND"
+        self.pub.publish(msg)
+        return False 
+    
 def main():
-    targets = [(2, 0)]  # Define multiple target points
+    import rclpy
+    rclpy.init()
+    gs= GS_Traversal() 
     try:
-        rospy.init_node('straight_line_approach_node')
-        approach = StraightLineApproach.StraightLineApproach(1.5, 0.5, targets)
-        approach.navigate()
-    except rospy.ROSInterruptException:
-        pass
+        rclpy.spin(gs)
+    finally:
+        gs.destroy_node()
+        rclpy.shutdown()
 
-    gs = GridSearch(10, 10, 1, 0, 0)  # define multiple target points here: cartesian
-    targets = gs.square_target() #generates multiple targets 
-    gs_traversal_object = GS_Traversal(0.6, 0.3, targets, "AR1")
-    gs_traversal_object.navigate() #should be one of aruco, mallet, waterbottle
-    
-    pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
-    # frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v
-    aimer = aruco_homing.AimerROS(640, 360, 1000, 100, 100, 1.5, 0.3) # FOR ARUCO
-    
-    # aimer = aruco_homing.AimerROS(50, 50, 1450, 10, 50, 1.0, 0.5) # FOR WATER BOTTLE
-    rospy.Subscriber('aruco_node/bbox', Float64MultiArray, callback=aimer.rosUpdate) # change topic name
-    # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
-    rate = rospy.Rate(10)
-    while not rospy.is_shutdown():
-        twist = Twist()
-        if aimer.linear_v == 0 and aimer.angular_v == 0:
-            print ("at weird", aimer.linear_v, aimer.angular_v)
-            twist.linear.x = 0
-            twist.angular.z = 0
-            pub.publish(twist)
-            return True
-        if aimer.angular_v == 1:
-            twist.angular.z = aimer.max_angular_v
-            twist.linear.x = 0
-        elif aimer.angular_v == -1:
-            twist.angular.z = -aimer.max_angular_v
-            twist.linear.x = 0
-        elif aimer.linear_v == 1:
-            twist.linear.x = aimer.max_linear_v
-            twist.angular.z = 0
-         
-        pub.publish(twist)
-        rate.sleep()
-    
-    
 if __name__ == '__main__':
     main()

@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix
 
 import argparse
@@ -13,12 +14,14 @@ def gps_callback(gps_msg):
 
 
 def main():
-    rospy.init_node("gps_to_txt")
+    rclpy.init()
+    node=rclpy.create_node('gps_to_txt')
+    
 
     # gps rostopic name
     gps_topic = "/fix" 
-    rospy.Subscriber(gps_topic, NavSatFix, gps_callback)
-    rospy.spin()
+    node.create_subscription(NavSatFix,gps_topic,  gps_callback, 10)
+    rclpy.spin(node)
 
 if __name__ == '__main__':
     main()

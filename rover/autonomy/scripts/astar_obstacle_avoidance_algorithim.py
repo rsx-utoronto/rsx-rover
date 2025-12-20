@@ -22,10 +22,11 @@ If self.auto abort is still not working:
 print it ou† to see.
 """
 
-import rospy
+import rclpy 
+from rclpy.node import Node
 import numpy as np
 np.float = float
-import ros_numpy
+#import ros_numpy
 from nav_msgs.msg import Odometry, OccupancyGrid
 from octomap_msgs.msg import Octomap
 from geometry_msgs.msg import PoseStamped, Twist, Pose, Point, Quaternion
@@ -35,16 +36,20 @@ from sensor_msgs.msg import PointCloud2
 from queue import PriorityQueue
 from std_msgs.msg import Header, Float32MultiArray
 import math
+from builtin_interfaces.msg import Duration
+from rclpy.duration import Duration
 from visualization_msgs.msg import Marker,MarkerArray
-import tf.transformations as tf
-from tf.transformations import quaternion_from_euler
+# import tf_transformations as tf
+# from transformations import quaternion_from_euler
+from transforms3d.euler import quat2euler
 import threading
 from threading import Lock
-
+from sensor_msgs_py import point_cloud2
 from geometry_msgs.msg import Point
 from std_msgs.msg import Float32MultiArray, String, Bool
 from nav_msgs.msg import Path
 import os
+from rclpy.clock import Clock
 import yaml
 import time
 
@@ -54,24 +59,51 @@ with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
 
 
-class AstarObstacleAvoidance():
+class AstarObstacleAvoidance(Node):
     def __init__(self, lin_vel = 0.3, ang_vel= 0.3, goal=[(5,0)]):
+        super().__init__('octomap_a_star_planner')
         
-        if sm_config.get("realsense_detection"):
-            self.pointcloud_topic = rospy.get_param("~pointcloud_topic", sm_config.get("realsense_pointcloud"))
+        # if sm_config.get("realsense_detection"):
+        #     self.pointcloud_topic = rospy.get_param("~pointcloud_topic", sm_config.get("realsense_pointcloud"))
+        # else:
+        #     self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed_node/point_cloud/cloud_registered")
+        
+        #  parameters with default values
+        self.declare_parameter('realsense_detection', False)
+        self.declare_parameter('realsense_pointcloud', '/camera/depth/points') #obstacle avoidance points from realsense
+        self.declare_parameter('pointcloud_topic', '/zed_node/point_cloud/cloud_registered') #obsatcle avoidance points from zed
+
+        realsense_enabled = self.get_parameter('realsense_detection').get_parameter_value().bool_value
+        realsense_topic = self.get_parameter('realsense_pointcloud').get_parameter_value().string_value
+        fallback_topic = self.get_parameter('pointcloud_topic').get_parameter_value().string_value
+
+        if realsense_enabled: #check which camera we're using
+            self.pointcloud_topic = realsense_topic
         else:
-            self.pointcloud_topic = rospy.get_param("~pointcloud_topic", "/zed_node/point_cloud/cloud_registered")
-          
-        # Parameters
-        self.map_topic = rospy.get_param("~map_topic", "/octomap_binary")
-        self.waypoint_topic = rospy.get_param("~waypoint_topic", "/waypoint")
-        self.update_rate = rospy.get_param("~update_rate", 5.0)  # Frequency in Hz 
-        self.vel_topic = rospy.get_param("~vel_topic", "/cmd_vel")  # Velocity command
-        self.height_min = rospy.get_param("~height_min", 0.2)  # Min height for obstacles
-        self.height_max = rospy.get_param("~height_max", 15)  # Max height for obstacles
-        self.octomap_topic = rospy.get_param("~octomap_topic", "/octomap_binary")
-        self.tree_resolution = rospy.get_param("~resolution", 0.1)  # OctoMap resolution (meters)
-        self.pose_topic = rospy.get_param("~pose_topic", "/robot_pose")
+            self.pointcloud_topic = fallback_topic
+        
+        # Declare all parameters
+        self.declare_parameter("map_topic", "/octomap_binary")
+        self.declare_parameter("waypoint_topic", "/waypoint")
+        self.declare_parameter("update_rate", 5.0)
+        self.declare_parameter("vel_topic", "/cmd_vel")
+        self.declare_parameter("height_min", 0.2)
+        self.declare_parameter("height_max", 15.0)
+        self.declare_parameter("octomap_topic", "/octomap_binary")
+        self.declare_parameter("resolution", 0.1)
+        self.declare_parameter("pose_topic", "/robot_pose")
+
+        # Retrieve parameter values
+        self.map_topic = self.get_parameter("map_topic").get_parameter_value().string_value
+        self.waypoint_topic = self.get_parameter("waypoint_topic").get_parameter_value().string_value
+        self.update_rate = self.get_parameter("update_rate").get_parameter_value().double_value
+        self.vel_topic = self.get_parameter("vel_topic").get_parameter_value().string_value
+        self.height_min = self.get_parameter("height_min").get_parameter_value().double_value
+        self.height_max = self.get_parameter("height_max").get_parameter_value().double_value
+        self.octomap_topic = self.get_parameter("octomap_topic").get_parameter_value().string_value
+        self.tree_resolution = self.get_parameter("resolution").get_parameter_value().double_value
+        self.pose_topic = self.get_parameter("pose_topic").get_parameter_value().string_value
+        
         
         # Map and planning variables
         self.robot_footprint=[]
@@ -88,7 +120,8 @@ class AstarObstacleAvoidance():
         )
         self.grid_origin=None
         # self.grid_origin = (0.0, 0.0)
-        self.rate = rospy.Rate(self.update_rate)
+        # self.rate = rospy.Rate(self.update_rate)
+        self.rate = self.create_rate(self.update_rate)
         # self.tree = OctreeNode(self.boundary, self.tree_resolution)
         self.current_position_x=0
         self.current_position_y=0
@@ -100,34 +133,33 @@ class AstarObstacleAvoidance():
         self.abort_check = False
         self.heading=0
         self.current_corner_array = [
-            Point(x=1.5, y=1.5, z=0),
-            Point(x=1.5, y=-1.5, z=0),
-            Point(x=-1.5, y=-1.5, z=0), # with 0.5, it produces green blocks!
-            Point(x=-1.5, y=1.5, z=0) ]
+            Point(x=1.5, y=1.5, z=0.0),
+            Point(x=1.5, y=-1.5, z=0.0),
+            Point(x=-1.5, y=-1.5, z=0.0), # with 0.5, it produces green blocks!
+            Point(x=-1.5, y=1.5, z=0.0) ]
         self.z_min = -0.25
         self.z_max = 3
         self.yaw = 0
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
         
-        # Publishers and Subscribers
-       # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        
-        self.bounding_box_pub = rospy.Publisher("/rover_bounding_box", Marker, queue_size=10)
-        self.invaliid_pose_sub=rospy.Publisher('/invalid_pose_markers', Marker, queue_size=10)
-        # self.map_sub = rospy.Subscriber(self.map_topic, Octomap, self.octomap_callback)
-        # self.pose_sub = rospy.Subscriber(self.pose_topic, PoseStamped, self.odom_callback)
-        self.waypoint_pub = rospy.Publisher(self.waypoint_topic, PoseStamped, queue_size=10)
-        self.astar_pub = rospy.Publisher('/astar_waypoints', Float32MultiArray, queue_size=10)
-        self.pointcloud_sub = rospy.Subscriber(self.pointcloud_topic, PointCloud2, self.pointcloud_callback)
-        self.octomap_pub = rospy.Publisher(self.octomap_topic, Octomap, queue_size=10)
-        self.marker_array_pub = rospy.Publisher('/dwa_trajectories', MarkerArray, queue_size=1)
-        self.astar_marker_pub = rospy.Publisher('/astar_waypoints_markers', MarkerArray, queue_size=1)  # New publisher for A* markers
-        self.footprint_pub = rospy.Publisher('/robot_footprint', Marker, queue_size=1)
-        self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
-        self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
-        self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
-        
+        # Publishers
+        self.bounding_box_pub = self.create_publisher(Marker, "/rover_bounding_box", 10)
+        self.invalid_pose_pub = self.create_publisher(Marker, "/invalid_pose_markers", 10)
+        self.waypoint_pub = self.create_publisher(PoseStamped, self.waypoint_topic, 10)
+        self.astar_pub = self.create_publisher(Float32MultiArray, "/astar_waypoints", 10)
+        self.octomap_pub = self.create_publisher(Octomap, self.octomap_topic, 10)
+        self.marker_array_pub = self.create_publisher(MarkerArray, "/dwa_trajectories", 1)
+        self.astar_marker_pub = self.create_publisher(MarkerArray, "/astar_waypoints_markers", 1)
+        self.footprint_pub = self.create_publisher(Marker, "/robot_footprint", 1)
+        self.drive_publisher = self.create_publisher(Twist, "/drive", 10)
+
+        # Subscribers
+        self.pointcloud_sub = self.create_subscription(PointCloud2, self.pointcloud_topic, self.pointcloud_callback, 10)
+        self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
+        self.pose_subscriber = self.create_subscription(PoseStamped, "/pose", self.pose_callback, 10)
+
+                
     def abort_callback(self,msg):
         self.abort_check = msg.data
 
@@ -137,25 +169,26 @@ class AstarObstacleAvoidance():
         """
         #  rospy.loginfo("Received point cloud, processing…")
 
-        xyz = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
+        # xyz = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
+        xyz = np.array([[point[0], point[1], point[2]] for point in point_cloud2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)]) #getting the points --> from where?
         mask = np.isfinite(xyz).all(axis=1)
-        xyz = xyz[mask]
+        xyz = xyz[mask] #to filtre out non-finite numbers
 
         w,h = self.grid_size
         new_height_grid = np.zeros((h, w), dtype=np.float32)  # heights
         grid= np.zeros((h, w), dtype=np.int8)   # shape = (rows, cols) #confirm shape!!!
 
-        for x,y,z in xyz:
+        for x,y,z in xyz: #go through all points
             if not (self.z_min < z < self.z_max):
                # print("not in threshold", z)
                 continue
 
-            gx,gy=self.world_to_grid(x,y)
+            gx,gy=self.world_to_grid(x,y) #transform the loc into our coord
             if 0 <= gx < w and 0 <= gy < h: #whithin the height threshhold so assign obstacle_threshold
                 grid[gy, gx] = self.obstacle_threshold   # mark as occupied
                 new_height_grid[gy, gx] = z  # Store actual height
-                world_x, world_y = self.grid_to_world(gx, gy)       
-                self.publish_invalid_pose_marker(world_x, world_y)  # Publish invalid pose marker
+                world_x, world_y = self.grid_to_world(gx, gy) #transform back
+                self.publish_invalid_pose_marker(world_x, world_y)  # Publish invalid pose marker --> is it beacuse we've assigned its value to grid?
         
         self.height_grid=new_height_grid
         self.occupancy_grid=grid
@@ -174,14 +207,15 @@ class AstarObstacleAvoidance():
         self.current_orientation_w = msg.pose.pose.orientation.w
 
             # Convert quaternion to Euler angles to get roll, pitch, and yaw (theta)
-        (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
+        (self.roll, self.pitch, self.yaw) = quat2euler([
                 self.current_orientation_x,
                 self.current_orientation_y,
                 self.current_orientation_z,
                 self.current_orientation_w
             ])
+        
 
-        self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
+        self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, #to roll, pitch, yaw
                                             msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
         self.publish_bounding_box()
     
@@ -196,7 +230,7 @@ class AstarObstacleAvoidance():
         self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
                                             msg.pose.orientation.y, msg.pose.orientation.z)[2]
         
-        (self.roll, self.pitch, self.yaw) = tf.euler_from_quaternion([
+        (self.roll, self.pitch, self.yaw) = quat2euler([
                 self.current_orientation_x,
                 self.current_orientation_y,
                 self.current_orientation_z,
@@ -232,7 +266,7 @@ class AstarObstacleAvoidance():
         # rospy.loginfo("Publishing OctoMap...")
         octomap_msg = self.tree.writeBinaryMsg()
         header = Header()
-        header.stamp = rospy.Time.now()
+        header.stamp =  self.get_clock().now().to_msg() 
         header.frame_id = "map"
         octomap_msg.header = header
         self.octomap_pub.publish(octomap_msg)
@@ -244,7 +278,7 @@ class AstarObstacleAvoidance():
         for traj in trajectories:
             line_marker = Marker()
             line_marker.header.frame_id = "map"
-            line_marker.header.stamp = rospy.Time.now()
+            line_marker.header.stamp = self.get_clock().now().to_msg()
             line_marker.ns = "dwa_trajectories"
             line_marker.id = marker_id
             line_marker.type = Marker.LINE_STRIP
@@ -255,7 +289,7 @@ class AstarObstacleAvoidance():
             line_marker.color.b = 0.0
             line_marker.color.a = 1.0
             line_marker.pose.orientation.w = 1.0
-            line_marker.lifetime = rospy.Duration(0.1)
+            line_marker.lifetime = Duration(seconds=0.1)
 
             for point in traj:
                 p = Point()
@@ -276,7 +310,7 @@ class AstarObstacleAvoidance():
         # Points marker for waypoints (larger size)
         points_marker = Marker()
         points_marker.header.frame_id = "map"
-        points_marker.header.stamp = rospy.Time.now()
+        points_marker.header.stamp =  self.get_clock().now()
         points_marker.ns = "astar_points"
         points_marker.id = 0
         points_marker.type = Marker.POINTS
@@ -287,12 +321,12 @@ class AstarObstacleAvoidance():
         points_marker.color.g = 0.0
         points_marker.color.b = 0.0
         points_marker.color.a = 1.0
-        points_marker.lifetime = rospy.Duration(0)
+        points_marker.lifetime = rclpy.duration.Duration(seconds=0)
 
         # Line strip connecting waypoints
         line_marker = Marker()
         line_marker.header.frame_id = "map"
-        line_marker.header.stamp = rospy.Time.now()
+        line_marker.header.stamp = self.get_clock().now().to_msg()
         line_marker.ns = "astar_line"
         line_marker.id = 1
         line_marker.type = Marker.LINE_STRIP
@@ -303,7 +337,7 @@ class AstarObstacleAvoidance():
         line_marker.color.b = 0.0
         line_marker.color.a = 1.0
         line_marker.pose.orientation.w = 1.0
-        line_marker.lifetime = rospy.Duration(0)
+        line_marker.lifetime = rclpy.duration.Duration(seconds=0)
 
         # Populate both markers with waypoints
         for index in range(0, len(waypoints), 2):
@@ -324,7 +358,7 @@ class AstarObstacleAvoidance():
         # note there is an older publish bounding box function that just makes a box around the rover..
         marker = Marker()
         marker.header.frame_id = "map"  
-        marker.header.stamp = rospy.Time.now()
+        marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = "rover_bounding_box"
         marker.id = 0
         marker.type = Marker.LINE_STRIP
@@ -364,16 +398,16 @@ class AstarObstacleAvoidance():
         neighbor_gx, neighbor_gy = neighbor
         
         # Check obstacles first
-        if self.occupancy_grid[current_gy, current_gx] >= self.obstacle_threshold:
+        if self.occupancy_grid[current_gy, current_gx] >= self.obstacle_threshold: #if there is an obstacle at this point
             return float('inf')
-        if self.occupancy_grid[neighbor_gy, neighbor_gx] >= self.obstacle_threshold:
+        if self.occupancy_grid[neighbor_gy, neighbor_gx] >= self.obstacle_threshold: #if there is an obstacle at this point
             return float('inf')
         
         # Use actual height difference
         height_diff = abs(self.height_grid[current_gy, current_gx] - self.height_grid[neighbor_gy, neighbor_gx])
         return height_diff + 1  # +1 for base movement cost
         
-    def heuristic(self, node, goal): #h fucntion -> euclidean distance
+    def heuristic(self, node, goal): #h fucntion -> euclidean distance, measures how far apart start and goal are, both in (x, y)
         return np.linalg.norm(np.array(node) - np.array(goal))
 
     def reconstruct_path(self, came_from, current):
@@ -391,11 +425,11 @@ class AstarObstacleAvoidance():
         open_set = PriorityQueue()
         open_set.put((0, start))
         came_from = {}
-        g_score = {start: 0}
-        f_score = {start: self.heuristic(start, goal)}
+        g_score = {start: 0} #keeps track of distance/cost from start
+        f_score = {start: self.heuristic(start, goal)} #keeps track of overall distance/cost from start to goal
         closed = set()
         
-        while not open_set.empty() and not self.abort_check:
+        while not open_set.empty() and not self.abort_check: #while we have points to go to?
             _, current = open_set.get()
           
             # Skip nodes already processed
@@ -406,23 +440,23 @@ class AstarObstacleAvoidance():
 
             if current == goal:
                 #print("in a*, open set is closed", current)
-                return self.reconstruct_path(came_from, current)
+                return self.reconstruct_path(came_from, current) #if processed until goal, return the constructed path
           #  print("in get neighbors in astar", current)
-            for neighbor in self.get_neighbors(current):
+            for neighbor in self.get_neighbors(current): #get coord neighbours
                 
                 if neighbor in closed:
-                    continue  # Skip closed nodes
+                    continue  # Skip closed nodes, has been processed
 
                 height_cost = self.height_cost(current, neighbor)
                 tentative_g = g_score[current] + height_cost
 
-                if tentative_g < g_score.get(neighbor, float('inf')):
+                if tentative_g < g_score.get(neighbor, float('inf')): #if its a shorter path overall to get to this point (may be due to objects), add it to path
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g
-                    f_score[neighbor] = tentative_g + self.heuristic(neighbor, goal)
-                    open_set.put((f_score[neighbor], neighbor))
-           
-        rospy.logwarn("A* failed to find a path")
+                    f_score[neighbor] = tentative_g + self.heuristic(neighbor, goal) #overall path cost
+                    open_set.put((f_score[neighbor], neighbor)) #puts the neighbour in the queue to be inspected
+
+        self.get_logger().warn("A* failed to find a path")
         return []
          
     def is_pose_valid(self, pose):
@@ -459,9 +493,9 @@ class AstarObstacleAvoidance():
     def publish_invalid_pose_marker(self, x, y, z=0.1):
         marker = Marker()
         marker.header.frame_id = "map"
-        marker.header.stamp = rospy.Time.now()
+        marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = "invalid_pose"
-        marker.id = int(rospy.Time.now().to_sec() * 1000) % 1000000  # give it a semi-unique ID
+        marker.id = int(self.get_clock().now().to_sec() * 1000) % 1000000  # give it a semi-unique ID
         marker.type = Marker.CUBE
         marker.action = Marker.ADD
         marker.pose.position.x = x
@@ -478,7 +512,7 @@ class AstarObstacleAvoidance():
         marker.color.g = 1.0
         marker.color.b = 0.0
         marker.color.a = 1.0
-        marker.lifetime = rospy.Duration(8.0)  # markers disappear after 2 seconds
+        marker.lifetime = rclpy.duration.Duration(seconds=8.0)  # markers disappear after 8 seconds
 
         self.invaliid_pose_sub.publish(marker)
 
@@ -511,7 +545,7 @@ class AstarObstacleAvoidance():
         
         flattened_waypoints = []
         for gx, gy in waypoints:
-            x, y = self.grid_to_world(gx, gy)
+            x, y = self.grid_to_world(gx, gy) #transform into world coords
             flattened_waypoints.extend([x, y])
             
         msg.data = flattened_waypoints  # Set the data field with the flattened list
@@ -530,13 +564,13 @@ class AstarObstacleAvoidance():
         need_replan = True
         last_position = (0, 0)
         self.current_path = []
-        last_plan_time = rospy.Time.now()
-        replan_interval = rospy.Duration(5)
+        last_plan_time = self.get_clock().now()
+        replan_interval = Duration(seconds=5)
         path_available = False
         first_time = True
-        goal = self.world_to_grid(self.goal[0][0], self.goal[0][1])
+        goal = self.world_to_grid(self.goal[0][0], self.goal[0][1]) #transform points
         world_goal=(self.goal[0][0], self.goal[0][1])
-        rate = rospy.Rate(50)
+        rate = self.create_rate(50)
         threshold = 0.5  # meters  for each waypoint
         angle_threshold = 0.5  # radians for each waypoint
         threshold_goal = 1.5 #for final waypoint
@@ -544,14 +578,14 @@ class AstarObstacleAvoidance():
         target_reached_flag=False #when true, stop!
        
        #this makes sure the origin is the right origin before stating to plan
-        while not self.got_callback:
+        while not self.got_callback: #hasn't gotten pose coord yet
             if self.abort_check:
                 print("self.abort is true!")
                 break
             # rate.sleep()
-        self.grid_origin=(self.current_position_x, self.current_position_y)
+        self.grid_origin=(self.current_position_x, self.current_position_y) #set the grid origin to init/curr position
      
-        while not rospy.is_shutdown() and not target_reached_flag and not self.abort_check:
+        while rclpy.ok() and not target_reached_flag and not self.abort_check: #while hasn't aborted and hasn't been reached
             print("Self abort check is ", self.abort_check)
             msg = Twist()
             
@@ -559,27 +593,27 @@ class AstarObstacleAvoidance():
                 print("self.abort is true!")
                 break
             
-            if self.occupancy_grid is None: 
+            if self.occupancy_grid is None: #if grid hasn't been init --> should include array with occupied points, init in pointcloud callback
                 if self.abort_check:
                     break
                 print("self.occupancy_grid for straught line is None")
                 rate.sleep()
                 continue
            
-            if self.abort_check or target_reached_flag:
+            if self.abort_check or target_reached_flag: 
                 break
             
-            current_x, current_y = self.world_to_grid(self.current_position_x,self.current_position_y)
-            final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
+            current_x, current_y = self.world_to_grid(self.current_position_x,self.current_position_y) #get transformed curr location 
+            final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2) #transformed 2d distance
             
-            world_final_goal_target_distance = math.sqrt(
+            world_final_goal_target_distance = math.sqrt( #real life 2d distance
                      (world_goal[0] - self.current_position_x) ** 2 +
                      (world_goal[1] - self.current_position_y) ** 2
                  )
             
             # if this isn't working, try world_final_goal_distance
             # if final_goal_target_distance < threshold_goal or target_reached_flag:
-            if world_final_goal_target_distance < threshold_goal or target_reached_flag:
+            if world_final_goal_target_distance < threshold_goal or target_reached_flag: #if within target threshold/reached
                 print("final goal target distance", final_goal_target_distance)
                 target_reached_flag=True
                 msg.linear.x = 0
@@ -589,15 +623,15 @@ class AstarObstacleAvoidance():
                 return
                 # break
             
-            start = self.world_to_grid(self.current_position_x, self.current_position_y)
+            start = self.world_to_grid(self.current_position_x, self.current_position_y) #if target hasn't been reached set a start point from world coords
 
             # replanning conditions
             
             need_replan = False
-            if rospy.Time.now() - last_plan_time > replan_interval:
+            if self.get_clock().now() - last_plan_time > replan_interval: #check whether we need replan based on threashold time
                 need_replan = True
 
-            if last_position:
+            if last_position: #check whether we need replan based on threashold dist diff
                 dx = start[0] - last_position[0]
                 dy = start[1] - last_position[1]
                 if abs(dx) > 6 or abs(dy) > 6:
@@ -612,7 +646,7 @@ class AstarObstacleAvoidance():
                     break
                 print("doing astar", start, goal)
                 
-                path = self.a_star(start, goal)
+                path = self.a_star(start, goal) #generate path
                 if self.abort_check:
                     break
                 if path:
@@ -628,7 +662,7 @@ class AstarObstacleAvoidance():
             #     break
    
             # Follow waypoints
-            while path_available and self.current_path and not self.abort_check and not target_reached_flag:
+            while path_available and self.current_path and not self.abort_check and not target_reached_flag: #while loop to navigate to path points
                 print("self.abort_check in in inner loop is", self.abort_check)
                 current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
                 final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
@@ -675,9 +709,9 @@ class AstarObstacleAvoidance():
                     self.drive_publisher.publish(msg)
                     if self.abort_check:
                         break
-                    if target_reached_flag:
+                    if target_reached_flag: #is redundant can be deleted
                         return
-                    rospy.loginfo(f"Reached waypoint. Proceeding to next. There are {len(self.current_path)} waypoints left.")
+                    self.get_logger().info(f"Reached waypoint. Proceeding to next. There are {len(self.current_path)} waypoints left.")
                     
                     if self.abort_check:
                         break
@@ -707,10 +741,22 @@ class AstarObstacleAvoidance():
                 #break maybe uncomment this??
             rate.sleep()
                       
-if __name__ == "__main__":
-    rospy.init_node("octomap_a_star_planner", anonymous=True)
+def main(args=None):
+    rclpy.init(args=args)
     try:
-        planner = AstarObstacleAvoidance()
+        planner = AstarObstacleAvoidance()  
         planner.navigate()
-    except rospy.ROSInterruptException:
+    except KeyboardInterrupt:
         pass
+    finally:
+        planner.destroy_node()
+        rclpy.shutdown()
+        
+if __name__ == "__main__":
+    main()
+    # rospy.init_node("octomap_a_star_planner", anonymous=True)
+    # try:
+    #     planner = AstarObstacleAvoidance()
+    #     planner.navigate()
+    # except rospy.ROSInterruptException:
+    #     pass

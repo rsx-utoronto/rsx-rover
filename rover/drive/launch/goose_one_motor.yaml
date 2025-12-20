@@ -1,7 +1,19 @@
-talons:
-  one_motor:
-    id: 6
-    P: 3.0
-    I: 0.015
-    D: 175.0
-    inverted: False
+ros_phoenix_node:
+  ros__parameters:
+    talons:
+      one_motor:
+        id: 6
+        P: 3.0
+        I: 0.015
+        D: 175.0
+        inverted: False
+
+falcon_motor_control_node:
+  ros__parameters:
+    talons:
+      one_motor:
+        id: 6
+        P: 3.0
+        I: 0.015
+        D: 175.0
+        inverted: False

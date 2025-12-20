@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from sensor_msgs.msg import Image  # Import Image message type from sensor_msgs package
 from cv_bridge import CvBridge
 import io
@@ -13,11 +14,13 @@ PUBLISH_RATE = 5
 INPUT_TOPIC = '/zed_node/rgb/image_rect_color'
 OUTPUT_TOPIC = 'c_stream'
 
-class compressedImage():
+
+class compressedImage(Node):
 
     def __init__(self):
-        self.inStream = rospy.Subscriber(INPUT_TOPIC, Image, self.callback, queue_size = 1)
-        self.outStream = rospy.Publisher(OUTPUT_TOPIC, Image, queue_size=1)
+        super().__init__('compressed')
+        self.inStream = self.create_subscription(Image, INPUT_TOPIC, self.callback,  1)
+        self.outStream = self.create_publisher(Image, OUTPUT_TOPIC, 1)
         self.bridge = CvBridge()
         self.compressed = Image()
 
@@ -28,16 +31,15 @@ class compressedImage():
         decBuffer = cv2.imdecode(compressedBuffer, 1)
 
         self.compressed = self.bridge.cv2_to_imgmsg(decBuffer, encoding="passthrough")
-        self.publish()
-
-    def publish(self):
         self.outStream.publish(self.compressed)
 
-if __name__ == '__main__':
-    rospy.init_node('compressed', anonymous=True)
+
+def main(args=None):
+    rclpy.init(args=args)
     compressed_image = compressedImage()
-    rate = rospy.Rate(PUBLISH_RATE)
-    rospy.spin()
-    while not rospy.is_shutdown():
-        compressed_image.publish()
-        #rate.sleep()
+    rclpy.spin(compressed_image)
+    compressed_image.destroy_node()
+    rclpy.shutdown()
+    
+if __name__ == '__main__':
+    main()

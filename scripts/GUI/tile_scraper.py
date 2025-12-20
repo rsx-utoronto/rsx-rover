@@ -118,9 +118,9 @@ def main():
 	]
 
 	locations = [
-		# front_campus,
-		woodbine_beach
-		# mdrs
+		front_campus,
+		woodbine_beach,
+		mdrs
 	]
 
 	internet_map_servers = [MapServers.ARCGIS_World_Imagery]

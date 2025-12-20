@@ -1,100 +1,61 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.14.4)  # ROS 2 requires CMake 3.8+
 project(rover)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  std_msgs
-  sensor_msgs
-  geometry_msgs
-  message_generation
-  message_filters
-  tf2_ros
-  tf2
-  pcl_ros
-  # octomap_msgs
-  visualization_msgs
+
+# ROS 2 Core ===========================================================
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(message_filters REQUIRED)
+find_package(rosidl_default_generators REQUIRED)  # Replaces message_generation
+
+
+set(msg_files
+  "msg/ArmInputs.msg"
+  "msg/MissionState.msg"
+)
+
+set(srv_files
+  "srv/Corrections.srv"
+#   "srv/GoToArmPos.srv"
+#   "srv/SaveArmPos.srv"
 )
 
 
-#find_package(GTSAM REQUIRED)
 
-#include_directories(${GTSAM_INCLUDE_DIR})
-
-find_package(PCL 1.2 REQUIRED)
-# find_package(octomap REQUIRED)
-
-# Variables set by the pcl config.cmake.in file
+# PCL Configuration ====================================================
+find_package(PCL 1.10 REQUIRED)  # Use updated version for ROS 2
+find_package(PCL 1.10 REQUIRED)  # Use updated version for ROS 2
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+# Message/Service Generation ===========================================
+# Declare message files
 
-
-## Uncomment this if the package has a setup.py. This macro ensures
-## modules and global scripts declared therein get installed
-## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
-
-################################################
-## Declare ROS messages, services and actions ##
-################################################
-
-## To declare and build messages, services or actions from within this
-## package, follow these steps:
-## * Let MSG_DEP_SET be the set of packages whose message types you use in
-##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
-## * In the file package.xml:
-##   * add a build_depend tag for "message_generation"
-##   * add a build_depend and a exec_depend tag for each package in MSG_DEP_SET
-##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
-##     but can be declared for certainty nonetheless:
-##     * add a exec_depend tag for "message_runtime"
-## * In this file (CMakeLists.txt):
-##   * add "message_generation" and every package in MSG_DEP_SET to
-##     find_package(catkin REQUIRED COMPONENTS ...)
-##   * add "message_runtime" and every package in MSG_DEP_SET to
-##     catkin_package(CATKIN_DEPENDS ...)
-##   * uncomment the add_*_files sections below as needed
-##     and list every .msg/.srv/.action file to be processed
-##   * uncomment the generate_messages entry below
-##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
-
-## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  ArmInputs.msg
-  # StateMsg.msg
-  # StateMsg.msg
-  UnityCmd.msg 
+ament_export_dependencies(
+  std_msgs
+  sensor_msgs
+  geometry_msgs
+  visualization_msgs
 )
 
-# Generate services in the 'srv' folder
-add_service_files(
-  FILES
-  # AddGoal.srv
-  Corrections.srv
-  GoToArmPos.srv
-  SaveArmPos.srv
-)
-
-## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
-
-## Generate added messages and services with any dependencies listed here
-generate_messages(
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ${msg_files}
+  ${srv_files}
   DEPENDENCIES
   std_msgs
   sensor_msgs
@@ -102,164 +63,228 @@ generate_messages(
   visualization_msgs
 )
 
-################################################
-## Declare ROS dynamic reconfigure parameters ##
-################################################
-
-## To declare and build dynamic reconfigure parameters within this
-## package, follow these steps:
-## * In the file package.xml:
-##   * add a build_depend and a exec_depend tag for "dynamic_reconfigure"
-## * In this file (CMakeLists.txt):
-##   * add "dynamic_reconfigure" to
-##     find_package(catkin REQUIRED COMPONENTS ...)
-##   * uncomment the "generate_dynamic_reconfigure_options" section below
-##     and list every .cfg file to be processed
-
-## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
-
-###################################
-## catkin specific configuration ##
-###################################
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if your package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-    #INCLUDE_DIRS include
-    #LIBRARIES Rover
-    CATKIN_DEPENDS roscpp rospy std_msgs message_runtime message_filters
-    DEPENDS
-)
-
-###########
-## Build ##
-###########
-
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-  # $(OCTOMAP_INCLUDE_DIRS)
-  # rover/autonomy/scripts/obstacle_avoidance/include
-)
-
-# Declare a C++ library
-# add_library(dwa_visualizer
-#   rover/autonomy/scripts/obstacle_avoidance/trajectory_visualizer.cpp
-# )
-
-## Add cmake target dependencies of the library
-## as an example, code may need to be generated before libraries
-## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-## Declare a C++ executable
-## With catkin_make all packages are built within a single CMake context
-## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/Rover_node.cpp)
-
-## Rename C++ executable without prefix
-## The above recommended prefix causes long target names, the following renames the
-## target back to the shorter version for ease of user use
-## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
-# set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
-
-## Add cmake target dependencies of the executable
-## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-# Specify libraries to link a library or executable target against
-# target_link_libraries(dwa_visualizer
-#   ${catkin_LIBRARIES}
-# )
-
-#############
-## Install ##
-#############
-
-# all install targets should use catkin DESTINATION variables
-# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
-
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# install(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark executables and/or libraries for installation
-# install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-# Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  # FILES_MATCHING PATTERN "*.h"
-  # PATTERN ".svn" EXCLUDE
-)
-
-## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
-
-#############
-## Testing ##
-#############
-
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_Rover.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
-
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)
-
-# catkin_install_python(PROGRAMS rover/autonomy/scripts/state_machine_node.py
-# DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# Package Configuration ================================================
+# ament_package(
+#   # INCLUDE_DIRS include
+#   # LIBRARIES Rover
+#   # CATKIN_DEPENDS removed in ROS 2
 # )
 
 add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
-target_link_libraries(drive_sender_node ${catkin_LIBRARIES})
+ament_target_dependencies(drive_sender_node
+  rclcpp
+  std_msgs
+  geometry_msgs
+  sensor_msgs
+  message_filters
+)
 
-# add_executable(GNSSLocalization rover/autonomy/src/GNSSLocalization.cpp)
-# target_link_libraries(GNSSLocalization ${catkin_LIBRARIES})
-
-# add_executable(GNSSTargetAid rover/autonomy/src/GNSSTargetAid.cpp)
-# target_link_libraries(GNSSTargetAid ${catkin_LIBRARIES})
-
-# add_executable(lidar_pcl_subscriber rover/autonomy/scripts/point_cloud_subscriber.cpp rover/autonomy/scripts/pcl_traversibility_score.cpp rover/autonomy/scripts/segment_pcl.cpp)
-# target_link_libraries(lidar_pcl_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-
-# add_executable(pcd_writer_subscriber rover/autonomy/scripts/pcd_writer_node.cc)
-# target_link_libraries(pcd_writer_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-
-# add_executable(grid_map_subscriber rover/autonomy/scripts/grid_map_node.cc)
-# target_link_libraries(grid_map_subscriber ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${G})
-
-add_executable(arm_point_cloud_assembler rover/arm/ros1/arm_point_cloud_assembler.cpp)
-target_link_libraries(arm_point_cloud_assembler ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-
-# add_executable(dwa_planner rover/autonomy/scripts/obstacle_avoidance/dwa_planner.cpp)
-# target_link_libraries(dwa_planner ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} dwa_visualizer)
-
-# catkin_install_python(PROGRAMS scripts/base_comms_check.py scripts/jetson_comms_check.py
-#  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-
-# catkin_install_python(PROGRAMS rover/autonomy/scripts/gps_target_waypoint_updater.py
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# target_link_libraries(drive_sender_node PUBLIC
+#   rclcpp::rclcpp
+#   ${std_msgs_TARGETS}
+#   ${sensor_msgs_TARGETS}
+#   ${geometry_msgs_TARGETS}
+#   ${message_filters_TARGETS}
 # )
+
+# DEPRECATED # Include Directories =================================================
+# include_directories(
+#   include
+#   ${rosidl_include_directories}  # ROS 2 generated message headers
+#   # $(OCTOMAP_INCLUDE_DIRS)
+#   # rover/autonomy/scripts/obstacle_avoidance/include
+# )
+
+target_include_directories(drive_sender_node PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${rover}>"
+)
+
+# Executable Targets ==================================================
+# Drive component
+# add_executable(drive_sender_node rover/drive/src/drive_sender_node.cpp)
+# target_link_libraries(drive_sender_node
+#   ${rclcpp_LIBRARIES}
+#   ${std_msgs_LIBRARIES}
+# )
+
+
+# Arm component
+# add_executable(arm_point_cloud_assembler rover/arm/ros1/arm_point_cloud_assembler.cpp)
+# target_link_libraries(arm_point_cloud_assembler
+#   ${rclcpp_LIBRARIES}
+#   ${sensor_msgs_LIBRARIES}
+#   ${PCL_LIBRARIES}
+# )
+
+# Uncomment and update other targets as needed:
+# add_executable(GNSSLocalization rover/autonomy/src/GNSSLocalization.cpp)
+# target_link_libraries(GNSSLocalization ...)
+
+# Install Targets =====================================================
+install(TARGETS 
+  drive_sender_node
+#   arm_point_cloud_assembler
+  # Add other executables here
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# install(
+#   DIRECTORY include/
+#   DESTINATION include
+# )
+
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+# Install configuration files (e.g., Fast DDS profiles)
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}
+)
+
+# Python scripts installation (adjust for ROS 2)
+# install(PROGRAMS
+#   rover/autonomy/scripts/state_machine_node.py
+#   DESTINATION lib/${PROJECT_NAME}
+# )
+
+# Required ROS 2 macro
+install(PROGRAMS
+  scripts/manual_switch.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+install(PROGRAMS
+  scripts/manual_control
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/imu_to_enu.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/pub_manual_indicator.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/state_machine.py
+  rover/autonomy/scripts/sm_config.yaml
+  long_lat_goal.csv
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/state_machine_remAR3_addObj3.py
+  rover/autonomy/scripts/optimal_path_improved.py
+  rover/autonomy/scripts/sm_grid_search_improve.py
+  rover/autonomy/scripts/sm_straight_line_improved.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# install(DIRECTORY 
+#   scripts/GUI/tile_cache 
+#   DESTINATION lib/${PROJECT_NAME}
+# )
+
+install(PROGRAMS
+  scripts/GUI/gui_pyqt.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/sm_grid_search.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+install(PROGRAMS
+  rover/science/scripts/webcam.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+install(PROGRAMS
+  scripts/utils/gen/find_usb.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/utils/gen/setup_can.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+install(PROGRAMS
+  rover/autonomy/scripts/led_light.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/sm_straight_line_new.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/sm_straight_line.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/gps_to_pose.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/utils/gen/find_usb.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/utils/gen/setup_can.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+install(PROGRAMS
+  rover/autonomy/scripts/ar_detection_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/object_subscriber_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+install(PROGRAMS
+  rover/autonomy/scripts/mallet.pt
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/astar_obstacle_avoidance_algorithim.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/astar_obstacle_avoidance_grid_search.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/science/scripts/geniecamerapublisher.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/check_zed.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# install(
+#   Files rover/drive/config/goose.yaml
+#   DESTINATION share/${PROJECT_NAME}/config
+# )
+
+ament_package()

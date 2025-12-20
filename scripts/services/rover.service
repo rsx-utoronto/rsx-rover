@@ -4,6 +4,9 @@ After=network.target
 # Before=nextcloud-web.service
 
 [Service]
+User=rsx
+Environment=HOME=/home/rsx
+Environment=ROS_LOG_DIR=/home/rsx/.ros/log
 ExecStart=/usr/bin/bash /home/rsx/rover_ws/src/rsx-rover/scripts/manual_control_service
 # ExecReload=
 Type=simple

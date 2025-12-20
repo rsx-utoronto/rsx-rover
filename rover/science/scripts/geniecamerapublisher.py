@@ -16,10 +16,8 @@ Date: 2025-01-04
 """
 
 
-
-
-
-import rospy
+import rclpy
+from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 
@@ -40,12 +38,7 @@ https://github.com/JSeam2/pyGigE-V
 
 
 
-class GenieCameraPublisher:
-
-
-
-
-
+class GenieCameraPublisher(Node):
     def __init__(self):
         """
 
@@ -53,7 +46,7 @@ class GenieCameraPublisher:
         -----------------------------------------
 
         """
-
+        super().__init__('genie_camera_publisher')
 
         # create new context to store native camera data
         self.ctx = gev()
@@ -103,7 +96,7 @@ class GenieCameraPublisher:
         # use -1 for streaming or [1-9] for num frames
         self.ctx.GevStartImageTransfer(-1)
 
-        self.take_image_sub = rospy.Subscriber("/save_genie_image", String, self.save_genie_callback)
+        self.take_image_sub = self.create_subscription( String, "/save_genie_image",self.save_genie_callback, 10)
 
 
 
@@ -142,20 +135,20 @@ class GenieCameraPublisher:
         -----------------------------------------
         """
 
-        rospy.init_node("geniecam")
+        # rospy.init_node("geniecam")
 
-        rate = rospy.Rate(2)
-        pub = rospy.Publisher("geniecam", Image, queue_size=10)
+       
+        pub = self.create_publisher( Image, "geniecam", 10)
 
         bridge = CvBridge()
 
-        while not rospy.is_shutdown():
+        while not rclpy.ok():
 
             img = self._get_image()
             self.img = bridge.cv2_to_imgmsg(img, "8UC1")
             pub.publish(self.img)
 
-            rate.sleep()
+            time.sleep(1/2)
 
     def save_genie_callback(self, msg):
         msgs = msg.data.split(",")
@@ -186,13 +179,14 @@ class GenieCameraPublisher:
 
 
 if __name__ == "__main__":
+    rclpy.init()
     try:
 
         g = GenieCameraPublisher()
 
-        while not rospy.is_shutdown() and not g.camera_found:
+        while rclpy.ok() and not g.camera_found:
             print("Waiting for genie camera...")
-            rospy.sleep(2)
+            time.sleep(2)
 
         if g.camera_found:
             print("Genie camera found!")
@@ -201,5 +195,5 @@ if __name__ == "__main__":
         else:
             print("No Genie camera found.")
 
-    except rospy.ROSInterruptException:
+    except rclpy.exceptions.ROSInterruptException:
         pass

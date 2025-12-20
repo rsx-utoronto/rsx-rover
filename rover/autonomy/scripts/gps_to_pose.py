@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-import rospy
+import rclpy 
+from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, Imu
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Pose
 from math import atan2, pi, sin, cos, radians
 import gps_conversion_functions as functions
 import message_filters
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
-import tf
+# import tf
+from transforms3d.euler import quat2euler as euler_from_quaternion
+from transforms3d.euler import euler2quat as quaternion_from_euler
 
-class GPSToPose: 
+class GPSToPose(Node): 
     
     def __init__(self, origin_coordinates=None, base_coordinates=None, rover_coordinates=None):
         """_summary_
@@ -19,22 +22,34 @@ class GPSToPose:
             base_coordinates: coordinates of the moving base gps antenna in rover frame. Defaults to None.
             rover_coordinates: coordinates of rover gps in rover frame. Defaults to None.
         """
-        
-        self.origin_coordinates = origin_coordinates
-        self.base_coordinates = base_coordinates
-        self.rover_coordinates = rover_coordinates
+        super().__init__('gps_to_pose')
+    
+        # Declare and retrieve parameters
+        self.declare_parameter('origin_coordinates', [0.0, 0.0]) #instead of None
+        self.declare_parameter('base_coordinates', [0.0, 0.0])
+        self.declare_parameter('rover_coordinates', [0.0, 1.055])
 
-        self.gps1 = message_filters.Subscriber("calian_gnss/gps_extended", GnssSignalStatus)
-        self.gps2 = message_filters.Subscriber("calian_gnss/base_gps_extended", GnssSignalStatus)
-        self.imu_sub = rospy.Subscriber("/imu/orient", Imu, self.imu_callback)
+        self.origin_coordinates = self.get_parameter('origin_coordinates').value
+        self.base_coordinates = self.get_parameter('base_coordinates').value
+        self.rover_coordinates = self.get_parameter('rover_coordinates').value
+
+        # Initialize variables
         self.imu = Imu()
-        # here 5 is the size of the queue and 0.2 is the time allowed between messages
-        self.ts = message_filters.ApproximateTimeSynchronizer([self.gps1, self.gps2], 5, 0.2)
-        self.ts.registerCallback(self.callback)
-        self.pose_pub = rospy.Publisher('pose', PoseStamped, queue_size=1)
-        self.msg = PoseStamped()
         self.x = 0
         self.y = 0
+        self.msg = PoseStamped()
+        self.mag_declination_rad = -10.04 * pi / 180
+
+        # ROS 2-style publishers/subscribers
+        self.pose_pub = self.create_publisher(PoseStamped, '/pose', 10)
+        self.imu_sub = self.create_subscription(Imu, '/imu/orient', self.imu_callback, 10)
+        self.set_origin_sub = self.create_subscription(Pose, '/set_origin', self.set_origin, 10)
+
+        self.gps1 = message_filters.Subscriber(self, GnssSignalStatus, "calian_gnss/gps_extended")
+        self.gps2 = message_filters.Subscriber(self, GnssSignalStatus, "calian_gnss/base_gps_extended")
+        # here 5 is the size of the queue and 0.2 is the time allowed between messages
+        self.ts = message_filters.ApproximateTimeSynchronizer([self.gps1, self.gps2], 5, 0.4)
+        self.ts.registerCallback(self.callback)
 
         self.mag_declination_rad = -10.04 * (pi / 180)  # Magnetic declination in radians
 
@@ -70,6 +85,8 @@ class GPSToPose:
 
     def callback(self, gps1, gps2):
         # first we get the most recent longitudes and latitudes
+        # self.get_logger().info("IN GPS TO POSE!")
+
         lat1 = gps1.latitude
         long1 = gps1.longitude
         lat2 = gps2.latitude
@@ -94,13 +111,14 @@ class GPSToPose:
         # current gps location as the origin
         # note that we consider north (or 0.0 as a calculated gps heading on the -pi to pi scale) to be the
         # positive y direction for our coordinate system 
-        if self.origin_coordinates is None:
+        # self.get_logger().info(f"{self.origin_coordinates}")
+        if self.origin_coordinates == [0.0, 0.0]:
             # note that since the gps antenna locations are fixed distances from the origin, to not have to
             # we use the coordinates for antenna one, then apply a fix based of where antenna 1 is from the
             # center of the rover if needed afterwards
             self.origin_coordinates = (lat1, long1)
-            x = 0
-            y = 0
+            self.x = 0.0
+            self.y = 0.0
         else:
             # it is difficult to calculate from decimal degrees the x and y distance between two points
             # this is because a degree of longitude at te equator is a different distance that at 23 degree
@@ -116,7 +134,8 @@ class GPSToPose:
 
         # now that we have the coordinate and angle quaternion information we can return the pose message
         msg = self.msg
-        msg.header.stamp = rospy.Time.now()
+        # msg.header.stamp = rospy.Time.now()
+        msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = "map"
         msg.pose.position.x = self.x
         msg.pose.position.y = self.y
@@ -131,25 +150,36 @@ class GPSToPose:
             msg.pose.orientation.w = qw
         self.pose_pub.publish(msg)
 
+    def set_origin(self, msg: Pose):
+        self.origin_coordinates = [msg.position.x, msg.position.y]
+
     def imu_callback(self, msg):
         # Convert quaternion to Euler angles (roll, pitch, yaw)
         orientation_list = [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
-        (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(orientation_list)
+        # (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(orientation_list)
+        (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
+        
         yaw = yaw + self.mag_declination_rad
         # Convert back to quaternion
-        qx, qy, qz, qw = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
+        qx, qy, qz, qw = quaternion_from_euler(roll, pitch, yaw)
         msg.orientation.x = qx
         msg.orientation.y = qy
         msg.orientation.z = qz
         msg.orientation.w = qw
         self.imu = msg
 
-def main():
-    # base gps on the right, heading gps on the left
-    gps_converter = GPSToPose(None, (0, 0), (0, 1.055))
-    rospy.spin()
+    
+def main(args=None):
+    rclpy.init(args=args)
+    node = GPSToPose()
+    try:
+        rclpy.spin(node)
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
-if __name__ == "__main__":
-    rospy.init_node("gps_to_pose")
+    
+
+if __name__ == '__main__':
     main()
