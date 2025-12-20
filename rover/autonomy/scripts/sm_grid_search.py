@@ -130,30 +130,30 @@ class GS_Traversal(Node):
     
     def aruco_detection_callback(self, data):
         try:
-            time_now = time.time()
-            if abs(self.timer - time_now) > 5:
-                self.timer = time_now
-                self.count = 0
-            print("count,", self.count)
+            time_now=time.time()
+            if abs(self.timer-time_now) >5:
+                self.timer=time_now
+                self.count=0
+            print("count,",self.count)
             if data.data:
                 if self.count <= 4:
-                    self.count += 1
+                    self.count +=1
                 else:
                     self.aruco_found = data.data
                     if self.state in self.found_objects:
                         self.found_objects[self.state] = data.data
                     else:
-                        self.get_logger().warn(f"aruco_detection_callback: state '{self.state}' not in found_objects keys")
+                        self.get_logger().warn(f"aruco_detection_callback: state '{self.state}' not in found_objects")
                     self.count += 1
         except Exception as e:
             self.get_logger().error(f"Exception in aruco_detection_callback: {e}")
     
     def mallet_detection_callback(self, data):
         try:
-            time_now = time.time()
-            if abs(self.timer - time_now) > 5:
-                self.timer = time_now
-                self.count = 0
+            time_now=time.time()
+            if abs(self.timer-time_now) >5:
+                self.timer=time_now
+                self.count=0
             if data.data:
                 if self.count <= 4:
                     self.count += 1
@@ -162,17 +162,17 @@ class GS_Traversal(Node):
                     if self.state in self.found_objects:
                         self.found_objects[self.state] = data.data
                     else:
-                        self.get_logger().warn(f"mallet_detection_callback: state '{self.state}' not in found_objects keys")
+                        self.get_logger().warn(f"mallet_detection_callback: state '{self.state}' not in found_objects")
                     self.count += 1
         except Exception as e:
             self.get_logger().error(f"Exception in mallet_detection_callback: {e}")
 
     def waterbottle_detection_callback(self, data):
         try:
-            time_now = time.time()
-            if abs(self.timer - time_now) > 5:
-                self.timer = time_now
-                self.count = 0
+            time_now=time.time()
+            if abs(self.timer-time_now) >5:
+                self.timer=time_now
+                self.count=0
             if data.data:
                 if self.count <= 4:
                     self.count += 1
@@ -181,7 +181,7 @@ class GS_Traversal(Node):
                     if self.state in self.found_objects:
                         self.found_objects[self.state] = data.data
                     else:
-                        self.get_logger().warn(f"waterbottle_detection_callback: state '{self.state}' not in found_objects keys")
+                        self.get_logger().warn(f"waterbottle_detection_callback: state '{self.state}' not in found_objects")
                     self.count += 1
         except Exception as e:
             self.get_logger().error(f"Exception in waterbottle_detection_callback: {e}")
