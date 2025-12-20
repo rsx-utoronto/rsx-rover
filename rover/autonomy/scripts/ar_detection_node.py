@@ -13,6 +13,7 @@ from std_msgs.msg import Bool
 from std_msgs.msg import String
 from cv_bridge import CvBridge, CvBridgeError
 from rover.msg import MissionState
+import threading
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
@@ -71,6 +72,7 @@ class ARucoTagDetectionNode(Node):
         #self.updated_state_msg = StateMsg()
         #self.scanned_state_smg = StateMsg()
         self.found = False
+        self._nav_thread = None
 
     def image_callback(self, ros_image):
         try:
@@ -89,7 +91,10 @@ class ARucoTagDetectionNode(Node):
         if self.mission_state_msg == "START_GS_TRAV":
             if getattr(self, 'last_cv_image') is not None:
                 print("calling findArucoMarkers")
-                self.findArucoMarkers(self.last_cv_image)
+                if self._nav_thread is None or not self._nav_thread.is_alive():
+                    self._nav_thread = threading.Thread(target=self.findArucoMarkers, args=(self.last_cv_image,), daemon=True)
+                    self._nav_thread.start()
+                    
             else: 
                 self.get_logger().info("ar_detection_node: No image received yet for AR detection.")
             

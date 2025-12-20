@@ -341,7 +341,6 @@ class GS_Traversal(Node):
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
                 print(f"Object detected during navigation: {self.found_objects[self.state]}")
                 msg.state="OBJ_FOUND"
-                # msg.search_result="OBJ_FOUND"
                 self.pub.publish(msg)
                 return True
             # print("Going to target", target_x, target_y)

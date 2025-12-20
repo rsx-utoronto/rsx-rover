@@ -10,6 +10,7 @@ import numpy as np
 from ultralytics import YOLO
 import os
 import yaml
+import threading 
 from std_msgs.msg import String
 from rover.msg import MissionState
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
@@ -56,6 +57,7 @@ class ObjectDetectionNode(Node):
         script_dir=os.path.dirname(os.path.abspath(__file__))
         model_path=os.path.join(script_dir, 'mallet.pt')
         self.model = YOLO(model_path)  # Load YOLO model
+        self._nav_thread = None
         
         #self.model = YOLO('best.pt')  #Load YOLO model
         self.model.conf = 0.5  # Set confidence threshold
@@ -81,7 +83,10 @@ class ObjectDetectionNode(Node):
         self.mission_state_msg = msg.state
         if self.mission_state_msg == "START_GS_TRAV":
             if getattr(self, 'last_cv_image') is not None:
-                self.detect_objects(self.last_cv_image)
+                if self._nav_thread is None or not self._nav_thread.is_alive():
+                    self._nav_thread = threading.Thread(target=self.detect_objects, args=(self.last_cv_image,), daemon=True)
+                    self._nav_thread.start()
+                
             else: 
                 self.get_logger().info("ar_detection_node: No image received yet for AR detection.")
 
