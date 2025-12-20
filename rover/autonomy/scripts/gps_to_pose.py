@@ -151,7 +151,7 @@ class GPSToPose(Node):
         self.pose_pub.publish(msg)
 
     def set_origin(self, msg: Pose):
-        self.origin_coordinates = (msg.position.x, msg.position.y)
+        self.origin_coordinates = [msg.position.x, msg.position.y]
 
     def imu_callback(self, msg):
         # Convert quaternion to Euler angles (roll, pitch, yaw)
