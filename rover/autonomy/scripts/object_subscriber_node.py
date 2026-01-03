@@ -8,6 +8,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from std_msgs.msg import Float64MultiArray, Bool
 import numpy as np
 from ultralytics import YOLO
+import torch
 import os
 import yaml
 from std_msgs.msg import String
@@ -52,14 +53,18 @@ class ObjectDetectionNode(Node):
         self.K = None
         self.D = None
         script_dir=os.path.dirname(os.path.abspath(__file__))
-        model_path=os.path.join(script_dir, 'mallet.pt')
+        model_path=os.path.join(script_dir, 'model_v1.pt')
         self.model = YOLO(model_path)  # Load YOLO model
+        self.device = 0 if torch.cuda.is_available() else "cpu"
+        self.model.to(self.device)
+        self.HALF = torch.cuda.is_available()
+        self.CLASSES = list(self.model.names.values())
         
         #self.model = YOLO('best.pt')  #Load YOLO model
-        self.model.conf = 0.5  # Set confidence threshold
+        self.conf = 0.5  # Set confidence threshold
 
         # Mapping class indices to object names (update as per your model's training labels)
-        self.class_map = {0: "mallet", 1: "waterbottle"}  # Adjust indices based on your model's label order
+        # self.class_map = {0: "mallet", 1: "waterbottle"}  # Adjust indices based on your model's label order
 
     def info_callback(self, info_msg):
         self.D = np.array(info_msg.D)
@@ -81,7 +86,14 @@ class ObjectDetectionNode(Node):
         if self.model==None: 
             print("Model is NULL")
             
-        results = self.model(img, verbose=False)  # Run YOLO detection
+        # results = self.model(img, verbose=False)  # Run YOLO detection
+        results = self.model.predict(
+            source=img, 
+            conf=self.conf,
+            device=self.device,
+            half=self.HALF,
+            verbose=False
+        )
         # print("Object detection detect_objects")
         for result in results:
             # print("actual results", results)
@@ -93,9 +105,9 @@ class ObjectDetectionNode(Node):
                 x1, y1, x2, y2 = map(int, box.xyxy[0])  # Bounding box coordinates
                 conf = box.conf[0]  # Confidence score
                 cls = int(box.cls[0])  # Class index
-                if cls not in self.class_map:
+                if cls not in range(len(self.CLASSES)):
                     continue  # Skip unrecognized classes
-                obj_name = self.class_map[cls]
+                obj_name = self.CLASSES[cls]
                 width, height = x2 - x1, y2 - y1
                 area = width * height
                 # Publish bounding box
