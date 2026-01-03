@@ -53,6 +53,10 @@ class StraightLineApproach(Node):
         self.ang_vel = sm_config.get("straight_line_approach_ang_vel")
         self.target = None
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
+        self._nav_lock = threading.Lock()
+        self._pose_lock = threading.Lock()
+        self._nav_event = threading.Event()
+        self.nav_thread = None
     
     def callback(self, msg):
         #print("I heard: ", msg.data)
@@ -63,23 +67,27 @@ class StraightLineApproach(Node):
         self.get_logger().info(f"in SL feedback callback, msg.state: {msg.state}")
 
         if msg.state == "START_SL":
-            self.active = True
+            self.current_state = getattr(msg, "current_state", "Location Selection")
             print("in SL msg.current_goal", msg.current_goal)
             target_x = msg.current_goal.pose.position.x
             target_y = msg.current_goal.pose.position.y
-            self.target = [(target_x, target_y)]
-            self.get_logger().info("Straight line behavior ACTIVE")
-            self.navigate()
+            with self._nav_lock: #new 
+                self.target = [(target_x, target_y)] #had this
+            self._nav_event.set() #new
+            if self.nav_thread is None or not self.nav_thread.is_alive():
+                self.nav_thread = threading.Thread(target=self._nav_loop, daemon=True)
+                self.nav_thread.start()
         else:
             self.active = False
     
     def pose_callback(self, msg):
         print("in SL pose callback")
-        self.x = msg.pose.position.x
-        self.y = msg.pose.position.y
-        self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
-                                            msg.pose.orientation.y, msg.pose.orientation.z)[2]
-        self.get_logger().info(f"x: {self.x}, y {self.y}, heading {self.heading}")
+        with self._pose_lock:
+            self.x = msg.pose.position.x
+            self.y = msg.pose.position.y
+            self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
+                                                msg.pose.orientation.y, msg.pose.orientation.z)[2]
+        # self.get_logger().info(f"x: {self.x}, y {self.y}, heading {self.heading}")
     
     def abort_callback(self,msg):
         self.abort_check = msg.data
@@ -127,18 +135,21 @@ class StraightLineApproach(Node):
         print(self.x, self.y, self.heading)
         while (rclpy.ok()) and (self.abort_check is False):
             # rclpy.spin_once(self, timeout_sec=0.1)
-            print("in move to target loop", self.x, self.y)
+            print("in move to target loop", self.x, self.y, self.heading)
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
                 continue
-
-            target_heading = math.atan2(target_y - self.y, target_x - self.x)
-            target_distance = math.sqrt((target_x - self.x) ** 2 + (target_y - self.y) ** 2)
+            with self._pose_lock:
+                x=self.x
+                y=self.y
+                heading=self.heading
+            target_heading = math.atan2(target_y - y, target_x - x)
+            target_distance = math.sqrt((target_x - x) ** 2 + (target_y - y) ** 2)
             # print(f"Current Position: ({self.x}, {self.y})")
             # print("Target Heading:", math.degrees(target_heading), " Target Distance:", target_distance)
             # print(f"x: {self.x}, y {self.y}, heading {self.heading}")
 
-            angle_diff = target_heading - self.heading
+            angle_diff = target_heading - heading
             
             # print ( f"angle_diff: {angle_diff}")
 
@@ -148,13 +159,14 @@ class StraightLineApproach(Node):
                 angle_diff += 2 * math.pi
                 
             # print (f"diff in heading: {angle_diff}", f"target_distance: {target_distance}")
+            # rclpy.spin_once(self, timeout_sec=0.1)
 
             if target_distance < threshold:
                 msg.linear.x = 0.0
                 msg.angular.z = 0.0
                 self.drive_publisher.publish(msg)
                 print(f"Reached target: ({target_x}, {target_y})")
-                break
+                return
 
             if abs(angle_diff) <= angle_threshold:
                 msg.linear.x = self.lin_vel
@@ -168,28 +180,48 @@ class StraightLineApproach(Node):
             self.drive_publisher.publish(msg)
             time.sleep(1/50)
 
-    def navigate(self, state="Location Selection"): #navigate needs to take in a state value as well
-        print("self.targets", self.target)
-        for target_x, target_y in self.target:
-            print(f"Moving towards target: ({target_x}, {target_y})")
-            self.move_to_target(target_x, target_y)
-            if self.abort_check:
-                self.abort_check = False
+    # def navigate(self, state="Location Selection"): # navigate needs to take in a state value as well
+    #     print("self.targets", self.target)
+    #     for target_x, target_y in self.target:
+    #         print(f"Moving towards target: ({target_x}, {target_y})")
+    #         self.move_to_target(target_x, target_y)
+    #         if self.abort_check:
+    #             self.abort_check = False
+    #             break
+    #         time.sleep(1)
+    #     sla_msg = MissionState()
+    #     # compute success against first target we were given
+    #     tx, ty = targets[0]
+    #     if (np.abs(self.x - tx) < 0.5) and (np.abs(self.y - ty) < 0.5):
+    #          sla_msg.state = "SLA_DONE"
+    #     else:
+    #          sla_msg.state = "SLA_FAILED"
+ 
+    #     self.active = False
+    #     self.pub.publish(sla_msg)
+        
+    def _nav_loop(self):
+        while rclpy.ok():
+            self._nav_event.wait()
+            if not rclpy.ok():
                 break
-            time.sleep(1)
-        if (np.abs(self.x - self.target[0][0]) < 0.5) and (np.abs(self.y - self.target[0][1]) < 0.5):
-            sla_msg = MissionState()
-            sla_msg.state = "SLA_DONE"
-            self.active = False
-        else:
-            sla_msg = MissionState()
-            sla_msg.state = "SLA_FAILED"
-            self.active = False
-        self.pub.publish(sla_msg)
+            # copy target under lock to avoid races
+            with self._nav_lock:
+                targets = list(self.target) if self.target else []
+            for tx, ty in targets:
+                self.move_to_target(tx, ty)
+                if self.abort_check:
+                    break
+            # publish SLA result correlated with current_state
+            resp = MissionState()
+            resp.current_state = getattr(self, "current_state", "")
+            resp.state = "SLA_DONE" if not self.abort_check else "SLA_FAILED"
+            self.pub.publish(resp)
+            self._nav_event.clear()
+
         
 
 def main():
-    import rclpy
     rclpy.init(args=None)
     sla = StraightLineApproach()
     try: 

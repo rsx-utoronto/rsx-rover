@@ -3,7 +3,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, Imu
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Pose
 from math import atan2, pi, sin, cos, radians
 import gps_conversion_functions as functions
 import message_filters
@@ -23,7 +23,6 @@ class GPSToPose(Node):
             rover_coordinates: coordinates of rover gps in rover frame. Defaults to None.
         """
         super().__init__('gps_to_pose')
-        
     
         # Declare and retrieve parameters
         self.declare_parameter('origin_coordinates', [0.0, 0.0]) #instead of None
@@ -44,11 +43,12 @@ class GPSToPose(Node):
         # ROS 2-style publishers/subscribers
         self.pose_pub = self.create_publisher(PoseStamped, '/pose', 10)
         self.imu_sub = self.create_subscription(Imu, '/imu/orient', self.imu_callback, 10)
+        self.set_origin_sub = self.create_subscription(Pose, '/set_origin', self.set_origin, 10)
 
         self.gps1 = message_filters.Subscriber(self, GnssSignalStatus, "calian_gnss/gps_extended")
         self.gps2 = message_filters.Subscriber(self, GnssSignalStatus, "calian_gnss/base_gps_extended")
         # here 5 is the size of the queue and 0.2 is the time allowed between messages
-        self.ts = message_filters.ApproximateTimeSynchronizer([self.gps1, self.gps2], 5, 0.2)
+        self.ts = message_filters.ApproximateTimeSynchronizer([self.gps1, self.gps2], 5, 0.4)
         self.ts.registerCallback(self.callback)
 
         self.mag_declination_rad = -10.04 * (pi / 180)  # Magnetic declination in radians
@@ -85,6 +85,8 @@ class GPSToPose(Node):
 
     def callback(self, gps1, gps2):
         # first we get the most recent longitudes and latitudes
+        # self.get_logger().info("IN GPS TO POSE!")
+
         lat1 = gps1.latitude
         long1 = gps1.longitude
         lat2 = gps2.latitude
@@ -99,9 +101,11 @@ class GPSToPose(Node):
         """
         
         # let's first transform our heading (also changing it to anti-clockwise being positive, east is 0.0)
-        heading = 2*pi - radians(gps1.heading) # + pi
+        # heading = 2*pi - radians(gps1.heading) # + pi
+        heading = - pi/2 - radians(gps1.heading)
         
         rover_heading = self.transform_heading(heading)
+        # self.get_logger().info(f"heading: {rover_heading}")
         qx,qy,qz,qw = functions.eulerToQuaternion(0.0, 0.0, rover_heading)        
 
         # now let's get our coordinate
@@ -109,7 +113,7 @@ class GPSToPose(Node):
         # current gps location as the origin
         # note that we consider north (or 0.0 as a calculated gps heading on the -pi to pi scale) to be the
         # positive y direction for our coordinate system 
-        self.get_logger().info(f"{self.origin_coordinates}")
+        # self.get_logger().info(f"{self.origin_coordinates}")
         if self.origin_coordinates == [0.0, 0.0]:
             # note that since the gps antenna locations are fixed distances from the origin, to not have to
             # we use the coordinates for antenna one, then apply a fix based of where antenna 1 is from the
@@ -148,6 +152,9 @@ class GPSToPose(Node):
             msg.pose.orientation.w = qw
         self.pose_pub.publish(msg)
 
+    def set_origin(self, msg: Pose):
+        self.origin_coordinates = [msg.position.x, msg.position.y]
+
     def imu_callback(self, msg):
         # Convert quaternion to Euler angles (roll, pitch, yaw)
         orientation_list = [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
@@ -167,9 +174,14 @@ class GPSToPose(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = GPSToPose()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node)
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+    
 
 if __name__ == '__main__':
     main()

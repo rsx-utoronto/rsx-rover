@@ -10,9 +10,10 @@ from rover.msg import MissionState
 from std_msgs.msg import String as StdString
 import math
 import aruco_homing as aruco_homing
-
+from rclpy.executors import MultiThreadedExecutor
 import yaml
 import os
+import threading
 import time
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
@@ -65,10 +66,21 @@ class GS_Traversal(Node):
         self.waterbottle_sub = self.create_subscription(Bool, 'waterbottle_detected', self.waterbottle_detection_callback, 10)
         self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
         self.message_pub = self.create_publisher(String, "gui_status", 10)
+        if sm_config.get("realsense_detection"):
+            aimer = aruco_homing.AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+        else: 
+            aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+        
+        self.aruco_bbox_sub= self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10) 
         # self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
         self.pub = self.create_publisher(MissionState, 'mission_state', 10)
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
-    
+        self._nav_thread = None
+        self.aimer_aruco=None
+        self.aimer_object=None
+        self.aruco_bbox_sub=None
+        self.object_bbox_sub=None
+
     def feedback_callback(self, msg):
         print("in GS traversal feedback callback, msg.state:", msg.state)
         if msg.state == "START_GS_TRAV":
@@ -77,7 +89,9 @@ class GS_Traversal(Node):
             self.get_logger().info("Grid Search behavior ACTIVE")
             self.start_x = msg.current_goal.pose.position.x
             self.start_y = msg.current_goal.pose.position.y
-            self.navigate()
+            if self._nav_thread is None or not self._nav_thread.is_alive():
+                self._nav_thread = threading.Thread(target=self.navigate, daemon=True)
+                self._nav_thread.start()
         # elif msg.state in ("HOMING_DONE", "HOMING_SUCCESS", "HOMING_FAILED"):
         #     self.homing_status = msg.state
         else:
@@ -121,45 +135,63 @@ class GS_Traversal(Node):
         return angles
     
     def aruco_detection_callback(self, data):
-        time_now=time.time()
-        if abs(self.timer-time_now) >5:
-            self.timer=time_now
-            self.count=0
-        print("count,",self.count)
-        if data.data:
-            if self.count <= 4:
-                self.count +=1
-            else:
-                self.aruco_found = data.data
-                self.found_objects[self.state] = data.data
-                self.count += 1
+        try:
+            time_now=time.time()
+            if abs(self.timer-time_now) >5:
+                self.timer=time_now
+                self.count=0
+            print("count,",self.count)
+            if data.data:
+                if self.count <= 4:
+                    self.count +=1
+                else:
+                    self.aruco_found = data.data
+                    if self.state in self.found_objects:
+                        self.found_objects[self.state] = data.data
+                    else:
+                        self.get_logger().warn(f"aruco_detection_callback: state '{self.state}' not in found_objects")
+                    self.count += 1
+        except Exception as e:
+            self.get_logger().error(f"Exception in aruco_detection_callback: {e}")
     
     def mallet_detection_callback(self, data):
-        time_now=time.time()
-        if abs(self.timer-time_now) >5:
-            self.timer=time_now
-            self.count=0
-        if data.data:
-            if self.count <= 4:
-                self.count += 1
-            else:
-                self.mallet_found = data.data
-                self.found_objects[self.state] = data.data
-                self.count += 1
+        try:
+            time_now=time.time()
+            if abs(self.timer-time_now) >5:
+                self.timer=time_now
+                self.count=0
+            if data.data:
+                if self.count <= 4:
+                    self.count += 1
+                else:
+                    self.mallet_found = data.data
+                    if self.state in self.found_objects:
+                        self.found_objects[self.state] = data.data
+                    else:
+                        self.get_logger().warn(f"mallet_detection_callback: state '{self.state}' not in found_objects")
+                    self.count += 1
+        except Exception as e:
+            self.get_logger().error(f"Exception in mallet_detection_callback: {e}")
 
     def waterbottle_detection_callback(self, data):
-        time_now=time.time()
-        if abs(self.timer-time_now) >5:
-            self.timer=time_now
-            self.count=0
-        if data.data:
-            if self.count <= 4:
-                self.count += 1
-            else:
-                    
-                self.waterbottle_found = data.data
-                self.found_objects[self.state] = data.data
-                self.count += 1
+        print("in waterbottle detection callback")
+        try:
+            time_now=time.time()
+            if abs(self.timer-time_now) >5:
+                self.timer=time_now
+                self.count=0
+            if data.data:
+                if self.count <= 4:
+                    self.count += 1
+                else:
+                    self.waterbottle_found = data.data
+                    if self.state in self.found_objects:
+                        self.found_objects[self.state] = data.data
+                    else:
+                        self.get_logger().warn(f"waterbottle_detection_callback: state '{self.state}' not in found_objects")
+                    self.count += 1
+        except Exception as e:
+            self.get_logger().error(f"Exception in waterbottle_detection_callback: {e}")
 
     def square_target(self):
         print("Generating square grid search targets...")
@@ -205,6 +237,9 @@ class GS_Traversal(Node):
         first_time=True
         
         while (rclpy.ok()) and (self.abort_check is False):
+            # Allow ROS callbacks to process during the tight loop
+         
+            
             obj = self.mallet_found or self.waterbottle_found
             mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
@@ -242,7 +277,7 @@ class GS_Traversal(Node):
                     msg.linear.x = float(0)
                     msg.angular.z = angle_diff * kp
                     if abs(msg.angular.z) < 0.3:
-                        msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
+                        msg.angular.z = 0 #0.3 if msg.angular.z > 0 else -0.3 CHANGE WHEN TESTING OUSTIDE
 
             else: #if mapping[state] is True --> if the object is found
                 print("mapping state is true!")
@@ -254,20 +289,19 @@ class GS_Traversal(Node):
                 # should publish that it is found
                 if state == "AR1" or state == "AR2":
                     # this sees which camera it is using and then uses the parameters accordingly.
-                    if sm_config.get("realsense_detection"):
-                        aimer = aruco_homing.AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
-                    else: 
-                        aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
-                    self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10) 
-                    print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
+                    if self.aruco_bbox_sub is None:
+                        # self.aruco_bbox_sub= self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10) 
+                        print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                     
                 elif state == "OBJ1" or state == "OBJ2" or state == "OBJ3" :
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE, MALLET
-                    self.create_subscription(Float64MultiArray, 'object/bbox', aimer.rosUpdate, 10)
+                    # if self.object_bbox_sub is None:
+                        # self.object_bbox_sub= self.create_subscription(Float64MultiArray, 'object/bbox', aimer.rosUpdate, 10)
                     print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
               
                 # Wait a bit for initial detection
                 for i in range(50):
+
                     time.sleep(0.1)
                 
                 # Add variables for tracking detection memory
@@ -276,6 +310,9 @@ class GS_Traversal(Node):
                 detection_active = False
 
                 while (rclpy.ok()) and (self.abort_check is False):
+                    # Allow ROS callbacks to process
+       
+                    
                     twist = Twist()
                     
                     # Check if we have valid values from the aimer
@@ -291,6 +328,7 @@ class GS_Traversal(Node):
                                 initial_time=time.time()
                             
                             while abs(initial_time-time.time()) < 0.7:
+                            
                                 msg.linear.x=self.lin_vel
                                 self.drive_publisher.publish(msg)
                                 print("final homing movement",abs(initial_time-time.time()) )
@@ -337,7 +375,6 @@ class GS_Traversal(Node):
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
                 print(f"Object detected during navigation: {self.found_objects[self.state]}")
                 msg.state="OBJ_FOUND"
-                # msg.search_result="OBJ_FOUND"
                 self.pub.publish(msg)
                 return True
             # print("Going to target", target_x, target_y)
@@ -361,12 +398,16 @@ class GS_Traversal(Node):
 def main():
     import rclpy
     rclpy.init()
+    executor = MultiThreadedExecutor()
+    executor.add_node(gs)
     gs= GS_Traversal() 
     try:
-        rclpy.spin(gs)
+        executor.spin(gs)
     finally:
         gs.destroy_node()
         rclpy.shutdown()
+
+
 
 if __name__ == '__main__':
     main()
