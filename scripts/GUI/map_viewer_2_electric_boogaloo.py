@@ -23,6 +23,8 @@ import map_js_snnipets
 import csv
 from datetime import datetime
 
+from PyQt5.QtCore import pyqtSignal, QTimer
+
 from PyQt5 import QtWebChannel, QtCore
 
 os.environ['QT_API'] = 'pyqt5'
@@ -103,7 +105,7 @@ class MapViewer(QWidget):
 	# Thresholds
 	ROBOT_REDRAW_THRESHOLD = 0.000001
 	LINE_DRAW_THRESHOLD = 0.00001
-	OBSTACLE_CLEARANCE = 0.000002
+	OBSTACLE_CLEARANCE = 0.00005
 	
 	# Default settings
 	DEFAULT_ZOOM = 18
@@ -116,9 +118,6 @@ class MapViewer(QWidget):
 		super().__init__(*args, **kwargs)
 
 		self._init_map_widget()
-		self._init_map_config()
-		self._init_markers(Locations.engineering)
-
 
 		page = self._get_page()
 		wc = getattr(page, 'webChannel', None)
@@ -133,7 +132,9 @@ class MapViewer(QWidget):
 
 			# --- pick CSV files: reuse latest ones if they exist, otherwise create new ones ---
 			self.session_id = datetime.now().strftime('%Y%m%d_%H%M%S')
-			base = Path.cwd()
+			self.data_dir = Path(__file__).resolve().parent
+			self.data_dir.mkdir(parents=True, exist_ok=True)
+			base = self.data_dir
 
 			def _choose_csv(pattern, default_name, fieldnames):
 				"""
@@ -171,7 +172,7 @@ class MapViewer(QWidget):
             )
 
 			# CSV to store path points for straight-line segments
-			base = Path.cwd()
+			base = self.data_dir
 			self.csv_path_segments = base / f'path_segments_{self.session_id}.csv'
 			with open(self.csv_path_segments, 'w', newline='') as f:
 				writer = csv.DictWriter(f, fieldnames=['id', 'timestamp', 'lat', 'lng', 'label'])
@@ -194,12 +195,42 @@ class MapViewer(QWidget):
             # per-category running counter; obstacle_id will just be this number as a string
 			self.obstacle_counter = {'temporary': 0, 'permanent': 0}
 
+			# --- path display state ---
+			# Green polyline for the currently planned path
+			self.current_path_line = None          # L.polyline or None
+			self.current_path_points = []          # [[lat, lng], ...] for current path
+			# List of orange polylines for previous paths
+			self.old_path_lines = []               # [L.polyline, ...]
+
+			# CSV written by sm_straight_line for Start/End (separate from places_to_go.csv)
+			self._auto_start_end_csv = Path(__file__).parent / "sm_start_end_for_gui.csv"
+			self._places_to_go_last_mtime = None   # used as "last seen" mtime for auto CSV
+
+			# If the auto CSV already exists when the GUI starts, record its mtime
+			if self._auto_start_end_csv.exists():
+				try:
+					self._places_to_go_last_mtime = self._auto_start_end_csv.stat().st_mtime
+				except OSError:
+					self._places_to_go_last_mtime = None
+
+			# Timer: watch the auto CSV and rebuild the path whenever sm_straight_line updates it
+			self._path_watch_timer = QTimer(self)
+			self._path_watch_timer.setInterval(1000)  # check every 1 second
+			self._path_watch_timer.timeout.connect(self._check_for_new_start_end)
+			self._path_watch_timer.start()
+
 			# (Optional) print paths for sanity
 			print("Permanent obstacles CSV:", self.csv_perm)
 			print("Temporary obstacles CSV:", self.csv_temp)
 			print("Points to traverse CSV:", self.csv_trav)
-		self._install_right_click_popup()
-		self._install_mouse_position_display()
+
+		self._init_map_config()
+		QTimer.singleShot(0, self._install_right_click_popup)
+		QTimer.singleShot(0, self._install_mouse_position_display)
+		self._init_markers(Locations.engineering)
+		self._run_when_leaflet_ready(self._post_map_init)
+
+
 
 
 		# signal to be used by other components
@@ -222,6 +253,76 @@ class MapViewer(QWidget):
 		self.elevation_min: float = 0
 		self.elevation_max: float = 0
 		self.places_to_go_markers = []
+
+	def _check_for_new_start_end(self) -> None:
+		"""
+		Watch sm_start_end_for_gui.csv (written by sm_straight_line) for changes.
+		If it changed, read its Start/End points and rebuild the path,
+		turning the old green path orange and drawing the new one.
+		"""
+		csv_path = self._auto_start_end_csv
+
+		if not csv_path.exists():
+			return
+
+		try:
+			mtime = csv_path.stat().st_mtime
+		except OSError:
+			return
+
+		# First time seeing the file in this session: just record mtime, don't build a path yet.
+		if self._places_to_go_last_mtime is None:
+			self._places_to_go_last_mtime = mtime
+			return
+
+		# File changed -> read points and rebuild path
+		if mtime > self._places_to_go_last_mtime:
+			self._places_to_go_last_mtime = mtime
+
+			pts = []
+			try:
+				with open(csv_path, newline="") as f:
+					reader = csv.DictReader(f)
+					for row in reader:
+						if not row:
+							continue
+
+						name = (
+							row.get("Point Name")
+							or row.get("name")
+							or row.get("Name")
+							or ""
+						)
+
+						try:
+							lat_str = (
+								row.get("Latitude")
+								or row.get("lat")
+								or row.get("Lat")
+							)
+							lng_str = (
+								row.get("Longitude")
+								or row.get("lon")
+								or row.get("Lng")
+								or row.get("Long")
+							)
+							lat = float(lat_str)
+							lng = float(lng_str)
+						except (TypeError, ValueError):
+							continue
+
+						pts.append({"name": name, "lat": lat, "lng": lng})
+
+			except Exception as e:
+				print(f"[auto_path] Failed to read {csv_path}: {e}")
+				return
+
+			if not pts:
+				print("[auto_path] No valid points found in auto CSV; skipping path build.")
+				return
+
+			# Build the path using these points (no pop-up windows)
+			self.make_straight_line_path(silent=True, points=pts)
 
 
 	def _install_mouse_position_display(self):
@@ -269,6 +370,34 @@ class MapViewer(QWidget):
 		"""
 		self._get_page().runJavaScript(js)
 
+	def _inflate_hull(self, hull, margin):
+		"""
+		Inflate a convex hull outward by `margin` (same units as lat/lng, i.e. degrees).
+
+		For each vertex, we push it away from the hull centroid by `margin`.
+		"""
+		if not hull or margin <= 0.0:
+			return hull
+
+		# centroid of the hull
+		cx = sum(lat for (lat, _lng) in hull) / len(hull)
+		cy = sum(lng for (_lat, lng) in hull) / len(hull)
+
+		inflated = []
+		for (lat, lng) in hull:
+			vx = lat - cx
+			vy = lng - cy
+			norm = math.hypot(vx, vy)
+
+			if norm < 1e-12:
+				# Vertex coincides with centroid; just push it in +lat direction
+				inflated.append((lat + margin, lng))
+			else:
+				scale = (norm + margin) / norm
+				inflated.append((cx + vx * scale, cy + vy * scale))
+
+		return inflated
+
 	def _collect_obstacle_hulls_for_path(self):
 		"""
 		Build convex hulls for all obstacles from self.obstacles so that we
@@ -302,6 +431,11 @@ class MapViewer(QWidget):
 						upper.append(p)
 
 					hull = lower[:-1] + upper[:-1]
+
+				# --- NEW: inflate the hull by a safety margin ---
+				margin = getattr(self, "OBSTACLE_CLEARANCE", 0.0)
+				if margin > 0.0 and len(hull) >= 1:
+					hull = self._inflate_hull(hull, margin)
 
 				hulls.append({"cat": cat, "oid": oid, "verts": hull})
 		return hulls
@@ -487,7 +621,7 @@ class MapViewer(QWidget):
 
 		return [nodes[k] for k in path_idx]
 	
-	def make_straight_line_path(self):
+	def make_straight_line_path(self, silent: bool = False, points=None):
 		"""
 		Build a straight-line path that:
 		  - starts at 'Start' (if present in places_to_go),
@@ -497,21 +631,13 @@ class MapViewer(QWidget):
 		The resulting path is drawn on the map and its points (without duplicates)
 		are stored in self.csv_path_segments.
 		"""
-		pts = getattr(self, "places_to_go_points", None)
+		pts = points if points is not None else getattr(self, "places_to_go_points", None)
 		if not pts:
-			QMessageBox.warning(
-				self,
-				"Path",
-				"No 'places to go' points loaded.\n\nClick 'Load Places To Go' first."
-			)
+			print("[path] No points available to build path.")
 			return
 
 		if len(pts) < 2:
-			QMessageBox.information(
-				self,
-				"Path",
-				"Need at least two points to build a path."
-			)
+			print("[path] Need at least two points to build a path.")
 			return
 
 		# pick start point: row named "Start" if present, else first point
@@ -526,41 +652,56 @@ class MapViewer(QWidget):
 		def coord(idx):
 			return (pts[idx]["lat"], pts[idx]["lng"])
 
-		unvisited = set(range(len(pts)))
-		unvisited.discard(start_idx)
-		current_idx = start_idx
-
-		# build obstacle hulls from loaded obstacles
+        # build obstacle hulls from loaded obstacles
 		hulls = self._collect_obstacle_hulls_for_path()
 
-		full_path = [coord(current_idx)]
+        # --- choose end point ---
+        # Convention: last point in the CSV is the current target/end point
+		end_idx = len(pts) - 1
 
-		# greedy nearest-neighbour order
-		while unvisited:
-			cur_xy = coord(current_idx)
-			next_idx = min(unvisited, key=lambda k: dist(cur_xy, coord(k)))
-			next_xy = coord(next_idx)
+		if end_idx == start_idx:
+			print("[path] Start and end are the same point; nothing to build.")
+			return
 
-			segment_path = self._plan_path_between_points(cur_xy, next_xy, hulls)
+		start_xy = coord(start_idx)
+		end_xy = coord(end_idx)
 
-			# append, skipping first point to avoid duplicates between segments
-			for (lat, lng) in segment_path[1:]:
-				if dist((lat, lng), full_path[-1]) > 1e-9:
-					full_path.append((lat, lng))
-
-			current_idx = next_idx
-			unvisited.remove(next_idx)
+        # Plan ONE path from Start -> End, avoiding obstacles
+		full_path = self._plan_path_between_points(start_xy, end_xy, hulls)
 
 		# ----- draw path on map -----
-		if not hasattr(self, "path_line"):
-			self.path_line = L.polyline([], {"color": "#00ff00"})
-			self.path_line.addTo(self.map)
-
 		latlngs = [[lat, lng] for (lat, lng) in full_path]
 
-		# clear previous path then draw new one
-		map_js_snnipets.map_marker_set_lat_lng_points(self.map, [], self.path_line.jsName)
-		map_js_snnipets.map_marker_set_lat_lng_points(self.map, latlngs, self.path_line.jsName)
+        # 1) If there was already a green "current" path, turn it into an orange history path
+		if self.current_path_points:
+			try:
+				history_line = L.polyline(self.current_path_points, {
+                    "color": "#ff8800"  # orange-ish
+				})
+				history_line.addTo(self.map)
+				self.old_path_lines.append(history_line)
+			except Exception as e:
+				print("Failed to create history path polyline:", e)
+
+        # 2) Ensure we have a green polyline for the *new* current path
+		if self.current_path_line is None:
+			self.current_path_line = L.polyline([], {
+                "color": "#00ff00"    # bright green
+            })
+			self.current_path_line.addTo(self.map)
+
+        # 3) Update the green polyline with the new path points
+        #    (clear any old coords, then set new coords)
+		map_js_snnipets.map_marker_set_lat_lng_points(
+            self.map, [], self.current_path_line.jsName
+        )
+		map_js_snnipets.map_marker_set_lat_lng_points(
+            self.map, latlngs, self.current_path_line.jsName
+        )
+
+        # 4) Remember the current path points so that next time we can move
+        #    this path into the orange "history" layer
+		self.current_path_points = latlngs
 
 		# ----- save unique points to CSV (no duplicates) -----
 		seen = set()
@@ -586,12 +727,10 @@ class MapViewer(QWidget):
 					"label": "path_point",
 				})
 
-		QMessageBox.information(
-			self,
-			"Path",
-			f"Path built with {len(full_path)} points.\n"
-			f"Saved {len(ordered_unique)} unique points to:\n{self.csv_path_segments}"
-		)
+		print(
+            f"[path] Built path with {len(full_path)} points; "
+            f"saved {len(ordered_unique)} unique points to {self.csv_path_segments}"
+        )
 	
 	def _redraw_obstacle_shape(self, cat: str, oid: str):
 		import json
@@ -918,6 +1057,31 @@ class MapViewer(QWidget):
 
 		raise RuntimeError("Could not obtain QWebEnginePage for WebChannel.")
 
+	def _run_when_leaflet_ready(self, fn, tries=50, delay_ms=100):
+		"""
+		Poll until the Leaflet map exists in JS, then run fn().
+		Avoids 'mapObject/LObject of null' startup races.
+		"""
+		page = self._get_page()
+		js_check = f"Boolean(window['{self.map.jsName}Object'] || window.map)"
+
+		def _check():
+			def _cb(ok):
+				if ok:
+					fn()
+				elif tries > 0:
+					QTimer.singleShot(delay_ms, lambda: self._run_when_leaflet_ready(fn, tries-1, delay_ms))
+			page.runJavaScript(js_check, _cb)
+
+		_check()
+
+	def _post_map_init(self):
+		# These were previously in _init_map_config
+		map_js_snnipets.init_map_cursor(self.map)
+		map_js_snnipets.init_map_scale(self.map)
+
+		
+
 	# --- INTERNAL: handle a stored point from JS (append CSV + draw a marker) ---
 	def _on_store_point(self, lat: float, lng: float, label: str):
 		key = (label or '').strip().lower()
@@ -1111,6 +1275,11 @@ class MapViewer(QWidget):
 
 	# --- INTERNAL: inject right-click popup JS with 2 buttons calling back to Python ---
 	def _install_right_click_popup(self):
+		# If map isn't created yet, don't crash — just skip for now.
+		if not hasattr(self, "map") or self.map is None:
+			print("Right-click popup: map not initialized yet; skipping install")
+			return
+		
 		js = f"""
 		(function() {{
 		var m = window['{self.map.jsName}Object'] || window.map;
@@ -1372,11 +1541,7 @@ class MapViewer(QWidget):
 		csv_path = Path(__file__).parent / "places_to_go.csv"
 
 		if not csv_path.exists():
-			QMessageBox.warning(
-				self,
-				"Places to go",
-				f"CSV file with places to go was not found.\n\nExpected at:\n{csv_path}"
-			)
+			print(f"[places_to_go] CSV not found at {csv_path}")
 			return
 
 		added = 0
@@ -1436,41 +1601,19 @@ class MapViewer(QWidget):
 					added += 1
 
 			if added == 0:
-				QMessageBox.information(
-					self,
-					"Places to go",
-					f"No valid points were found in:\n{csv_path}"
-				)
+				print(f"[places_to_go] No valid points found in {csv_path}")
 			else:
-				QMessageBox.information(
-					self,
-					"Places to go",
-					f"Loaded {added} point(s) from:\n{csv_path}"
-				)
+				print(f"[places_to_go] Loaded {added} point(s) from {csv_path}")
 
 		except Exception as e:
-			QMessageBox.critical(
-				self,
-				"Places to go",
-				f"Failed to read CSV file:\n{csv_path}\n\nError: {e}"
-			)
+			print(f"[places_to_go] Failed to read CSV file {csv_path}: {e}")
 
 	def _init_map_config(self) -> None:
-		# create pyqtlet2 map
-		self.map = L.map(
-			self.mapWidget,
-			{
-				"doubleClickZoom": False,
-				"maxBountsViscosity": 1.0,
-			}
-		)
-
-		# initialize view and cursor
+		self.map = L.map(self.mapWidget, {
+			"doubleClickZoom": False,
+			"maxBountsViscosity": 1.0,
+		})
 		self.map.setView(Locations.mdrs, self.DEFAULT_ZOOM)
-		map_js_snnipets.init_map_cursor(self.map)
-
-		# add scale to the map
-		map_js_snnipets.init_map_scale(self.map)
 	
 	def _init_markers(self, startup_location: list[float]) -> None:
 		
@@ -1792,9 +1935,9 @@ if __name__ == "__main__":
 	viewer = MapViewer()
 	
 	viewer.show()  # Display the widget
-	viewer.set_map_server(
-		str(CACHE_DIR) + '/arcgis_world_imagery/{z}/{y}/{x}.jpg', 19
-	)
+	tile_root = (CACHE_DIR / "arcgis_world_imagery").resolve()
+	tile_url = tile_root.as_uri() + "/{z}/{x}/{y}.jpg"
+	viewer.set_map_server(tile_url, 19)
 	viewer.set_robot_position(43.658,-79.398)
 
 	viewer.set_elevation_source(resolve_path("elevation.json"))

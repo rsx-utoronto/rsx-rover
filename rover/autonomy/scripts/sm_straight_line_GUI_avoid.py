@@ -16,6 +16,7 @@ import ar_detection_node as ar_detect
 
 import yaml
 import os
+from pathlib import Path
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
@@ -25,14 +26,361 @@ with open(file_path, "r") as f:
 
 import csv
 
-with open(csv_path, "r", newline=" ") as c:
-    obstacles = csv.reader(c) #assigns entries in csv file to obstacles
+SAFETY_MARGIN = 0.00005  # adjust as needed
+
+# with open(csv_path, "r", newline=" ") as c:
+#     obstacles = csv.reader(c) #assigns entries in csv file to obstacles
 
 
 # File for the straight line traversal class for the state machine. The class is initialized with linear, angular velocities, and target passed
 # through the state machine. When navigate function is called, it calls the move_to_target function which continuously calculates the target distance
 # and heading to determine the angular and linear velocities. When the target distance is within the threshold it breaks out of the loop to return.
-    
+
+# ------------- Obstacle CSV loading and geometry helpers -------------
+
+def load_obstacles_from_csv(file_path: str, label: str):
+    """
+    Load obstacles from a CSV exported by map_viewer_2.
+    CSV format (per row):
+      id,timestamp,lat,lng,label,obstacle_id
+
+    Returns:
+      dict[(label, obstacle_id)] -> list[(lat, lng)]
+    """
+    obstacles = {}
+    if not file_path:
+        return obstacles
+
+    try:
+        with open(file_path, newline="") as f:
+            reader = csv.DictReader(f)
+            tag = Path(file_path).stem  # <- add this
+            for row in reader:
+                try:
+                    obstacle_id = row["obstacle_id"]
+                    lat = float(row["lat"])
+                    lng = float(row["lng"])
+                except (KeyError, ValueError):
+                    continue
+
+                key = (label, f"{tag}:{obstacle_id}")  # <- change this
+                obstacles.setdefault(key, []).append((lat, lng))
+    except FileNotFoundError:
+        print(f"[WARN] Obstacle CSV not found: {file_path}")
+
+    return obstacles
+
+
+def _orientation(p, q, r):
+    """
+    Helper for segment intersection:
+    returns 0 -> colinear, 1 -> clockwise, 2 -> counterclockwise
+    """
+    val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
+    if abs(val) < 1e-9:
+        return 0
+    return 1 if val > 0 else 2
+
+
+def _on_segment(p, q, r):
+    """
+    Given colinear p, q, r, check if point q lies on segment pr.
+    """
+    return (
+        min(p[0], r[0]) - 1e-9 <= q[0] <= max(p[0], r[0]) + 1e-9
+        and min(p[1], r[1]) - 1e-9 <= q[1] <= max(p[1], r[1]) + 1e-9
+    )
+
+
+def segments_intersect(p1, p2, q1, q2):
+    """
+    Standard 2D line segment intersection test for p1-p2 vs q1-q2.
+    Points are (x, y) tuples. Here x=lat, y=lng (same as your CSVs).
+    """
+    o1 = _orientation(p1, p2, q1)
+    o2 = _orientation(p1, p2, q2)
+    o3 = _orientation(q1, q2, p1)
+    o4 = _orientation(q1, q2, p2)
+
+    # General case
+    if o1 != o2 and o3 != o4:
+        return True
+
+    # Special colinear cases
+    if o1 == 0 and _on_segment(p1, q1, p2):
+        return True
+    if o2 == 0 and _on_segment(p1, q2, p2):
+        return True
+    if o3 == 0 and _on_segment(q1, p1, q2):
+        return True
+    if o4 == 0 and _on_segment(q1, p2, q2):
+        return True
+
+    return False
+
+
+def obstacle_edges(vertices):
+    """
+    Given a list of vertices [(lat, lng), ...] for an obstacle,
+    return a list of edges as pairs of points.
+
+    If there are only 2 points, it's treated as an open segment.
+    If there are >=3 points, we close the polygon (last->first).
+    """
+    edges = []
+    n = len(vertices)
+    if n < 2:
+        return edges
+
+    # Edge between successive vertices
+    for i in range(n - 1):
+        edges.append((vertices[i], vertices[i + 1]))
+
+    # Close polygon for 3 or more vertices
+    if n >= 3:
+        edges.append((vertices[-1], vertices[0]))
+
+    return edges
+
+
+def find_blocking_obstacles(start_pt, end_pt, all_obstacles):
+    """
+    Given:
+      start_pt: (lat, lng)
+      end_pt:   (lat, lng)
+      all_obstacles: dict[(label, obstacle_id)] -> list[(lat, lng)]
+
+    Returns:
+      list[(label, obstacle_id)] that intersect the straight line
+      from start_pt to end_pt.
+    """
+    blocking = []
+
+    for key, vertices in all_obstacles.items():
+        if len(vertices) < 2:
+            continue
+
+        for a, b in obstacle_edges(vertices):
+            if segments_intersect(start_pt, end_pt, a, b):
+                blocking.append(key)
+                break  # no need to check more edges for this obstacle
+
+    return blocking
+
+def dist(p1, p2):
+    """Euclidean distance between 2D points (x, y)."""
+    if not p1 or not p2:
+        return float("inf")
+    return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
+def inflate_hull(hull, margin):
+    """
+    Inflate a convex hull outward by `margin`.
+
+    hull: list[(x, y)]
+    margin: float, same units as x/y.
+    """
+    if not hull or margin <= 0.0:
+        return hull
+
+    cx = sum(x for (x, _y) in hull) / len(hull)
+    cy = sum(y for (_x, y) in hull) / len(hull)
+
+    inflated = []
+    for (x, y) in hull:
+        vx = x - cx
+        vy = y - cy
+        norm = math.hypot(vx, vy)
+
+        if norm < 1e-12:
+            # Vertex at centroid; push in +x direction
+            inflated.append((x + margin, y))
+        else:
+            scale = (norm + margin) / norm
+            inflated.append((cx + vx * scale, cy + vy * scale))
+
+    return inflated
+
+def build_obstacle_hulls(all_obstacles):
+    """
+    Turn the obstacle dict from load_obstacles_from_csv into convex hulls.
+
+    all_obstacles: dict[(label, obstacle_id)] -> list[(x, y)]
+
+    Returns:
+      list of {"label": label, "oid": oid, "verts": [(x, y), ...]}
+    """
+    hulls = []
+
+    for (label, oid), verts in all_obstacles.items():
+        # unique + sorted
+        pts = sorted(set(verts))
+        if len(pts) < 2:
+            continue
+
+        if len(pts) == 2:
+            hull = pts[:]  # just a segment
+        else:
+            # Monotone chain convex hull (same idea as in map_viewer_2)
+            def cross(o, a, b):
+                return ((a[0] - o[0]) * (b[1] - o[1])
+                        - (a[1] - o[1]) * (b[0] - o[0]))
+
+            lower = []
+            for p in pts:
+                while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+                    lower.pop()
+                lower.append(p)
+
+            upper = []
+            for p in reversed(pts):
+                while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+                    upper.pop()
+                upper.append(p)
+
+            hull = lower[:-1] + upper[:-1]
+
+        # --- NEW: inflate this hull by the safety margin ---
+        hull = inflate_hull(hull, SAFETY_MARGIN)
+
+        hulls.append({"label": label, "oid": oid, "verts": hull})
+
+    return hulls
+
+
+def _build_all_edges_from_hulls(hulls):
+    """
+    From list of hulls, build a flat list of segment edges.
+    Uses obstacle_edges() defined above.
+    """
+    edges = []
+    for ob in hulls:
+        edges.extend(obstacle_edges(ob["verts"]))
+    return edges
+
+
+def _segment_blocked_by_edges(p1, p2, edges, tol=1e-9):
+    """
+    True if segment p1-p2 crosses any obstacle edge in `edges`,
+    ignoring exact shared endpoints.
+    """
+    def almost_equal(a, b, eps=tol):
+        return abs(a[0] - b[0]) <= eps and abs(a[1] - b[1]) <= eps
+
+    for (c, d) in edges:
+        # allow touching at shared endpoints
+        if (almost_equal(p1, c) or almost_equal(p1, d) or
+                almost_equal(p2, c) or almost_equal(p2, d)):
+            continue
+        if segments_intersect(p1, p2, c, d):
+            return True
+    return False
+
+
+def _dijkstra_path(adj, start_idx, goal_idx):
+    """Simple Dijkstra shortest-path on adjacency list graph."""
+    import heapq
+
+    N = len(adj)
+    dist_arr = [float("inf")] * N
+    prev = [None] * N
+    dist_arr[start_idx] = 0.0
+    heap = [(0.0, start_idx)]
+
+    while heap:
+        d, u = heapq.heappop(heap)
+        if d > dist_arr[u]:
+            continue
+        if u == goal_idx:
+            break
+        for v, w in adj[u]:
+            nd = d + w
+            if nd < dist_arr[v]:
+                dist_arr[v] = nd
+                prev[v] = u
+                heapq.heappush(heap, (nd, v))
+
+    if dist_arr[goal_idx] == float("inf"):
+        return None
+
+    path_idx = []
+    cur = goal_idx
+    while cur is not None:
+        path_idx.append(cur)
+        cur = prev[cur]
+    path_idx.reverse()
+    return path_idx
+
+
+def plan_path_between_points(start, goal, hulls):
+    """
+    Visibility-graph style path between start and goal that avoids
+    obstacle polygons given in `hulls`.
+
+    start, goal: (x, y)
+    hulls: list of {"label": ..., "oid": ..., "verts": [(x, y), ...]}
+
+    Returns:
+      list[(x, y)] including start and goal.
+    """
+    # Node 0 = start, node 1 = goal; others are obstacle vertices
+    nodes = [start, goal]
+    # meta[i] = None or (label, oid, idx_in_hull, nverts)
+    meta = [None, None]
+
+    for ob in hulls:
+        verts = ob["verts"]
+        n = len(verts)
+        for idx, pt in enumerate(verts):
+            nodes.append(pt)
+            meta.append((ob["label"], ob["oid"], idx, n))
+
+    # Pre-compute all obstacle edges for intersection checks
+    all_edges = _build_all_edges_from_hulls(hulls)
+
+    N = len(nodes)
+    adj = [[] for _ in range(N)]
+
+    for i in range(N):
+        for j in range(i + 1, N):
+            p1 = nodes[i]
+            p2 = nodes[j]
+
+            if dist(p1, p2) == 0.0:
+                continue
+
+            mi = meta[i]
+            mj = meta[j]
+
+            # If both points are vertices of the same obstacle,
+            # only connect neighbours on that hull (avoid cutting corners).
+            if mi is not None and mj is not None and mi[0] == mj[0] and mi[1] == mj[1]:
+                n = mi[3]
+                idx_i = mi[2]
+                idx_j = mj[2]
+                if not ((idx_i - idx_j) % n == 1 or (idx_j - idx_i) % n == 1):
+                    # Not neighbours on the polygon perimeter
+                    continue
+
+            # If the segment is blocked by any obstacle edge, skip it
+            if _segment_blocked_by_edges(p1, p2, all_edges):
+                continue
+
+            w = dist(p1, p2)
+            adj[i].append((j, w))
+            adj[j].append((i, w))
+
+    path_idx = _dijkstra_path(adj, 0, 1)
+
+    if not path_idx:
+        # Fallback: if direct line is free, just use it
+        if not _segment_blocked_by_edges(start, goal, all_edges):
+            return [start, goal]
+        # Last-resort fallback: still return direct (better than nothing)
+        return [start, goal]
+
+    return [nodes[k] for k in path_idx]
+
 class StraightLineApproachNew(Node):
     def __init__(self, lin_vel, ang_vel, targets, state):
         super().__init__('straight_line_approach_new')
@@ -177,6 +525,8 @@ class StraightLineApproachNew(Node):
     def detection_callback(self, data):
         self.found = data
 
+    """
+    
     def find_closest_obstacles(self, msg):
         self.x = msg.pose.position.x
         self.y = msg.pose.position.y
@@ -185,6 +535,8 @@ class StraightLineApproachNew(Node):
     
     def create_new_points(self, object):
         return ()
+
+    """
 
     def move_to_target(self, target_x, target_y, state): #needs to check for obstacle points 
         
@@ -361,6 +713,7 @@ class StraightLineApproachNew(Node):
             time.sleep(1)
 
 if __name__ == '__main__':
+    """
     targets = [(9, 2)]  # Define multiple target points
     rclpy.init()
     try:
@@ -377,3 +730,108 @@ if __name__ == '__main__':
         straight_line_approach(1, 0.5, target) #LOOK HERE
     except rclpy.exceptions.ROSInterruptException:
         pass
+    """
+
+    # 1) Load start and end x/y from CSV in this folder
+    start_end_csv = os.path.join(os.path.dirname(__file__), "sm_straight_line_start_end.csv")
+
+    with open(start_end_csv, newline="") as f:
+        reader = csv.DictReader(f)
+        row = next(reader)
+
+    start_x = float(row["start_x"])
+    start_y = float(row["start_y"])
+    target_x = float(row["target_x"])
+    target_y = float(row["target_y"])
+
+    print(f"Start position from CSV:  ({start_x}, {start_y})")
+    print(f"Target position from CSV: ({target_x}, {target_y})")
+
+    start_pt = (start_x, start_y)
+    end_pt = (target_x, target_y)
+
+    # 1b) Write a separate CSV in the GUI folder for the map to use when
+    #     building the path. This is *not* places_to_go.csv.
+    BASE_GUI_DIR = os.path.expanduser("~/rover_ws/src/rsx-rover/scripts/GUI")
+    GUI_START_END_CSV = os.path.join(BASE_GUI_DIR, "sm_start_end_for_gui.csv")
+
+    try:
+        with open(GUI_START_END_CSV, "w", newline="") as f:
+            writer = csv.DictWriter(
+                f, fieldnames=["Point Name", "Latitude", "Longitude"]
+            )
+            writer.writeheader()
+            writer.writerow(
+                {"Point Name": "Start", "Latitude": start_x, "Longitude": start_y}
+            )
+            writer.writerow(
+                {"Point Name": "End", "Latitude": target_x, "Longitude": target_y}
+            )
+        print(f"Wrote GUI start/end CSV to: {GUI_START_END_CSV}")
+    except OSError as e:
+        print(f"[WARN] Failed to write GUI start/end CSV: {e}")
+
+# 2) Find the GUI folder (robust: relative to repo)
+BASE_GUI_DIR = Path(__file__).resolve().parents[3] / "scripts" / "GUI"
+if not BASE_GUI_DIR.exists():
+    # fallback to old behavior if repo layout changes
+    BASE_GUI_DIR = Path(os.path.expanduser("~/rover_ws/src/rsx-rover/scripts/GUI"))
+
+# 3) Load ALL obstacle CSVs that match the naming patterns
+perm_csvs = sorted(BASE_GUI_DIR.glob("*permanent_obstacles*.csv"))
+temp_csvs = sorted(BASE_GUI_DIR.glob("*temporary_obstacles*.csv"))
+
+if not perm_csvs:
+    print(f"[WARN] No permanent obstacle CSVs found in: {BASE_GUI_DIR}")
+if not temp_csvs:
+    print(f"[WARN] No temporary obstacle CSVs found in: {BASE_GUI_DIR}")
+
+perm_obstacles = {}
+for fp in perm_csvs:
+    perm_obstacles.update(load_obstacles_from_csv(str(fp), "permanent"))
+
+temp_obstacles = {}
+for fp in temp_csvs:
+    temp_obstacles.update(load_obstacles_from_csv(str(fp), "temporary"))
+
+    all_obstacles = {}
+    all_obstacles.update(perm_obstacles)
+    all_obstacles.update(temp_obstacles)
+
+    # Print which obstacles block the direct start→end line
+    blocking = find_blocking_obstacles(start_pt, end_pt, all_obstacles)
+    if not blocking:
+        print("Direct path from start to end is NOT blocked by any obstacles in the CSVs.")
+    else:
+        print("Direct path from start to end is BLOCKED by these obstacles:")
+        for label, obstacle_id in blocking:
+            print(f"  - {label} obstacle with obstacle_id={obstacle_id}")
+
+    # 4) Build obstacle hulls and compute a waypoint path around them
+    hulls = build_obstacle_hulls(all_obstacles)
+    path_points = plan_path_between_points(start_pt, end_pt, hulls)
+
+    print("\nPlanned path waypoints (start -> end):")
+    for i, (px, py) in enumerate(path_points):
+        print(f"  {i}: ({px}, {py})")
+
+    # 5) Use all intermediate waypoints (excluding the first start point)
+    #    as the list of targets for the rover. navigate() already loops
+    #    through self.targets in order.
+    targets = [(x, y) for (x, y) in path_points[1:]]
+
+    # Normal ROS2 setup
+    rclpy.init()
+    try:
+        approach = StraightLineApproachNew(1.5, 0.5, targets, 'AR1')
+
+        # If you're testing without the full state machine/odom, you can
+        # seed the pose with the CSV start coordinates:
+        approach.x = start_x
+        approach.y = start_y
+
+        approach.navigate()
+    except rclpy.exceptions.ROSInterruptException:
+        pass
+    finally:
+        rclpy.shutdown()
