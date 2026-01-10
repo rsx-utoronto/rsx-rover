@@ -183,7 +183,7 @@ class GS_Traversal(Node):
             # print("state", state)
             # print("mapping state", mapping[state])
             # pub = rospy.Publisher('drive', Twist, queue_size=10)
-            pub=self.create_publisher(Twist, 'drive', 10)
+            pub=self.create_publisher(Twist, 'drive', 10) 
             if mapping[state] is False: #while not detected
                 # normal operations
                 if target_x is None or target_y is None or self.x is None or self.y is None:
