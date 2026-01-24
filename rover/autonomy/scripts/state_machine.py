@@ -21,7 +21,7 @@ from optimal_path_improved import OPmain
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
-from sm_straight_line_unused import StraightLineApproachNew
+from rover.autonomy.scripts.sm_straight_line_updated import StraightLineApproachNew
 from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
 import astar_obstacle_avoidance_grid_search 
 import gps_conversion_functions as functions
