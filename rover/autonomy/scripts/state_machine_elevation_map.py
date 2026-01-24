@@ -35,7 +35,8 @@ import csv
 print("I am in the final state machine file")
 # file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
-csv_path = "/home/rsx-base/rover_ws/src/rsx-rover/scripts/GUI/points_to_traverse_20251113_212655.csv"
+# Edit: Updated path to 20260105_205815
+csv_path = "/home/rsx-base/rover_ws/src/rsx-rover/scripts/GUI/points_to_traverse_20260105_205815.csv"
 with open(csv_path, mode='r', newline='') as file:
     # Create a CSV reader object
     csv_reader = csv.reader(file)
@@ -51,8 +52,8 @@ with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
     print("I managed to load the yaml file")
 
-
-RUN_STATES_DEFAULT = ["GNSS1", "AR1", "OBJ2", "OBJ1", "AR2", "AR3", "GNSS2"] 
+# EDIT: Added the AR_REC and OBJ_REC states
+RUN_STATES_DEFAULT = ["GNSS1", "AR1", "OBJ2", "OBJ1", "AR2", "AR3", "GNSS2", "AR_REC", "OBJ_REC"] 
 RUN_STATES = sm_config.get("RUN_STATES", RUN_STATES_DEFAULT)
 print("run states from yaml", RUN_STATES)
 
@@ -165,20 +166,46 @@ class GLOB_MSGS(Node):
 
     def coord_callback(self, data): 
         self.pub_state(String(data="In GPS coordinates callback"))
-        location_data = data 
-        if (len(location_data.data) == 16): #Process all 8 GPS coordinates
+        location_data = data
+        # Edit: changed from == to >= since ARREC or OBJREC may or maynot have coordinates , process all 10 gps coordinates 
+        if (len(location_data.data) >= 16): #Process all 10 GPS coordinates
 
             locations = {} #Create empty locations dict
             location_name_list = ["start", "GNSS1", "GNSS2", "AR1", "AR2", "AR3", "OBJ1", "OBJ2", "ARREC", "OBJREC"]
             i = 0
             for name in location_name_list:
-                if location_data.data[i] is not None and location_data.data[i+1] is not None:
+                # EDIT: Addded len(location_data.data) >= i+2 to prevent index out of range error
+                if len(location_data.data) >= i+2 and location_data.data[i] is not None and location_data.data[i+1] is not None:
                     locations[name] = (location_data.data[i], location_data.data[i+1]) # For each mission name key, assign the (x,y) value tuple as element
                     i +=2
             
             self.locations = locations #assign the GPS coordinate dict to locations
-        
         self.pub_state(String(data="Received GPS coordinates"))
+        
+        # EDIT: update cartesian of ARREC and OBJREC if they exist in the csv file
+        if self.cartesian is not None and "start" in self.locations:
+            for task_name in ["ARREC", "OBJREC"]:
+                if task_name in self.locations:
+                    distance = functions.getDistanceBetweenGPSCoordinates(
+                        self.locations["start"], 
+                        self.locations[task_name]
+                    )
+                    theta = functions.getHeadingBetweenGPSCoordinates(
+                        self.locations["start"][0], self.locations["start"][1], 
+                        self.locations[task_name][0], self.locations[task_name][1]
+                    )
+                    
+                    new_x = distance * math.sin(theta)
+                    new_y = distance * math.cos(theta)
+                    
+                    # Update the global cartesian dictionary
+                    # This updates the Master Record, but NOT the Userdata yet
+                    self.cartesian[task_name] = (new_x, new_y)
+                    self.pub_state(String(data=f"Updated {task_name} coordinates"))
+
+        self.pub_state(String(data="Updated Cartesian coordinates for ARREC and OBJREC if applicable"))
+        
+        
 
     def pub_state(self, state): #for publishing a message through the state publisher
         self.pub.publish(state)
@@ -274,8 +301,17 @@ class LocationSelection(smach.State): #State for determining which mission/state
             userdata.rem_loc_dict = userdata.locations_dict.copy()
             print (userdata.rem_loc_dict)
             userdata.start_location = (0, 0)
+
             
         path = userdata.rem_loc_dict
+
+        #EDIT: Sync ARREC and OBJREC coordinates from glob_msg.cartesian to userdata if they exist
+        for task in ["ARREC", "OBJREC"]:
+            if task in self.glob_msg.cartesian:
+                if task in RUN_STATES:
+                    path[task] = self.glob_msg.cartesian[task]
+                    self.glob_msg.pub_state(String(data=f"Synced {task} to mission queue"))
+                        
         if path != {}: #Checks if all locations are visited
             
             try:
@@ -906,12 +942,12 @@ class AR_REC(smach.State):
     def execute(self, userdata): 
         self.glob_msg.pub_state(String(data="Performing AR REC Search"))
         current_location_data = self.glob_msg.get_pose()
-        current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["OBJ2"][0])**2 + 
-                            (current_location_data.pose.position.y - userdata.rem_loc_dict["OBJ2"][1])**2)**(1/2)
+        current_distance = ((current_location_data.pose.position.x - userdata.rem_loc_dict["ARREC"][0])**2 + 
+                            (current_location_data.pose.position.y - userdata.rem_loc_dict["ARREC"][1])**2)**(1/2)
         
         if self.glob_msg.abort_check:
-            self.glob_msg.pub_state(String(data="Aborting for state OBJ2"))
-            userdata.aborted_state = "OBJ2"
+            self.glob_msg.pub_state(String(data="Aborting for state ARREC"))
+            userdata.aborted_state = "ARREC"
             return "ABORT"
 
         if current_distance < 5:
@@ -1175,6 +1211,8 @@ def main(args=None):
     ar3 = AR3()
     obj1 = OBJ1()
     obj2 = OBJ2()
+    arrec = AR_REC()
+    objrec = OBJ_REC()
     tasks_ended = TasksEnded()
     abort = ABORT() 
 
@@ -1304,6 +1342,32 @@ def main(args=None):
                 smach.StateMachine.add(
                     "OBJ2",
                     obj2,
+                    transitions={"Location Selection": "Location Selection",
+                                 "ABORT" : "ABORT"},
+                    remapping={
+                        "rem_loc_dict": "rem_loc_dict",
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
+                    }
+                )
+
+            if "ARREC" in RUN_STATES:
+                smach.StateMachine.add(
+                    "ARREC",
+                    arrec,
+                    transitions={"Location Selection": "Location Selection",
+                                 "ABORT" : "ABORT"},
+                    remapping={
+                        "rem_loc_dict": "rem_loc_dict",
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
+                    }
+                )
+
+            if "OBJREC" in RUN_STATES:
+                smach.StateMachine.add(
+                    "OBJREC",
+                    objrec,
                     transitions={"Location Selection": "Location Selection",
                                  "ABORT" : "ABORT"},
                     remapping={
