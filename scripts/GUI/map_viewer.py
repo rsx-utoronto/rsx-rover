@@ -223,6 +223,9 @@ class MapViewer(QWidget):
 		self.elevation_max: float = 0
 		self.places_to_go_markers = []
 
+		# initialize arm radius stuff 
+		self.arm_layer = None
+
 
 	def _install_mouse_position_display(self):
 		js = f"""
@@ -1592,12 +1595,11 @@ class MapViewer(QWidget):
 		"""
 
 		delivery_path = Path.cwd() / "delivery_lat_lon_goal.csv"
+		print(delivery_path)
 
 		try:
 			target_lat = None
 			target_long = None
-
-			print("LOOKING FOR CSV")
 
 			with open(delivery_path, newline="") as f:
 				reader = csv.reader(f)
@@ -1611,25 +1613,24 @@ class MapViewer(QWidget):
 
 			if target_lat is None:
 				print("Astronaut 2 not found in CSV")
+				print(target_lat)
 				return
 
 			print("DRAWING CIRCLE")
-
-			# Create a new layer for this marker if needed
-			if not hasattr(self, "arm_layer"):
-				self.arm_layer = L.layerGroup()
-				self.arm_layer.addTo(self.map)
-			else:
-				# Clear previous marker
+			
+			# removing exisiting arm layer 
+			if self.arm_layer:
 				self.map.removeLayer(self.arm_layer)
-				self.arm_layer = L.layerGroup()
-				self.arm_layer.addTo(self.map)
+
+			# creating new layer 
+			self.arm_layer = L.layerGroup()
+			self.arm_layer.addTo(self.map)
+
 
 			# Draw the circle
-			circle = L.circle(
-				[target_lat, target_long],
-				{
-					"radius":  20,   # point.radius must exist
+			circle = L.circle([target_lat, target_long],{
+					"radius":  50,  
+					"fillColor": "red",
 					"color":   "red",
 					"weight":  4
 				}

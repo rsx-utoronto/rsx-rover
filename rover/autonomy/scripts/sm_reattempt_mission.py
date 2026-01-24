@@ -246,9 +246,9 @@ class reattemptTarget(Node):
                     self.drive_publisher.publish(msg)
                     print(f"Reached target: ({target_x}, {target_y})")
                     if(self.spin(state)):
-                        pass
+                        continue
                     else:
-                        break
+                        pass # if spining doesn't locate continue moving to target
 
                 if abs(angle_diff) <= angle_threshold:
                     msg.linear.x = self.lin_vel
@@ -355,7 +355,7 @@ class reattemptTarget(Node):
             self.drive_publisher.publish(msg)
             time.sleep(1/50)
 
-    def navigate(self, state="Location Selection"): #navigate needs to take in a state value as well
+    def navigate(self): #navigate needs to take in a state value as well
         for target_x, target_y in self.targets:
             print(f"Moving towards target: ({target_x}, {target_y})")
             self.move_to_target(target_x, target_y, self.state)
