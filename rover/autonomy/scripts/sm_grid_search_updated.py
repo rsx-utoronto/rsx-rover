@@ -96,8 +96,7 @@ class GS_Traversal(Node):
         else:
             self.active = False
        
-    def 
-    (self, msg):
+    def pose_callback(self, msg):
         self.x = msg.pose.position.x
         self.y = msg.pose.position.y
         self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
