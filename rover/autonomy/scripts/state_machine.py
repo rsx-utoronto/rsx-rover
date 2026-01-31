@@ -15,7 +15,8 @@ import smach
 import time
 import math
 from optimal_path_improved import OPmain
-
+import datetime
+import csv
 #from thomas_grid_search import thomasgrid
 #import ar_detection_node  
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
@@ -186,10 +187,10 @@ class GLOB_MSGS(Node):
     def coord_callback(self, data): 
         self.pub_state(String(data="In GPS coordinates callback"))
         location_data = data 
-        if (len(location_data.data) == 16): #Process all 8 GPS coordinates
+        if (len(location_data.data) >= 16): #Process all 8 GPS coordinates
 
             locations = {} #Create empty locations dict
-            location_name_list = ["start", "GNSS1", "GNSS2", "AR1", "AR2", "OBJ1", "OBJ2", "OBJ3"]
+            location_name_list = ["start", "GNSS1", "GNSS2", "AR1", "AR2", "OBJ1", "OBJ2", "OBJ3", "ARREC", "OBJREC"]
             i = 0
             for name in location_name_list:
                 if location_data.data[i] is not None and location_data.data[i+1] is not None:
@@ -470,7 +471,25 @@ class ARSearchState(smach.State):
                         pass
         finally:
             self._aruco_sub = None
+    def get_reattempt_targets(self):
+        session_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+        traverse_path = f"/home/rsx-base/rover_ws/src/rsx-rover/scripts/GUI/points_to_traverse_{session_id}.csv"
+        targets_to_reattempt =[]
 
+        with open(traverse_path, mode='r', newline='') as csvfile:
+            # Create a reader object that iterates over lines in the CSV file
+            reader = csv.DictReader(csvfile)
+
+            # Loop through each row and print its contents
+            for row in reader:
+                distance = functions.getDistanceBetweenGPSCoordinates((self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1]), (row['lat'], row['long']))
+                theta = functions.getHeadingBetweenGPSCoordinates(self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1], row['lat'], row['long'])
+                # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
+                x = distance * math.sin(theta)
+                y = distance * math.cos(theta)
+
+                targets_to_reattempt.append(x,y)
+        return targets_to_reattempt
     def execute(self, userdata):
         # canonical state message
         self.glob_msg.pub_state(String(data=f"Performing {self.state_name} Search"))
@@ -497,7 +516,13 @@ class ARSearchState(smach.State):
             if not self.glob_msg.done_early:
                 # publish START_GS with starting_point
                 msg = MissionState()
-                msg.state = "START_GS_TRAV"
+                if self.state_name == "ARREC":
+                    targets = self.get_reattempt_targets()
+                    msg.state = "START_REATTEMPT"
+                    msg.targets = targets
+                    
+                else:
+                    msg.state = "START_GS_TRAV"
                 # msg.starting_point = PoseStamped()
                 # msg.starting_point.pose.position.x = float(target[0])
                 # msg.starting_point.pose.position.y = float(target[1])
@@ -664,10 +689,15 @@ class ObjectSearchState(smach.State):
                 print("checkpoint 2")
                 # publish START_GS (let grid-search node instantiate traversal)
                 msg = MissionState()
-                msg.state = "START_GS_TRAV"
-                # msg.starting_point = PoseStamped()
-                # msg.starting_point.pose.position.x = float(target[0])
-                # msg.starting_point.pose.position.y = float(target[1])
+                if self.state_name == "ARREC":
+                    targets = self.get_reattempt_targets()
+                    msg.state = "START_REATTEMPT"
+                    msg.targets = targets
+                else:
+                    msg.state = "START_GS_TRAV"
+                    # msg.starting_point = PoseStamped()
+                    # msg.starting_point.pose.position.x = float(target[0])
+                    # msg.starting_point.pose.position.y = float(target[1])
                 msg.current_state = self.state_name
                 self.glob_msg.mission_state_pub.publish(msg)
 
@@ -833,6 +863,8 @@ def main(args=None):
     obj1 = ObjectSearchState("OBJ1")
     obj2 = ObjectSearchState("OBJ2")
     obj3 = ObjectSearchState("OBJ3")
+    arrec = ARSearchState("ARREC")
+    objrec = ObjectSearchState("OBJREC")
     tasks_ended = TasksEnded()
     abort = ABORT() 
 
@@ -845,6 +877,8 @@ def main(args=None):
     obj1.set_msg(glob_msg)
     obj2.set_msg(glob_msg)
     obj3.set_msg(glob_msg)
+    arrec.set_msg(glob_msg)
+    objrec.set_msg(glob_msg)
     tasks_ended.set_msg(glob_msg)
     abort.set_msg(glob_msg)
 
