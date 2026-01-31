@@ -1005,7 +1005,32 @@ def main(args=None):
                         "aborted_state" : "aborted_state"
                     }
                 )
-            
+                
+            if "ARREC" in RUN_STATES:
+                smach.StateMachine.add(
+                    "ARREC",
+                    arrec,
+                    transitions={"Location Selection": "Location Selection",
+                                 "ABORT" : "ABORT"},
+                    remapping={
+                        "rem_loc_dict": "rem_loc_dict",
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
+                    }
+                )
+                
+            if "OBJREC" in RUN_STATES:
+                smach.StateMachine.add(
+                    "OBJREC",
+                    objrec,
+                    transitions={"Location Selection": "Location Selection",
+                                 "ABORT" : "ABORT"},
+                    remapping={
+                        "rem_loc_dict": "rem_loc_dict",
+                        "prev_loc": "prev_loc",
+                        "aborted_state" : "aborted_state"
+                    }
+                )
             smach.StateMachine.add(
                 "ABORT",
                 abort,
