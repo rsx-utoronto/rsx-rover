@@ -36,7 +36,7 @@ class CanSenderNode(Node):
         self.WHEEL_CIR = 1 # 0.15 * 2 * math.pi
         self.FF_TORQUE = ff_torque
         self.min_v = 2.0
-        self.max_dv = 6.0
+        self.max_dv = 12.5
         self.gearbox_ratio = gearbox_ratio
         self.last_left_velocity = 0.0
         self.last_right_velocity = 0.0
