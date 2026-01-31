@@ -1,25 +1,22 @@
 #!/usr/bin/python3
 
-# This one is new because it can home during straight line traversal. 
-
 import rclpy
 from rclpy.node import Node
-import time
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Bool, String
+from rover.msg import MissionState
 import math
-import ar_detection_node as adn
-import aruco_homing as aruco_homing
-import ar_detection_node as ar_detect
-
+import time
+import threading
 import yaml
 import os
+import numpy as np
+import threading
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
-# file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
-
+#file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml"
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
@@ -28,86 +25,87 @@ with open(file_path, "r") as f:
 # through the state machine. When navigate function is called, it calls the move_to_target function which continuously calculates the target distance
 # and heading to determine the angular and linear velocities. When the target distance is within the threshold it breaks out of the loop to return.
     
-class StraightLineApproachNew(Node):
-    def __init__(self, lin_vel, ang_vel, targets, state):
-        super().__init__('straight_line_approach_new')
-        self.lin_vel = lin_vel
-        self.ang_vel = ang_vel
-        self.targets = targets
+class StraightLineApproach(Node):
+    def __init__(self):
+        super().__init__('straight_line_approach_node')
         self.found = False
-        self.timer = 0
-        self.state=state
         self.abort_check = False
-        self.x = -100000
-        self.y = -100000
-        self.done_early = False
-        self.start_looking = False
+        self.x = 0#-100000
+        self.y = 0#-100000
         self.heading = 0
-        
-        # self.pose_subscriber = rospy.Subscriber('/pose', PoseStamped, self.pose_callback)
-        # self.target_subscriber = rospy.Subscriber('target', Float64MultiArray, self.target_callback)
-        # self.drive_publisher = rospy.Publisher('/drive', Twist, queue_size=10)
-        self.create_subscription(PoseStamped, '/pose', self.pose_callback, 10)
-        self.create_subscription(Float64MultiArray, 'target', self.target_callback, 10)
+        self.active = False
+        self.target = None
+        self.sub = self.create_subscription(String, 'chatter', self.callback, 10)
+        # Use QoS depth 10 and add callback logging
+        self.pose_subscriber = self.create_subscription(
+            PoseStamped, '/pose', self.pose_callback, 10)
+        self.target_subscriber = self.create_subscription(
+            Float64MultiArray, '/target', self.target_callback, 10)
         self.drive_publisher = self.create_publisher(Twist, '/drive', 10)
+        self.abort_sub = self.create_subscription(
+            Bool, "/auto_abort_check", self.abort_callback, 10)
+        self.aruco_sub = self.create_subscription(
+            Bool, "/aruco_found", self.detection_callback, 10)
         
-        self.aruco_found = False
-        self.count=0
-        # self.abort_sub = rospy.Subscriber("auto_abort_check", Bool, self.abort_callback)
-        self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
-        
-        #new additions
-        # self.aruco_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        # self.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
-        # self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
-        # self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
-        # self.message_pub = rospy.Publisher("gui_status", String, queue_size=10)
-        # self.done_early = rospy.Publisher("done_early", Bool, queue_size=10)
-        self.aruco_sub=self.create_subscription(Odometry, '/rtabmap/odom', self.odom_callback, 10)
-        self.aruco_sub = self.create_subscription(Bool, 'aruco_found', self.aruco_detection_callback, 10)
-        self.mallet_sub = self.create_subscription(Bool, 'mallet_detected', self.mallet_detection_callback, 10)
-        self.waterbottle_sub = self.create_subscription(Bool, 'waterbottle_detected', self.waterbottle_detection_callback, 10)
-        self.message_pub = self.create_publisher(String, "gui_status", 10)
-        self.done_early = self.create_publisher(Bool, "done_early", 10)
-        
-        # self.odom_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        # self.odom_sub = self.create_subscription(Odometry, '/rtabmap/odom', self.odom_callback, 10)
-        self.found_objects = {"AR1":False, 
-                   "AR2":False,
-                   "OBJ1":False,
-                   "OBJ2":False,
-                   "OBJ3":False}
-        self.aruco_found = False
-        self.mallet_found = False
-        self.waterbottle_found = False
+        self.pub = self.create_publisher(MissionState, 'mission_state', 10)
+        self.sla_pub = self.create_publisher(String, 'sla_pub', 10)
+        self.lin_vel= sm_config.get("straight_line_approach_lin_vel")
+        self.ang_vel = sm_config.get("straight_line_approach_ang_vel")
+        self.target = None
+        self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
+        self._nav_lock = threading.Lock()
+        self._pose_lock = threading.Lock()
+        self._nav_event = threading.Event()
+        self.nav_thread = None
+    
+    def callback(self, msg):
+        #print("I heard: ", msg.data)
+        pass
 
-        #new additions
-        #  elf.aruco_sub = rospy.Subscriber("aruco_found", Bool, callback=self.aruco_detection_callback)
-        # self.mallet_sub = rospy.Subscriber('mallet_detected', Bool, callback=self.mallet_detection_callback)
-        # self.waterbottle_sub = rospy.Subscriber('waterbottle_detected', Bool, callback=self.waterbottle_detection_callback)
+    def feedback_callback(self, msg):
+        print("in SL feedback callback, msg.state:", msg.state)
+        self.get_logger().info(f"in SL feedback callback, msg.state: {msg.state}")
 
+        if msg.state == "START_SL":
+            self.current_state = getattr(msg, "current_state", "Location Selection")
+            print("in SL msg.current_goal", msg.current_goal)
+            target_x = msg.current_goal.pose.position.x
+            target_y = msg.current_goal.pose.position.y
+            with self._nav_lock: #new 
+                self.target = [(target_x, target_y)] #had this
+            self._nav_event.set() #new
+            if self.nav_thread is None or not self.nav_thread.is_alive():
+                self.nav_thread = threading.Thread(target=self._nav_loop, daemon=True)
+                self.nav_thread.start()
+        else:
+            self.active = False
     
     def pose_callback(self, msg):
-        self.x = msg.pose.position.x
-        self.y = msg.pose.position.y
-        self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
-                                            msg.pose.orientation.y, msg.pose.orientation.z)[2]
-
+        print("in SL pose callback")
+        with self._pose_lock:
+            self.x = msg.pose.position.x
+            self.y = msg.pose.position.y
+            self.heading = self.to_euler_angles(msg.pose.orientation.w, msg.pose.orientation.x, 
+                                                msg.pose.orientation.y, msg.pose.orientation.z)[2]
+        # self.get_logger().info(f"x: {self.x}, y {self.y}, heading {self.heading}")
+    
     def abort_callback(self,msg):
         self.abort_check = msg.data
         
     def odom_callback(self, msg):
+        print("in SL odom callback")
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
         self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
                                             msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
+        self.get_logger().info(f"x: {self.x}, y {self.y}, heading {self.heading}")
 
     def target_callback(self, msg):
         self.target_x = msg.data[0]
         self.target_y = msg.data[1]
 
     def to_euler_angles(self, w, x, y, z):
-        angles = [0, 0, 0]  # [roll, pitch, yaw]
+        angles = [0.0, 0.0, 0.0]  # [roll, pitch, yaw]
 
         # Roll (x-axis rotation)
         sinr_cosp = 2 * (w * x + y * z)
@@ -124,50 +122,6 @@ class StraightLineApproachNew(Node):
         cosy_cosp = 1 - 2 * (y * y + z * z)
         angles[2] = math.atan2(siny_cosp, cosy_cosp)
         return angles
-    
-       
-    def aruco_detection_callback(self, data):
-        if self.start_looking:
-            print("in aruco detection callback", self.count)
-            time_now=time.time()
-            if abs(self.timer-time_now) > 5:
-                self.timer = time_now
-                self.count = 0
-            print("count,",self.count)
-            # print("sm grid search_ data.data", data.data)
-            if data.data:
-                if self.count <= 4:
-                    self.count +=1
-                else:
-                    self.aruco_found = data.data
-                    self.found_objects[self.state] = data.data
-                    self.count += 1
-    
-    def mallet_detection_callback(self, data):
-        time_now=time.time()
-        if abs(self.timer-time_now) >5:
-            self.timer=time_now
-            self.count=0
-        if data.data:
-            if self.count <= 4:
-                self.count += 1
-            else:
-                self.mallet_found = data.data
-                self.found_objects[self.state] = data.data
-                self.count += 1
-
-    def waterbottle_detection_callback(self, data):
-        time_now=time.time()
-        if abs(self.timer-time_now) >5:
-            self.timer=time_now
-            self.count=0
-        if data.data:
-            if self.count <= 4:
-                self.count += 1
-            else:
-                self.waterbottle_found = data.data
-                self.found_objects[self.state] = data.data
-                self.count += 1
     
     def detection_callback(self, data):
         self.found = data
@@ -333,29 +287,56 @@ class StraightLineApproachNew(Node):
             self.drive_publisher.publish(msg)
             time.sleep(1/50)
 
-    def navigate(self, state="Location Selection"): #navigate needs to take in a state value as well
-        for target_x, target_y in self.targets:
-            print(f"Moving towards target: ({target_x}, {target_y})")
-            self.move_to_target(target_x, target_y, self.state)
-            if self.abort_check:
-                self.abort_check = False
+    # def navigate(self, state="Location Selection"): # navigate needs to take in a state value as well
+    #     print("self.targets", self.target)
+    #     for target_x, target_y in self.target:
+    #         print(f"Moving towards target: ({target_x}, {target_y})")
+    #         self.move_to_target(target_x, target_y)
+    #         if self.abort_check:
+    #             self.abort_check = False
+    #             break
+    #         time.sleep(1)
+    #     sla_msg = MissionState()
+    #     # compute success against first target we were given
+    #     tx, ty = targets[0]
+    #     if (np.abs(self.x - tx) < 0.5) and (np.abs(self.y - ty) < 0.5):
+    #          sla_msg.state = "SLA_DONE"
+    #     else:
+    #          sla_msg.state = "SLA_FAILED"
+ 
+    #     self.active = False
+    #     self.pub.publish(sla_msg)
+        
+    def _nav_loop(self):
+        while rclpy.ok():
+            self._nav_event.wait()
+            if not rclpy.ok():
                 break
-            time.sleep(1)
+            # copy target under lock to avoid races
+            with self._nav_lock:
+                targets = list(self.target) if self.target else []
+            for tx, ty in targets:
+                self.move_to_target(tx, ty)
+                if self.abort_check:
+                    break
+            # publish SLA result correlated with current_state
+            resp = MissionState()
+            resp.current_state = getattr(self, "current_state", "")
+            resp.state = "SLA_DONE" if not self.abort_check else "SLA_FAILED"
+            self.pub.publish(resp)
+            self._nav_event.clear()
+
+        
+
+def main():
+    rclpy.init(args=None)
+    sla = StraightLineApproach()
+    try: 
+        print("spinning sla node")
+        rclpy.spin(sla)
+    finally: 
+        sla.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
-    targets = [(9, 2)]  # Define multiple target points
-    rclpy.init()
-    try:
-        
-        approach = StraightLineApproachNew(1.5, 0.5, targets, 'AR1')
-        approach.navigate()
-    except rclpy.exceptions.ROSInterruptException:
-        pass
-
-    gs = GridSearch(4, 4, 1, x, y)  # define multiple target points here: cartesian
-    target = gs.square_target()
-    print(target)
-    try:
-        straight_line_approach(1, 0.5, target) #LOOK HERE
-    except rclpy.exceptions.ROSInterruptException:
-        pass
+    main()
