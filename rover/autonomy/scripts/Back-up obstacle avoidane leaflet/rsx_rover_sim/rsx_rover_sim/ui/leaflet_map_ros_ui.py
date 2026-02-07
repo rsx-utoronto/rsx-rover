@@ -888,26 +888,48 @@ HTML_TEMPLATE = r"""
         const container = L.DomUtil.create('div', 'leaflet-bar');
 
         const btnPlaces = L.DomUtil.create('a', 'tool-btn', container);
+
+        btnPlaces.style.width = 'auto';
+        btnPlaces.style.padding = '0 15px';
+        btnPlaces.style.display = 'flex';
+        btnPlaces.style.alignItems = 'center';
+
         btnPlaces.href = '#';
         btnPlaces.title = 'Load places_to_go.csv';
         btnPlaces.innerHTML = 'Load Places';
 
         const btnObs = L.DomUtil.create('a', 'tool-btn', container);
+        btnObs.style.width = 'auto';
+        btnObs.style.padding = '0 15px';
+        btnObs.style.display = 'flex';
+        btnObs.style.alignItems = 'center';
         btnObs.href = '#';
         btnObs.title = 'Load permanent_obstacles_*.csv';
         btnObs.innerHTML = 'Load Obstacles';
 
         const btnSaveObs = L.DomUtil.create('a', 'tool-btn', container);
+        btnSaveObs.style.width = 'auto';
+        btnSaveObs.style.padding = '0 15px';
+        btnSaveObs.style.display = 'flex';
+        btnSaveObs.style.alignItems = 'center';
         btnSaveObs.href = '#';
         btnSaveObs.title = 'Publish + save permanent obstacles to CSV';
         btnSaveObs.innerHTML = 'Save Obstacles';
 
         const btnTemp = L.DomUtil.create('a', 'tool-btn', container);
+        btnTemp.style.width = 'auto';
+        btnTemp.style.padding = '0 15px';
+        btnTemp.style.display = 'flex';
+        btnTemp.style.alignItems = 'center';
         btnTemp.href = '#';
         btnTemp.title = 'Draw a temporary obstacle polygon (red)';
         btnTemp.innerHTML = 'Draw Temp Obstacle';
 
         const btnClearTemp = L.DomUtil.create('a', 'tool-btn', container);
+        btnClearTemp.style.width = 'auto';
+        btnClearTemp.style.padding = '0 15px';
+        btnClearTemp.style.display = 'flex';
+        btnClearTemp.style.alignItems = 'center';
         btnClearTemp.href = '#';
         btnClearTemp.title = 'Remove all temporary obstacles';
         btnClearTemp.innerHTML = 'Clear Temp Obstacles';
@@ -1427,6 +1449,7 @@ def main():
     executor.add_node(detour_planner)
     executor.add_node(rover)
     executor.add_node(fake_zed)
+    print("NODES INITIALIZED")
 
     timer = QTimer()
     def _spin_all():
