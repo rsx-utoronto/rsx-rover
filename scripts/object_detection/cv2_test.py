@@ -1,9 +1,12 @@
 import cv2, torch
 from ultralytics import YOLO
+import os
 
 # --- 1) Device & model ---
 device = 0 if torch.cuda.is_available() else "cpu"
-model = YOLO("model_v1.pt")
+print(f"Using device: {device}")
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model_v1.pt")
+model = YOLO(path)
 model.to(device)
 HALF = torch.cuda.is_available()  # use half precision if on GPU
 
