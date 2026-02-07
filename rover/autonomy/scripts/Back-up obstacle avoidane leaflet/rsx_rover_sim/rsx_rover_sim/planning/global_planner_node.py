@@ -191,27 +191,61 @@ def _segment_blocked_by_edges(p1, p2, edges, tol=1e-10) -> bool:
     return False
 
 
-def _dijkstra_path(adj, start_idx, goal_idx):
+# Maximum obstacle height (in cm) that the rover can traverse over
+MAX_TRAVERSABLE_HEIGHT_CM = 30.0
+
+# Cost multiplier for traversing over low obstacles (per cm of height)
+TRAVERSAL_COST_PER_CM = 0.5  # meters of cost per cm of obstacle height
+
+
+def _heuristic(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
+    """Euclidean distance heuristic for A*."""
+    return dist(p1, p2)
+
+
+def _astar_path(adj, nodes, start_idx, goal_idx):
+    """
+    A* pathfinding algorithm.
+    adj[i] contains tuples of (neighbor_idx, edge_cost)
+    nodes[i] contains (x, y) coordinates for heuristic calculation
+    """
     N = len(adj)
-    dist_arr = [float("inf")] * N
+    g_score = [float("inf")] * N  # Cost from start to node
+    f_score = [float("inf")] * N  # g_score + heuristic
     prev = [None] * N
-    dist_arr[start_idx] = 0.0
-    heap = [(0.0, start_idx)]
+    
+    g_score[start_idx] = 0.0
+    f_score[start_idx] = _heuristic(nodes[start_idx], nodes[goal_idx])
+    
+    # Priority queue: (f_score, g_score, node_idx)
+    # Include g_score as tiebreaker for nodes with equal f_score
+    heap = [(f_score[start_idx], 0.0, start_idx)]
+    closed_set = set()
 
     while heap:
-        d, u = heapq.heappop(heap)
-        if d > dist_arr[u]:
+        f, g, u = heapq.heappop(heap)
+        
+        if u in closed_set:
             continue
+        
         if u == goal_idx:
             break
-        for v, w in adj[u]:
-            nd = d + w
-            if nd < dist_arr[v]:
-                dist_arr[v] = nd
+            
+        closed_set.add(u)
+        
+        for v, edge_cost in adj[u]:
+            if v in closed_set:
+                continue
+                
+            tentative_g = g_score[u] + edge_cost
+            
+            if tentative_g < g_score[v]:
                 prev[v] = u
-                heapq.heappush(heap, (nd, v))
+                g_score[v] = tentative_g
+                f_score[v] = tentative_g + _heuristic(nodes[v], nodes[goal_idx])
+                heapq.heappush(heap, (f_score[v], tentative_g, v))
 
-    if dist_arr[goal_idx] == float("inf"):
+    if g_score[goal_idx] == float("inf"):
         return None
 
     path_idx = []
@@ -223,25 +257,67 @@ def _dijkstra_path(adj, start_idx, goal_idx):
     return path_idx
 
 
+def _get_crossing_obstacle_cost(p1: Tuple[float, float], p2: Tuple[float, float], 
+                                 traversable_hulls: List[Dict[str, Any]]) -> float:
+    """
+    Calculate additional cost for crossing over traversable (low) obstacles.
+    Returns the cost based on the height of obstacles the segment passes through.
+    """
+    extra_cost = 0.0
+    
+    for ob in traversable_hulls:
+        hull_edges = obstacle_edges(ob["verts"])
+        # Check if segment crosses this obstacle
+        crosses = False
+        for edge in hull_edges:
+            if segments_intersect(p1, p2, edge[0], edge[1]):
+                crosses = True
+                break
+        
+        if crosses:
+            # Add cost based on obstacle height
+            height_cm = ob.get("height_cm", 0.0)
+            extra_cost += height_cm * TRAVERSAL_COST_PER_CM
+    
+    return extra_cost
+
+
 def plan_path_between_points(start: Tuple[float, float],
                              goal: Tuple[float, float],
-                             hulls: List[Dict[str, Any]]) -> Optional[List[Tuple[float, float]]]:
+                             hulls: List[Dict[str, Any]],
+                             traversable_hulls: List[Dict[str, Any]] = None) -> Optional[List[Tuple[float, float]]]:
     """
-    Visibility-graph planner adapted from sm_straight_line_GUI_avoid.py. :contentReference[oaicite:3]{index=3}
-    start, goal are XY meters. hulls are inflated convex obstacles.
+    A* visibility-graph planner with height-based traversal costs.
+    
+    start, goal are XY meters.
+    hulls: inflated convex obstacles that BLOCK passage (height > MAX_TRAVERSABLE_HEIGHT_CM)
+    traversable_hulls: obstacles that can be crossed with additional cost (height <= MAX_TRAVERSABLE_HEIGHT_CM)
+    
     Returns a list of XY points (including start+goal) or None if no path.
     """
+    if traversable_hulls is None:
+        traversable_hulls = []
+    
     nodes = [start, goal]
     meta = [None, None]  # None or (oid, idx_in_hull, nverts)
 
+    # Add vertices from blocking obstacles
     for ob in hulls:
         verts = ob["verts"]
         n = len(verts)
         for idx, pt in enumerate(verts):
             nodes.append(pt)
             meta.append((ob["oid"], idx, n))
+    
+    # Also add vertices from traversable obstacles (for potential waypoints)
+    for ob in traversable_hulls:
+        verts = ob["verts"]
+        n = len(verts)
+        for idx, pt in enumerate(verts):
+            nodes.append(pt)
+            meta.append((ob["oid"] + "_trav", idx, n))
 
-    all_edges = _build_all_edges_from_hulls(hulls)
+    all_edges = _build_all_edges_from_hulls(hulls)  # Only blocking obstacles block edges
 
     N = len(nodes)
     adj = [[] for _ in range(N)]
@@ -266,14 +342,21 @@ def plan_path_between_points(start: Tuple[float, float],
                 if not ((idx_i - idx_j) % n == 1 or (idx_j - idx_i) % n == 1):
                     continue
 
+            # Check if blocked by impassable obstacles
             if _segment_blocked_by_edges(p1, p2, all_edges):
                 continue
 
-            w = dist(p1, p2)
-            adj[i].append((j, w))
-            adj[j].append((i, w))
+            # Base cost is distance
+            base_cost = dist(p1, p2)
+            
+            # Add cost for crossing traversable obstacles
+            traversal_cost = _get_crossing_obstacle_cost(p1, p2, traversable_hulls)
+            
+            total_cost = base_cost + traversal_cost
+            adj[i].append((j, total_cost))
+            adj[j].append((i, total_cost))
 
-    path_idx = _dijkstra_path(adj, 0, 1)
+    path_idx = _astar_path(adj, nodes, 0, 1)
     if not path_idx:
         # If even start->goal intersects inflated edges, there is truly no valid route in this graph
         if _segment_blocked_by_edges(start, goal, all_edges):
@@ -351,12 +434,18 @@ class GlobalPlannerNode(Node):
         goal_xy = latlon_to_xy(self.goal[0], self.goal[1], lat0, lon0)
 
         # Build inflated convex hulls in XY meters (clearance applied here)
-        hulls: List[Dict[str, Any]] = []
+        # Separate into blocking (tall) and traversable (low) obstacles
+        blocking_hulls: List[Dict[str, Any]] = []
+        traversable_hulls: List[Dict[str, Any]] = []
+        
         for obs in self.obstacles:
             oid = str(obs.get("id", "0"))
             pts = obs.get("points", [])
             if len(pts) < 3:
                 continue
+            
+            # Get obstacle height (default to blocking height if not specified)
+            height_cm = float(obs.get("height_cm", 100.0))  # Default 100cm = blocking
 
             xy_pts: List[Tuple[float, float]] = []
             for p in pts:
@@ -375,9 +464,23 @@ class GlobalPlannerNode(Node):
                 continue
 
             hull_inflated = inflate_hull(hull, self.clearance_m)
-            hulls.append({"oid": oid, "verts": hull_inflated})
+            
+            hull_data = {"oid": oid, "verts": hull_inflated, "height_cm": height_cm}
+            
+            # Obstacles <= 30cm can be traversed with cost penalty
+            if height_cm <= MAX_TRAVERSABLE_HEIGHT_CM:
+                traversable_hulls.append(hull_data)
+                self.get_logger().debug(f"Obstacle {oid}: traversable (height={height_cm}cm)")
+            else:
+                blocking_hulls.append(hull_data)
+                self.get_logger().debug(f"Obstacle {oid}: blocking (height={height_cm}cm)")
+        
+        self.get_logger().info(
+            f"Planning with {len(blocking_hulls)} blocking obstacles, "
+            f"{len(traversable_hulls)} traversable obstacles"
+        )
 
-        path_xy = plan_path_between_points(start_xy, goal_xy, hulls)
+        path_xy = plan_path_between_points(start_xy, goal_xy, blocking_hulls, traversable_hulls)
 
         if not path_xy:
             self.get_logger().warn(

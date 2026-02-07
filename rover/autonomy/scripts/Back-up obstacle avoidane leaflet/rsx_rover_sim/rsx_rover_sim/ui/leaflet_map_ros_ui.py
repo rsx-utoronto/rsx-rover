@@ -35,8 +35,9 @@ from rsx_rover_sim.sim.rover_sim_node import RoverSimNode
 
 
 
-SW_LAT, SW_LNG = 38.409961, -110.790467
-NE_LAT, NE_LNG = 38.411895, -110.786068
+# Toronto area - RSX testing location (expanded bounds)
+SW_LAT, SW_LNG = 43.656000, -79.400000
+NE_LAT, NE_LNG = 43.662000, -79.393000
 
 
 HTML_TEMPLATE = r"""
@@ -109,22 +110,25 @@ HTML_TEMPLATE = r"""
     const bounds = L.latLngBounds(sw, ne);
 
     const map = L.map('map', {
-      zoomControl: false,
+      zoomControl: true,
       attributionControl: false,
       scrollWheelZoom: true,
-      doubleClickZoom: false,
-      touchZoom: false,
-      boxZoom: false,
-      keyboard: false,
-      inertia: false
+      doubleClickZoom: true,
+      touchZoom: true,
+      boxZoom: true,
+      keyboard: true,
+      inertia: true
     });
 
-    map.fitBounds(bounds, { padding: [60, 60] });
-    map.setMaxBounds(bounds);
-    map.options.maxBoundsViscosity = 1.0;
+    // Plain background - no map tiles
+    map.fitBounds(bounds, { padding: [40, 40] });
+    // Allow panning outside bounds slightly
+    map.setMaxBounds(bounds.pad(0.5));
+    map.options.maxBoundsViscosity = 0.5;
 
-    const fittedZoom = map.getZoom();
-    map.setMinZoom(fittedZoom);
+    // Set zoom limits - allow zooming in/out freely
+    map.setMinZoom(14);
+    map.setMaxZoom(22);
 
     const hoverBox = document.getElementById('hoverBox');
     function fmt(n) { return Number(n).toFixed(6); }
@@ -211,6 +215,11 @@ HTML_TEMPLATE = r"""
     const obsVerts = {};
     // obstacle id -> polygon
     const obsPolys = {};
+    // obstacle id -> height in cm (for A* traversal cost)
+    const obsHeights = {};
+
+    // Default height for new obstacles (cm) - obstacles <= 30cm are traversable
+    const DEFAULT_OBSTACLE_HEIGHT = 100;  // blocking by default
 
     let nextObstacleId = 1;
     let selectedObsId = null;
@@ -363,12 +372,18 @@ HTML_TEMPLATE = r"""
     }
 
     function styleObstacleLayer(layer) {
-      layer.setStyle && layer.setStyle({ color: '#3388ff', weight: 3, fillOpacity: 0.2 });
+      const oid = layer._obsId ?? '?';
+      const height = obsHeights[oid] !== undefined ? obsHeights[oid] : DEFAULT_OBSTACLE_HEIGHT;
+      // Color based on height: green = traversable (<=30cm), red = blocking (>30cm)
+      const color = height <= 30 ? '#22aa22' : '#cc3333';
+      layer.setStyle && layer.setStyle({ color: color, weight: 3, fillOpacity: 0.25 });
     }
 
     function labelFor(layer) {
       const oid = layer._obsId ?? '?';
-      return 'permanent #' + oid;
+      const height = obsHeights[oid] !== undefined ? obsHeights[oid] : DEFAULT_OBSTACLE_HEIGHT;
+      const traversable = height <= 30 ? ' (traversable)' : ' (blocking)';
+      return 'obstacle #' + oid + ' - ' + height + 'cm' + traversable;
     }
 
     function getObstaclePoints(obsId) {
@@ -455,7 +470,13 @@ HTML_TEMPLATE = r"""
           const ll = m.getLatLng();
           return { lat: ll.lat, lon: ll.lng };
         });
-        obstacles.push({ id: String(obsId), label: 'permanent', points: pts });
+        const height = obsHeights[obsId] !== undefined ? obsHeights[obsId] : DEFAULT_OBSTACLE_HEIGHT;
+        obstacles.push({ 
+          id: String(obsId), 
+          label: 'permanent', 
+          height_cm: height,
+          points: pts 
+        });
       });
       obstacles.sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
       return { obstacles: obstacles };
@@ -765,6 +786,7 @@ HTML_TEMPLATE = r"""
       permObsVertexLayer.clearLayers();
       for (const k in obsVerts) delete obsVerts[k];
       for (const k in obsPolys) delete obsPolys[k];
+      for (const k in obsHeights) delete obsHeights[k];
 
       if (!payload || !payload.obstacles) return;
 
@@ -777,6 +799,11 @@ HTML_TEMPLATE = r"""
         if (!o.points || o.points.length === 0) return;
 
         const useId = oid || String(maxId + 1);
+        
+        // Store height for this obstacle
+        const height = o.height_cm !== undefined ? parseFloat(o.height_cm) : DEFAULT_OBSTACLE_HEIGHT;
+        obsHeights[useId] = height;
+        
         o.points.forEach(pt => addVertexMarker(useId, pt.lat, pt.lon));
         rebuildObstaclePolygon(useId);
       });
@@ -1013,6 +1040,18 @@ HTML_TEMPLATE = r"""
 
       try { map.removeLayer(layer); } catch (e) {}
 
+      // Prompt for obstacle height
+      const heightInput = prompt(
+        'Enter obstacle height in cm (<=30 = traversable, >30 = blocking):', 
+        '100'
+      );
+      const height = parseFloat(heightInput);
+      if (!isNaN(height) && height >= 0) {
+        obsHeights[obsId] = height;
+      } else {
+        obsHeights[obsId] = DEFAULT_OBSTACLE_HEIGHT;
+      }
+
       rebuildObstaclePolygon(obsId);
       setSelectedObstacle(obsId);
       });
@@ -1095,10 +1134,26 @@ def load_permanent_obstacles(csv_path: str) -> List[Dict[str, Any]]:
 
             oid = _pick_first(row, ["obstacle_id", "obstacle", "oid", "group_id", "id"]) or "0"
             label = _pick_first(row, ["label", "type", "category"]) or "permanent"
+            
+            # Parse height_cm (default to 100cm = blocking obstacle)
+            height_s = _pick_first(row, ["height_cm", "height", "z", "elevation"])
+            try:
+                height_cm = float(height_s) if height_s else 100.0
+            except ValueError:
+                height_cm = 100.0
 
             if oid not in obstacles_by_id:
-                obstacles_by_id[oid] = {"id": str(oid), "label": label, "points": []}
+                obstacles_by_id[oid] = {
+                    "id": str(oid), 
+                    "label": label, 
+                    "height_cm": height_cm,
+                    "points": []
+                }
             obstacles_by_id[oid]["points"].append({"lat": lat, "lon": lon})
+            
+            # Use the max height if multiple points have different heights
+            if height_cm > obstacles_by_id[oid].get("height_cm", 0):
+                obstacles_by_id[oid]["height_cm"] = height_cm
 
     def sort_key(item):
         try:
@@ -1323,18 +1378,19 @@ class RosLeafletNode(Node):
 
         with open(out_path, "w", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["id", "timestamp", "lat", "lng", "label", "obstacle_id"])
+            w.writerow(["id", "timestamp", "lat", "lng", "label", "obstacle_id", "height_cm"])
 
             vid = 1
             for obs in payload.get("obstacles", []):
                 oid = str(obs.get("id", "0"))
                 label = str(obs.get("label", "permanent"))
+                height_cm = float(obs.get("height_cm", 100.0))
                 for pt in obs.get("points", []):
                     lat = pt.get("lat", None)
                     lon = pt.get("lon", None)
                     if lat is None or lon is None:
                         continue
-                    w.writerow([vid, now, float(lat), float(lon), label, oid])
+                    w.writerow([vid, now, float(lat), float(lon), label, oid, height_cm])
                     vid += 1
                     rows_written += 1
 

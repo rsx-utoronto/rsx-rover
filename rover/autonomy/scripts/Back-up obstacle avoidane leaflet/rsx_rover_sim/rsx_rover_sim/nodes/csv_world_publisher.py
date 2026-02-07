@@ -58,8 +58,10 @@ def load_places_to_go(csv_path: str) -> List[Dict[str, Any]]:
 def load_permanent_obstacles(csv_path: str) -> List[Dict[str, Any]]:
     """
     Expected-ish format (based on your existing project):
-      id,timestamp,lat,lng,label,obstacle_id
+      id,timestamp,lat,lng,label,obstacle_id,height_cm
     But this loader is tolerant: it searches for lat/lon and obstacle_id-like fields.
+    height_cm specifies the obstacle height in centimeters (default 100cm if not specified).
+    Obstacles <= 30cm are traversable with a cost penalty.
     """
     obstacles_by_id: Dict[str, Dict[str, Any]] = {}
 
@@ -85,14 +87,31 @@ def load_permanent_obstacles(csv_path: str) -> List[Dict[str, Any]]:
                 oid = "0"
 
             label = _pick_first(row, ["label", "type", "category"])
+            
+            # Parse height_cm (default to 100cm = blocking obstacle)
+            height_s = _pick_first(row, ["height_cm", "height", "z", "elevation"])
+            try:
+                height_cm = float(height_s) if height_s else 100.0
+            except ValueError:
+                height_cm = 100.0
+            
             if oid not in obstacles_by_id:
-                obstacles_by_id[oid] = {"id": str(oid), "label": label, "points": []}
+                obstacles_by_id[oid] = {
+                    "id": str(oid), 
+                    "label": label, 
+                    "height_cm": height_cm,
+                    "points": []
+                }
 
             obstacles_by_id[oid]["points"].append({"lat": lat, "lon": lon})
 
             # if label appears later, keep it
             if label and not obstacles_by_id[oid].get("label"):
                 obstacles_by_id[oid]["label"] = label
+            
+            # Use the max height if multiple points have different heights
+            if height_cm > obstacles_by_id[oid].get("height_cm", 0):
+                obstacles_by_id[oid]["height_cm"] = height_cm
 
     # Return in numeric-ish order when possible
     def sort_key(item):
