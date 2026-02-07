@@ -36,7 +36,7 @@ from sensor_msgs.msg import PointCloud2
 from queue import PriorityQueue
 from std_msgs.msg import Header, Float32MultiArray
 import math
-from builtin_interfaces.msg import Duration
+from builtin_interfaces.msg import Duration as MsgDuration
 from rclpy.duration import Duration
 from visualization_msgs.msg import Marker,MarkerArray
 # import tf_transformations as tf
@@ -157,7 +157,8 @@ class AstarObstacleAvoidance(Node):
         # Subscribers
         self.pointcloud_sub = self.create_subscription(PointCloud2, self.pointcloud_topic, self.pointcloud_callback, 10)
         self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
-        self.pose_subscriber = self.create_subscription(PoseStamped, "/pose", self.pose_callback, 10)
+        # Subscribe to odometry from ZED
+        self.odom_subscriber = self.create_subscription(Odometry, "/zed_node/odom", self.odom_callback, 10)
 
                 
     def abort_callback(self,msg):
@@ -194,8 +195,8 @@ class AstarObstacleAvoidance(Node):
         self.occupancy_grid=grid
     
     def odom_callback(self, msg):
-       # print("in callback")
-            # Extract robot's position from the Odometry message
+        self.got_callback = True  # Signal that we received odometry
+        # Extract robot's position from the Odometry message
         self.current_position_x = msg.pose.pose.position.x
         self.current_position_y = msg.pose.pose.position.y
         self.current_position_z = msg.pose.pose.position.z
@@ -267,7 +268,7 @@ class AstarObstacleAvoidance(Node):
         octomap_msg = self.tree.writeBinaryMsg()
         header = Header()
         header.stamp =  self.get_clock().now().to_msg() 
-        header.frame_id = "map"
+        header.frame_id = "base_link"
         octomap_msg.header = header
         self.octomap_pub.publish(octomap_msg)
     
@@ -277,7 +278,7 @@ class AstarObstacleAvoidance(Node):
 
         for traj in trajectories:
             line_marker = Marker()
-            line_marker.header.frame_id = "map"
+            line_marker.header.frame_id = "base_link"
             line_marker.header.stamp = self.get_clock().now().to_msg()
             line_marker.ns = "dwa_trajectories"
             line_marker.id = marker_id
@@ -289,7 +290,7 @@ class AstarObstacleAvoidance(Node):
             line_marker.color.b = 0.0
             line_marker.color.a = 1.0
             line_marker.pose.orientation.w = 1.0
-            line_marker.lifetime = Duration(seconds=0.1)
+            line_marker.lifetime = MsgDuration(sec=0, nanosec=100000000)
 
             for point in traj:
                 p = Point()
@@ -309,8 +310,8 @@ class AstarObstacleAvoidance(Node):
 
         # Points marker for waypoints (larger size)
         points_marker = Marker()
-        points_marker.header.frame_id = "map"
-        points_marker.header.stamp =  self.get_clock().now()
+        points_marker.header.frame_id = "base_link"
+        points_marker.header.stamp = self.get_clock().now().to_msg()
         points_marker.ns = "astar_points"
         points_marker.id = 0
         points_marker.type = Marker.POINTS
@@ -321,11 +322,11 @@ class AstarObstacleAvoidance(Node):
         points_marker.color.g = 0.0
         points_marker.color.b = 0.0
         points_marker.color.a = 1.0
-        points_marker.lifetime = rclpy.duration.Duration(seconds=0)
+        points_marker.lifetime = MsgDuration(sec=0, nanosec=0)
 
         # Line strip connecting waypoints
         line_marker = Marker()
-        line_marker.header.frame_id = "map"
+        line_marker.header.frame_id = "base_link"
         line_marker.header.stamp = self.get_clock().now().to_msg()
         line_marker.ns = "astar_line"
         line_marker.id = 1
@@ -337,7 +338,7 @@ class AstarObstacleAvoidance(Node):
         line_marker.color.b = 0.0
         line_marker.color.a = 1.0
         line_marker.pose.orientation.w = 1.0
-        line_marker.lifetime = rclpy.duration.Duration(seconds=0)
+        line_marker.lifetime = MsgDuration(sec=0, nanosec=0)
 
         # Populate both markers with waypoints
         for index in range(0, len(waypoints), 2):
@@ -357,7 +358,7 @@ class AstarObstacleAvoidance(Node):
     def publish_bounding_box(self):
         # note there is an older publish bounding box function that just makes a box around the rover..
         marker = Marker()
-        marker.header.frame_id = "map"  
+        marker.header.frame_id = "base_link"  
         marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = "rover_bounding_box"
         marker.id = 0
@@ -492,10 +493,10 @@ class AstarObstacleAvoidance(Node):
     
     def publish_invalid_pose_marker(self, x, y, z=0.1):
         marker = Marker()
-        marker.header.frame_id = "map"
+        marker.header.frame_id = "base_link"
         marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = "invalid_pose"
-        marker.id = int(self.get_clock().now().to_sec() * 1000) % 1000000  # give it a semi-unique ID
+        marker.id = int(self.get_clock().now().nanoseconds / 1e6) % 1000000  # give it a semi-unique ID
         marker.type = Marker.CUBE
         marker.action = Marker.ADD
         marker.pose.position.x = x
@@ -512,9 +513,9 @@ class AstarObstacleAvoidance(Node):
         marker.color.g = 1.0
         marker.color.b = 0.0
         marker.color.a = 1.0
-        marker.lifetime = rclpy.duration.Duration(seconds=8.0)  # markers disappear after 8 seconds
+        marker.lifetime = MsgDuration(sec=8, nanosec=0)  # markers disappear after 8 seconds
 
-        self.invaliid_pose_sub.publish(marker)
+        self.invalid_pose_pub.publish(marker)
 
     def transform_corners(self, pose):
         """
@@ -582,8 +583,10 @@ class AstarObstacleAvoidance(Node):
             if self.abort_check:
                 print("self.abort is true!")
                 break
-            # rate.sleep()
+            print("Waiting for odometry callback...")
+            time.sleep(0.1)  # Small sleep to prevent busy loop
         self.grid_origin=(self.current_position_x, self.current_position_y) #set the grid origin to init/curr position
+        print(f"Got odometry! Starting at ({self.current_position_x}, {self.current_position_y})")
      
         while rclpy.ok() and not target_reached_flag and not self.abort_check: #while hasn't aborted and hasn't been reached
             print("Self abort check is ", self.abort_check)
@@ -616,8 +619,8 @@ class AstarObstacleAvoidance(Node):
             if world_final_goal_target_distance < threshold_goal or target_reached_flag: #if within target threshold/reached
                 print("final goal target distance", final_goal_target_distance)
                 target_reached_flag=True
-                msg.linear.x = 0
-                msg.angular.z = 0
+                msg.linear.x = 0.0
+                msg.angular.z = 0.0
                 self.drive_publisher.publish(msg)
                 print(f"Reached final target: ({target_x}, {target_y}) whithin a distance of {world_final_goal_target_distance}")
                 return
@@ -679,8 +682,8 @@ class AstarObstacleAvoidance(Node):
                 # if final_goal_target_distance < threshold_goal or target_reached_flag:
                 if world_final_goal_target_distance < threshold_goal or target_reached_flag:
                     target_reached_flag = True
-                    msg.linear.x = 0
-                    msg.angular.z = 0
+                    msg.linear.x = 0.0
+                    msg.angular.z = 0.0
                     self.drive_publisher.publish(msg)
                     print(f"Reached final target: ({target_x}, {target_y}) whithin a distance of {world_final_goal_target_distance}")
                     return
@@ -704,8 +707,8 @@ class AstarObstacleAvoidance(Node):
                 if target_distance < threshold and not target_reached_flag:
                     #print("target distance", target_distance)
                     self.current_path.pop(0)
-                    msg.linear.x = 0
-                    msg.angular.z = 0
+                    msg.linear.x = 0.0
+                    msg.angular.z = 0.0
                     self.drive_publisher.publish(msg)
                     if self.abort_check:
                         break
@@ -727,10 +730,10 @@ class AstarObstacleAvoidance(Node):
                 if abs(angle_diff) <= angle_threshold:
                    # print("trying to move forward", target_distance, self.current_position_x, target_x)
                     msg.linear.x = self.lin_vel
-                    msg.angular.z = 0
+                    msg.angular.z = 0.0
                 else:
                     #print("rotating", angle_diff)
-                    msg.linear.x = 0
+                    msg.linear.x = 0.0
                     msg.angular.z = angle_diff * kp
                     if abs(msg.angular.z) < 0.3:
                         msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
@@ -744,7 +747,13 @@ class AstarObstacleAvoidance(Node):
 def main(args=None):
     rclpy.init(args=args)
     try:
-        planner = AstarObstacleAvoidance()  
+        planner = AstarObstacleAvoidance()
+        
+        # Spin in a separate thread so callbacks work while navigate() runs
+        from threading import Thread
+        spin_thread = Thread(target=rclpy.spin, args=(planner,), daemon=True)
+        spin_thread.start()
+        
         planner.navigate()
     except KeyboardInterrupt:
         pass
@@ -754,9 +763,3 @@ def main(args=None):
         
 if __name__ == "__main__":
     main()
-    # rospy.init_node("octomap_a_star_planner", anonymous=True)
-    # try:
-    #     planner = AstarObstacleAvoidance()
-    #     planner.navigate()
-    # except rospy.ROSInterruptException:
-    #     pass
