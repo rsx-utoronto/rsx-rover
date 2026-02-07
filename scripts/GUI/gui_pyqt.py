@@ -1150,6 +1150,7 @@ class RoverGUI(QMainWindow):
         self.camsTab.setLayout(cam_tab_layout)
 
     def setup_control_tab(self):
+        
         self.controls_group = QGroupBox("Controls")
         controls_layout = QHBoxLayout()
 
