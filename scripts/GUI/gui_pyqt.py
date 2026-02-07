@@ -1153,6 +1153,7 @@ class RoverGUI(QMainWindow):
         self.controls_group = QGroupBox("Controls")
         controls_layout = QHBoxLayout()
 
+        '''
         # Joystick (for Controls tab)
         joystick_group = QGroupBox("Joystick")
         joystick_layout = QVBoxLayout()
@@ -1193,6 +1194,7 @@ class RoverGUI(QMainWindow):
         control_tab_layout = QVBoxLayout()
         control_tab_layout.addWidget(self.controls_group)
         self.controlTab.setLayout(control_tab_layout)
+        '''
 
         
         # self.controlTab.setLayout(control_tab_layout)
@@ -1232,6 +1234,7 @@ class RoverGUI(QMainWindow):
     #used to initialize main tab with splitters
     def setup_split_screen_tab(self):
         # Controls section
+        '''
         self.controls_group = QGroupBox("Controls")
         controls_layout = QHBoxLayout()
 
@@ -1243,7 +1246,7 @@ class RoverGUI(QMainWindow):
         joystick_group.setLayout(joystick_layout)
         self.joystick_splitter.joystickMoved.connect(self.sync_joysticks)
 
-
+        
         # Gear slider
         gear_group = QGroupBox("Gear Control")
         slider_layout = QVBoxLayout()
@@ -1282,7 +1285,7 @@ class RoverGUI(QMainWindow):
         # vertical_splitter.addWidget(controls_group)
         control_tab_layout = QVBoxLayout()
         control_tab_layout.addWidget(self.controls_group)
-
+        '''
         # Create the new section to appear above camera
         status_group = QGroupBox("Status")
         status_layout = QHBoxLayout()  # Changed from QVBoxLayout to QHBoxLayout
