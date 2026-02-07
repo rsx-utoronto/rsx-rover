@@ -1,6 +1,7 @@
 source /opt/ros/humble/setup.bash
 export RMW_IMPLEMENTATION=rmw_zenoh_cpp
-export ZENOH_ROUTER_CONFIG_URI=${HUNTER}/hunter2_zenoh.json5
+# export ZENOH_ROUTER_CONFIG_URI=${HUNTER}/hunter2_zenoh.json5
+export ZENOH_ROUTER_CONFIG_URI=~/rover_ws/src/rsx-rover/config/zenoh_rover.json5
 
 
 if [[ `pidof rmw_zenohd` ]];

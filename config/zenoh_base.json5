@@ -34,8 +34,8 @@
     ///
     /// See https://docs.rs/zenoh/latest/zenoh/config/struct.EndPoint.html
     endpoints: [
-      "tcp/192.168.0.125:7447",
-      "tcp/192.168.0.111:7447"
+      "tcp/192.168.0.125:7447"
+      // "tcp/192.168.0.111:7447"
     ],
 
     /// Global connect configuration,
@@ -82,6 +82,7 @@
     /// See https://docs.rs/zenoh/latest/zenoh/config/struct.EndPoint.html
     endpoints: [
       "tcp/[::]:7447#iface=enp45s0"
+      // "tcp/127.0.0.1:7447"
     ],
 
     /// Global listen configuration,
@@ -125,11 +126,11 @@
       /// Whether multicast scouting is enabled or not
       ///
       /// ROS setting: disable multicast discovery by default
-      enabled: false,
+      enabled: true,
       /// The socket which should be used for multicast scouting
       address: "224.0.0.224:7446",
       /// The network interface which should be used for multicast scouting
-      interface: "auto", // If not set or set to "auto" the interface if picked automatically
+      interface: "lo", // If not set or set to "auto" the interface if picked automatically
       /// The time-to-live on multicast scouting packets
       ttl: 1,
       /// Which type of Zenoh instances to automatically establish sessions with upon discovery on UDP multicast.
