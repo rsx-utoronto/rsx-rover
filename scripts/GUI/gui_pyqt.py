@@ -1151,7 +1151,7 @@ class RoverGUI(QMainWindow):
 
     def setup_control_tab(self):
         
-        self.controls_group = QGroupBox("Controls")
+        #self.controls_group = QGroupBox("Controls")
         controls_layout = QHBoxLayout()
 
         '''
@@ -1402,11 +1402,13 @@ class RoverGUI(QMainWindow):
         self.clear_map_button.setStyleSheet(button_style)
         self.clear_map_button.clicked.connect(self.map_overlay_splitter.clear_map)
 
+        
         # Create horizontal layout for checkbox and clear button
         checkbox_layout = QHBoxLayout()
         checkbox_layout.addWidget(self.checkbox_setting_splitter)
         checkbox_layout.addStretch(1)  # This pushes the checkbox left and button right
         checkbox_layout.addWidget(self.clear_map_button)
+        
         
         # Create a container widget for the checkbox layout
         checkbox_container = QWidget()
@@ -1426,10 +1428,15 @@ class RoverGUI(QMainWindow):
         # Create the horizontal splitter for the main layout
         splitter.addWidget(left_side_splitter)  # Left side has new section stacked above camera
         splitter.addWidget(map_group)           # Right side has map
+
+        self.statusTermGroupBox = QGroupBox("Status Messages")
+        status_term_layout = QVBoxLayout()
+        status_term_layout.addWidget(self.statusTerminal)
         
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
         
+        '''
         # Create a group box for the status terminal
         vertSplitter = QSplitter(Qt.Vertical)
         vertSplitter.addWidget(splitter)
@@ -1440,8 +1447,10 @@ class RoverGUI(QMainWindow):
 
         self.statusTermGroupBox.setLayout(status_term_layout)
         bottom_layout = QHBoxLayout()
-        bottom_layout.addWidget(self.controls_group)  
+        #bottom_layout.addWidget(self.controls_group)  
         bottom_layout.addWidget(self.statusTermGroupBox)
+        '''
+
 
         bottom_container = QWidget()
         bottom_container.setLayout(bottom_layout)
