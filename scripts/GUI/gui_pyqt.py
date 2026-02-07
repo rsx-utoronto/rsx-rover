@@ -1425,8 +1425,9 @@ class RoverGUI(QMainWindow):
 
         # Create the horizontal splitter for the main layout
         splitter.addWidget(left_side_splitter)  # Left side has new section stacked above camera
-        splitter.addWidget(map_group)           # Right side has map
+        # splitter.addWidget(map_group)           # Right side has map
         
+
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
         
@@ -1438,17 +1439,22 @@ class RoverGUI(QMainWindow):
         status_term_layout.addWidget(self.statusTerminal)
         self.statusTermGroupBox.setMinimumHeight(100)
 
-        self.statusTermGroupBox.setLayout(status_term_layout)
-        bottom_layout = QHBoxLayout()
-        bottom_layout.addWidget(self.controls_group)  
-        bottom_layout.addWidget(self.statusTermGroupBox)
+        right_side_splitter = QSplitter(Qt.Vertical)
+        right_side_splitter.addWidget(map_group)
+        right_side_splitter.addWidget(self.statusTermGroupBox)
 
-        bottom_container = QWidget()
-        bottom_container.setLayout(bottom_layout)
-        vertSplitter.addWidget(bottom_container)
+        splitter.addWidget(right_side_splitter)
+        # self.statusTermGroupBox.setLayout(status_term_layout)
+        # bottom_layout = QHBoxLayout()
+        # bottom_layout.addWidget(self.controls_group)  
+        # bottom_layout.addWidget(self.statusTermGroupBox)
+
+        # bottom_container = QWidget()
+        # bottom_container.setLayout(bottom_layout)
+        # vertSplitter.addWidget(bottom_container)
         split_screen_layout = QVBoxLayout()
-        # split_screen_layout.addWidget(splitter)
-        split_screen_layout.addWidget(vertSplitter)
+        # # split_screen_layout.addWidget(splitter)
+        split_screen_layout.addWidget(splitter)
         # split_screen_layout.addWidget(self.statusTermGroupBox) 
         self.split_screen_tab.setLayout(split_screen_layout)
 
