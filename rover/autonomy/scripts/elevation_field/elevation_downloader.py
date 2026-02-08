@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import csv
 import json
 import math
@@ -167,8 +168,8 @@ def process_location(center: tuple, name: str):
 
 if __name__ == "__main__":
     # Process URC Desert location
-    process_location(URC_DESERT_CENTER, "urc_desert_hanksville")
+    #process_location(URC_DESERT_CENTER, "urc_desert_hanksville")
     
     # Uncomment to also process Toronto
-    # process_location(TORONTO_CENTER, "toronto_front_campus")
+    process_location(TORONTO_CENTER, "toronto_front_campus")
   
