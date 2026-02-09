@@ -11,8 +11,8 @@ ELEV_API_LIMIT = 100  # Max points per API request
 API_URL = 'https://api.open-meteo.com/v1/elevation'
 
 # Grid Configuration
-GRID_SIZE_M = 50.0        # 50m x 50m area
-RESOLUTION_M = 0.5        # 0.5m resolution
+GRID_SIZE_M = 10        # 50m x 50m area
+RESOLUTION_M = 0.001       # 1m resolution
 POINTS_PER_SIDE = int(GRID_SIZE_M / RESOLUTION_M)  # 100 points per side
 
 # Earth radius for coordinate conversion
@@ -35,22 +35,48 @@ def meters_to_degrees(meters_lat: float, meters_lon: float, ref_lat: float) -> t
     return deg_lat, deg_lon
 
 
-def get_elevation_from_points(lats: list, lons: list) -> list:
-    """Get elevation using latitude and longitude from Open-Meteo API."""
+# def get_elevation_from_points(lats: list, lons: list) -> list:
+#     """Get elevation using latitude and longitude from Open-Meteo API."""
+#     lat_str = ','.join(f"{lat:.7f}" for lat in lats)
+#     lon_str = ','.join(f"{lon:.7f}" for lon in lons)
+#     url = f"{API_URL}?latitude={lat_str}&longitude={lon_str}"
+    
+#     try:
+#         with urllib.request.urlopen(url, timeout=30) as response:
+#             res = response.read().decode('utf-8')
+#             res_json = json.loads(res)
+#             if "elevation" in res_json:
+#                 return res_json["elevation"]
+#     except Exception as e:
+#         print(f"API Error: {e}")
+#     return [-1.0] * len(lats)
+
+def get_elevation_from_points(lats, lons, max_retries=5):
     lat_str = ','.join(f"{lat:.7f}" for lat in lats)
     lon_str = ','.join(f"{lon:.7f}" for lon in lons)
     url = f"{API_URL}?latitude={lat_str}&longitude={lon_str}"
-    
-    try:
-        with urllib.request.urlopen(url, timeout=30) as response:
-            res = response.read().decode('utf-8')
-            res_json = json.loads(res)
-            if "elevation" in res_json:
-                return res_json["elevation"]
-    except Exception as e:
-        print(f"API Error: {e}")
-    return [-1.0] * len(lats)
 
+    for attempt in range(max_retries):
+        try:
+            with urllib.request.urlopen(url, timeout=30) as response:
+                res = response.read().decode('utf-8')
+                res_json = json.loads(res)
+                if "elevation" in res_json:
+                    return res_json["elevation"]
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                wait_time = 5 * (2 ** attempt)  # exponential backoff
+                print(f"429 Too Many Requests. Waiting {wait_time}s and retrying...")
+                time.sleep(wait_time)
+                continue
+            else:
+                print(f"HTTP Error: {e}")
+                break
+        except Exception as e:
+            print(f"Error: {e}")
+            break
+    print("Max retries reached, returning -1 for all points in batch.")
+    return [-1.0] * len(lats)
 
 def generate_grid(center_lat: float, center_lon: float) -> list:
     """Generate grid points centered on the given coordinate."""
@@ -104,7 +130,7 @@ def fetch_elevations(points: list) -> list:
         
         # Small delay to avoid rate limiting
         if batch_num < total_batches - 1:
-            time.sleep(0.1)
+            time.sleep(10)
     
     return elevations
 
@@ -115,7 +141,7 @@ def save_to_csv(points: list, elevations: list, output_path: Path):
         writer = csv.writer(f)
         writer.writerow(['latitude', 'longitude', 'elevation_m'])
         for (lat, lon), elev in zip(points, elevations):
-            writer.writerow([f"{lat:.7f}", f"{lon:.7f}", f"{elev:.2f}"])
+            writer.writerow([f"{lat:.7f}", f"{lon:.7f}", f"{elev:.7f}"])
     print(f"\nSaved to: {output_path}")
 
 
@@ -148,10 +174,10 @@ def process_location(center: tuple, name: str):
     valid_elevs = [e for e in elevations if e != -1.0]
     if valid_elevs:
         print(f"\nElevation Statistics:")
-        print(f"  Min: {min(valid_elevs):.2f}m")
-        print(f"  Max: {max(valid_elevs):.2f}m")
-        print(f"  Avg: {sum(valid_elevs)/len(valid_elevs):.2f}m")
-        print(f"  Range: {max(valid_elevs) - min(valid_elevs):.2f}m")
+        print(f"  Min: {min(valid_elevs):.7f}m")
+        print(f"  Max: {max(valid_elevs):.7f}m")
+        print(f"  Avg: {sum(valid_elevs)/len(valid_elevs):.7f}m")
+        print(f"  Range: {max(valid_elevs) - min(valid_elevs):.7f}m")
     
     # Save files
     output_dir = Path(__file__).parent.resolve()
@@ -168,7 +194,7 @@ def process_location(center: tuple, name: str):
 
 if __name__ == "__main__":
     # Process URC Desert location
-    #process_location(URC_DESERT_CENTER, "urc_desert_hanksville")
+    # process_location(URC_DESERT_CENTER, "urc_desert_hanksville")
     
     # Uncomment to also process Toronto
     process_location(TORONTO_CENTER, "toronto_front_campus")
