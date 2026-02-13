@@ -12,3 +12,9 @@ science_data/
 build/
 install/
 log/
+*.laz
+*.cpg
+*.dbf
+*.shp
+*.shp.xml
+*.shx
