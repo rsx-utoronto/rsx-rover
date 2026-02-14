@@ -42,15 +42,15 @@ class GS_Traversal(Node):
         self.state = None
         self.count = 0
         self.timer=0
-        self.w = sm_config.get("AR_grid_search_w")
-        self.h = sm_config.get("AR_grid_search_h")
-        self.tol = sm_config.get("AR_grid_search_tol")
-        self.start_x=0
-        self.start_y=0
+        self.w = sm_config.get("AR_grid_search_w") #new
+        self.h = sm_config.get("AR_grid_search_h") #new
+        self.tol = sm_config.get("AR_grid_search_tol") #new
+        self.start_x=0 #new
+        self.start_y=0 #new
         self.aruco_found = False
         self.mallet_found = False
         self.waterbottle_found = False
-        self.homing_status = None
+        self.homing_status = None #new
         self.found_objects = {"AR1":False, 
                    "AR2":False,
                    "OBJ1":False,
@@ -66,20 +66,20 @@ class GS_Traversal(Node):
         self.waterbottle_sub = self.create_subscription(Bool, 'waterbottle_detected', self.waterbottle_detection_callback, 10)
         self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
         self.message_pub = self.create_publisher(String, "gui_status", 10)
-        if sm_config.get("realsense_detection"):
+        if sm_config.get("realsense_detection"): #moved here
             aimer = aruco_homing.AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
         else: 
             aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
         
-        self.aruco_bbox_sub= self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10) 
+        self.aruco_bbox_sub= self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10) #moved here
         # self.object_sub = rospy.Subscriber('/rtabmap/odom', Odometry, self.odom_callback)
-        self.pub = self.create_publisher(MissionState, 'mission_state', 10)
+        self.pub = self.create_publisher(MissionState, 'mission_state', 10) #new for integrating with the state machine
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
-        self._nav_thread = None
-        self.aimer_aruco=None
-        self.aimer_object=None
-        self.aruco_bbox_sub=None
-        self.object_bbox_sub=None
+        self._nav_thread = None  #new
+        self.aimer_aruco=None #new
+        self.aimer_object=None #new
+        self.aruco_bbox_sub=None #new
+        self.object_bbox_sub=None #new
 
     def feedback_callback(self, msg):
         print("in GS traversal feedback callback, msg.state:", msg.state)
@@ -348,9 +348,14 @@ class GS_Traversal(Node):
                         elif aimer.linear_v == 1:
                             twist.linear.x = float(aimer.max_linear_v)
                             twist.angular.z = 0.0
+                        
+                        last_detectionp_linear_velocity = float(twist.linear.x) #this line to be used when we are scaling the speed.
+                        last_detectionp_angular_velocity = float(twist.angular.z) #this line to be used when we are scaling the speed.
                     else:
                         if detection_active and time.time() - last_detection_time < detection_memory_duration:
-                            print("Using last movement commands from memory")
+                            twist.linear.x = last_detectionp_linear_velocity * -1
+                            twist.angular.z = last_detectionp_angular_velocity * -1
+                            print("Going back or turning the angle back when no detection and still in within the memory duration") 
                         else:
                             print("Detection lost and memory expired, returning to grid search")
                             detection_active = False
@@ -367,9 +372,29 @@ class GS_Traversal(Node):
 
     def navigate(self): #navigate needs to take in a state value as well, default value is Location Selection
         print("in gs navigate")
+        msg = MissionState()
         self.targets = self.square_target()
         print("targets generated:", self.targets)
-        msg = MissionState()
+        
+        twist = Twist() #code for spinning in a circle initially
+        initz_heading = self.heading[2]
+        while ((self.heading-initz_heading) > 5.9): #If the angle difference is 20degrees
+            twist.angular.z = self.ang_vel
+            self.drive_publisher(twist)
+            if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle
+                if self.state == "OBJ1" or self.state == "OBJ2" or self.state == "OBJ3": #if objects detected are the an Object
+                    print(f"Object detected during navigation: {self.found_objects[self.state]}")
+                    msg.state="OBJ_FOUND"
+                    self.pub.publish(msg)
+                    return True
+                else:   #if objects detected are an aruco, should be tested 
+                    self.move_to_target(self.x, self.y) #Will aruco found return false? self.x and self.y won't be used
+                    if self.found_objects[self.state]: #should be aruco
+                        print(f"Object detected during navigation: {self.found_objects[self.state]}")
+                        msg.state="OBJ_FOUND"
+                        self.pub.publish(msg)
+                        return True 
+        
         for target_x, target_y in self.targets:
             # print('self target lenght', len(self.targets), self.targets, target_x,target_y)
             if self.found_objects[self.state]: #should be one of aruco, mallet, waterbottle

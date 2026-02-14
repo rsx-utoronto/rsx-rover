@@ -6,6 +6,7 @@
 # To kill, run the command `tmux kill-session -t manual`
 
 source /opt/ros/humble/setup.bash && source /home/rsx/rover_ws/install/setup.bash
+tmux kill-server
 
 # roscore&
 

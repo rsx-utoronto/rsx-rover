@@ -1,2 +1,0 @@
-../Core/Src/linear_buffer.c:27:6:linear_buff_flush	16	static
-../Core/Src/linear_buffer.c:56:6:linear_buff_add	16	static

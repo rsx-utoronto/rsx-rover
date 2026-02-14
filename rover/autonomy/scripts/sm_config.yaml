@@ -2,18 +2,11 @@
 RUN_STATES:
   - GNSS1
   - GNSS2
+  - OBJ1
+  - OBJ2
+  - OBJ3
   - AR1
   - AR2
-  - OBJ1
-  - AR3
-  - OBJ2
-
-  
-#  - GNSS1
- # - AR3
- # - OBJ1
-  #- OBJ2
- # - GNSS2
 
 origin_pose: [0.0, 0.0]
 heading_vector: [1.1, 0.0]
@@ -32,14 +25,14 @@ AR_grid_search_tol: 4
 AR_grid_search_obstacle_avoidance_w: 40
 AR_grid_search_obstacle_avoidance_h: 40
 AR_grid_search_obstacle_avoidance_tol: 2
-
+0
 OBJ_grid_search_w: 20
 OBJ_grid_search_h: 20
 OBJ_grid_search_tol: 2
 # don't change this unless it's realsense
 
-GS_Traversal_lin_vel: 2.5
-GS_Traversal_ang_vel: 0.3
+GS_Traversal_lin_vel: 0 #2.5
+GS_Traversal_ang_vel: 0 #0.3
 
 run_in_order : TRUE #false means we find shortest path, true means it takes in the same order as states_run_in_order
 #If you set this to true, make sure you do not skip any states
@@ -52,7 +45,9 @@ States_run_in_order:
   - OBJ1
   - OBJ2
   - OBJ3
- 
+
+
+  
 
 #- OBJ2
 
