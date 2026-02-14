@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from pyproj import Transformer
 from rasterio.transform import rowcol
 from scipy.ndimage import sobel
+from scipy.ndimage import sobel, distance_transform_edt
 import heapq
 
 # Rover GPS location (CHANGE if needed)
@@ -87,6 +88,37 @@ goal  = (start[0] - 100, start[1] + 50)             # 50 pixels away
 
 # Clamp goal inside map
 goal = (min(goal[0], cost_map.shape[0]-1), min(goal[1], cost_map.shape[1]-1))
+
+# -----------------------------
+# Inflate obstacles to keep path >= 1.0 m away
+# -----------------------------
+buffer_m = 1
+buffer_pixels = int(np.ceil(buffer_m / resolution))
+
+# obstacle where dem_clip has no data
+obstacle_mask = np.isnan(dem_clip)
+
+if np.any(obstacle_mask):
+    # distance (in pixels) from each free cell to nearest obstacle
+    dist_pixels = distance_transform_edt(~obstacle_mask)
+    dist_m = dist_pixels * resolution
+    inflated = dist_m < buffer_m
+    cost_map[inflated] = 1.0  # make these cells very costly to traverse
+else:
+    # fallback: treat very steep cells as obstacles
+    slope_thresh = 0.9
+    steep_mask = slope_norm > slope_thresh
+    if np.any(steep_mask):
+        dist_pixels = distance_transform_edt(~steep_mask)
+        dist_m = dist_pixels * resolution
+        inflated = dist_m < buffer_m
+        cost_map[inflated] = 1.0
+
+# Ensure start/goal aren't blocked by inflation
+sr, sc = start
+gr, gc = goal
+cost_map[sr, sc] = min(cost_map[sr, sc], 0.0)
+cost_map[gr, gc] = min(cost_map[gr, gc], 0.0)
 
 # -----------------------------
 # A* implementation
