@@ -46,12 +46,14 @@ class ObjectDetectionNode(Node):
         self.state_sub = self.create_subscription(String, self.state_topic, self.state_callback, 10)
         self.mallet_pub = self.create_publisher(Bool, 'mallet_detected', 1)
         self.waterbottle_pub = self.create_publisher(Bool, 'waterbottle_detected', 1)
+        self.pick_hammer_pub = self.create_publisher(Bool, 'pick_hammer_detected', 1)
         self.bbox_pub = self.create_publisher(Float64MultiArray, 'object/bbox', 10)
         self.vis_pub = self.create_publisher(Image, 'vis/object_detections', 10)
         self.mission_state_pub = self.create_publisher(MissionState, 'mission_state', 10)
         self.create_subscription(MissionState,'mission_state',self.mission_state_callback, 10)
         self.mallet_found = False
         self.waterbottle_found = False
+        self.pick_hammer_found = False
         self.last_cv_image = None
         self.K = None
         self.D = None
@@ -81,7 +83,7 @@ class ObjectDetectionNode(Node):
         except CvBridgeError as e:
             self.get_logger().error(f"Failed to convert ROS image to CV2: {e}")
             return
-        if self.curr_state == "OBJ1" or self.curr_state == "OBJ2":
+        if self.curr_state == "OBJ1" or self.curr_state == "OBJ2" or self.curr_state == "OBJ3" :
             self.detect_objects(cv_image)
     
     def mission_state_callback(self, msg):
@@ -119,6 +121,7 @@ class ObjectDetectionNode(Node):
             detections = result.boxes  # This contains the bounding boxes, scores, and class predictions
             mallet_found = False
             waterbottle_found = False
+            pick_hammer_found = False
             for box in detections:
                 # Extract bbox coordinates, confidence, and class
                 x1, y1, x2, y2 = map(int, box.xyxy[0])  # Bounding box coordinates
@@ -147,6 +150,11 @@ class ObjectDetectionNode(Node):
                     waterbottle_found = True
                     msg.state="OBJ_FOUND"
                     self.mission_state_pub.publish(msg)      
+                elif obj_name == "hammer":
+                    print("Hammer found")
+                    pick_hammer_found = True
+                    msg.state="OBJ_FOUND"
+                    self.pick_hammer_pub.publish(Bool(data=True))
                 else:
                     print("No object detected")
                     msg.state="OBJ_NOT_FOUND"
@@ -154,6 +162,8 @@ class ObjectDetectionNode(Node):
             # Publish detection status
             self.mallet_pub.publish(Bool(data=mallet_found))
             self.waterbottle_pub.publish(Bool(data=waterbottle_found))
+            self.pick_hammer_pub.publish(Bool(data=pick_hammer_found))  # Reset hammer detection
+            
             # Publish visualized image
             img_msg = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
             self.vis_pub.publish(img_msg)
