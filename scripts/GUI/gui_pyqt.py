@@ -227,7 +227,7 @@ class ArucoBar(QWidget):
     update_label_signal = pyqtSignal(bool)
     update_list_signal = pyqtSignal(str)
 
-    def __init__(self, node):
+    def __init__(self, node, found_topic, name_topic):
         super().__init__()
         self.init_ui()
         self.node=node
@@ -238,8 +238,8 @@ class ArucoBar(QWidget):
         # Initialize ROS subscribers
         # rospy.Subscriber('aruco_found', Bool, self.bool_callback)
         # rospy.Subscriber('aruco_name', String, self.string_callback)
-        node.create_subscription(Bool, 'aruco_found', self.bool_callback, 10)
-        node.create_subscription(String, 'aruco_name', self.string_callback, 10)
+        node.create_subscription(Bool, found_topic, self.bool_callback, 10)
+        node.create_subscription(String, name_topic, self.string_callback, 10)
         
         
         self.received_string = ""
@@ -299,6 +299,7 @@ class ObjectBar(QWidget):
     # Define signals to communicate with the main thread
     update_mallet_signal = pyqtSignal(bool)
     update_bottle_signal = pyqtSignal(bool)
+    update_hammer_signal = pyqtSignal(bool)
 
     def __init__(self, node):
         super().__init__()
@@ -307,12 +308,14 @@ class ObjectBar(QWidget):
         # Connect signals to the corresponding update methods
         self.update_mallet_signal.connect(self.update_mallet)
         self.update_bottle_signal.connect(self.update_bottle)
+        self.update_hammer_signal.connect(self.update_hammer)
 
         # Initialize ROS subscribers
         # rospy.Subscriber('mallet_detected', Bool, self.mallet_callback)
         # rospy.Subscriber('waterbottle_detected', Bool, self.bottle_callback)
         node.create_subscription(Bool, 'mallet_detected', self.mallet_callback, 10)
         node.create_subscription(Bool, 'waterbottle_detected', self.bottle_callback, 10)
+        node.create_subscription(Bool, 'pick_hammer_detected', self.hammer_callback, 10)
 
         self.received_strings = []
 
@@ -341,10 +344,23 @@ class ObjectBar(QWidget):
         """)
         self.label_bottle.setFont(QFont("Arial", 72, QFont.Bold))
 
+        # Create a label
+        self.label_hammer = QLabel("Hammer not found", self)
+        self.label_hammer.setAlignment(Qt.AlignCenter)
+        self.label_hammer.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black;  
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label_hammer.setFont(QFont("Arial", 72, QFont.Bold))
+
         # Layout
         layout = QHBoxLayout()
         layout.addWidget(self.label_mallet)
         layout.addWidget(self.label_bottle)
+        layout.addWidget(self.label_hammer)
         self.setLayout(layout)
 
     def mallet_callback(self, msg):
@@ -354,6 +370,10 @@ class ObjectBar(QWidget):
     def bottle_callback(self, msg):
         # Emit signal to update the list in the main thread
         self.update_bottle_signal.emit(msg.data)
+
+    def hammer_callback(self, msg):
+        # Emit signal to update the list in the main thread
+        self.update_hammer_signal.emit(msg.data)
 
     def update_mallet(self, found):
         # Update the label in the main thread
@@ -396,6 +416,27 @@ class ObjectBar(QWidget):
                 padding: 10px;  
             """)
 
+    def update_hammer(self, found):
+        if found:
+            self.label_hammer.setText("Hammer Found")
+            self.label_hammer.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label_hammer.setText("Hammer not found")
+            self.label_hammer.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
+
+
 class StateMachineStatus(QWidget):
     # Define signal to update the label
     update_label_signal = pyqtSignal(str)
@@ -410,6 +451,7 @@ class StateMachineStatus(QWidget):
         # Initialize ROS subscriber
         # rospy.Subscriber('/led_colour', String, self.callback)
         node.create_subscription(String, '/led_colour', self.callback, 10)
+
 
     def init_ui(self):
         # Create a label
@@ -1329,11 +1371,13 @@ class RoverGUI(QMainWindow):
         detection_group.setMaximumHeight(150)  # Increase from 120 to 150
         
         # Create components
-        self.aruco_bar = ArucoBar(node)
+        self.aruco_bar = ArucoBar(node,'aruco1_found', 'aruco1_name')
+        self.aruco2_bar = ArucoBar(node,'aruco2_found', 'aruco2_name')
         self.object_bar = ObjectBar(node)
         
         # Add components to horizontal layout
         detection_layout.addWidget(self.aruco_bar)
+        detection_layout.addWidget(self.aruco2_bar)
         detection_layout.addWidget(self.object_bar)
         detection_group.setLayout(detection_layout)
 
@@ -1433,7 +1477,7 @@ class RoverGUI(QMainWindow):
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
         
-        '''
+        
         # Create a group box for the status terminal
         vertSplitter = QSplitter(Qt.Vertical)
         vertSplitter.addWidget(splitter)
