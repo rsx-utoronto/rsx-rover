@@ -32,7 +32,7 @@ from calian_gnss_ros2_msg.msg import GnssSignalStatus
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy, HistoryPolicy
 
 #cache folder of map tiles generated from tile_scraper.py
-CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
+CACHE_DIR = Path(__file__).parent.parent.parent.parent.parent.resolve() / "src/rsx-rover/scripts/GUI/tile_cache"
 
 #map widget that has map viewer 
 class mapOverlay(QWidget):
@@ -41,6 +41,7 @@ class mapOverlay(QWidget):
         self.node = node
         self.viewer = map_viewer.MapViewer()
         #sets the source of map tiles to local tile cache folder
+        print(CACHE_DIR)
         self.viewer.set_map_server(
             str(CACHE_DIR) + '/arcgis_world_imagery/{z}/{y}/{x}.jpg', 19
         )
@@ -299,6 +300,7 @@ class ObjectBar(QWidget):
     # Define signals to communicate with the main thread
     update_mallet_signal = pyqtSignal(bool)
     update_bottle_signal = pyqtSignal(bool)
+    update_hammer_signal = pyqtSignal(bool)
 
     def __init__(self, node):
         super().__init__()
@@ -307,12 +309,14 @@ class ObjectBar(QWidget):
         # Connect signals to the corresponding update methods
         self.update_mallet_signal.connect(self.update_mallet)
         self.update_bottle_signal.connect(self.update_bottle)
+        self.update_hammer_signal.connect(self.update_hammer)
 
         # Initialize ROS subscribers
         # rospy.Subscriber('mallet_detected', Bool, self.mallet_callback)
         # rospy.Subscriber('waterbottle_detected', Bool, self.bottle_callback)
         node.create_subscription(Bool, 'mallet_detected', self.mallet_callback, 10)
         node.create_subscription(Bool, 'waterbottle_detected', self.bottle_callback, 10)
+        node.create_subscription(Bool, 'pick_hammer_detected', self.hammer_callback, 10)
 
         self.received_strings = []
 
@@ -341,10 +345,23 @@ class ObjectBar(QWidget):
         """)
         self.label_bottle.setFont(QFont("Arial", 72, QFont.Bold))
 
+        # Create a label
+        self.label_hammer = QLabel("Hammer not found", self)
+        self.label_hammer.setAlignment(Qt.AlignCenter)
+        self.label_hammer.setStyleSheet("""
+            background-color: #808080; 
+            color: white;  
+            border: 2px solid black;  
+            border-radius: 10px; 
+            padding: 10px; 
+        """)
+        self.label_hammer.setFont(QFont("Arial", 72, QFont.Bold))
+
         # Layout
         layout = QHBoxLayout()
         layout.addWidget(self.label_mallet)
         layout.addWidget(self.label_bottle)
+        layout.addWidget(self.label_hammer)
         self.setLayout(layout)
 
     def mallet_callback(self, msg):
@@ -354,6 +371,10 @@ class ObjectBar(QWidget):
     def bottle_callback(self, msg):
         # Emit signal to update the list in the main thread
         self.update_bottle_signal.emit(msg.data)
+
+    def hammer_callback(self, msg):
+        # Emit signal to update the list in the main thread
+        self.update_hammer_signal.emit(msg.data)
 
     def update_mallet(self, found):
         # Update the label in the main thread
@@ -389,6 +410,26 @@ class ObjectBar(QWidget):
         else:
             self.label_bottle.setText("Waterbottle not found")
             self.label_bottle.setStyleSheet("""
+                background-color: #FF5252; 
+                color: white;  
+                border: 2px solid black;  
+                border-radius: 10px;  
+                padding: 10px;  
+            """)
+
+    def update_hammer(self, found):
+        if found:
+            self.label_hammer.setText("Pick Hammer Found")
+            self.label_hammer.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+        else:
+            self.label_hammer.setText("Pick Hammer not Found")
+            self.label_hammer.setStyleSheet("""
                 background-color: #FF5252; 
                 color: white;  
                 border: 2px solid black;  
@@ -1417,35 +1458,29 @@ class RoverGUI(QMainWindow):
         left_side_splitter = QSplitter(Qt.Vertical)
         left_side_splitter.addWidget(status_group)
         left_side_splitter.addWidget(detection_group)
-        left_side_splitter.addWidget(camera_group)
+        left_side_splitter.addWidget(camera_group) # Camera feed expands to bottom of left column
 
-        # Create the horizontal splitter for the main layout
-        splitter.addWidget(left_side_splitter)  # Left side has new section stacked above camera
-        splitter.addWidget(map_group)           # Right side has map
-        
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 1)
-        
-        # Create a group box for the status terminal
-        vertSplitter = QSplitter(Qt.Vertical)
-        vertSplitter.addWidget(splitter)
+        # Create the status terminal group box
         self.statusTermGroupBox = QGroupBox("Status Messages")
         status_term_layout = QVBoxLayout()
         status_term_layout.addWidget(self.statusTerminal)
-        self.statusTermGroupBox.setMinimumHeight(100)
-
         self.statusTermGroupBox.setLayout(status_term_layout)
-        bottom_layout = QHBoxLayout()
-        bottom_layout.addWidget(self.controls_group)  
-        bottom_layout.addWidget(self.statusTermGroupBox)
+        
+        # Create a vertical splitter for the right side (Map + Status Messages)
+        right_side_splitter = QSplitter(Qt.Vertical)
+        right_side_splitter.addWidget(map_group)
+        right_side_splitter.addWidget(self.statusTermGroupBox)
+        
+        # Main Horizontal splitter
+        main_horizontal_splitter = QSplitter(Qt.Horizontal)
+        main_horizontal_splitter.addWidget(left_side_splitter)
+        main_horizontal_splitter.addWidget(right_side_splitter)
+        
+        main_horizontal_splitter.setStretchFactor(0, 1)
+        main_horizontal_splitter.setStretchFactor(1, 1)
 
-        bottom_container = QWidget()
-        bottom_container.setLayout(bottom_layout)
-        vertSplitter.addWidget(bottom_container)
         split_screen_layout = QVBoxLayout()
-        # split_screen_layout.addWidget(splitter)
-        split_screen_layout.addWidget(vertSplitter)
-        # split_screen_layout.addWidget(self.statusTermGroupBox) 
+        split_screen_layout.addWidget(main_horizontal_splitter)
         self.split_screen_tab.setLayout(split_screen_layout)
 
     def on_checkbox_state_changed(self, state,map_overlay):
