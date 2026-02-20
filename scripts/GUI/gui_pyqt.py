@@ -1491,7 +1491,7 @@ class RoverGUI(QMainWindow):
         right_side_splitter.addWidget(self.statusTermGroupBox)
 
         splitter.addWidget(right_side_splitter)
-        # self.statusTermGroupBox.setLayout(status_term_layout)
+        self.statusTermGroupBox.setLayout(status_term_layout)
         # bottom_layout = QHBoxLayout()
         # bottom_layout.addWidget(self.controls_group)  
         # bottom_layout.addWidget(self.statusTermGroupBox)
@@ -1502,7 +1502,7 @@ class RoverGUI(QMainWindow):
         split_screen_layout = QVBoxLayout()
         # # split_screen_layout.addWidget(splitter)
         split_screen_layout.addWidget(splitter)
-        # split_screen_layout.addWidget(self.statusTermGroupBox) 
+        split_screen_layout.addWidget(self.statusTermGroupBox) 
         self.split_screen_tab.setLayout(split_screen_layout)
 
     def on_checkbox_state_changed(self, state,map_overlay):
