@@ -1,4 +1,4 @@
-
+// Sample code that looks for a specific CAN msg from RPi and activates a servo connected to an Arduino
 #include <SPI.h>
 #include <mcp2515.h>
 
@@ -32,7 +32,7 @@ void setup() {
   // Switch to normal mode
   mcp2515.setNormalMode();
 
-  Serial.println("MCP2515 init OK Yayyyy :)");
+  Serial.println("MCP2515 initialization OK. Preparing to attach servo.");
 
   // attaches the servo on pin 9 to the servo object
   rightAngleServo.attach(3); 
@@ -65,7 +65,7 @@ void loop() {
     Serial.println("--------------------");
 
     if (can_msg.can_id == 0x82052C80){
-      Serial.println("Thy mother");
+      Serial.println("Servo message received. Activating rotation!");
       rightAngleServo.write(vel);
 //      delay(2000);
       vel = vel == 90 ? 0 : 90;
@@ -74,3 +74,4 @@ void loop() {
 
 //  Serial.println("--");
 }
+
