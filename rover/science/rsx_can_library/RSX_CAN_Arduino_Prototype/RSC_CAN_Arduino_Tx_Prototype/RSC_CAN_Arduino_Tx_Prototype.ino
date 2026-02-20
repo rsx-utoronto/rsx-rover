@@ -1,7 +1,7 @@
 #include <SPI.h>
 #include <mcp2515.h>
 
-// PINOUT to Arduino Uno
+// MCP2515 PINOUT to Arduino Uno
 // SCK to Pin 13
 // SI to Pin 11
 // SO to Pin 12 
@@ -17,13 +17,13 @@ void setup() {
   // Reset MCP2515
   mcp2515.reset();
 
-  // Set CAN speed (must match your bus!)
+  // Set CAN speed (must match the bus!)
   mcp2515.setBitrate(CAN_500KBPS, MCP_8MHZ);
 
   // Switch to normal mode
   mcp2515.setNormalMode();
 
-  Serial.println("MCP2515 init OK");
+  Serial.println("MCP2515 initialization OK. Now sending sample CAN messages.");
 }
 
 void loop() {
@@ -39,3 +39,4 @@ void loop() {
   Serial.println("Message sent");
   delay(1000);
 }
+
