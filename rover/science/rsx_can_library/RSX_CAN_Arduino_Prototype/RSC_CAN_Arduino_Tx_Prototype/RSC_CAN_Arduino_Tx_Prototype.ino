@@ -1,3 +1,4 @@
+// Sample CAN code with RPi as Rx and Arduino as Tx 
 #include <SPI.h>
 #include <mcp2515.h>
 
@@ -39,4 +40,5 @@ void loop() {
   Serial.println("Message sent");
   delay(1000);
 }
+
 
