@@ -1,0 +1,53 @@
+/* Sweep
+ by BARRAGAN <http://barraganstudio.com>
+ This example code is in the public domain.
+
+ modified 8 Nov 2013
+ by Scott Fitzgerald
+ https://www.arduino.cc/en/Tutorial/LibraryExamples/Sweep
+*/
+
+#include <Servo.h>
+
+Servo myservo;  // create servo object to control a servo
+// twelve servo objects can be created on most boards
+
+int vel = 90;    // variable to store the servo position
+
+void setup() {
+  myservo.attach(3);  // attaches the servo on pin 9 to the servo object
+  Serial.begin(9600);
+}
+
+void loop() {
+
+  // if (Serial.available() >= 2) {
+    // vel = Serial.parseInt();
+    // Serial.print("Servo speed set to: ");
+    // Serial.println(vel - 90);
+//    if (angle == 84) {
+//      digitalWrite(LED_PIN, HIGH);
+//    }
+//    else {
+//      digitalWrite(LED_PIN, LOW);
+//    }
+//    //delay(10); // Delay to give the servo time to move
+    // Serial.flush();
+  // }
+    myservo.write(vel);
+    delay(2000);
+    myservo.write(vel+30);
+    delay(2000);
+    myservo.write(vel-30);
+    delay(2000);
+//  delay(1);
+//  for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+//    // in steps of 1 degree
+//    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+//    delay(15);                       // waits 15 ms for the servo to reach the position
+//  }
+//  for (pos = 180; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
+//    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15 ms for the servo to reach the position
+//  }
+}
