@@ -1,4 +1,4 @@
-
+// Sample CAN code with Arduino as Rx and RPi as Tx 
 #include <SPI.h>
 #include <mcp2515.h>
 
@@ -25,7 +25,8 @@ void setup() {
   // Switch to normal mode
   mcp2515.setNormalMode();
 
-  Serial.println("MCP2515 init OK Yayyyy :)");
+  // Confirm Arduino is configured and ready to receive CAN messages
+  Serial.println("MCP2515 initialization OK. Now preparing to receive CAN messages.");
 }
 
 void loop() {
@@ -54,3 +55,4 @@ void loop() {
 
 //  Serial.println("--");
 }
+
