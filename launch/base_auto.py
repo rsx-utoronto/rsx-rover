@@ -22,6 +22,14 @@ def generate_launch_description():
             output='screen'
         ),
 
+        # --- Heartbeat Publisher Node ---
+        Node(
+            package='rover',
+            executable='heartbeat_publisher.py',
+            name='heartbeat_publisher',
+            output='screen'
+        ),
+
         # --- Include joy.launch.py ---
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
