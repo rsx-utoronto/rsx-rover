@@ -287,6 +287,11 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  rover/autonomy/scripts/heartbeat_publisher.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   rover/science/scripts/geniecamerapublisher.py
   DESTINATION lib/${PROJECT_NAME}
 )
