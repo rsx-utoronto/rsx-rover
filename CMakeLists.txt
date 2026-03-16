@@ -180,6 +180,11 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  rover/autonomy/scripts/astar_2026.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   rover/autonomy/scripts/pub_manual_indicator.py
   DESTINATION lib/${PROJECT_NAME}
 )
