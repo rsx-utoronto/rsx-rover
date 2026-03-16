@@ -84,7 +84,6 @@ class ObjectDetectionNode(Node):
             # print("cv bridge failed")
             self.get_logger().error(f"Failed to convert ROS image to CV2: {e}")
             return
-        # print("after cv bridge")
         if self.curr_state == "OBJ1" or self.curr_state == "OBJ2" or self.curr_state == "OBJ3" :
             self.detect_objects(cv_image)
     
@@ -153,10 +152,9 @@ class ObjectDetectionNode(Node):
                     msg.state="OBJ_FOUND"
                     self.mission_state_pub.publish(msg)      
                 elif obj_name == "hammer":
-                    print("Pickhammer found")
+                    print("Hammer found")
                     pick_hammer_found = True
                     msg.state="OBJ_FOUND"
-                    self.mission_state_pub.publish(msg)
                     self.pick_hammer_pub.publish(Bool(data=True))
                 else:
                     print("No object detected")
