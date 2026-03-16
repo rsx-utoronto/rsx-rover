@@ -1,11 +1,12 @@
+#!/usr/bin/env python3
+
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Empty
-import time
 
 class HeartbeatPublisher(Node):
-    def init(self):
-        super().init('heartbeat_publisher')
+    def __init__(self):
+        super().__init__('heartbeat_publisher')
         self.publisher = self.create_publisher(Empty, '/heartbeat', 10)
         self.timer = self.create_timer(1.0, self.publish_heartbeat)
 
@@ -22,5 +23,5 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()
 
-if name == 'main':
+if __name__ == '__main__':
     main()
