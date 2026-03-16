@@ -295,6 +295,8 @@ class LocationSelection(smach.State): #State for determining which mission/state
                         print("checkpoint 2")
                     else:
                         sla = StraightLineApproachNew(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target], target_name) 
+                from DEM_elevation_map_generator import run_dem_astar
+                run_dem_astar(self.glob_msg, target_name)
                 print("before nav in fms")
                 sla.navigate() #navigating to the next mission on our optimal path, can have abort be called in the SLA file
                 print("after navigate")
