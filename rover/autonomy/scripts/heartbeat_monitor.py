@@ -2,8 +2,8 @@
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Empty
 from geometry_msgs.msg import Twist
+from sensor_msgs.msg import Joy
 import time
 
 class HeartbeatMonitor(Node):
@@ -18,8 +18,8 @@ class HeartbeatMonitor(Node):
         
         # Subscribe to heartbeat from base station
         self.subscription = self.create_subscription(
-            Empty,
-            '/heartbeat',
+            Joy,
+            '/software/joy',
             self.heartbeat_callback,
             10
         )
@@ -34,6 +34,7 @@ class HeartbeatMonitor(Node):
 
     def heartbeat_callback(self, msg):
         """Called when a heartbeat message is received"""
+        self.get_logger().info('I Get Drive Info!')
         self.last_heartbeat = time.time()
         if self.heartbeat_lost:
             self.get_logger().info('Heartbeat restored!')
@@ -49,6 +50,7 @@ class HeartbeatMonitor(Node):
             self.stop_motors()
         elif elapsed > 2.0:
             # Keep publishing stop command while heartbeat is lost
+            self.get_logger().info('Heartbeat lost, publishing stop command')
             self.stop_motors()
 
     def stop_motors(self):
