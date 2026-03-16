@@ -45,6 +45,15 @@ def generate_launch_description():
             name='object_subscriber',
             output='screen'
         )
+
+        # Node(
+        #     package='rover',
+        #     executable='sm_grid_search.py',
+        #     name='grid_search',
+        #     output='screen'
+        # )
+
+
         
         # Node(
             #  package='rover',

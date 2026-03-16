@@ -7,6 +7,7 @@ from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Bool, String
 from rover.msg import MissionState
+import aruco_homing
 import math
 import time
 import threading

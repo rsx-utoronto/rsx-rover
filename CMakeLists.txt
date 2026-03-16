@@ -215,6 +215,11 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+  rover/autonomy/scripts/aruco_homing.py
+  rover/autonomy/scripts/aruco_homing_improve.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 install(PROGRAMS
   rover/science/scripts/webcam.py
@@ -267,6 +272,8 @@ install(PROGRAMS
 
 install(PROGRAMS
   rover/autonomy/scripts/object_subscriber_node.py
+  rover/autonomy/scripts/model_v1.pt
+  rover/autonomy/scripts/best.pt
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -285,6 +292,12 @@ install(PROGRAMS
   rover/autonomy/scripts/astar_obstacle_avoidance_grid_search.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
+install(PROGRAMS
+  rover/autonomy/scripts/rtabmap_init.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 
 install(PROGRAMS
   rover/science/scripts/geniecamerapublisher.py
