@@ -227,10 +227,14 @@ class ArucoBar(QWidget):
     update_label_signal = pyqtSignal(bool)
     update_list_signal = pyqtSignal(str)
 
-    def __init__(self, node, found_topic, name_topic):
+    def __init__(self, node, name):
         super().__init__()
         self.init_ui()
         self.node=node
+        self.name = name 
+        self.aruco_name = ''
+        self.found_list = []
+        
         # Connect signals to the corresponding update methods
         self.update_label_signal.connect(self.update_label)
         self.update_list_signal.connect(self.update_string_list)
@@ -238,10 +242,9 @@ class ArucoBar(QWidget):
         # Initialize ROS subscribers
         # rospy.Subscriber('aruco_found', Bool, self.bool_callback)
         # rospy.Subscriber('aruco_name', String, self.string_callback)
-        node.create_subscription(Bool, found_topic, self.bool_callback, 10)
-        node.create_subscription(String, name_topic, self.string_callback, 10)
-        
-        
+        node.create_subscription(Bool, 'aruco_found', self.bool_callback, 10)
+        node.create_subscription(String, 'aruco_name', self.string_callback, 10)
+    
         self.received_string = ""
 
     def init_ui(self):
@@ -268,12 +271,29 @@ class ArucoBar(QWidget):
 
     def string_callback(self, msg):
         # Emit signal to update the list in the main thread
+        self.aruco_name = msg.data.strip()
         self.update_list_signal.emit(msg.data.strip())
+
+        if self.aruco_name not in self.found_list:
+            self.found_list.append(self.aruco_name)
 
     def update_label(self, found):
         # Update the label in the main thread
-        if found:
-            self.label.setText("Aruco Found: " + self.received_string)
+
+        # could check if the aruco_name is the same as the name of the aruco tag button 
+
+        if found and self.name == self.aruco_name:
+            self.label.setText(self.received_string)
+            self.label.setStyleSheet("""
+                background-color: #4CAF50; 
+                color: white;   
+                border: 2px solid black; 
+                border-radius: 10px;  
+                padding: 10px; 
+            """)
+
+        elif self.name in self.found_list:
+            self.label.setText(self.name)
             self.label.setStyleSheet("""
                 background-color: #4CAF50; 
                 color: white;   
@@ -294,6 +314,7 @@ class ArucoBar(QWidget):
     def update_string_list(self, new_string):
         # Append the string to the list in the main thread
         self.received_string = new_string
+
 
 class ObjectBar(QWidget):
     # Define signals to communicate with the main thread
@@ -1371,8 +1392,8 @@ class RoverGUI(QMainWindow):
         detection_group.setMaximumHeight(150)  # Increase from 120 to 150
         
         # Create components
-        self.aruco_bar = ArucoBar(node,'aruco1_found', 'aruco1_name')
-        self.aruco2_bar = ArucoBar(node,'aruco2_found', 'aruco2_name')
+        self.aruco_bar = ArucoBar(node, 'aruco 1')
+        self.aruco2_bar = ArucoBar(node, 'aruco 2')
         self.object_bar = ObjectBar(node)
         
         # Add components to horizontal layout
