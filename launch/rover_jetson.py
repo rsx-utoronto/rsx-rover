@@ -91,7 +91,15 @@ def generate_launch_description():
             executable='pub_manual_indicator.py',
             name='pub_manual_indicator',
             output='screen'
-        )#,
+        ),
+
+        # Heartbeat Monitor Node
+        Node(
+            package='rover',
+            executable='heartbeat_monitor.py',
+            name='heartbeat_monitor',
+            output='screen'
+        )
 
         # Webcam nodes (for the arm)
         # Node(
