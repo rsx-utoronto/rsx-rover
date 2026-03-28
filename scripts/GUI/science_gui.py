@@ -1190,6 +1190,67 @@ class RoverGUI(QMainWindow):
         # self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
         self.science_serial_controller = node.create_publisher( String, '/science_serial_control',5)
         self.science_serial_data = node.create_subscription( String, '/science_serial_data', self.get_probe_data_callback, 10)
+
+        # Adding stuff for chem+temp tab
+        # TODO: confirm topic name with science team
+        self.chem_servo_pub = self.node.create_publisher(String, '/chem_servo_control', 10)
+        # TODO: confirm topic name with science team  
+        self.chem_image_sub = self.node.create_subscription
+        (
+            CompressedImage,
+            '/chem_image',               # TODO: confirm topic name
+            self.chem_image_callback,
+            10
+        )
+        # TODO: confirm topic names with science team
+        self.site1_temp_sub = self.node.create_subscription(
+            String,
+            '/science_temp_site1',      # TODO: confirm topic name
+            self.site1_temp_callback,
+            10
+        )
+        self.site1_hum_sub = self.node.create_subscription(
+            String,
+            '/science_hum_site1',       # TODO: confirm topic name
+            self.site1_hum_callback,
+            10
+        )
+        self.site2_temp_sub = self.node.create_subscription(
+            String,
+            '/science_temp_site2',      # TODO: confirm topic name
+            self.site2_temp_callback,
+            10
+        )
+
+        self.site2_hum_sub = self.node.create_subscription(
+            String,
+            '/science_hum_site2',       # TODO: confirm topic name
+            self.site2_hum_callback,
+            10
+        )
+        # These variables will probably track whether sites are stopped
+        self.site1_stopped = False
+        self.site2_stopped = False
+        self.chem_image_active = False
+
+        # Store data for plotting
+        self.site1_temp_data = []
+        self.site1_temp_time = []
+        self.site1_hum_data = []
+        self.site1_hum_time = []
+        self.site2_temp_data = []
+        self.site2_temp_time = []
+        self.site2_hum_data = []
+        self.site2_hum_time = []
+
+        # Time counters for each graph
+        self.site1_temp_counter = 0
+        self.site1_hum_counter = 0
+        self.site2_temp_counter = 0
+        self.site2_hum_counter = 0
+
+        #----------------------------- End of Chem Tab changes
+
         self.reached_state = None
         self.ph1_plot_data = []
         self.ph2_plot_data = []
@@ -1415,6 +1476,98 @@ class RoverGUI(QMainWindow):
         else:
             self.chem_display_button.setStyleSheet("")
             print("Chem image display OFF")
+    # Call Back functions
+    def site1_temp_callback(self, msg):  # Called automatically when temperature data arrives for site 1
+        if self.site1_stopped:   # if stop button was pressed, ignore new data
+            return
+        
+        value = float(msg.data)              
+        self.site1_temp_counter += 1         
+        self.site1_temp_data.append(value)   
+        self.site1_temp_time.append(self.site1_temp_counter)  
+        
+        # Update the graph
+        self.site1_temp_plot.clear()         
+        self.site1_temp_plot.plot(  
+            self.site1_temp_time,            # x axis = time
+            self.site1_temp_data,            # y axis = temperature
+            pen=pg.mkPen(color=(255, 0, 0))  # red line
+    )
+        
+    #Called automatically when humidity data arrives for site 1
+    def site1_hum_callback(self, msg):
+        if self.site1_stopped:
+            return
+        
+        value = float(msg.data)
+        self.site1_hum_counter += 1
+        self.site1_hum_data.append(value)
+        self.site1_hum_time.append(self.site1_hum_counter)
+        
+        self.site1_hum_plot.clear()
+        self.site1_hum_plot.plot(
+            self.site1_hum_time,
+            self.site1_hum_data,
+            pen=pg.mkPen(color=(0, 0, 255))  # blue line
+    )
+    def site2_temp_callback(self, msg): # Called automatically when temperature data arrives for site 2
+        if self.site2_stopped:
+            return
+        
+        value = float(msg.data)
+        self.site2_temp_counter += 1
+        self.site2_temp_data.append(value)
+        self.site2_temp_time.append(self.site2_temp_counter)
+        
+        self.site2_temp_plot.clear()
+        self.site2_temp_plot.plot(
+            self.site2_temp_time,
+            self.site2_temp_data,
+            pen=pg.mkPen(color=(255, 0, 0))  # red line
+    )
+    # Called automatically when humidity data arrives for site 2
+    def site2_hum_callback(self, msg):
+        if self.site2_stopped:
+            return
+        
+        value = float(msg.data)
+        self.site2_hum_counter += 1
+        self.site2_hum_data.append(value)
+        self.site2_hum_time.append(self.site2_hum_counter)
+        
+        self.site2_hum_plot.clear()
+        self.site2_hum_plot.plot(
+            self.site2_hum_time,
+            self.site2_hum_data,
+            pen=pg.mkPen(color=(0, 0, 255))  # blue line
+        )
+    
+    # Called automatically when a new image arrives from science team
+    def chem_image_callback(self, msg):
+        if not self.chem_image_active:  # only show image if display is ON
+            return
+        
+        # Convert ROS2 compressed image to something Qt can display
+        np_arr = np.frombuffer(msg.data, np.uint8)       # convert to numpy array
+        cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR) # decode image
+        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB) # fix colors
+        
+        # Convert to Qt format for display
+        height, width, _ = cv_image.shape
+        bytes_per_line = 3 * width
+        qimg = QImage(cv_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
+        pixmap = QPixmap.fromImage(qimg)
+        
+        # Scale image to fit the label
+        scaled_pixmap = pixmap.scaled(
+            self.chem_image_label.size(),
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation
+        )
+        
+        # Display the image
+        self.chem_image_label.setPixmap(scaled_pixmap)
+
 
 
 
