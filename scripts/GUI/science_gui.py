@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayou
     QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, \
     QCheckBox,QSplitter,QStylePainter, QStyleOptionComboBox, QStyle, \
     QToolButton, QMenu, QLineEdit , QPushButton, QTextEdit,\
-    QListWidget, QListWidgetItem, QStyleOptionSlider, QSizePolicy
+    QListWidget, QListWidgetItem, QStyleOptionSlider, QSizePolicy, QScrollArea
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
@@ -850,6 +850,66 @@ class ResizableLabel(QLabel):
         super().resizeEvent(event)
 
 
+class PixelSelectableLabel(QLabel):
+    pixelSelected = pyqtSignal(int, int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAlignment(Qt.AlignCenter)
+        self.setBackgroundRole(QPalette.Base)
+        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self._base_pixmap = None
+        self._zoom_factor = 1.0
+        self._image_width = 0
+        self._image_height = 0
+
+    def set_image_array(self, rgb_image: np.ndarray):
+        if rgb_image is None:
+            return
+        self._image_height, self._image_width = rgb_image.shape[:2]
+        bytes_per_line = 3 * self._image_width
+        qimg = QImage(
+            rgb_image.data,
+            self._image_width,
+            self._image_height,
+            bytes_per_line,
+            QImage.Format_RGB888,
+        ).copy()
+        self._base_pixmap = QPixmap.fromImage(qimg)
+        self._render_pixmap()
+
+    def set_zoom(self, zoom_factor: float):
+        self._zoom_factor = max(0.1, zoom_factor)
+        self._render_pixmap()
+
+    def _render_pixmap(self):
+        if self._base_pixmap is None:
+            return
+        target_width = max(1, int(self._base_pixmap.width() * self._zoom_factor))
+        target_height = max(1, int(self._base_pixmap.height() * self._zoom_factor))
+        scaled = self._base_pixmap.scaled(
+            target_width,
+            target_height,
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation,
+        )
+        self.setPixmap(scaled)
+        self.resize(scaled.size())
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton and self.pixmap() and self._image_width and self._image_height:
+            pix = self.pixmap()
+            x_display = event.pos().x()
+            y_display = event.pos().y()
+            if 0 <= x_display < pix.width() and 0 <= y_display < pix.height():
+                x_image = int((x_display / pix.width()) * self._image_width)
+                y_image = int((y_display / pix.height()) * self._image_height)
+                x_image = max(0, min(self._image_width - 1, x_image))
+                y_image = max(0, min(self._image_height - 1, y_image))
+                self.pixelSelected.emit(x_image, y_image)
+        super().mousePressEvent(event)
+
+
 class CameraFeed:
     def __init__(self, node, label1, label2, label3, label4, label5, splitter):
         self.node=node
@@ -1175,6 +1235,8 @@ class CameraFeed:
 class RoverGUI(QMainWindow):
     statusSignal = pyqtSignal(str)
     probeUpdateSignal = pyqtSignal(bool)
+    multispectralImageSavedSignal = pyqtSignal(dict)
+    multispectralStatusSignal = pyqtSignal(str)
     def __init__(self, node:Node):
         self.node=node
         super().__init__()
@@ -1266,6 +1328,23 @@ class RoverGUI(QMainWindow):
         self.temp_save_data = []  # For storing finalized temperature data
         self.pmt_save_data = []  # For storing finalized PMT data
 
+        self.ms_bridge = CvBridge()
+        self.ms_wavelength_sequence = [None, 440, 500, 530, 570, 610, 670, 740, 780, 840, 900, 950, 1000]
+        self.ms_collect_queue = []
+        self.ms_expected_images = 0
+        self.ms_collection_mode = None
+        self.ms_session_dir = None
+        self.ms_metadata_path = None
+        self.ms_entries = []
+        self.ms_selected_pixel = None
+        self.ms_last_latitude = None
+        self.ms_last_longitude = None
+        self.ms_last_heading = None
+
+        self.ms_gps_sub = node.create_subscription(NavSatFix, '/calian_gnss/gps', self.multispectral_gps_callback, 10)
+        self.ms_heading_sub = node.create_subscription(GnssSignalStatus, '/calian_gnss/gps_extended', self.multispectral_heading_callback, 10)
+        self.ms_image_sub = node.create_subscription(Image, '/geniecam', self.multispectral_image_callback, 10)
+
         # Create tabs
         self.scienceTab = QWidget()  # Create science tab first
         self.longlat_tab = QWidget()
@@ -1273,6 +1352,7 @@ class RoverGUI(QMainWindow):
         self.camsTab = QWidget()
         # New Tabs (2026 Revision)
         self.chemTempTab = QWidget()
+        self.multispectralTab = QWidget()
 
         # Setup tabs before adding them
         self.setup_science_tab()  # Setup science tab first
@@ -1280,6 +1360,7 @@ class RoverGUI(QMainWindow):
         self.setup_control_tab()
         self.setup_cams_tab()
         self.setup_chem_temp_tab()
+        self.setup_multispectral_tab()
         
         # Add tabs to QTabWidget - with science tab first
         self.tabs.addTab(self.scienceTab, "Science")  # Science tab is now first/default
@@ -1287,12 +1368,15 @@ class RoverGUI(QMainWindow):
         self.tabs.addTab(self.controlTab, "Controls")
         self.tabs.addTab(self.camsTab, "Cameras")
         self.tabs.addTab(self.chemTempTab, "Chem +Temp/Humidity")
+        self.tabs.addTab(self.multispectralTab, "Multispectral")
 
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
         
         self.statusSignal.connect(self.string_signal_receive)
         self.probeUpdateSignal.connect(self.update_science_plot)
+        self.multispectralImageSavedSignal.connect(self.multispectral_on_image_saved)
+        self.multispectralStatusSignal.connect(self.multispectral_set_status)
 
 
     def string_callback(self, msg):
@@ -1443,6 +1527,366 @@ class RoverGUI(QMainWindow):
         self.servo_back_button.clicked.connect(self.chem_servo_backward)
         self.servo_forward_button.clicked.connect(self.chem_servo_forward)
         self.chem_display_button.clicked.connect(self.toggle_chem_image)
+
+    def setup_multispectral_tab(self):
+        root_layout = QVBoxLayout()
+
+        top_layout = QHBoxLayout()
+
+        data_group = QGroupBox("Data Sites")
+        data_layout = QVBoxLayout()
+        self.ms_image_list = QListWidget()
+        self.ms_image_list.setMinimumWidth(260)
+        data_layout.addWidget(self.ms_image_list)
+        data_group.setLayout(data_layout)
+
+        image_group = QGroupBox("Image Viewer")
+        image_layout = QVBoxLayout()
+
+        image_header_layout = QHBoxLayout()
+        image_header_layout.addStretch(1)
+        self.ms_current_wavelength_label = QLabel("λ = ?")
+        image_header_layout.addWidget(self.ms_current_wavelength_label)
+
+        self.ms_image_label = PixelSelectableLabel()
+        self.ms_image_label.setMinimumSize(650, 420)
+        self.ms_image_label.setStyleSheet("background-color: #202020; border: 1px solid #808080;")
+
+        self.ms_image_scroll = QScrollArea()
+        self.ms_image_scroll.setWidget(self.ms_image_label)
+        self.ms_image_scroll.setWidgetResizable(False)
+        self.ms_image_scroll.setAlignment(Qt.AlignCenter)
+
+        nav_layout = QHBoxLayout()
+        self.ms_prev_button = QPushButton("<")
+        self.ms_next_button = QPushButton(">")
+        nav_layout.addStretch(1)
+        nav_layout.addWidget(self.ms_prev_button)
+        nav_layout.addWidget(self.ms_next_button)
+        nav_layout.addStretch(1)
+
+        zoom_layout = QHBoxLayout()
+        self.ms_zoom_slider = QSlider(Qt.Horizontal)
+        self.ms_zoom_slider.setMinimum(25)
+        self.ms_zoom_slider.setMaximum(400)
+        self.ms_zoom_slider.setValue(100)
+        self.ms_zoom_value_label = QLabel("100%")
+        zoom_layout.addWidget(QLabel("Zoom"))
+        zoom_layout.addWidget(self.ms_zoom_slider)
+        zoom_layout.addWidget(self.ms_zoom_value_label)
+
+        self.ms_pixel_label = QLabel("Pixel: (not selected)")
+
+        image_layout.addLayout(image_header_layout)
+        image_layout.addWidget(self.ms_image_scroll)
+        image_layout.addLayout(nav_layout)
+        image_layout.addLayout(zoom_layout)
+        image_layout.addWidget(self.ms_pixel_label)
+        image_group.setLayout(image_layout)
+
+        top_layout.addWidget(data_group, 1)
+        top_layout.addWidget(image_group, 3)
+
+        bottom_layout = QHBoxLayout()
+
+        control_group = QGroupBox("Controls")
+        control_layout = QGridLayout()
+        self.ms_collect_13_button = QPushButton("Collect 13")
+        self.ms_collect_single_button = QPushButton("Collect Single")
+        self.ms_generate_graph_button = QPushButton("Generate Graph")
+        self.ms_servo_backward_button = QPushButton("Servo Backward")
+        self.ms_servo_forward_button = QPushButton("Servo Forward")
+
+        self.ms_single_wavelength_combo = QComboBox()
+        for wavelength in self.ms_wavelength_sequence:
+            if wavelength is None:
+                self.ms_single_wavelength_combo.addItem("None")
+            else:
+                self.ms_single_wavelength_combo.addItem(f"{wavelength} nm")
+
+        control_layout.addWidget(self.ms_collect_13_button, 0, 0)
+        control_layout.addWidget(self.ms_collect_single_button, 0, 1)
+        control_layout.addWidget(QLabel("Single wavelength:"), 1, 0)
+        control_layout.addWidget(self.ms_single_wavelength_combo, 1, 1)
+        control_layout.addWidget(self.ms_generate_graph_button, 2, 0, 1, 2)
+        control_layout.addWidget(self.ms_servo_backward_button, 3, 0)
+        control_layout.addWidget(self.ms_servo_forward_button, 3, 1)
+        control_group.setLayout(control_layout)
+
+        graph_group = QGroupBox("Reflectance Graph")
+        graph_layout = QVBoxLayout()
+        self.ms_graph = pg.PlotWidget()
+        self.ms_graph.setBackground("w")
+        self.ms_graph.showGrid(x=True, y=True, alpha=0.3)
+        self.ms_graph.setLabel("left", "Greyscale Value")
+        self.ms_graph.setLabel("bottom", "Filter Index")
+        self.ms_graph.setYRange(0, 255)
+        graph_layout.addWidget(self.ms_graph)
+        graph_group.setLayout(graph_layout)
+
+        bottom_layout.addWidget(control_group, 1)
+        bottom_layout.addWidget(graph_group, 2)
+
+        self.ms_gps_label = QLabel("GPS: lat ?, lon ?, heading ?")
+        self.ms_status_label = QLabel("Status: Ready")
+
+        root_layout.addLayout(top_layout)
+        root_layout.addLayout(bottom_layout)
+        root_layout.addWidget(self.ms_gps_label)
+        root_layout.addWidget(self.ms_status_label)
+        self.multispectralTab.setLayout(root_layout)
+
+        self.ms_servo_forward_button.clicked.connect(self.multispectral_move_servo_forward)
+        self.ms_servo_backward_button.clicked.connect(self.multispectral_move_servo_backward)
+        self.ms_collect_13_button.clicked.connect(self.multispectral_collect_13)
+        self.ms_collect_single_button.clicked.connect(self.multispectral_collect_single)
+        self.ms_generate_graph_button.clicked.connect(self.multispectral_generate_graph)
+        self.ms_image_list.currentRowChanged.connect(self.multispectral_display_selected_image)
+        self.ms_zoom_slider.valueChanged.connect(self.multispectral_zoom_changed)
+        self.ms_image_label.pixelSelected.connect(self.multispectral_pixel_selected)
+        self.ms_prev_button.clicked.connect(self.multispectral_prev_image)
+        self.ms_next_button.clicked.connect(self.multispectral_next_image)
+
+    def multispectral_set_status(self, text: str):
+        if hasattr(self, 'ms_status_label'):
+            self.ms_status_label.setText(f"Status: {text}")
+
+    def multispectral_gps_callback(self, msg):
+        self.ms_last_latitude = msg.latitude
+        self.ms_last_longitude = msg.longitude
+        if hasattr(self, 'ms_gps_label'):
+            heading_text = "?" if self.ms_last_heading is None else f"{self.ms_last_heading:.2f}"
+            self.ms_gps_label.setText(
+                f"GPS: lat {self.ms_last_latitude:.6f}, lon {self.ms_last_longitude:.6f}, heading {heading_text}"
+            )
+
+    def multispectral_heading_callback(self, msg):
+        self.ms_last_heading = msg.heading
+        if hasattr(self, 'ms_gps_label'):
+            lat_text = "?" if self.ms_last_latitude is None else f"{self.ms_last_latitude:.6f}"
+            lon_text = "?" if self.ms_last_longitude is None else f"{self.ms_last_longitude:.6f}"
+            self.ms_gps_label.setText(
+                f"GPS: lat {lat_text}, lon {lon_text}, heading {self.ms_last_heading:.2f}"
+            )
+
+    def multispectral_send_science_command(self, command: str):
+        msg = String()
+        msg.data = command
+        self.science_serial_controller.publish(msg)
+
+    def multispectral_new_session(self, session_prefix: str):
+        base_dir = os.path.join(os.path.expanduser("~"), "rover_ws/src/rsx-rover/science_data", "multispectral")
+        os.makedirs(base_dir, exist_ok=True)
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        self.ms_session_dir = os.path.join(base_dir, f"{session_prefix}_{timestamp}")
+        os.makedirs(self.ms_session_dir, exist_ok=True)
+        self.ms_metadata_path = os.path.join(self.ms_session_dir, "metadata.csv")
+        with open(self.ms_metadata_path, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["index", "filename", "wavelength", "latitude", "longitude", "heading", "timestamp"])
+
+    def multispectral_reset_session(self):
+        self.ms_entries = []
+        self.ms_selected_pixel = None
+        self.ms_image_list.clear()
+        self.ms_graph.clear()
+        self.ms_pixel_label.setText("Pixel: (not selected)")
+
+    def multispectral_wavelength_text(self, wavelength):
+        return "None" if wavelength is None else f"{wavelength}nm"
+
+    def multispectral_format_float(self, value, precision=6):
+        if value is None:
+            return "nan"
+        return f"{value:.{precision}f}"
+
+    def multispectral_move_servo_forward(self):
+        self.multispectral_send_science_command("<MS_SERVO_FORWARD_STEP>")
+        self.multispectralStatusSignal.emit("Servo moved forward by 1 step")
+
+    def multispectral_move_servo_backward(self):
+        self.multispectral_send_science_command("<MS_SERVO_BACKWARD_STEP>")
+        self.multispectralStatusSignal.emit("Servo moved backward by 1 step")
+
+    def multispectral_collect_13(self):
+        if self.ms_expected_images > 0:
+            self.multispectralStatusSignal.emit("Collection already in progress")
+            return
+        self.multispectral_new_session("collect13")
+        self.multispectral_reset_session()
+        self.ms_collect_queue = self.ms_wavelength_sequence.copy()
+        self.ms_expected_images = len(self.ms_collect_queue)
+        self.ms_collection_mode = "collect13"
+        self.multispectral_send_science_command("<MS_COLLECT_13>")
+        self.multispectralStatusSignal.emit(f"Collect 13 started. Saving to {self.ms_session_dir}")
+
+    def multispectral_collect_single(self):
+        if self.ms_expected_images > 0:
+            self.multispectralStatusSignal.emit("Collection already in progress")
+            return
+        selected_text = self.ms_single_wavelength_combo.currentText()
+        wavelength = None if selected_text == "None" else int(selected_text.replace(" nm", ""))
+        self.multispectral_new_session("single")
+        self.multispectral_reset_session()
+        self.ms_collect_queue = [wavelength]
+        self.ms_expected_images = 1
+        self.ms_collection_mode = "single"
+        self.multispectral_send_science_command("<MS_COLLECT_SINGLE>")
+        self.multispectralStatusSignal.emit(
+            f"Collect single started ({self.multispectral_wavelength_text(wavelength)}). Saving to {self.ms_session_dir}"
+        )
+
+    def multispectral_image_callback(self, msg):
+        if self.ms_expected_images <= 0 or not self.ms_collect_queue or self.ms_session_dir is None:
+            return
+        try:
+            cv_image = self.ms_bridge.imgmsg_to_cv2(msg)
+            if len(cv_image.shape) == 2:
+                gray = cv_image
+                bgr = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
+                rgb = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2RGB)
+            else:
+                if cv_image.shape[2] == 4:
+                    bgr = cv2.cvtColor(cv_image, cv2.COLOR_BGRA2BGR)
+                else:
+                    bgr = cv_image
+                rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+                gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+
+            wavelength = self.ms_collect_queue.pop(0)
+            image_index = len(self.ms_entries) + 1
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            latitude = self.ms_last_latitude
+            longitude = self.ms_last_longitude
+            heading = self.ms_last_heading
+
+            filename = (
+                f"{image_index:02d}_{self.multispectral_wavelength_text(wavelength)}"
+                f"_lat_{self.multispectral_format_float(latitude, 6)}"
+                f"_lon_{self.multispectral_format_float(longitude, 6)}"
+                f"_head_{self.multispectral_format_float(heading, 2)}.png"
+            )
+            filepath = os.path.join(self.ms_session_dir, filename)
+            cv2.imwrite(filepath, bgr)
+
+            with open(self.ms_metadata_path, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([
+                    image_index,
+                    filename,
+                    self.multispectral_wavelength_text(wavelength),
+                    self.multispectral_format_float(latitude, 6),
+                    self.multispectral_format_float(longitude, 6),
+                    self.multispectral_format_float(heading, 2),
+                    timestamp,
+                ])
+
+            entry = {
+                "index": image_index,
+                "filepath": filepath,
+                "wavelength": wavelength,
+                "wavelength_label": self.multispectral_wavelength_text(wavelength),
+                "latitude": latitude,
+                "longitude": longitude,
+                "heading": heading,
+                "gray": gray,
+                "rgb": rgb,
+            }
+            self.ms_entries.append(entry)
+            self.ms_expected_images -= 1
+            self.multispectralImageSavedSignal.emit(entry)
+
+            if self.ms_expected_images == 0:
+                self.ms_collection_mode = None
+                self.multispectralStatusSignal.emit(
+                    f"Collection complete. Saved {len(self.ms_entries)} image(s) to {self.ms_session_dir}"
+                )
+            else:
+                self.multispectralStatusSignal.emit(
+                    f"Captured {len(self.ms_entries)} image(s). Waiting for {self.ms_expected_images} more"
+                )
+        except Exception as error:
+            self.ms_expected_images = 0
+            self.ms_collect_queue = []
+            self.ms_collection_mode = None
+            self.multispectralStatusSignal.emit(f"Capture failed: {error}")
+
+    def multispectral_on_image_saved(self, entry: dict):
+        latitude = self.multispectral_format_float(entry["latitude"], 6)
+        longitude = self.multispectral_format_float(entry["longitude"], 6)
+        heading = self.multispectral_format_float(entry["heading"], 2)
+        item_text = (
+            f"{entry['index']:02d} | {entry['wavelength_label']} | "
+            f"lat {latitude}, lon {longitude}, head {heading}"
+        )
+        self.ms_image_list.addItem(item_text)
+        if self.ms_image_list.count() == 1:
+            self.ms_image_list.setCurrentRow(0)
+
+    def multispectral_display_selected_image(self, row: int):
+        if row < 0 or row >= len(self.ms_entries):
+            return
+        entry = self.ms_entries[row]
+        self.ms_image_label.set_image_array(entry["rgb"])
+        self.ms_current_wavelength_label.setText(f"λ = {entry['wavelength_label']}")
+        self.multispectral_zoom_changed(self.ms_zoom_slider.value())
+
+    def multispectral_prev_image(self):
+        if self.ms_image_list.count() == 0:
+            return
+        row = self.ms_image_list.currentRow()
+        self.ms_image_list.setCurrentRow(max(0, row - 1))
+
+    def multispectral_next_image(self):
+        count = self.ms_image_list.count()
+        if count == 0:
+            return
+        row = self.ms_image_list.currentRow()
+        self.ms_image_list.setCurrentRow(min(count - 1, row + 1))
+
+    def multispectral_zoom_changed(self, value: int):
+        self.ms_zoom_value_label.setText(f"{value}%")
+        self.ms_image_label.set_zoom(value / 100.0)
+
+    def multispectral_pixel_selected(self, x: int, y: int):
+        self.ms_selected_pixel = (x, y)
+        self.ms_pixel_label.setText(f"Pixel: ({x}, {y})")
+        self.multispectral_plot_pixel(x, y)
+
+    def multispectral_generate_graph(self):
+        if self.ms_selected_pixel is None:
+            self.multispectralStatusSignal.emit("Select a pixel first by clicking on the image")
+            return
+        x, y = self.ms_selected_pixel
+        self.multispectral_plot_pixel(x, y)
+
+    def multispectral_plot_pixel(self, x: int, y: int):
+        if not self.ms_entries:
+            self.multispectralStatusSignal.emit("No images collected yet")
+            return
+
+        x_values = []
+        y_values = []
+
+        for index, entry in enumerate(self.ms_entries, start=1):
+            if index > 13:
+                break
+            gray = entry["gray"]
+            height, width = gray.shape[:2]
+            if 0 <= x < width and 0 <= y < height:
+                greyscale_value = int(gray[y, x])
+            else:
+                greyscale_value = 0
+            x_values.append(index)
+            y_values.append(greyscale_value)
+
+        self.ms_graph.clear()
+        pen = pg.mkPen(color=(0, 0, 255), width=2)
+        self.ms_graph.plot(x_values, y_values, pen=pen, symbol='o', symbolSize=8, symbolBrush='b')
+        self.ms_graph.getAxis('bottom').setTicks([[(i, str(i)) for i in range(1, 14)]])
+        self.ms_graph.setXRange(1, 13, padding=0)
+        self.ms_graph.setYRange(0, 255)
+        self.multispectralStatusSignal.emit(f"Graph updated for pixel ({x}, {y})")
 
     # defining some functions for the chem+temp tab
     def stop_site1_graphs(self):
