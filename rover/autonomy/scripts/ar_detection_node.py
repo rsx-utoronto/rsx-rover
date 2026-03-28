@@ -28,7 +28,8 @@ class ARucoTagDetectionNode(Node):
     def __init__(self):
         super().__init__('aruco_tag_detector')
         self.bridge = CvBridge()
-        self.curr_state = None
+        # self.curr_state = None
+        self.curr_state = "AR1" #COMMENT OUT WHEN RUNNING!
         # self.image_topic = "/camera/color/image_raw"
         
         if sm_config.get("realsense_detection"):
