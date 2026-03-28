@@ -1210,18 +1210,22 @@ class RoverGUI(QMainWindow):
         self.longlat_tab = QWidget()
         self.controlTab = QWidget()
         self.camsTab = QWidget()
+        # New Tabs (2026 Revision)
+        self.chemTempTab = QWidget()
 
         # Setup tabs before adding them
         self.setup_science_tab()  # Setup science tab first
         self.setup_lngLat_tab()
         self.setup_control_tab()
         self.setup_cams_tab()
+        self.setup_chem_temp_tab()
         
         # Add tabs to QTabWidget - with science tab first
         self.tabs.addTab(self.scienceTab, "Science")  # Science tab is now first/default
         self.tabs.addTab(self.longlat_tab, "State Machine")
         self.tabs.addTab(self.controlTab, "Controls")
         self.tabs.addTab(self.camsTab, "Cameras")
+        self.tabs.addTab(self.chemTempTab, "Chem +Temp/Humidity")
 
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
@@ -1263,6 +1267,155 @@ class RoverGUI(QMainWindow):
             print("map tab")  
         elif index == 2:  # Split Screen Tab
             print("split tab") # Show map viewer in split screen tab
+
+    # Chem + Temp tab function
+    def setup_chem_temp_tab(self):
+        main_layout = QVBoxLayout() # I am just setting an outer container to stacks the chem + temp portion vertically
+        temp_hum_group = QGroupBox("Temp/Humidity")   # top section
+        chem_group = QGroupBox("Chem")                # bottom section
+        temp_hum_layout = QVBoxLayout()
+        chem_layout = QVBoxLayout()
+        
+
+    # Temp Portion Layout
+        stop_buttons_layout = QHBoxLayout()
+
+        self.stop_site1_button = QPushButton("Stop Site 1")  
+        self.stop_site2_button = QPushButton("Stop Site 2")  
+    
+        # Adding buttons to the horizontal layout
+        stop_buttons_layout.addWidget(self.stop_site1_button)
+        stop_buttons_layout.addWidget(self.stop_site2_button)
+    
+        # Adding the buttons row to the temp/humidity layout
+        temp_hum_layout.addLayout(stop_buttons_layout)
+
+        # Now placing all the graphs
+        graphs_layout = QHBoxLayout()
+        # Site 1 column
+        site1_layout = QVBoxLayout()
+        site1_label = QLabel("Site 1")
+        self.site1_temp_plot = pg.PlotWidget() # Previously pyqtgraph has been already imported as pg
+        self.site1_hum_plot = pg.PlotWidget()
+
+        # Site 2 column - temp on top, humidity below
+        site2_layout = QVBoxLayout()
+        site2_label = QLabel("Site 2")
+        self.site2_temp_plot = pg.PlotWidget()
+        self.site2_hum_plot = pg.PlotWidget()
+
+        # Now styling all the graphs (just setting the plot background to white)
+        for plot in [self.site1_temp_plot, self.site1_hum_plot, self.site2_temp_plot, self.site2_hum_plot]:
+            plot.setBackground("w")
+            plot.showGrid(x=True, y=True)
+        # Labelling each axis
+        # Label each graph
+        self.site1_temp_plot.setLabel("left", "Temperature (°C)")
+        self.site1_temp_plot.setLabel("bottom", "Time")
+        self.site1_hum_plot.setLabel("left", "Humidity (%)")
+        self.site1_hum_plot.setLabel("bottom", "Time")
+        self.site2_temp_plot.setLabel("left", "Temperature (°C)")
+        self.site2_temp_plot.setLabel("bottom", "Time")
+        self.site2_hum_plot.setLabel("left", "Humidity (%)")
+        self.site2_hum_plot.setLabel("bottom", "Time")
+
+        # Now building all the layout
+        site1_layout.addWidget(site1_label)
+        site1_layout.addWidget(self.site1_temp_plot)
+        site1_layout.addWidget(self.site1_hum_plot)
+        site2_layout.addWidget(site2_label)
+        site2_layout.addWidget(self.site2_temp_plot)
+        site2_layout.addWidget(self.site2_hum_plot)
+        # Putting the columns side by side
+        graphs_layout.addLayout(site1_layout)
+        graphs_layout.addLayout(site2_layout)
+        # Adding everything back to temp_hum section
+        temp_hum_layout.addLayout(graphs_layout)
+    # Chem Section
+        chem_layout = QVBoxLayout()
+    
+        # Row 1 - Servo buttons side by side
+        servo_buttons_layout = QHBoxLayout()
+        
+        self.servo_back_button = QPushButton("Servo Backward")
+        self.servo_forward_button = QPushButton("Servo Forward")
+        
+        servo_buttons_layout.addWidget(self.servo_back_button)
+        servo_buttons_layout.addWidget(self.servo_forward_button)
+        
+        # Row 2 It will show display button and image side by side
+        display_layout = QHBoxLayout()
+        
+        self.chem_display_button = QPushButton("Display")
+        
+        # This label will show the image when received
+        self.chem_image_label = QLabel("No Image Yet")
+        self.chem_image_label.setAlignment(Qt.AlignCenter)
+        self.chem_image_label.setMinimumSize(320, 240)   # min size for image
+        self.chem_image_label.setFrameStyle(QFrame.Panel | QFrame.Sunken)  # border
+        self.chem_image_label.setStyleSheet("background-color: #808080;")  # grey background
+        
+        display_layout.addWidget(self.chem_display_button)
+        display_layout.addWidget(self.chem_image_label)
+        
+        # Add both rows to chem layout
+        chem_layout.addLayout(servo_buttons_layout)
+        chem_layout.addLayout(display_layout)
+
+        # Assigning layouts to group boxes
+        temp_hum_group.setLayout(temp_hum_layout)
+        chem_group.setLayout(chem_layout)
+        
+        # Add both group boxes to main layout (stacked vertically)
+        main_layout.addWidget(temp_hum_group)
+        main_layout.addWidget(chem_group)
+        
+        # Set the main layout on the actual tab
+        self.chemTempTab.setLayout(main_layout)
+
+
+        # I am gonna connect buttons to functions
+        # Temp Section
+        self.stop_site1_button.clicked.connect(self.stop_site1_graphs)
+        self.stop_site2_button.clicked.connect(self.stop_site2_graphs)
+        # Chem Section
+        self.servo_back_button.clicked.connect(self.chem_servo_backward)
+        self.servo_forward_button.clicked.connect(self.chem_servo_forward)
+        self.chem_display_button.clicked.connect(self.toggle_chem_image)
+
+    # defining some functions for the chem+temp tab
+    def stop_site1_graphs(self):
+        self.site1_stopped = True
+        self.stop_site1_button.setEnabled(False)
+        self.stop_site1_button.setText("Site 1 Stopped")
+        print("Site 1 graphs stopped")
+    def stop_site2_graphs(self):
+        self.site2_stopped = True
+        self.stop_site2_button.setEnabled(False)
+        self.stop_site2_button.setText("Site 2 Stopped")
+        print("Site 2 graphs stopped")
+    def chem_servo_forward(self):
+        msg = String()
+        msg.data = "<CHEM_SERVO_FORWARD>"  # TODO: confirm this command with science team
+        self.chem_servo_pub.publish(msg)
+        print("Chem servo forward")
+
+    def chem_servo_backward(self):
+        msg = String()
+        msg.data = "<CHEM_SERVO_BACKWARD>"  # TODO: confirm this command with science team
+        self.chem_servo_pub.publish(msg)
+        print("Chem servo backward")
+
+    def toggle_chem_image(self):
+        # Here I will Subscribe to chem image topic when Display is clicked
+        self.chem_image_active = not self.chem_image_active
+        if self.chem_image_active:
+            self.chem_display_button.setStyleSheet("background-color: #FF0000;")
+            print("Chem image display ON")
+        else:
+            self.chem_display_button.setStyleSheet("")
+            print("Chem image display OFF")
+
 
 
     def setup_cams_tab(self):
