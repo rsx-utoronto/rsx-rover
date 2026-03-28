@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+#Add vertical part -- two section -- nest that with a horizontal part - qhbox layout horizontal - qv vertical - plotwidget add tabs/section
+#
 
 import csv
 import sys
@@ -22,7 +24,7 @@ from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
 # from rover.arm.ros1.gripper import arm_serial_connector
 from sensor_msgs.msg import NavSatFix, CompressedImage, Image
-from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
+from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool, Int32
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
@@ -1190,6 +1192,9 @@ class RoverGUI(QMainWindow):
         # self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
         self.science_serial_controller = node.create_publisher( String, '/science_serial_control',5)
         self.science_serial_data = node.create_subscription( String, '/science_serial_data', self.get_probe_data_callback, 10)
+        self.science_led_uv_publisher = node.create_publisher(Bool, '/science_led_uv', 10)
+        self.science_led_blue_publisher = node.create_publisher(Bool, '/science_led_blue', 10)
+        self.science_position_servo_publisher = node.create_publisher(Int32, '/science_servo_position', 10)
         self.reached_state = None
         self.ph1_plot_data = []
         self.ph2_plot_data = []
@@ -1197,6 +1202,11 @@ class RoverGUI(QMainWindow):
         self.temp_plot_data = []
         self.pmt_plot_data = []
         self.ph1_time, self.ph2_time, self.hum_time, self.temp_time, self.pmt_time = (1, 1, 1, 1, 1)
+        self.led_uv = 0
+        self.science_led_uv_publisher.publish(self.led_uv)
+        self.led_blue = 0
+        self.science_led_blue_publisher.publish(self.led_blue)
+
 
         # Add save data variables for each measurement type
         self.ph1_save_data = []  # For storing finalized pH1 data
@@ -1212,6 +1222,7 @@ class RoverGUI(QMainWindow):
         self.camsTab = QWidget()
         # New Tabs (2026 Revision)
         self.chemTempTab = QWidget()
+        self.opticalTab = QWidget()
 
         # Setup tabs before adding them
         self.setup_science_tab()  # Setup science tab first
@@ -1219,6 +1230,7 @@ class RoverGUI(QMainWindow):
         self.setup_control_tab()
         self.setup_cams_tab()
         self.setup_chem_temp_tab()
+        self.setup_optical_tab()
         
         # Add tabs to QTabWidget - with science tab first
         self.tabs.addTab(self.scienceTab, "Science")  # Science tab is now first/default
@@ -1226,6 +1238,7 @@ class RoverGUI(QMainWindow):
         self.tabs.addTab(self.controlTab, "Controls")
         self.tabs.addTab(self.camsTab, "Cameras")
         self.tabs.addTab(self.chemTempTab, "Chem +Temp/Humidity")
+        self.tabs.addTab(self.opticalTab, "Optical")
 
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
@@ -1415,6 +1428,104 @@ class RoverGUI(QMainWindow):
         else:
             self.chem_display_button.setStyleSheet("")
             print("Chem image display OFF")
+    
+    #Adding Optical Module tab
+    def setup_optical_tab(self):
+        main_layout = QVBoxLayout() #Setting up the main layout
+        led_group = QGroupBox("LED") #LED group
+        position_group = QGroupBox("Position") #Position group
+        data_group = QGroupBox("Data") #Data group
+        graph_group = QGroupBox("Graph") #Graph group
+
+        led_layout = QHBoxLayout() 
+        position_layout = QHBoxLayout() 
+        data_layout = QHBoxLayout() 
+        graph_layout = QHBoxLayout() 
+        
+        # Led Portion Layout
+        LED_buttons_layout = QHBoxLayout()
+
+        led_label = QLabel("LED")
+        self.led_uv_button = QPushButton("UV")  
+        self.led_blue_button = QPushButton("Blue")  
+
+        self.led_uv_button.setStyleSheet("""
+            QPushButton::clicked
+            {
+            background-color : purple;
+            }
+        """)
+
+        self.led_blue_button.setStyleSheet("""
+            QPushButton::clicked
+            {
+            background-color : blue;
+            }
+        """)
+    
+        # Adding buttons to the horizontal layout
+        LED_buttons_layout.addWidget(led_label)
+        LED_buttons_layout.addWidget(self.led_uv_button)
+        LED_buttons_layout.addWidget(self.led_blue_button)
+    
+        led_layout.addLayout(LED_buttons_layout)
+        
+        self.led_uv_button.clicked.connect(self.led_uv_btnstate)
+        self.led_blue_button.clicked.connect(self.led_blue_btnstate)
+
+    # Position Portion Layout
+        position_buttons_layout = QHBoxLayout()
+
+        position_label = QLabel("Position")
+        self.site1_button = QPushButton("Site 1")  
+        self.site2_button = QPushButton("Site 2")  
+
+        # Adding buttons to the horizontal layout
+        position_buttons_layout.addWidget(position_label)
+        position_buttons_layout.addWidget(self.site1_button)
+        position_buttons_layout.addWidget(self.site2_button)
+        
+        position_layout.addLayout(position_buttons_layout)
+
+        self.site1_button.clicked.connect(self.stop_site1_graphs) #TODO: 
+        self.site2_button.clicked.connect(self.stop_site2_graphs)
+
+    # Data Portion Layout
+
+    # Graph Portion Layout
+        
+
+    def led_uv_btnstate(self):
+        if self.led_uv_button.isChecked():
+            self.led_uv = 1
+            self.led_blue_button.setText("UV LED On")
+        else:
+            self.led_uv = 0
+            self.led_blue_button.setText("UV LED Off")
+        msg = Bool()
+        msg.data = self.led_uv  # TODO: confirm this command with science team
+        self.science_led_uv_publisher.publish(msg)
+
+    def led_blue_btnstate(self):
+        if self.led_blue_button.isChecked():
+            self.led_blue = 1
+            self.led_blue_button.setText("Blue LED On")
+        else:
+            self.led_blue = 0
+            self.led_blue_button.setText("Blue LED Off")
+        msg = Bool()
+        msg.data = self.led_blue #TODO: confirm this command with science team
+        self.science_led_blue_publisher.publish(msg)
+
+    def stop_site1_graphs(self):
+        msg = Int32()
+        msg.data = 1 #TODO: confirm this command with science team
+        self.science_position_servo_publisher.publish(msg)
+
+    def stop_site2_graphs(self):
+        msg = Int32()
+        msg.data = -1 #TODO: confirm this command with science team
+        self.science_position_servo_publisher.publish(msg)
 
 
 
