@@ -30,14 +30,13 @@ class HeartbeatMonitor(Node):
         # Check heartbeat status every 500ms
         self.timer = self.create_timer(0.5, self.check_heartbeat)
         
-        self.get_logger().info('Heartbeat monitor started')
+        #self.get_logger().info('Heartbeat monitor started')
 
     def heartbeat_callback(self, msg):
         """Called when a heartbeat message is received"""
-        self.get_logger().info('I Get Drive Info!')
         self.last_heartbeat = time.time()
         if self.heartbeat_lost:
-            self.get_logger().info('Heartbeat restored!')
+            #self.get_logger().info('Heartbeat restored!')
             self.heartbeat_lost = False
 
     def check_heartbeat(self):
@@ -45,12 +44,12 @@ class HeartbeatMonitor(Node):
         elapsed = time.time() - self.last_heartbeat
         
         if elapsed > 2.0 and not self.heartbeat_lost:
-            self.get_logger().error(f'Heartbeat lost! No message for {elapsed:.1f}s. STOPPING MOTORS!')
+            #self.get_logger().error(f'Heartbeat lost! No message for {elapsed:.1f}s. STOPPING MOTORS!')
             self.heartbeat_lost = True
             self.stop_motors()
         elif elapsed > 2.0:
             # Keep publishing stop command while heartbeat is lost
-            self.get_logger().info('Heartbeat lost, publishing stop command')
+            #self.get_logger().info('Heartbeat lost, publishing stop command')
             self.stop_motors()
 
     def stop_motors(self):
