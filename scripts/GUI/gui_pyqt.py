@@ -227,12 +227,19 @@ class ArucoBar(QWidget):
     update_label_signal = pyqtSignal(bool)
     update_list_signal = pyqtSignal(str)
 
-    def __init__(self, node, name):
+    def __init__(self, node, index):
         super().__init__()
         self.init_ui()
         self.node=node
-        self.name = name 
         self.aruco_name = ''
+
+        self.index = index 
+        self.found_count = 0
+        self.aruco_max = 2
+        self.prev_found = False 
+        self.assigned = False
+
+
         self.found_list = []
         
         # Connect signals to the corresponding update methods
@@ -272,28 +279,24 @@ class ArucoBar(QWidget):
     def string_callback(self, msg):
         # Emit signal to update the list in the main thread
         self.aruco_name = msg.data.strip()
-        self.update_list_signal.emit(msg.data.strip())
-
-        if self.aruco_name not in self.found_list:
-            self.found_list.append(self.aruco_name)
+        self.update_list_signal.emit(msg.data.strip())            
 
     def update_label(self, found):
-        # Update the label in the main thread
 
-        # could check if the aruco_name is the same as the name of the aruco tag button 
+        rising_edge = found and not self.prev_found
 
-        if found and self.name == self.aruco_name:
+        current_count = self.found_count   # <-- ADD THIS
+
+        # Assign ONCE using snapshot of count
+        if rising_edge and not self.assigned and current_count == self.index:
+            self.assigned = True
+
+        # Increment AFTER checking
+        if rising_edge and self.found_count < self.aruco_max:
+            self.found_count += 1
+
+        if self.assigned:
             self.label.setText(self.received_string)
-            self.label.setStyleSheet("""
-                background-color: #4CAF50; 
-                color: white;   
-                border: 2px solid black; 
-                border-radius: 10px;  
-                padding: 10px; 
-            """)
-
-        elif self.name in self.found_list:
-            self.label.setText(self.name)
             self.label.setStyleSheet("""
                 background-color: #4CAF50; 
                 color: white;   
@@ -310,6 +313,8 @@ class ArucoBar(QWidget):
                 border-radius: 10px;  
                 padding: 10px;  
             """)
+
+        self.prev_found = found    
 
     def update_string_list(self, new_string):
         # Append the string to the list in the main thread
@@ -1392,8 +1397,8 @@ class RoverGUI(QMainWindow):
         detection_group.setMaximumHeight(150)  # Increase from 120 to 150
         
         # Create components
-        self.aruco_bar = ArucoBar(node, 'aruco 1')
-        self.aruco2_bar = ArucoBar(node, 'aruco 2')
+        self.aruco_bar = ArucoBar(node, 1)
+        self.aruco2_bar = ArucoBar(node, 2)
         self.object_bar = ObjectBar(node)
         
         # Add components to horizontal layout
