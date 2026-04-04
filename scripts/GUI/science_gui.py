@@ -1296,6 +1296,8 @@ class RoverGUI(QMainWindow):
         self.site1_stopped = False
         self.site2_stopped = False
         self.chem_image_active = False
+        self.optical_data_active = False
+        self.optical_data_array = [[], []]
 
         # Store data for plotting
         self.site1_temp_data = []
@@ -1360,6 +1362,7 @@ class RoverGUI(QMainWindow):
         # New Tabs (2026 Revision)
         self.chemTempTab = QWidget()
         self.multispectralTab = QWidget()
+        self.opticalTab = QWidget()
 
         # Setup tabs before adding them
         self.setup_science_tab()  # Setup science tab first
@@ -1376,6 +1379,7 @@ class RoverGUI(QMainWindow):
         self.tabs.addTab(self.camsTab, "Cameras")
         self.tabs.addTab(self.chemTempTab, "Chem +Temp/Humidity")
         self.tabs.addTab(self.multispectralTab, "Multispectral")
+        self.tabs.addTab(self.opticalTab, "Optical")
 
         # Connect tab change event
         self.tabs.currentChanged.connect(self.on_tab_changed)
@@ -1930,7 +1934,7 @@ class RoverGUI(QMainWindow):
     
     #Adding Optical Module tab
     def setup_optical_tab(self):
-        main_layout = QVBoxLayout() #Setting up the main layout
+        optical_main_layout = QVBoxLayout() #Setting up the main layout
         led_group = QGroupBox("LED") #LED group
         position_group = QGroupBox("Position") #Position group
         data_group = QGroupBox("Data") #Data group
@@ -1941,12 +1945,15 @@ class RoverGUI(QMainWindow):
         data_layout = QHBoxLayout() 
         graph_layout = QHBoxLayout() 
         
-        # Led Portion Layout
+    # Led Portion Layout
         LED_buttons_layout = QHBoxLayout()
 
         led_label = QLabel("LED")
         self.led_uv_button = QPushButton("UV")  
         self.led_blue_button = QPushButton("Blue")  
+
+        self.led_uv_button.setCheckable(True)
+        self.led_blue_button.setCheckable(True)
 
         self.led_uv_button.setStyleSheet("""
             QPushButton::clicked
@@ -1986,21 +1993,53 @@ class RoverGUI(QMainWindow):
         
         position_layout.addLayout(position_buttons_layout)
 
-        self.site1_button.clicked.connect(self.stop_site1_graphs) #TODO: 
+        self.site1_button.clicked.connect(self.stop_site1_graphs) 
         self.site2_button.clicked.connect(self.stop_site2_graphs)
 
+    # TODO: Not clear on what is meant by " [y is changing] x is constant", in any case code can be modified to have a specific
+    # const x value or have graph be updated from specific values after stopped 
+
     # Data Portion Layout
+        self.optical_data_button = QPushButton("Data")  
+        data_layout.addWidget(self.optical_data_button)
+        self.optical_data_button.setStyleSheet("""
+            QPushButton::clicked
+            {
+            background-color : orange;
+            }
+        """)
+        self.optical_data_button.clicked.connect(self.start_display_graph)
 
     # Graph Portion Layout
-        
+        optical_graph_group = QGroupBox("Data Graph")
+        optical_graph_layout = QHBoxLayout() #Can change to QVBoxLayout as well
+        self.optical_graph = pg.PlotWidget()
+        self.optical_graph.setBackground("w")
+        self.optical_graph.showGrid(x=True, y=True, alpha=0.3)
+        self.optical_graph.setLabel("left", "Intensity") #TODO: Not sure? Written as placeholder
+        self.optical_graph.setLabel("bottom", "Wavelenght") #TODO: Not sure? Written as placeholder
+        optical_graph_layout.addWidget(self.optical_graph)
+        optical_graph_group.setLayout(optical_graph_layout)
+        graph_layout.addLayout(optical_graph_group)
+
+        led_group.setLayout(led_layout)
+        position_group.setLayout(position_layout)
+        data_group.setLayout(data_layout)
+        graph_group.setLayout(graph_layout)
+        optical_main_layout.addLayout(led_group)
+        optical_main_layout.addLayout(position_group)
+        optical_main_layout.addLayout(data_group)
+        optical_main_layout.addLayout(graph_group)
+
+        self.opticalTab.setLayout(optical_main_layout)        
 
     def led_uv_btnstate(self):
         if self.led_uv_button.isChecked():
             self.led_uv = 1
-            self.led_blue_button.setText("UV LED On")
+            self.led_uv_button.setText("UV LED On")
         else:
             self.led_uv = 0
-            self.led_blue_button.setText("UV LED Off")
+            self.led_uv_button.setText("UV LED Off")
         msg = Bool()
         msg.data = self.led_uv  # TODO: confirm this command with science team
         self.science_led_uv_publisher.publish(msg)
@@ -2025,6 +2064,51 @@ class RoverGUI(QMainWindow):
         msg = Int32()
         msg.data = -1 #TODO: confirm this command with science team
         self.science_position_servo_publisher.publish(msg)
+
+    #MODIFY
+    def start_display_graph(self):
+        self.optical_graph.clear()
+        self.plotted_index = ([0, 0], [0, 0])
+        if self.optical_data_active:
+            self.stop_display_graph()
+            return
+        if not self.optical_data_active:
+            self.optical_data_subscriber = node.create_subscription(Float32MultiArray, '/optical_data', self.optical_data_callback, 10) # TODO: Modify accordingly
+            #For now will assume that optical data topic passes two arrays: x, y
+            self.optical_data_active = True
+        # self.optical_plot_data()  # Removed: will plot when data arrives
+    
+    def optical_data_callback(self, msg):
+        if msg.data is not None:
+            self.plotted_index[0][0] = len(self.optical_data_array[0])
+            self.plotted_index[1][0] = len(self.optical_data_array[1])
+            self.optical_data_array[0].append(msg.data[0])
+            self.optical_data_array[1].append(msg.data[1])
+            self.plotted_index[0][1] = len(self.optical_data_array[0]) - 1
+            self.plotted_index[1][1] = len(self.optical_data_array[1]) - 1
+            self.optical_plot_data()
+
+    def optical_plot_data(self):
+        if len(self.optical_data_array) == 0:
+            print("No data collected yet for optical page")
+            return
+
+        x_values = self.optical_data_array[self.plotted_index[0][0]:self.plotted_index[0][1]]
+        y_values = self.optical_data_array[self.plotted_index[1][0]:self.plotted_index[1][1]]
+
+        pen = pg.mkPen(color=(0, 0, 255), width=2)
+        self.optical_graph.plot(x_values, y_values, pen=pen, symbol='o', symbolSize=8, symbolBrush='b')
+
+    def stop_display_graph(self):
+        self.optical_data_active = False
+        if hasattr(self, 'optical_data_subscriber'):
+            self.optical_data_subscriber.destroy()
+        self.optical_data_button.setEnabled(True)
+        self.optical_data_button.setText("Optical Data Stopped")
+        exporter = ImageExporter(self.optical_graph.scene())
+        exporter.export('optical_data_graph.png') #Will overwrite the graph at each save
+
+
     # Call Back functions
     def site1_temp_callback(self, msg):  # Called automatically when temperature data arrives for site 1
         if self.site1_stopped:   # if stop button was pressed, ignore new data
