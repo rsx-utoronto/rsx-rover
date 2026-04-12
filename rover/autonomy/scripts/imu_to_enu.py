@@ -12,7 +12,7 @@ class ImuDataToENU(Node):
         # self.sub = rospy.Subscriber('/zed_node/imu/data', Imu, self.imu_callback)
         # self.pub = rospy.Publisher('/imu/enu', Imu, queue_size=1)
         # rospy.spin()
-        self.sub= self.create_subscription(Imu, '/zed_node/imu/data', self.imu_callback, 10)
+        self.sub= self.create_subscription(Imu, '/zed/zed_node/imu/data', self.imu_callback, 10)
         self.pub = self.create_publisher(Imu, '/imu/enu', 1)
         
 

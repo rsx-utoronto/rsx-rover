@@ -14,20 +14,21 @@ from rclpy.node import Node
 import smach
 import time
 import math
-from optimal_path_improved import OPmain
+# from optimal_path_improved import OPmain
 import datetime
 import csv
+from optimal_path import OPmain
 #from thomas_grid_search import thomasgrid
 #import ar_detection_node  
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
-from rover.autonomy.scripts.sm_straight_line_updated import StraightLineApproachNew
+from sm_straight_line_updated import StraightLineApproachNew
 from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
 import astar_obstacle_avoidance_grid_search 
 import gps_conversion_functions as functions
 import gps_to_pose as gps_to_pose
-import sm_grid_search_unused
+import sm_grid_search
 import ar_detection_node
 from std_msgs.msg import String, Float32MultiArray
 from geometry_msgs.msg import PoseStamped, Pose
@@ -45,7 +46,6 @@ file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
     print("I managed to load the yaml file")
-
 
 RUN_STATES_DEFAULT = ["GNSS1", "AR1", "OBJ2", "OBJ1","OBJ3", "AR2", "GNSS2"] 
 RUN_STATES = sm_config.get("RUN_STATES", RUN_STATES_DEFAULT)

@@ -107,12 +107,14 @@ TeleopRover::TeleopRover() : Node("teleop_rover")
 
 void TeleopRover::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy)
 {
+	if (!MANUAL){
+		if (joy->axes[0] != 0.0 || joy->axes[1] != 0.0 || joy->axes[2] != 0.0 || joy->axes[5] != 0.0 || joy->buttons[4] != 0 || joy->buttons[5] != 0){
+			MANUAL = true;
+		}
+	}
 	buttons = joy->buttons;
 	axes = joy->axes;
 	// ROS_INFO("Joy Callback %f", axes[0]);
-	if (!MANUAL){
-		MANUAL = true;
-	}
 	
 }
 
