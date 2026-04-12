@@ -81,6 +81,7 @@ class ObjectDetectionNode(Node):
             cv_image = self.bridge.imgmsg_to_cv2(ros_image, "bgr8")
             self.last_cv_image = cv_image
         except CvBridgeError as e:
+            # print("cv bridge failed")
             self.get_logger().error(f"Failed to convert ROS image to CV2: {e}")
             return
         if self.curr_state == "OBJ1" or self.curr_state == "OBJ2" or self.curr_state == "OBJ3" :
@@ -101,7 +102,7 @@ class ObjectDetectionNode(Node):
         self.curr_state = state.data
 
     def detect_objects(self, img):
-        print("In detect objects")
+        # self.get_logger().info("In detect objects")
         if self.model==None: 
             print("Model is NULL")
         

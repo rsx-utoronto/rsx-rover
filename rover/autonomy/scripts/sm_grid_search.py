@@ -50,6 +50,7 @@ class GS_Traversal(Node):
         self.aruco_found = False
         self.mallet_found = False
         self.waterbottle_found = False
+        self.hammer_found = False
         self.homing_status = None
         self.found_objects = {"AR1":False, 
                    "AR2":False,
@@ -64,6 +65,7 @@ class GS_Traversal(Node):
         self.aruco_sub = self.create_subscription(Bool, "aruco_found", self.aruco_detection_callback, 10)
         self.mallet_sub = self.create_subscription(Bool, 'mallet_detected', self.mallet_detection_callback, 10)
         self.waterbottle_sub = self.create_subscription(Bool, 'waterbottle_detected', self.waterbottle_detection_callback, 10)
+        self.hammer_sub = self.create_subscription(Bool, 'pick_hammer_detected', self.hammer_detection_callback, 10)
         self.abort_sub = self.create_subscription(Bool, "auto_abort_check", self.abort_callback, 10)
         self.message_pub = self.create_publisher(String, "gui_status", 10)
         if sm_config.get("realsense_detection"):
@@ -193,6 +195,26 @@ class GS_Traversal(Node):
         except Exception as e:
             self.get_logger().error(f"Exception in waterbottle_detection_callback: {e}")
 
+    def hammer_detection_callback(self, data):
+        print("in hammer detection callback")
+        try:
+            time_now=time.time()
+            if abs(self.timer-time_now) >5:
+                self.timer=time_now
+                self.count=0
+            if data.data:
+                if self.count <= 4:
+                    self.count += 1
+                else:
+                    self.hammer_found = data.data
+                    if self.state in self.found_objects:
+                        self.found_objects[self.state] = data.data
+                    else:
+                        self.get_logger().warn(f"hammer_detection_callback: state '{self.state}' not in found_objects")
+                    self.count += 1
+        except Exception as e:
+            self.get_logger().error(f"Exception in hammer_detection_callback: {e}")
+
     def square_target(self):
         print("Generating square grid search targets...")
         dx, dy = 0, 1
@@ -227,7 +249,7 @@ class GS_Traversal(Node):
 
         # logic here might not be ideal - could be some weird scenario where the state is not one of these despite 
         # only being called when grid_search is required
-        obj = self.mallet_found or self.waterbottle_found
+        obj = self.mallet_found or self.waterbottle_found or self.hammer_found
         
         mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
@@ -240,7 +262,7 @@ class GS_Traversal(Node):
             # Allow ROS callbacks to process during the tight loop
          
             
-            obj = self.mallet_found or self.waterbottle_found
+            obj = self.mallet_found or self.waterbottle_found or self.hammer_found
             mapping = {"AR1":self.aruco_found, 
                    "AR2":self.aruco_found,
                    "OBJ1":obj,
