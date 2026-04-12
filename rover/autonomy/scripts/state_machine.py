@@ -579,8 +579,10 @@ class ObjectSearchState(smach.State):
         self.state_name = state_name
         self.glob_msg = None
         self.mallet_found = False
+        self.hammer_found = False
         self.waterbottle_found = False
         self._mallet_sub = None
+        self._hammer_sub = None
         self._waterbottle_sub = None
 
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -591,6 +593,9 @@ class ObjectSearchState(smach.State):
 
     def waterbottle_callback(self, msg: Bool):
         self.waterbottle_found = bool(msg.data)
+
+    def hammer_callback(self, msg: Bool):
+        self.hammer_found = bool(msg.data)
 
     def _subscribe_object_topics(self):
         try:
@@ -603,6 +608,11 @@ class ObjectSearchState(smach.State):
                 self._waterbottle_sub = self.glob_msg.create_subscription(Bool, "waterbottle_detected", self.waterbottle_callback, 10)
         except Exception:
             self._waterbottle_sub = None
+        try:
+            if self._hammer_sub is None:
+                self._hammer_sub = self.glob_msg.create_subscription(Bool, "pick_hammer_detected", self.hammer_callback, 10)
+        except Exception:
+            self._hammer_sub = None
 
     def _destroy_object_topics(self):
         try:
@@ -627,6 +637,18 @@ class ObjectSearchState(smach.State):
                         pass
         finally:
             self._waterbottle_sub = None
+        
+        try:
+            if self._hammer_sub is not None:
+                try:
+                    self.glob_msg.destroy_subscription(self._hammer_sub)
+                except Exception:
+                    try:
+                        self._hammer_sub.destroy()
+                    except Exception:
+                        pass
+        finally:
+            self._hammer_sub = None
         self.glob_msg.gs_status = None
 
     def execute(self, userdata):
@@ -692,23 +714,24 @@ class ObjectSearchState(smach.State):
                     return "ABORT"
 
 
-                if self.mallet_found or self.waterbottle_found or in_correct_loc:
+                if self.mallet_found or self.waterbottle_found or self.hammer_found:
                     if self.mallet_found:
                         self.glob_msg.pub_state(String(data="Grid Search did find Mallet"))
                     if self.waterbottle_found:
                         self.glob_msg.pub_state(String(data="Grid Search did find Waterbottle"))
-
-                    if in_correct_loc:
-                        self.glob_msg.pub_state(String(data=f"Close enough to {self.state_name}"))
-                        self.glob_msg.pub_state(String(data=f"Goal Point Reached: {self.state_name}"))
-                        self.glob_msg.pub_led_light(String(data="mission done"))
-                    else:
-                        self.glob_msg.pub_state(String(data=f"Grid Search did not get close enough for {self.state_name}"))
-                        if self.glob_msg.abort_check:
-                            userdata.aborted_state = self.state_name
-                            self.glob_msg.pub_state_name(String(data=""))
-                            self._destroy_object_topics()
-                            return "ABORT"
+                    if self.hammer_found:
+                        self.glob_msg.get_logger().info("Grid Search did find Hammer")
+                        self.glob_msg.pub_state(String(data="Grid Search did find Hammer"))
+                    
+                        
+                    self.glob_msg.pub_state(String(data=f"Goal Point Reached: {self.state_name}"))
+                    self.glob_msg.pub_led_light(String(data="mission done"))
+                    
+                    if self.glob_msg.abort_check:
+                        userdata.aborted_state = self.state_name
+                        self.glob_msg.pub_state_name(String(data=""))
+                        self._destroy_object_topics()
+                        return "ABORT"
                 else:
                     self.glob_msg.pub_state(String(data=f"Grid Search did not find objects for {self.state_name}"))
 

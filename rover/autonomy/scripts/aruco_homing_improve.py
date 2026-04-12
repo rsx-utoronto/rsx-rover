@@ -12,7 +12,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy, HistoryPolicy
 
-file_path = "/home/rsx-base/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
+file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need a better way to do this, fine for testing
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
@@ -51,6 +51,8 @@ class Aimer: #
         #    self.linear_v, self.angular_v = 0, 0
 
         # the middle of the aruco tag is aruco_x
+        if (aruco_top_left is None or aruco_top_right is None or aruco_bottom_left is None or aruco_bottom_right is None):
+            return
         aruco_x = (aruco_top_left[0] + aruco_top_right[0] + aruco_bottom_left[0] + aruco_bottom_right[0]) / 4
         print ("\n\ntuple stuff")
         print (aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right)
@@ -143,8 +145,9 @@ class AimerROS(Aimer):  #updates coords continuously
 
     def rosUpdate(self, data: Float64MultiArray) -> None:
         # Keep the callback tiny: just copy the latest bbox safely
+        # print("test")
         arr = list(data.data) if hasattr(data, "data") else []
-        if len(arr) < 8:
+        if len(arr) < 8 or any(coord is None for coord in arr):
             return
         with self._lock:
             self.aruco_top_left = (arr[0], arr[1])
@@ -171,12 +174,14 @@ class ArucoHomingNode(Node):
         max_linear_v = 1.8
         max_angular_v = 0.8
         
-        self.aimer = AimerROS(frame_width, frame_height, min_aruco_area,
-                             aruco_min_x_uncert, aruco_min_area_uncert,
-                             max_linear_v, max_angular_v)
+        # self.aimer = AimerROS(frame_width, frame_height, min_aruco_area,
+        #                      aruco_min_x_uncert, aruco_min_area_uncert,
+        #                      max_linear_v, max_angular_v)
+        self.aimer = AimerROS(640, 360, 700, 100, 100, max_linear_v, max_angular_v) # FOR ARUCO
+
         
         # ROS 2 setup
-        self.publisher = self.create_publisher(Twist, 'cmd_vel', 10)
+        self.publisher = self.create_publisher(Twist, 'drive', 10)
         self.subscription = self.create_subscription(
             Float64MultiArray,
             'aruco_node/bbox',
@@ -223,22 +228,23 @@ def main(args=None): #Assuming that we already detect aruco/waterbottle/mallet
    
     rclpy.init(args=args)
     node = ArucoHomingNode()
-    rclpy.spin(node) #main code should come after this
+    # rclpy.spin(node) #main code should come after this
     
     #Main testing code
-    pub = rclpy.create_publisher(Twist, 'drive', 10) # change topic name
+    #pub = rclpy.create_publisher(Twist, 'drive', 10) # change topic name
     
     #frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v
     if sm_config.get("realsense_detection"):
         aimer = AimerROS(640, 360, 2500, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
     else: #For zed camera
         aimer = AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+    print('Im here')
 
     #aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
     #self.create_subscription(Float64MultiArray, 'object/bbox', aimer.rosUpdate, 10) #For waterbottle
-    rclpy.create_subscription(Float64MultiArray,'aruco_node/bbox', aimer.rosUpdate, 10) # change topic name
+    #rclpy.create_subscription(Float64MultiArray,'aruco_node/bbox', aimer.rosUpdate, 10) # change topic name
     #int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
-    rate = rclpy.Rate(10)
+    #rate = rclpy.timer.Rate(10)
     #prev_flag =  ""
     #flag = ""
     startRotationTime = time.time()
@@ -267,12 +273,12 @@ def main(args=None): #Assuming that we already detect aruco/waterbottle/mallet
                 while abs(initial_time-time.time()) < 0.7: #Is it ok? Can switch to commented out main if not
                     twist.linear.x= sm_config.get("GS_Traversal_lin_vel")
                     twist.angular.z= 0
-                    pub.publish(twist) #drive publisher
+                    node.publisher.publish(twist) #drive publisher
                     print("final homing movement",abs(initial_time-time.time()) )
                     rclpy.timer.Rate(1).sleep()
                 twist.linear.x = 0.0
                 twist.angular.z = 0.0
-                pub.publish(twist)
+                node.publisher.publish(twist)
                 
                 return
             
@@ -326,7 +332,8 @@ def main(args=None): #Assuming that we already detect aruco/waterbottle/mallet
                 break
         
             
-        pub.publish(twist)
+        node.publisher.publish(twist)
+        rclpy.spin_once(node, timeout_sec=0.1)
         rclpy.timer.Rate(1).sleep()
 
 

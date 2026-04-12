@@ -219,6 +219,11 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  scripts/GUI/map_viewer.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   rover/autonomy/scripts/sm_grid_search.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -302,14 +307,15 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-  rover/autonomy/scripts/rtabmap_init.py
+  rover/autonomy/scripts/heartbeat_monitor.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 install(PROGRAMS
-  rover/autonomy/scripts/heartbeat_monitor.py
+  rover/autonomy/scripts/rtabmap_init.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
 
 install(PROGRAMS
   rover/science/scripts/geniecamerapublisher.py

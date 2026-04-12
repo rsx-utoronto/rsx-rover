@@ -20,6 +20,7 @@ CLASSES = list(model.names.values())
 cap = cv2.VideoCapture(1)  # or a video path
 CONF_THRES = 0.5           # confidence threshold
 IMG_SIZE = 640             # inference size; match training if possible
+print("Starting video stream...", CLASSES)
 
 while True:
     ok, frame_bgr = cap.read()
