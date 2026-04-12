@@ -25,6 +25,7 @@ find_package(rosidl_default_generators REQUIRED)  # Replaces message_generation
 
 set(msg_files
   "msg/ArmInputs.msg"
+  "msg/MissionState.msg"
 )
 
 set(srv_files
@@ -151,6 +152,11 @@ install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Install configuration files (e.g., Fast DDS profiles)
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}
+)
+
 # Python scripts installation (adjust for ROS 2)
 # install(PROGRAMS
 #   rover/autonomy/scripts/state_machine_node.py
@@ -163,6 +169,7 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+
 install(PROGRAMS
   scripts/manual_control
   DESTINATION lib/${PROJECT_NAME}
@@ -172,8 +179,110 @@ install(PROGRAMS
   rover/autonomy/scripts/imu_to_enu.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
 install(PROGRAMS
-  rover/autonomy/scripts/final_state_machine_new.py
+  rover/autonomy/scripts/pub_manual_indicator.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/state_machine.py
+  rover/autonomy/scripts/sm_config.yaml
+  long_lat_goal.csv
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/state_machine_remAR3_addObj3.py
+  rover/autonomy/scripts/optimal_path_improved.py
+  rover/autonomy/scripts/sm_grid_search_unused.py
+  rover/autonomy/scripts/sm_straight_line_unused.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# install(DIRECTORY 
+#   scripts/GUI/tile_cache 
+#   DESTINATION lib/${PROJECT_NAME}
+# )
+
+install(PROGRAMS
+  scripts/GUI/gui_pyqt.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/sm_grid_search.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+install(PROGRAMS
+  rover/science/scripts/webcam.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+install(PROGRAMS
+  scripts/utils/gen/find_usb.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/utils/gen/setup_can.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+install(PROGRAMS
+  rover/autonomy/scripts/led_light.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/sm_straight_line_new.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/sm_straight_line.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/gps_to_pose.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/utils/gen/find_usb.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/utils/gen/setup_can.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+install(PROGRAMS
+  rover/autonomy/scripts/ar_detection_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/object_subscriber_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+install(PROGRAMS
+  rover/autonomy/scripts/mallet.pt
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/astar_obstacle_avoidance_algorithim.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/astar_obstacle_avoidance_grid_search.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

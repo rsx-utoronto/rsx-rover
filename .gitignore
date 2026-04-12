@@ -12,3 +12,5 @@ science_data/
 build/
 install/
 log/
+venv/
+.DS_Store
