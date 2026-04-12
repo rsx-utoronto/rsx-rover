@@ -9,17 +9,8 @@ def generate_launch_description():
             executable="static_transform_publisher",
             name="gps_broadcaster_ekf",
             output="screen",
-            arguments=["-0.2", "0", "0.6", "0", "0", "0", "1", "base_link", "gps", "100"],
+            arguments=["-0.2", "0", "0.6", "0", "0", "0", "1", "base_link", "gps"],
             remappings=[("tf", "tf_ekf")]
-        ),
-
-        # Static transform publisher without remap
-        Node(
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            name="gps_broadcaster",
-            output="screen",
-            arguments=["-0.2", "0", "0.6", "0", "0", "0", "1", "base_link", "gps", "100"]
         ),
 
         # imu_to_enu node
@@ -33,7 +24,7 @@ def generate_launch_description():
         # imu_filter_madgwick node
         Node(
             package="imu_filter_madgwick",
-            executable="imu_filter_node",
+            executable="imu_filter_madgwick_node",
             name="imu_filter_madgwick",
             output="screen",
             parameters=[
@@ -42,7 +33,7 @@ def generate_launch_description():
                 {"world_frame": "enu"}
             ],
             remappings=[
-                ("imu/mag", "/zed_node/imu/mag"),
+                ("imu/mag", "/zed/zed_node/imu/mag"),
                 ("imu/data_raw", "/imu/enu"),
                 ("imu/data", "/imu/orient")
             ]
@@ -51,7 +42,7 @@ def generate_launch_description():
         # robot_localization ekf_localization_node
         Node(
             package="robot_localization",
-            executable="ekf_localization_node",
+            executable="ekf_node",
             name="ekf_odom_node",
             output="screen",
             parameters=[
@@ -71,7 +62,7 @@ def generate_launch_description():
                 {"imu0_remove_gravitational_acceleration": True},
                 {"imu0_config": [False, False, False, False, False, False, False, False, False,
                                  True, True, True, True, True, True]},
-                {"odom0": "/zed_node/odom"},
+                {"odom0": "/zed/zed_node/odom"},
                 {"odom0_differential": False},
                 {"odom0_relative": False},
                 {"odom0_queue_size": 10},

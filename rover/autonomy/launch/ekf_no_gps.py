@@ -1,12 +1,12 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import DeclareLaunchArgument, SetParameter
+from launch.actions import DeclareLaunchArgument, SetLaunchConfiguration
 
 
 def generate_launch_description():
     return LaunchDescription([
         # Set use_sim_time parameter globally
-        SetParameter(name='use_sim_time', value=True),
+        SetLaunchConfiguration(name='use_sim_time', value='true'),
 
         # Static transform from base_link to gps
         Node(

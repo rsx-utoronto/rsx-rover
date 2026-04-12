@@ -34,7 +34,6 @@ class HeartbeatMonitor(Node):
 
     def heartbeat_callback(self, msg):
         """Called when a heartbeat message is received"""
-        self.get_logger().info('I Get Drive Info!')
         self.last_heartbeat = time.time()
         if self.heartbeat_lost:
             self.get_logger().info('Heartbeat restored!')
