@@ -653,7 +653,7 @@ class LngLatEntryFromFile(QWidget):
 
     def collect_data(self):
         # Read data from the file
-        file_path = Path(__file__).parent.resolve() / "long_lat_goal.csv"
+        file_path = Path(__file__).parent.parent.parent.resolve() / "long_lat_goal.csv"
         with open(file_path, 'r') as file:
             lines = file.readlines()
 

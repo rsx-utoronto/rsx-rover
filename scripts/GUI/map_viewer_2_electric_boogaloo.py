@@ -282,33 +282,18 @@ class MapViewer(QWidget):
 			pts = []
 			try:
 				with open(csv_path, newline="") as f:
-					reader = csv.DictReader(f)
+					reader = csv.reader(f)
 					for row in reader:
-						if not row:
+						if not row or len(row) < 3:
 							continue
 
-						name = (
-							row.get("Point Name")
-							or row.get("name")
-							or row.get("Name")
-							or ""
-						)
-
+						# Positional format: name, latitude, longitude
+						name = (row[0] or "").strip()
 						try:
-							lat_str = (
-								row.get("Latitude")
-								or row.get("lat")
-								or row.get("Lat")
-							)
-							lng_str = (
-								row.get("Longitude")
-								or row.get("lon")
-								or row.get("Lng")
-								or row.get("Long")
-							)
-							lat = float(lat_str)
-							lng = float(lng_str)
+							lat = float((row[1] or "").strip())
+							lng = float((row[2] or "").strip())
 						except (TypeError, ValueError):
+							# Skip header rows or malformed records.
 							continue
 
 						pts.append({"name": name, "lat": lat, "lng": lng})
@@ -1538,7 +1523,8 @@ class MapViewer(QWidget):
 		self.places_to_go_markers.clear()
 
 		# CSV expected in the same folder as map_viewer.py
-		csv_path = Path(__file__).parent / "places_to_go.csv"
+		# csv_path = Path(__file__).parent / "places_to_go.csv"
+		csv_path = Path("/home/rsx-base/rover_ws/src/rsx-rover/long_lat_goal.csv")
 
 		if not csv_path.exists():
 			print(f"[places_to_go] CSV not found at {csv_path}")
@@ -1548,32 +1534,20 @@ class MapViewer(QWidget):
 
 		try:
 			with open(csv_path, newline='') as f:
-				reader = csv.DictReader(f)
+				reader = csv.reader(f)
 
 				for row in reader:
-					if not row:
+					if not row or len(row) < 3:
 						continue
 
-					# Name column (matches your sample: "Point Name")
-					name = (
-						row.get("Point Name")
-						or row.get("name")
-						or row.get("Name")
-						or ""
-					)
+					# Positional format: name, latitude, longitude
+					name = (row[0] or "").strip()
 
-					# Latitude / longitude columns
 					try:
-						lat_str = row.get("Latitude") or row.get("lat") or row.get("Lat")
-						lng_str = row.get("Longitude") or row.get("lon") or row.get("Lng") or row.get("Long")
-
-						if lat_str is None or lng_str is None:
-							continue
-
-						lat = float(lat_str)
-						lng = float(lng_str)
+						lat = float((row[1] or "").strip())
+						lng = float((row[2] or "").strip())
 					except (TypeError, ValueError):
-						# Skip any bad rows
+						# Skip header rows or malformed records.
 						continue
 
 					# save in python structure for path planning
