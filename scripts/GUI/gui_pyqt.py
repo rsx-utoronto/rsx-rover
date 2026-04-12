@@ -32,7 +32,7 @@ from calian_gnss_ros2_msg.msg import GnssSignalStatus
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy, HistoryPolicy
 
 #cache folder of map tiles generated from tile_scraper.py
-CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
+CACHE_DIR = Path(__file__).parent.parent.parent.parent.parent.resolve() / "src/rsx-rover/scripts/GUI/tile_cache"
 
 #map widget that has map viewer 
 class mapOverlay(QWidget):
@@ -41,6 +41,7 @@ class mapOverlay(QWidget):
         self.node = node
         self.viewer = map_viewer.MapViewer()
         #sets the source of map tiles to local tile cache folder
+        print(CACHE_DIR)
         self.viewer.set_map_server(
             str(CACHE_DIR) + '/arcgis_world_imagery/{z}/{y}/{x}.jpg', 19
         )
@@ -444,7 +445,7 @@ class ObjectBar(QWidget):
 
     def update_hammer(self, found):
         if found:
-            self.label_hammer.setText("Hammer Found")
+            self.label_hammer.setText("Pick Hammer Found")
             self.label_hammer.setStyleSheet("""
                 background-color: #4CAF50; 
                 color: white;   
@@ -453,7 +454,7 @@ class ObjectBar(QWidget):
                 padding: 10px; 
             """)
         else:
-            self.label_hammer.setText("Hammer not found")
+            self.label_hammer.setText("Pick Hammer not Found")
             self.label_hammer.setStyleSheet("""
                 background-color: #FF5252; 
                 color: white;  
@@ -1493,7 +1494,7 @@ class RoverGUI(QMainWindow):
         left_side_splitter = QSplitter(Qt.Vertical)
         left_side_splitter.addWidget(status_group)
         left_side_splitter.addWidget(detection_group)
-        left_side_splitter.addWidget(camera_group)
+        left_side_splitter.addWidget(camera_group) # Camera feed expands to bottom of left column
 
         # Create the horizontal splitter for the main layout
         splitter.addWidget(left_side_splitter)  # Left side has new section stacked above camera
