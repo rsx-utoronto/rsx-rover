@@ -143,11 +143,6 @@ class AstarObstacleAvoidance(Node):
         self.yaw = 0
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
-        # Navigation threading primitives
-        self._nav_event = threading.Event()
-        self._nav_lock = threading.Lock()
-        self.nav_thread = None
-        self.target = []
         self.global_waypoints = []  # list of (x, y) world coords provided by global planner
         
         # Publishers
@@ -194,26 +189,17 @@ class AstarObstacleAvoidance(Node):
             self._nav_event.wait()
             if not rclpy.ok():
                 break
-            # copy nav data under lock to avoid races
+            # copy target under lock to avoid races
             with self._nav_lock:
-                gw = list(self.global_waypoints) if self.global_waypoints else []
                 targets = list(self.target) if self.target else []
-
-            # If the global planner provided a waypoint list, follow it (use A* only when obstructed)
-            if gw:
-                try:
-                    self.follow_global_waypoints(gw)
-                except Exception as e:
-                    self.get_logger().error(f"Error in follow_global_waypoints: {e}")
-            else:
-                for tx, ty in targets:
-                    self.move_to_target(tx, ty)
-                    if self.abort_check:
-                        break
+            for tx, ty in targets:
+                self.move_to_target(tx, ty)
+                if self.abort_check:
+                    break
             # publish SLA result correlated with current_state
             resp = MissionState()
             resp.current_state = getattr(self, "current_state", "")
-            resp.state = "SLA_AVOIDANCE_DONE" if not self.abort_check else "SLA_AVOIDANCE_FAILED"
+            resp.state = "SLA_DONE" if not self.abort_check else "SLA_FAILED"
             self.pub.publish(resp)
             self._nav_event.clear()
 
@@ -614,135 +600,6 @@ class AstarObstacleAvoidance(Node):
             angle += 2 * math.pi
         return angle
     
-    def straight_line_clear(self, goal_x, goal_y, samples=20):
-        """Check the straight-line between current position and (goal_x,goal_y)
-        by sampling intermediate poses and using is_pose_valid. Returns True
-        if no sampled pose collides.
-        """
-        if self.occupancy_grid is None:
-            return False
-
-        sx = self.current_position_x
-        sy = self.current_position_y
-        for i in range(1, samples + 1):
-            t = i / float(samples)
-            ix = sx + (goal_x - sx) * t
-            iy = sy + (goal_y - sy) * t
-            if not self.is_pose_valid((ix, iy, self.yaw)):
-                return False
-        return True
-
-    def navigate_to_point_straight(self, goal_x, goal_y, threshold=0.5, angle_threshold=0.5):
-        """Drive directly toward goal_x,goal_y (world coords) using simple
-        heading control until within threshold. Returns when reached or aborted.
-        """
-        rate = self.create_rate(20)
-        kp = 0.5
-        while rclpy.ok() and not self.abort_check:
-            dx = goal_x - self.current_position_x
-            dy = goal_y - self.current_position_y
-            dist = math.hypot(dx, dy)
-            if dist < threshold:
-                # stop
-                msg = Twist()
-                msg.linear.x = 0
-                msg.angular.z = 0
-                self.drive_publisher.publish(msg)
-                return True
-
-            target_heading = math.atan2(dy, dx)
-            angle_diff = target_heading - self.heading
-            angle_diff = (angle_diff + math.pi) % (2 * math.pi) - math.pi
-
-            msg = Twist()
-            if abs(angle_diff) <= angle_threshold:
-                msg.linear.x = self.lin_vel
-                msg.angular.z = 0
-            else:
-                msg.linear.x = 0
-                msg.angular.z = angle_diff * kp
-                if abs(msg.angular.z) < 0.3:
-                    msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
-
-            self.drive_publisher.publish(msg)
-            rate.sleep()
-        return False
-
-    def follow_astar_path(self, path):
-        """ Follow a path returned by a_star (list of grid coords).
-        Converts to world points and drives through them sequentially.
-        """
-        if not path:
-            return
-        # make a shallow copy
-        pts = list(path)
-        rate = self.create_rate(20)
-        threshold = 0.5
-        kp = 0.5
-        while rclpy.ok() and pts and not self.abort_check:
-            gx, gy = pts[0]
-            tx, ty = self.grid_to_world(gx, gy)
-            dx = tx - self.current_position_x
-            dy = ty - self.current_position_y
-            dist = math.hypot(dx, dy)
-            msg = Twist()
-            if dist < threshold:
-                # reached waypoint
-                pts.pop(0)
-                msg.linear.x = 0
-                msg.angular.z = 0
-                self.drive_publisher.publish(msg)
-                continue
-
-            target_heading = math.atan2(dy, dx)
-            angle_diff = target_heading - self.heading
-            angle_diff = (angle_diff + math.pi) % (2 * math.pi) - math.pi
-
-            if abs(angle_diff) <= 0.5:
-                msg.linear.x = self.lin_vel
-                msg.angular.z = 0
-            else:
-                msg.linear.x = 0
-                msg.angular.z = angle_diff * kp
-                if abs(msg.angular.z) < 0.3:
-                    msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
-
-            self.drive_publisher.publish(msg)
-            rate.sleep()
-
-    def follow_global_waypoints(self, waypoints):
-        """Follow global planner waypoints (world coords). For each waypoint,
-        try to traverse the straight line. If a collision is detected, run
-        A* from current grid cell to the waypoint and follow that path.
-        """
-        # copy list so we can modify locally
-        wps = list(waypoints)
-        for wx, wy in wps:
-            if self.abort_check:
-                break
-
-            # Wait until we have a map
-            if self.occupancy_grid is None:
-                self.get_logger().info("Waiting for occupancy grid before following waypoints")
-                # small sleep
-                time.sleep(0.2)
-                continue
-
-            if self.straight_line_clear(wx, wy, samples=30):
-                self.get_logger().info(f"Straight-line clear to ({wx:.2f},{wy:.2f}), driving straight")
-                self.navigate_to_point_straight(wx, wy)
-            else:
-                self.get_logger().info(f"Obstacle detected on straight line to ({wx:.2f},{wy:.2f}), invoking A*")
-                start = self.world_to_grid(self.current_position_x, self.current_position_y)
-                goal = self.world_to_grid(wx, wy)
-                path = self.a_star(start, goal)
-                if path:
-                    self.current_path = path
-                    self.publish_waypoints(path)
-                    self.follow_astar_path(path)
-                else:
-                    self.get_logger().warn("A* failed to find a path to waypoint")     
-
     def navigate(self):
         need_replan = True
         last_position = (0, 0)
@@ -838,6 +695,11 @@ class AstarObstacleAvoidance(Node):
                     last_position = start
                     path_available = True
                     self.publish_waypoints(path)
+            
+            # if len(self.current_path)==1:
+            #     path_available=False
+            #     print("len path is 1")
+            #     break
    
             # Follow waypoints
             while path_available and self.current_path and not self.abort_check and not target_reached_flag: #while loop to navigate to path points

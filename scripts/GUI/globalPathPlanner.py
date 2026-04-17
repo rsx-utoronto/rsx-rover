@@ -8,16 +8,18 @@ relative to the robot's position.
 
 import json
 import math
-
+import rclpy
+from rclpy.node import Node
 import os
 from dataclasses import dataclass
 from pathlib import Path
 
 import uuid
 import shutil
+
 import tempfile
-
-
+import threading
+from rover.msg import MissionState
 import map_js_snnipets
 
 import csv
@@ -118,10 +120,54 @@ class MapViewer(QWidget):
 		super().__init__(*args, **kwargs)
 
 		self._init_map_widget()
+		self.pub = self.create_publisher(MissionState, 'mission_state', 10)
+  		self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
+		self.page = self._get_page()
+		wc = getattr(self.page, 'webChannel', None)
+		self._channel = (ch := (wc() if callable(wc) else wc)) or QtWebChannel.QWebChannel(self.page)
+  		# Navigation threading primitives
+        self._nav_event = threading.Event()
+        self._nav_lock = threading.Lock()
+        self.nav_thread = None
+        self.target = []
+  
+		def feedback_callback(self, msg):
+			print("in global path planner feedback callback, msg.state:", msg.state)
+			self.get_logger().info(f"in global path planner feedback callback, msg.state: {msg.state}")
 
-		page = self._get_page()
-		wc = getattr(page, 'webChannel', None)
-		self._channel = (ch := (wc() if callable(wc) else wc)) or QtWebChannel.QWebChannel(page)
+			if msg.state == "START_SL_AVOIDANCE":
+				self.current_state = getattr(msg, "current_state", "Location Selection")
+				print("in SL msg.current_goal", msg.current_goal)
+				target_x = msg.current_goal.pose.position.x
+				target_y = msg.current_goal.pose.position.y
+				current_x = msg.current_pose.pose.position.x
+				current_y = msg.current_pose.pose.position.y
+					
+				with self._nav_lock: #new 
+					self.target = [(target_x, target_y)] #had this
+					self.current_position = (current_x, current_y)
+				self._nav_event.set() #new
+     
+				if self.nav_thread is None or not self.nav_thread.is_alive():
+					self.nav_thread = threading.Thread(target=self._nav_loop, daemon=True)
+					self.nav_thread.start()
+      
+		def _nav_loop(self):
+			while rclpy.ok():
+				self._nav_event.wait()
+				if not rclpy.ok():
+					break
+				# copy target under lock to avoid races
+				with self._nav_lock:
+					targets = list(self.target) if self.target else []
+				self._check_for_new_start_end()
+				# publish path result correlated with current_state
+				resp = MissionState()
+				resp.current_state = getattr(self, "current_state", "")
+				resp.state = "GLOBAL_PATH_READY" if not self.abort_check else "GLOBAL_PATH_FAILED"
+				self.pub.publish(resp)
+				self._nav_event.clear()
+     
 		if ch is None:
 			page.setWebChannel(self._channel)
 		if not hasattr(self, '_bridge'):
@@ -214,10 +260,10 @@ class MapViewer(QWidget):
 					self._places_to_go_last_mtime = None
 
 			# Timer: watch the auto CSV and rebuild the path whenever sm_straight_line updates it
-			self._path_watch_timer = QTimer(self)
-			self._path_watch_timer.setInterval(1000)  # check every 1 second
-			self._path_watch_timer.timeout.connect(self._check_for_new_start_end)
-			self._path_watch_timer.start()
+			# self._path_watch_timer = QTimer(self)
+			# self._path_watch_timer.setInterval(1000)  # check every 1 second
+			# self._path_watch_timer.timeout.connect(self._check_for_new_start_end)
+			# self._path_watch_timer.start()
 
 			# (Optional) print paths for sanity
 			print("Permanent obstacles CSV:", self.csv_perm)
@@ -229,9 +275,6 @@ class MapViewer(QWidget):
 		QTimer.singleShot(0, self._install_mouse_position_display)
 		self._init_markers(Locations.engineering)
 		self._run_when_leaflet_ready(self._post_map_init)
-
-
-
 
 		# signal to be used by other components
 		self.headingSignal.connect(self.set_robot_rotation)
@@ -260,54 +303,78 @@ class MapViewer(QWidget):
 		If it changed, read its Start/End points and rebuild the path,
 		turning the old green path orange and drawing the new one.
 		"""
-		csv_path = self._auto_start_end_csv
-
-		if not csv_path.exists():
+		if self.current_pose is None or self.current_goal is None:
+			print("[auto_path] Missing current pose or goal; skipping path build.")
 			return
 
 		try:
-			mtime = csv_path.stat().st_mtime
-		except OSError:
+			pts = [
+				{
+					"name": "start",
+					"lat": self.current_position[0][0],
+					"lng": self.current_position[0][1]
+				},
+				{
+					"name": "goal",
+					"lat": self.target[0][0],
+					"lng": self.target[0][1]
+				}
+			]
+
+		except Exception as e:
+			print(f"[auto_path] Failed to extract pose data: {e}")
 			return
 
-		# First time seeing the file in this session: just record mtime, don't build a path yet.
-		if self._places_to_go_last_mtime is None:
-			self._places_to_go_last_mtime = mtime
-			return
+		self.make_straight_line_path(silent=True, points=pts)
+    
+		# csv_path = self._auto_start_end_csv
+		
+		# if not csv_path.exists():
+		# 	return
 
-		# File changed -> read points and rebuild path
-		if mtime > self._places_to_go_last_mtime:
-			self._places_to_go_last_mtime = mtime
+		# try:
+		# 	mtime = csv_path.stat().st_mtime
+		# except OSError:
+		# 	return
 
-			pts = []
-			try:
-				with open(csv_path, newline="") as f:
-					reader = csv.reader(f)
-					for row in reader:
-						if not row or len(row) < 3:
-							continue
+		# # First time seeing the file in this session: just record mtime, don't build a path yet.
+		# if self._places_to_go_last_mtime is None:
+		# 	self._places_to_go_last_mtime = mtime
+		# 	return
 
-						# Positional format: name, latitude, longitude
-						name = (row[0] or "").strip()
-						try:
-							lat = float((row[1] or "").strip())
-							lng = float((row[2] or "").strip())
-						except (TypeError, ValueError):
-							# Skip header rows or malformed records.
-							continue
+		# # File changed -> read points and rebuild path
+		# if mtime > self._places_to_go_last_mtime:
+		# 	self._places_to_go_last_mtime = mtime
 
-						pts.append({"name": name, "lat": lat, "lng": lng})
+		# 	pts = []
+		# 	try:
+		# 		with open(csv_path, newline="") as f:
+		# 			reader = csv.reader(f)
+		# 			for row in reader:
+		# 				if not row or len(row) < 3:
+		# 					continue
 
-			except Exception as e:
-				print(f"[auto_path] Failed to read {csv_path}: {e}")
-				return
+		# 				# Positional format: name, latitude, longitude
+		# 				name = (row[0] or "").strip()
+		# 				try:
+		# 					lat = float((row[1] or "").strip())
+		# 					lng = float((row[2] or "").strip())
+		# 				except (TypeError, ValueError):
+		# 					# Skip header rows or malformed records.
+		# 					continue
 
-			if not pts:
-				print("[auto_path] No valid points found in auto CSV; skipping path build.")
-				return
+		# 				pts.append({"name": name, "lat": lat, "lng": lng})
 
-			# Build the path using these points (no pop-up windows)
-			self.make_straight_line_path(silent=True, points=pts)
+		# 	except Exception as e:
+		# 		print(f"[auto_path] Failed to read {csv_path}: {e}")
+		# 		return
+
+		# 	if not pts:
+		# 		print("[auto_path] No valid points found in auto CSV; skipping path build.")
+		# 		return
+
+		# 	# Build the path using these points (no pop-up windows)
+		# 	self.make_straight_line_path(silent=True, points=pts)
 
 
 	def _install_mouse_position_display(self):
@@ -696,7 +763,9 @@ class MapViewer(QWidget):
 			if key not in seen:
 				seen.add(key)
 				ordered_unique.append((lat, lng))
-
+		resp = MissionState()
+		resp.globalPlannerWaypoints = [MissionState.Waypoint(latitude=lat, longitude=lng) for (lat, lng) in ordered_unique]
+		resp.state = "GLOBAL_PATH_READY"
 		with open(self.csv_path_segments, "w", newline="") as f:
 			writer = csv.DictWriter(
 				f,

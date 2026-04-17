@@ -11,7 +11,7 @@ if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
 
 import rclpy
 from rclpy.node import Node
-import map_viewer_2_electric_boogaloo as map_viewer
+import scripts.GUI.globalPathPlanner as map_viewer
 from pathlib import Path
 import numpy as np
 
