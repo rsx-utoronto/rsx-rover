@@ -26,6 +26,7 @@ from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix, CompressedImage, Image
 from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
+from rover.msg import MissionState
 from cv_bridge import CvBridge
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
@@ -39,7 +40,7 @@ class mapOverlay(QWidget):
     def __init__(self, node):
         super().__init__()
         self.node = node
-        self.viewer = map_viewer.MapViewer(self.node)
+        self.viewer = map_viewer.MapViewerDisplay()
         #sets the source of map tiles to local tile cache folder
         print(CACHE_DIR)
         self.viewer.set_map_server(
@@ -1082,6 +1083,7 @@ class CameraFeed:
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
     statusSignal = pyqtSignal(str)
+    missionStateSignal = pyqtSignal(str)
     def __init__(self,node):
         super().__init__()
         self.node=node
@@ -1094,6 +1096,7 @@ class RoverGUI(QMainWindow):
         self.velocity_control = VelocityControl(node)
 
         self.gui_status_sub=node.create_subscription(String, 'gui_status', self.string_callback, 10)
+        self.mission_state_sub=node.create_subscription(MissionState, 'mission_state', self.mission_state_callback, 10)
         self.auto_abort_pub=node.create_publisher(Bool, '/auto_abort_check', 5)
         # self.manual_abort_pub = rospy.Publisher('/manual_abort_check', Bool, queue_size=5)
         # self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
@@ -1117,6 +1120,7 @@ class RoverGUI(QMainWindow):
 
         
         self.statusSignal.connect(self.string_signal_receive)
+        self.missionStateSignal.connect(self.statusTerminal.update_string_list)
 
 
         self.setup_control_tab()
@@ -1128,6 +1132,26 @@ class RoverGUI(QMainWindow):
     def string_callback(self, msg):
         self.statusTerminal.string_callback(msg)
         self.statusSignal.emit(msg.data)
+
+    def mission_state_callback(self, msg):
+        details = []
+        if msg.state:
+            details.append(f"state={msg.state}")
+        if msg.current_state:
+            details.append(f"current_state={msg.current_state}")
+
+        try:
+            goal_x = msg.current_goal.pose.position.x
+            goal_y = msg.current_goal.pose.position.y
+            if goal_x != 0.0 or goal_y != 0.0:
+                details.append(f"goal=({goal_x:.2f}, {goal_y:.2f})")
+        except Exception:
+            pass
+
+        if not details:
+            details.append("<empty mission_state>")
+
+        self.missionStateSignal.emit("[mission_state] " + " | ".join(details))
 
     def string_signal_receive(self, msg):
         msg_list = msg.split(" ")
