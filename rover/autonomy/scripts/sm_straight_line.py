@@ -59,10 +59,11 @@ class StraightLineApproach(Node):
         self.nav_thread = None
 
     def feedback_callback(self, msg):
-        print("in SL feedback callback, msg.state:", msg.state)
+        # print("in SL feedback callback, msg.state:", msg.state)
         self.get_logger().info(f"in SL feedback callback, msg.state: {msg.state}")
 
         if msg.state == "START_SL":
+            print("Reached START_SL state in SL")
             self.current_state = getattr(msg, "current_state", "Location Selection")
             print("in SL msg.current_goal", msg.current_goal)
             target_x = msg.current_goal.pose.position.x
@@ -71,6 +72,7 @@ class StraightLineApproach(Node):
                 self.target = [(target_x, target_y)] #had this
             self._nav_event.set() #new
             if self.nav_thread is None or not self.nav_thread.is_alive():
+                print(("Starting navigation thread in SL"))
                 self.nav_thread = threading.Thread(target=self._nav_loop, daemon=True)
                 self.nav_thread.start()
     
@@ -121,7 +123,6 @@ class StraightLineApproach(Node):
         self.found = data
 
     def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISH IT)
-        
         kp = 0.5
         threshold = 0.5
         angle_threshold = 0.2
@@ -167,6 +168,7 @@ class StraightLineApproach(Node):
         
     def _nav_loop(self):
         while rclpy.ok():
+            print("in nav loop for SL, waiting for event")
             self._nav_event.wait()
             if not rclpy.ok():
                 break
