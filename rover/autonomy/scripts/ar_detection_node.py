@@ -84,7 +84,7 @@ class ARucoTagDetectionNode(Node):
             print(e)
         else:
             if self.curr_state == "AR1" or self.curr_state == "AR2":
-                print("calling findArucoMarkers")
+                # print("calling findArucoMarkers")
                 self.findArucoMarkers(cv_image)
             
     def mission_state_callback(self, msg):

@@ -15,6 +15,7 @@ class HeartbeatMonitor(Node):
         super().__init__('heartbeat_monitor')
         self.last_heartbeat = time.time()
         self.heartbeat_lost = False
+        self.get_logger().info('Heartbeat monitor initialized, waiting for heartbeat messages...')
         
         # Subscribe to heartbeat from base station
         self.subscription = self.create_subscription(
@@ -35,6 +36,7 @@ class HeartbeatMonitor(Node):
     def heartbeat_callback(self, msg):
         """Called when a heartbeat message is received"""
         self.last_heartbeat = time.time()
+        self.get_logger().debug('Heartbeat received, timestamp updated')
         if self.heartbeat_lost:
             #self.get_logger().info('Heartbeat restored!')
             self.heartbeat_lost = False
@@ -65,6 +67,7 @@ class HeartbeatMonitor(Node):
 
 
 def main(args=None):
+    print("Starting Heartbeat Monitor...")
     rclpy.init(args=args)
     node = HeartbeatMonitor()
     rclpy.spin(node)
@@ -72,4 +75,5 @@ def main(args=None):
     rclpy.shutdown()
 
 if __name__ == '__main__':
+    print("in main launch of heartbeat monitor")
     main()
