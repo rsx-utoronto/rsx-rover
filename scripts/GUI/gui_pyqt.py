@@ -89,7 +89,7 @@ class statusTerminal(QWidget):
 
         # Connect signals to the corresponding update methods
         self.update_status_signal.connect(self.update_string_list)
-        # rospy.Subscriber('gui_status', String, self.string_callback)
+        
         self.received_strings = []
         self.strlength = -1
     def init_ui(self):
@@ -154,7 +154,7 @@ class ArucoWidget(QWidget):
 
         # Initialize ROS subscribers
         # rospy.Subscriber('aruco_found', Bool, self.bool_callback)
-        # rospy.Subscriber('aruco_name', String, self.string_callback)
+        
         node.create_subscription(Bool, 'aruco_found', self.bool_callback, 10)
         node.create_subscription(String, 'aruco_name', self.string_callback, 10)
 
@@ -248,9 +248,6 @@ class ArucoBar(QWidget):
         self.update_label_signal.connect(self.update_label)
         self.update_list_signal.connect(self.update_string_list)
 
-        # Initialize ROS subscribers
-        # rospy.Subscriber('aruco_found', Bool, self.bool_callback)
-        # rospy.Subscriber('aruco_name', String, self.string_callback)
         node.create_subscription(Bool, 'aruco_found', self.bool_callback, 10)
         node.create_subscription(String, 'aruco_name', self.string_callback, 10)
     
@@ -1097,8 +1094,7 @@ class RoverGUI(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
         self.velocity_control = VelocityControl(node)
-        # self.gui_status_sub = self.node.('gui_status', String, self.string_callback)
-        # self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
+
         self.gui_status_sub=node.create_subscription(String, 'gui_status', self.string_callback, 10)
         self.mission_state_sub=node.create_subscription(MissionState, 'mission_state', self.mission_state_callback, 10)
         self.auto_abort_pub=node.create_publisher(Bool, '/auto_abort_check', 5)

@@ -175,7 +175,7 @@ class GLOB_MSGS(Node):
         relative_z = data.pose.pose.position.z - self.odom_zero.z
 
         self.current_position = (relative_x, relative_y, relative_z)
-        self.current_position =(0,0,0) # CHANGE WHEN TESTING OUTSIDE
+        # self.current_position =(0,0,0) # CHANGE WHEN TESTING OUTSIDE
             
     
     def get_odom(self):
@@ -252,7 +252,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
                 y = distance * math.cos(theta)
 
                 cartesian[el] = (x,y) 
-                cartesian[el] =(0,0) #Temporary for testing, remove later 
+                # cartesian[el] =(0,0) #Temporary for testing, remove later 
                 self.glob_msg.pub_state(String(data=str(cartesian[el])))
 
         print("Before CARTESIAN", cartesian)
@@ -333,7 +333,7 @@ class LocationSelection(smach.State): #State for determining which mission/state
                     msg.current_goal.pose.position.y = target[1]
                     self.glob_msg.mission_state_pub.publish(msg)
                       
-                while self.glob_msg.sla_status != "SLA_DONE" or self.glob_msg.sla_status != "SLA_AVOIDANCE_DONE" and rclpy.ok():
+                while self.glob_msg.sla_status != "SLA_DONE" and self.glob_msg.sla_status != "SLA_AVOIDANCE_DONE" and rclpy.ok():
                     time.sleep(1)
                     print("waiting for sla status", self.glob_msg.sla_status)
                     
