@@ -237,12 +237,6 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-  scripts/GUI/map_path_planner_node.py
-  scripts/GUI/globalPathPlanner.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-install(PROGRAMS
   rover/science/scripts/webcam.py
   DESTINATION lib/${PROJECT_NAME}
 )
