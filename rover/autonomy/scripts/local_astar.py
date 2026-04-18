@@ -176,7 +176,7 @@ class AstarObstacleAvoidance(Node):
             print("in Obstacle Avoidance msg.current_goal", msg.current_goal)
             target_x = msg.current_goal.pose.position.x
             target_y = msg.current_goal.pose.position.y
-            self.global_waypoints=msg.global_waypoints
+            self.global_waypoints=msg.global_planner_waypoints
             with self._nav_lock: #new 
                 self.target = [(target_x, target_y)] #had this
             self._nav_event.set() #new

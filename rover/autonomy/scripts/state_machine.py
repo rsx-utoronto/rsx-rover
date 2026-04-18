@@ -13,12 +13,9 @@ import smach
 import time
 import math
 from optimal_path import OPmain
-#from thomas_grid_search import thomasgrid
-#import ar_detection_node  
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
-from sm_straight_line_new import StraightLineApproachNew
 from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
 import astar_obstacle_avoidance_grid_search 
 import gps_conversion_functions as functions

@@ -11,7 +11,7 @@ if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
 
 import rclpy
 from rclpy.node import Node
-import scripts.GUI.globalPathPlanner as map_viewer
+import map_viewer_display as map_viewer
 from pathlib import Path
 import numpy as np
 
@@ -39,7 +39,7 @@ class mapOverlay(QWidget):
     def __init__(self, node):
         super().__init__()
         self.node = node
-        self.viewer = map_viewer.MapViewer()
+        self.viewer = map_viewer.MapViewer(self.node)
         #sets the source of map tiles to local tile cache folder
         print(CACHE_DIR)
         self.viewer.set_map_server(

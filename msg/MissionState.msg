@@ -3,4 +3,4 @@ string current_state #current state we are in (AR1, OBJ2, etc)
 geometry_msgs/PoseStamped current_goal #current goal we are moving towards (coordinates)
 geometry_msgs/PoseStamped current_pose
 float64[] targets #Targets for reattempt state
-float64[] globalPlannerWaypoints #waypoints for global planner
+float64[] global_planner_waypoints #waypoints for global planner

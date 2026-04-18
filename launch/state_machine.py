@@ -24,7 +24,21 @@ def generate_launch_description():
             name='straight_line',
             output='screen'
         ), 
-        
+
+        Node(
+            package='rover',
+            executable='local_astar.py',
+            name='local_astar',
+            output='screen'
+        ),
+
+        Node(
+            package='rover',
+            executable='globalPathPlanner.py',
+            name='global_path_planner',
+            output='screen'
+        ),
+
         Node(
             package='rover',
             executable='sm_grid_search.py',
