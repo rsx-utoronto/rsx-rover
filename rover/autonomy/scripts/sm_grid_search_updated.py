@@ -41,6 +41,7 @@ class GS_Traversal(Node):
         self.heading = 0
         self.state = None
         self.count = 0
+        self.timer=0
         self.w = sm_config.get("AR_grid_search_w") #new
         self.h = sm_config.get("AR_grid_search_h") #new
         self.tol = sm_config.get("AR_grid_search_tol") #new
@@ -411,7 +412,7 @@ class GS_Traversal(Node):
 
         
         msg = MissionState()
-        if self.found_objects[self.state] and self.abort_check is False:
+        if self.found_objects[self.state]:
             msg.state="OBJ_FOUND"
             self.pub.publish(msg)
             return True

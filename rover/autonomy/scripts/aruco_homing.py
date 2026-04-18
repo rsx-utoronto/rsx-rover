@@ -6,6 +6,7 @@ from rclpy.node import Node
 import time
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32MultiArray, Float64MultiArray
+from rover.msg import MissionState
 
 class Aimer: # 
 
@@ -31,7 +32,7 @@ class Aimer: #
         self.linear_v = None
         self.angular_v = None
 
-    def update(self, aruco_top_left: tuple, aruco_top_right: tuple, 
+    def update(self, aruco_top_left: tuple, aruco_top_right: tuple,  #determines what the speeds should be
                aruco_bottom_left: tuple, aruco_bottom_right: tuple) -> None: # update linear_v, angular_v
         # if aruco_top_left == None or aruco_top_right == None or aruco_bottom_left == None or aruco_bottom_right == None:
         #    self.linear_v, self.angular_v = 0, 0
@@ -115,13 +116,13 @@ class AimerROS(Aimer):  #updates coords continuously
                  max_linear_v: float, max_angular_v: float) -> None:
         super().__init__(frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v)
         
-    def rosUpdate(self, data: Int32MultiArray) -> None:
+    def rosUpdate(self, data: Int32MultiArray) -> None: #Callback function for recieving data of the bbox
         print ("\nDATA FROM AIMER ", data)
         aruco_top_left = (data.data[0], data.data[1])
         aruco_top_right = (data.data[2], data.data[3])
         aruco_bottom_left = (data.data[4], data.data[5])
         aruco_bottom_right = (data.data[6], data.data[7])
-        self.update(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right)
+        self.update(aruco_top_left, aruco_top_right, aruco_bottom_left, aruco_bottom_right) #Have to take this out
         
 
 
@@ -186,56 +187,55 @@ class ArucoHomingNode(Node):
         self.publisher.publish(twist)    
 
 def main(args=None):
-   
-    rclpy.init(args=args)
-    node = ArucoHomingNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    pub = rclpy.create_publisher(Twist, 'drive', 10) # change topic name
     
+    # frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v
+    aimer = AimerROS(640, 360, 1000, 100, 100, 1.8, 0.8) # FOR ARUCO
     
-    # pub = rclpy.create_publisher(Twist, 'drive', 10) # change topic name
-    
-    # # frame_width, frame_height, min_aruco_area, aruco_min_x_uncert, aruco_min_area_uncert, max_linear_v, max_angular_v
-    # aimer = AimerROS(640, 360, 1000, 100, 100, 1.8, 0.8) # FOR ARUCO
-    
-    # # aimer = AimerROS(640, 360, 1450, 50, 200, 1.0, 0.5) # FOR WATER BOTTLE
-    # rclpy.create_subscription( Float64MultiArray,'aruco_node/bbox', aimer.rosUpdate, 10) # change topic name
-    # # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
-    # rate = rospy.Rate(10)
-    # prev_flag =  ""
-    # flag = ""
-    # startRotationTime = time.time()
-    # while not rospy.is_shutdown():
-    #     twist = Twist()
-    #     if(time.time()-startRotationTime) > 35:
-    #         print ("failure", aimer.linear_v, aimer.angular_v)
-    #         twist.linear.x = 0
-    #         twist.angular.z = 0
-    #         pub.publish(twist)
-    #         return False
-    #     if aimer.linear_v == 0 and aimer.angular_v == 0:
-    #         print ("at weird", aimer.linear_v, aimer.angular_v)
-    #         twist.linear.x = 0
-    #         twist.angular.z = 0
-    #         pub.publish(twist)
-    #         return True
-    #     if aimer.angular_v == 1:
-    #         twist.angular.z = aimer.max_angular_v
-    #         twist.linear.x = 0
-    #     elif aimer.angular_v == -1:
-    #         twist.angular.z = -aimer.max_angular_v
-    #         twist.linear.x = 0
-    #     elif aimer.linear_v == 1:
-    #         twist.linear.x = aimer.max_linear_v
-    #         twist.angular.z = 0
-         
-    #     pub.publish(twist)
-    #     rate.sleep()
+    # aimer = AimerROS(640, 360, 1450, 50, 200, 1.0, 0.5) # FOR WATER BOTTLE
+    rclpy.create_subscription(Float64MultiArray,'aruco_node/bbox', aimer.rosUpdate, 10) # change topic name
+    print("Aruco Homing Node Started")
+    # int32multiarray convention: [top_left_x, top_left_y, top_right_x, top_right_y, bottom_left_x, bottom_left_y, bottom_right_x, bottom_right_y]
+    rate = rclpy.Rate(10) # 10 Hz
+    prev_flag =  ""
+    flag = ""
+    startRotationTime = time.time()
+    while rclpy.ok():
+        twist = Twist()
+        if(time.time()-startRotationTime) > 35:
+            print ("failure", aimer.linear_v, aimer.angular_v)
+            twist.linear.x = 0
+            twist.angular.z = 0
+            pub.publish(twist)
+            return False
+        if aimer.linear_v == 0 and aimer.angular_v == 0:
+            print ("at weird", aimer.linear_v, aimer.angular_v)
+            twist.linear.x = 0
+            twist.angular.z = 0
+            pub.publish(twist)
+            return True
+        if aimer.angular_v == 1:
+            twist.angular.z = aimer.max_angular_v
+            twist.linear.x = 0
+        elif aimer.angular_v == -1:
+            twist.angular.z = -aimer.max_angular_v
+            twist.linear.x = 0
+        elif aimer.linear_v == 1:
+            twist.linear.x = aimer.max_linear_v
+            twist.angular.z = 0
+       
+        pub.publish(twist)
+        print("publishing", twist.linear.x, twist.angular.z)
+        rate.sleep()
 
 if __name__ == '__main__':
     # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
     # rclpy.init()
     # node='aruco_homing'
-    
+    rclpy.init(args=None)
+    node = ArucoHomingNode()
+    rclpy.spin(node)
     main()
+    node.destroy_node()
+    rclpy.shutdown()
+    
