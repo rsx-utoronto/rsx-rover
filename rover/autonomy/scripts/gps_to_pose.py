@@ -4,13 +4,43 @@ from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, Imu
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped, Pose
-from math import atan2, pi, sin, cos, radians
+from math import asin, atan2, pi, sin, cos, radians
 import gps_conversion_functions as functions
 import message_filters
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
 # import tf
-from transforms3d.euler import quat2euler as euler_from_quaternion
-from transforms3d.euler import euler2quat as quaternion_from_euler
+
+
+def quaternion_to_euler(x, y, z, w):
+    """Convert quaternion (x, y, z, w) to Euler angles (roll, pitch, yaw)."""
+    t0 = 2.0 * (w * x + y * z)
+    t1 = 1.0 - 2.0 * (x * x + y * y)
+    roll = atan2(t0, t1)
+
+    t2 = 2.0 * (w * y - z * x)
+    t2 = max(-1.0, min(1.0, t2))
+    pitch = asin(t2)
+
+    t3 = 2.0 * (w * z + x * y)
+    t4 = 1.0 - 2.0 * (y * y + z * z)
+    yaw = atan2(t3, t4)
+    return roll, pitch, yaw
+
+
+def euler_to_quaternion(roll, pitch, yaw):
+    """Convert Euler angles (roll, pitch, yaw) to quaternion (x, y, z, w)."""
+    cy = cos(yaw * 0.5)
+    sy = sin(yaw * 0.5)
+    cp = cos(pitch * 0.5)
+    sp = sin(pitch * 0.5)
+    cr = cos(roll * 0.5)
+    sr = sin(roll * 0.5)
+
+    w = cr * cp * cy + sr * sp * sy
+    x = sr * cp * cy - cr * sp * sy
+    y = cr * sp * cy + sr * cp * sy
+    z = cr * cp * sy - sr * sp * cy
+    return x, y, z, w
 
 class GPSToPose(Node): 
     
@@ -159,11 +189,11 @@ class GPSToPose(Node):
         # Convert quaternion to Euler angles (roll, pitch, yaw)
         orientation_list = [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
         # (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(orientation_list)
-        (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
+        (roll, pitch, yaw) = quaternion_to_euler(*orientation_list)
         
         yaw = yaw + self.mag_declination_rad
         # Convert back to quaternion
-        qx, qy, qz, qw = quaternion_from_euler(roll, pitch, yaw)
+        qx, qy, qz, qw = euler_to_quaternion(roll, pitch, yaw)
         msg.orientation.x = qx
         msg.orientation.y = qy
         msg.orientation.z = qz
