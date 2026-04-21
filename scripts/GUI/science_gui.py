@@ -16,15 +16,15 @@ import time
 
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, \
     QSlider, QHBoxLayout, QVBoxLayout, QMainWindow, QTabWidget, QGroupBox, QFrame, \
-    QCheckBox,QSplitter,QStylePainter, QStyleOptionComboBox, QStyle, \
-    QToolButton, QMenu, QLineEdit , QPushButton, QTextEdit,\
-    QListWidget, QListWidgetItem, QStyleOptionSlider, QSizePolicy, QScrollArea
+    QCheckBox, QSplitter, QStylePainter, QStyleOptionComboBox, QStyle, \
+    QToolButton, QMenu, QLineEdit, QPushButton, QTextEdit, \
+    QListWidget, QListWidgetItem, QStyleOptionSlider, QSizePolicy, QScrollArea, QDialog
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
 # from rover.arm.ros1.gripper import arm_serial_connector
 from sensor_msgs.msg import NavSatFix, CompressedImage, Image
-from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool, Int32
+from std_msgs.msg import Float32MultiArray, Float64MultiArray, Float32, String, Bool, Int32
 from cv_bridge import CvBridge
 import cv2
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
@@ -1233,6 +1233,363 @@ class CameraFeed:
             self.label5.hide()
             self.splitter.setStretchFactor(4, 0)
 
+class CamerasWindow(QDialog):
+    ultrasonicUpdateSignal = pyqtSignal(str)
+    def __init__(self, node, parent=None):
+        super().__init__(parent)
+        self.node = node
+        self.bridge = CvBridge()
+
+        self.setWindowTitle("Cameras Window")
+        self.setGeometry(200, 200, 1200, 700)
+
+        # -----------------------------
+        # ROS2 topic placeholders
+        # Replace these strings later with the actual topic names
+        # -----------------------------
+        self.camera1_topic = "/camera_1/image_raw/compressed"   # TODO: replace with real topic
+        self.camera2_topic = "/camera_2/image_raw/compressed"   # TODO: replace with real topic
+        self.camera3_topic = "/camera_3/image_raw/compressed"   # TODO: replace with real topic
+
+        # -----------------------------
+        # Electromagnet + ultrasonic placeholders
+        # Replace these strings later with the actual topic names
+        # -----------------------------
+        self.electromagnet_topic = "/electromagnet_control"   # TODO: replace with real topic
+        self.ultrasonic_topic = "/ultrasonic_sensor"          # TODO: replace with real topic
+
+        self.electromagnet_on = False
+
+        self.electromagnet_pub = self.node.create_publisher(
+            Bool,
+            self.electromagnet_topic,
+            10
+        )
+
+        self.ultrasonic_sub = self.node.create_subscription(
+            Float32,
+            self.ultrasonic_topic,
+            self.ultrasonic_callback,
+            10
+        )
+
+        self.ultrasonicUpdateSignal.connect(self.update_ultrasonic_display)
+
+        # If one or more cameras publish sensor_msgs/msg/Image
+        # instead of sensor_msgs/msg/CompressedImage, set these to False.
+        self.camera1_is_compressed = True
+        self.camera2_is_compressed = True
+        self.camera3_is_compressed = True
+
+        # ROS2 subscriptions start OFF
+        self.camera1_sub = None
+        self.camera2_sub = None
+        self.camera3_sub = None
+
+        # -----------------------------
+        # UI
+        # -----------------------------
+        main_layout = QVBoxLayout()
+
+        title_label = QLabel("Cameras Window")
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+
+        feeds_layout = QHBoxLayout()
+
+        # Camera 1 column
+        cam1_layout = QVBoxLayout()
+        self.camera_label1 = ResizableLabel("Camera 1")
+        self.camera_label1.setAlignment(Qt.AlignCenter)
+        self.camera_label1.setMinimumSize(320, 240)
+        self.camera_label1.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label1.setStyleSheet("background-color: black; color: white;")
+
+        self.camera1_button = QPushButton("Turn Camera 1 On")
+        self.camera1_button.setCheckable(True)
+        self.camera1_button.clicked.connect(self.toggle_camera1)
+
+        cam1_layout.addWidget(self.camera_label1)
+        cam1_layout.addWidget(self.camera1_button)
+
+        # Camera 2 column
+        cam2_layout = QVBoxLayout()
+        self.camera_label2 = ResizableLabel("Camera 2")
+        self.camera_label2.setAlignment(Qt.AlignCenter)
+        self.camera_label2.setMinimumSize(320, 240)
+        self.camera_label2.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label2.setStyleSheet("background-color: black; color: white;")
+
+        self.camera2_button = QPushButton("Turn Camera 2 On")
+        self.camera2_button.setCheckable(True)
+        self.camera2_button.clicked.connect(self.toggle_camera2)
+
+        cam2_layout.addWidget(self.camera_label2)
+        cam2_layout.addWidget(self.camera2_button)
+
+        # Camera 3 column
+        cam3_layout = QVBoxLayout()
+        self.camera_label3 = ResizableLabel("Camera 3")
+        self.camera_label3.setAlignment(Qt.AlignCenter)
+        self.camera_label3.setMinimumSize(320, 240)
+        self.camera_label3.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.camera_label3.setStyleSheet("background-color: black; color: white;")
+
+        self.camera3_button = QPushButton("Turn Camera 3 On")
+        self.camera3_button.setCheckable(True)
+        self.camera3_button.clicked.connect(self.toggle_camera3)
+
+        cam3_layout.addWidget(self.camera_label3)
+        cam3_layout.addWidget(self.camera3_button)
+
+        feeds_layout.addLayout(cam1_layout)
+        feeds_layout.addLayout(cam2_layout)
+        feeds_layout.addLayout(cam3_layout)
+
+        self.topic_info_label = QLabel(
+            f"Camera 1: {self.camera1_topic}\n"
+            f"Camera 2: {self.camera2_topic}\n"
+            f"Camera 3: {self.camera3_topic}"
+        )
+        self.topic_info_label.setAlignment(Qt.AlignLeft)
+        self.topic_info_label.setStyleSheet("padding: 8px;")
+
+        # -----------------------------
+        # Electromagnet + ultrasonic controls
+        # -----------------------------
+        extra_controls_group = QGroupBox("Pickup / Sensor Controls")
+        extra_controls_layout = QHBoxLayout()
+
+        self.electromagnet_button = QPushButton("Electromagnet Off")
+        self.electromagnet_button.setCheckable(True)
+        self.electromagnet_button.clicked.connect(self.toggle_electromagnet)
+        self.electromagnet_button.setStyleSheet("""
+            QPushButton:checked {
+                background-color: orange;
+                color: black;
+                font-weight: bold;
+            }
+        """)
+
+        self.ultrasonic_display_label = QLabel("Ultrasonic: --")
+        self.ultrasonic_display_label.setAlignment(Qt.AlignCenter)
+        self.ultrasonic_display_label.setMinimumHeight(40)
+        self.ultrasonic_display_label.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.ultrasonic_display_label.setStyleSheet("""
+            background-color: white;
+            color: black;
+            font-size: 18px;
+            padding: 6px;
+        """)
+
+        extra_controls_layout.addWidget(self.electromagnet_button)
+        extra_controls_layout.addWidget(self.ultrasonic_display_label)
+        extra_controls_group.setLayout(extra_controls_layout)
+
+        main_layout.addWidget(title_label)
+        main_layout.addLayout(feeds_layout)
+        main_layout.addWidget(extra_controls_group)
+        main_layout.addWidget(self.topic_info_label)
+        self.setLayout(main_layout)
+
+    # -----------------------------
+    # Toggle functions
+    # -----------------------------
+    def toggle_camera1(self):
+        if self.camera1_button.isChecked():
+            self.start_camera1()
+        else:
+            self.stop_camera1()
+
+    def toggle_camera2(self):
+        if self.camera2_button.isChecked():
+            self.start_camera2()
+        else:
+            self.stop_camera2()
+
+    def toggle_camera3(self):
+        if self.camera3_button.isChecked():
+            self.start_camera3()
+        else:
+            self.stop_camera3()
+
+    def toggle_electromagnet(self):
+        self.electromagnet_on = self.electromagnet_button.isChecked()
+
+        msg = Bool()
+        msg.data = self.electromagnet_on
+        self.electromagnet_pub.publish(msg)
+
+        if self.electromagnet_on:
+            self.electromagnet_button.setText("Electromagnet On")
+            print(f"Electromagnet ON published to {self.electromagnet_topic}")
+        else:
+            self.electromagnet_button.setText("Electromagnet Off")
+            print(f"Electromagnet OFF published to {self.electromagnet_topic}")
+
+
+    def ultrasonic_callback(self, msg):
+        # Assumes std_msgs/msg/Float32
+        # If your topic uses another message type, adjust this line.
+        display_text = f"Ultrasonic: {msg.data:.2f}"
+        self.ultrasonicUpdateSignal.emit(display_text)
+
+
+    def update_ultrasonic_display(self, text):
+        self.ultrasonic_display_label.setText(text)
+
+    # -----------------------------
+    # Start subscribers
+    # -----------------------------
+    def start_camera1(self):
+        if self.camera1_sub is not None:
+            return
+
+        msg_type = CompressedImage if self.camera1_is_compressed else Image
+        self.camera1_sub = self.node.create_subscription(
+            msg_type,
+            self.camera1_topic,
+            self.camera1_callback,
+            10
+        )
+
+        self.camera1_button.setText("Turn Camera 1 Off")
+        print(f"Camera 1 started: {self.camera1_topic}")
+
+    def start_camera2(self):
+        if self.camera2_sub is not None:
+            return
+
+        msg_type = CompressedImage if self.camera2_is_compressed else Image
+        self.camera2_sub = self.node.create_subscription(
+            msg_type,
+            self.camera2_topic,
+            self.camera2_callback,
+            10
+        )
+
+        self.camera2_button.setText("Turn Camera 2 Off")
+        print(f"Camera 2 started: {self.camera2_topic}")
+
+    def start_camera3(self):
+        if self.camera3_sub is not None:
+            return
+
+        msg_type = CompressedImage if self.camera3_is_compressed else Image
+        self.camera3_sub = self.node.create_subscription(
+            msg_type,
+            self.camera3_topic,
+            self.camera3_callback,
+            10
+        )
+
+        self.camera3_button.setText("Turn Camera 3 Off")
+        print(f"Camera 3 started: {self.camera3_topic}")
+
+    # -----------------------------
+    # Stop subscribers
+    # -----------------------------
+    def stop_camera1(self):
+        if self.camera1_sub is not None:
+            self.node.destroy_subscription(self.camera1_sub)
+            self.camera1_sub = None
+
+        self.camera_label1.clear()
+        self.camera_label1.setText("Camera 1")
+        self.camera_label1.setStyleSheet("background-color: black; color: white;")
+        self.camera1_button.setChecked(False)
+        self.camera1_button.setText("Turn Camera 1 On")
+        print("Camera 1 stopped")
+
+    def stop_camera2(self):
+        if self.camera2_sub is not None:
+            self.node.destroy_subscription(self.camera2_sub)
+            self.camera2_sub = None
+
+        self.camera_label2.clear()
+        self.camera_label2.setText("Camera 2")
+        self.camera_label2.setStyleSheet("background-color: black; color: white;")
+        self.camera2_button.setChecked(False)
+        self.camera2_button.setText("Turn Camera 2 On")
+        print("Camera 2 stopped")
+
+    def stop_camera3(self):
+        if self.camera3_sub is not None:
+            self.node.destroy_subscription(self.camera3_sub)
+            self.camera3_sub = None
+
+        self.camera_label3.clear()
+        self.camera_label3.setText("Camera 3")
+        self.camera_label3.setStyleSheet("background-color: black; color: white;")
+        self.camera3_button.setChecked(False)
+        self.camera3_button.setText("Turn Camera 3 On")
+        print("Camera 3 stopped")
+
+    # -----------------------------
+    # Camera callbacks
+    # -----------------------------
+    def camera1_callback(self, msg):
+        self.update_camera_label(msg, self.camera_label1, self.camera1_is_compressed)
+
+    def camera2_callback(self, msg):
+        self.update_camera_label(msg, self.camera_label2, self.camera2_is_compressed)
+
+    def camera3_callback(self, msg):
+        self.update_camera_label(msg, self.camera_label3, self.camera3_is_compressed)
+
+    def update_camera_label(self, msg, label, is_compressed):
+        try:
+            if is_compressed:
+                np_arr = np.frombuffer(msg.data, np.uint8)
+                cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            else:
+                cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+
+            if cv_image is None:
+                return
+
+            cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+
+            height, width, channel = cv_image.shape
+            bytes_per_line = channel * width
+
+            qimg = QImage(
+                cv_image.data,
+                width,
+                height,
+                bytes_per_line,
+                QImage.Format_RGB888
+            )
+
+            pixmap = QPixmap.fromImage(qimg)
+
+            scaled_pixmap = pixmap.scaled(
+                label.size(),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+
+            label.setPixmap(scaled_pixmap)
+
+        except Exception as e:
+            print(f"Error updating camera feed: {e}")
+
+    def closeEvent(self, event):
+        self.stop_camera1()
+        self.stop_camera2()
+        self.stop_camera3()
+
+        # Safety: turn electromagnet off when the camera window closes
+        msg = Bool()
+        msg.data = False
+        self.electromagnet_pub.publish(msg)
+
+        self.electromagnet_on = False
+        self.electromagnet_button.setChecked(False)
+        self.electromagnet_button.setText("Electromagnet Off")
+
+        event.accept()
+
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
     statusSignal = pyqtSignal(str)
@@ -1253,7 +1610,15 @@ class RoverGUI(QMainWindow):
         # self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
         # self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
         self.science_serial_controller = node.create_publisher( String, '/science_serial_control',5)
+        self.science_led_uv_publisher = self.node.create_publisher(Bool, '/science_led_uv', 10)
+        self.science_led_blue_publisher = self.node.create_publisher(Bool, '/science_led_blue', 10)
+        self.science_position_servo_publisher = self.node.create_publisher(Int32, '/science_position_servo', 10)
         self.science_serial_data = node.create_subscription( String, '/science_serial_data', self.get_probe_data_callback, 10)
+        self.optical_data_active = False
+        self.optical_data_x = []
+        self.optical_data_y = []
+        self.optical_sample_index = 0
+        self.optical_data_subscriber = None
 
         # Adding stuff for chem+temp tab
         # TODO: confirm topic name with science team
@@ -1296,8 +1661,6 @@ class RoverGUI(QMainWindow):
         self.site1_stopped = False
         self.site2_stopped = False
         self.chem_image_active = False
-        self.optical_data_active = False
-        self.optical_data_array = [[], []]
 
         # Store data for plotting
         self.site1_temp_data = []
@@ -1324,10 +1687,10 @@ class RoverGUI(QMainWindow):
         self.temp_plot_data = []
         self.pmt_plot_data = []
         self.ph1_time, self.ph2_time, self.hum_time, self.temp_time, self.pmt_time = (1, 1, 1, 1, 1)
-        self.led_uv = 0
-        self.science_led_uv_publisher.publish(self.led_uv)
-        self.led_blue = 0
-        self.science_led_blue_publisher.publish(self.led_blue)
+        # self.led_uv = 0
+        # self.science_led_uv_publisher.publish(self.led_uv)
+        # self.led_blue = 0
+        # self.science_led_blue_publisher.publish(self.led_blue)
 
 
         # Add save data variables for each measurement type
@@ -1350,6 +1713,9 @@ class RoverGUI(QMainWindow):
         self.ms_last_longitude = None
         self.ms_last_heading = None
 
+        self.ms_data_sites_root = Path(__file__).parent.resolve() / "data sites"
+        self.ms_data_site_dirs = []
+
         self.ms_gps_sub = node.create_subscription(NavSatFix, '/calian_gnss/gps', self.multispectral_gps_callback, 10)
         self.ms_heading_sub = node.create_subscription(GnssSignalStatus, '/calian_gnss/gps_extended', self.multispectral_heading_callback, 10)
         self.ms_image_sub = node.create_subscription(Image, '/geniecam', self.multispectral_image_callback, 10)
@@ -1359,24 +1725,30 @@ class RoverGUI(QMainWindow):
         self.longlat_tab = QWidget()
         self.controlTab = QWidget()
         self.camsTab = QWidget()
+        self.camerasLauncherTab = QWidget()
         # New Tabs (2026 Revision)
         self.chemTempTab = QWidget()
         self.multispectralTab = QWidget()
         self.opticalTab = QWidget()
+
+        self.cameras_window = CamerasWindow(self.node, self)
 
         # Setup tabs before adding them
         self.setup_science_tab()  # Setup science tab first
         self.setup_lngLat_tab()
         self.setup_control_tab()
         self.setup_cams_tab()
+        self.setup_cameras_launcher_tab()
         self.setup_chem_temp_tab()
         self.setup_multispectral_tab()
+        self.setup_optical_tab()
         
         # Add tabs to QTabWidget - with science tab first
         self.tabs.addTab(self.scienceTab, "Science")  # Science tab is now first/default
         self.tabs.addTab(self.longlat_tab, "State Machine")
         self.tabs.addTab(self.controlTab, "Controls")
         self.tabs.addTab(self.camsTab, "Cameras")
+        self.tabs.addTab(self.camerasLauncherTab, "cameras")
         self.tabs.addTab(self.chemTempTab, "Chem +Temp/Humidity")
         self.tabs.addTab(self.multispectralTab, "Multispectral")
         self.tabs.addTab(self.opticalTab, "Optical")
@@ -1389,6 +1761,25 @@ class RoverGUI(QMainWindow):
         self.multispectralImageSavedSignal.connect(self.multispectral_on_image_saved)
         self.multispectralStatusSignal.connect(self.multispectral_set_status)
 
+    def setup_cameras_launcher_tab(self):
+        layout = QVBoxLayout()
+
+        info_label = QLabel("Open the second cameras window")
+        info_label.setAlignment(Qt.AlignCenter)
+
+        self.open_cameras_window_button = QPushButton("Open Cameras Window")
+        self.open_cameras_window_button.clicked.connect(self.open_cameras_window)
+
+        layout.addWidget(info_label)
+        layout.addWidget(self.open_cameras_window_button)
+        layout.addStretch()
+
+        self.camerasLauncherTab.setLayout(layout)
+
+    def open_cameras_window(self):
+        self.cameras_window.show()
+        self.cameras_window.raise_()
+        self.cameras_window.activateWindow()
 
     def string_callback(self, msg):
         self.statusTerminal.string_callback(msg)
@@ -1417,12 +1808,15 @@ class RoverGUI(QMainWindow):
 
 
         
-    #unused utility: if multiple tabs used can have triggers when tab sswitched
     def on_tab_changed(self, index):
-        if index == 1:  # Map Tab
-            print("map tab")  
-        elif index == 2:  # Split Screen Tab
-            print("split tab") # Show map viewer in split screen tab
+        tab_name = self.tabs.tabText(index)
+
+        if tab_name == "cameras":
+            self.open_cameras_window()
+        elif index == 1:
+            print("map tab")
+        elif index == 2:
+            print("split tab")
 
     # Chem + Temp tab function
     def setup_chem_temp_tab(self):
@@ -1546,8 +1940,13 @@ class RoverGUI(QMainWindow):
 
         data_group = QGroupBox("Data Sites")
         data_layout = QVBoxLayout()
+
         self.ms_image_list = QListWidget()
         self.ms_image_list.setMinimumWidth(260)
+
+        self.multispectral_create_data_site_folders()
+        self.multispectral_populate_data_sites_list()
+
         data_layout.addWidget(self.ms_image_list)
         data_group.setLayout(data_layout)
 
@@ -1658,6 +2057,31 @@ class RoverGUI(QMainWindow):
         self.ms_prev_button.clicked.connect(self.multispectral_prev_image)
         self.ms_next_button.clicked.connect(self.multispectral_next_image)
 
+    def multispectral_create_data_site_folders(self):
+        """
+        Create the main 'data sites' folder and the 10 data site folders.
+        If they already exist, nothing bad happens.
+        """
+        self.ms_data_sites_root.mkdir(parents=True, exist_ok=True)
+
+        self.ms_data_site_dirs = []
+
+        for i in range(1, 11):
+            site_dir = self.ms_data_sites_root / f"data site {i}"
+            site_dir.mkdir(parents=True, exist_ok=True)
+            self.ms_data_site_dirs.append(site_dir)
+
+    def multispectral_populate_data_sites_list(self):
+        """
+        Show data site folders in the Data Sites list.
+        """
+        self.ms_image_list.clear()
+
+        for site_dir in self.ms_data_site_dirs:
+            item = QListWidgetItem(site_dir.name)
+            item.setData(Qt.UserRole, str(site_dir))
+            self.ms_image_list.addItem(item)
+
     def multispectral_set_status(self, text: str):
         if hasattr(self, 'ms_status_label'):
             self.ms_status_label.setText(f"Status: {text}")
@@ -1699,9 +2123,11 @@ class RoverGUI(QMainWindow):
     def multispectral_reset_session(self):
         self.ms_entries = []
         self.ms_selected_pixel = None
-        self.ms_image_list.clear()
         self.ms_graph.clear()
         self.ms_pixel_label.setText("Pixel: (not selected)")
+
+        # Keep the data site folders visible
+        self.multispectral_populate_data_sites_list()
 
     def multispectral_wavelength_text(self, wavelength):
         return "None" if wavelength is None else f"{wavelength}nm"
@@ -1934,104 +2360,88 @@ class RoverGUI(QMainWindow):
     
     #Adding Optical Module tab
     def setup_optical_tab(self):
-        optical_main_layout = QVBoxLayout() #Setting up the main layout
-        led_group = QGroupBox("LED") #LED group
-        position_group = QGroupBox("Position") #Position group
-        data_group = QGroupBox("Data") #Data group
-        graph_group = QGroupBox("Graph") #Graph group
+        optical_main_layout = QVBoxLayout()
 
-        led_layout = QHBoxLayout() 
-        position_layout = QHBoxLayout() 
-        data_layout = QHBoxLayout() 
-        graph_layout = QHBoxLayout() 
-        
-    # Led Portion Layout
-        LED_buttons_layout = QHBoxLayout()
+        # Top control row
+        top_controls_group = QGroupBox("Optical Controls")
+        top_controls_layout = QHBoxLayout()
 
-        led_label = QLabel("LED")
-        self.led_uv_button = QPushButton("UV")  
-        self.led_blue_button = QPushButton("Blue")  
+        self.optical_servo_backward_button = QPushButton("Servo Backward")
+        self.optical_servo_forward_button = QPushButton("Servo Forward")
+        self.led_uv_button = QPushButton("UV LED Off")
+        self.led_blue_button = QPushButton("Blue LED Off")
 
         self.led_uv_button.setCheckable(True)
         self.led_blue_button.setCheckable(True)
 
         self.led_uv_button.setStyleSheet("""
-            QPushButton::clicked
-            {
-            background-color : purple;
+            QPushButton:checked {
+                background-color: purple;
+                color: white;
             }
         """)
 
         self.led_blue_button.setStyleSheet("""
-            QPushButton::clicked
-            {
-            background-color : blue;
+            QPushButton:checked {
+                background-color: blue;
+                color: white;
             }
         """)
-    
-        # Adding buttons to the horizontal layout
-        LED_buttons_layout.addWidget(led_label)
-        LED_buttons_layout.addWidget(self.led_uv_button)
-        LED_buttons_layout.addWidget(self.led_blue_button)
-    
-        led_layout.addLayout(LED_buttons_layout)
-        
-        self.led_uv_button.clicked.connect(self.led_uv_btnstate)
-        self.led_blue_button.clicked.connect(self.led_blue_btnstate)
 
-    # Position Portion Layout
-        position_buttons_layout = QHBoxLayout()
+        top_controls_layout.addWidget(self.optical_servo_backward_button)
+        top_controls_layout.addWidget(self.optical_servo_forward_button)
+        top_controls_layout.addSpacing(20)
+        top_controls_layout.addWidget(self.led_uv_button)
+        top_controls_layout.addWidget(self.led_blue_button)
+        top_controls_layout.addStretch()
 
-        position_label = QLabel("Position")
-        self.site1_button = QPushButton("Site 1")  
-        self.site2_button = QPushButton("Site 2")  
+        top_controls_group.setLayout(top_controls_layout)
 
-        # Adding buttons to the horizontal layout
-        position_buttons_layout.addWidget(position_label)
-        position_buttons_layout.addWidget(self.site1_button)
-        position_buttons_layout.addWidget(self.site2_button)
-        
-        position_layout.addLayout(position_buttons_layout)
+        # Data controls
+        data_group = QGroupBox("Data")
+        data_layout = QHBoxLayout()
 
-        self.site1_button.clicked.connect(self.stop_site1_graphs) 
-        self.site2_button.clicked.connect(self.stop_site2_graphs)
-
-    # TODO: Not clear on what is meant by " [y is changing] x is constant", in any case code can be modified to have a specific
-    # const x value or have graph be updated from specific values after stopped 
-
-    # Data Portion Layout
-        self.optical_data_button = QPushButton("Data")  
-        data_layout.addWidget(self.optical_data_button)
+        self.optical_data_button = QPushButton("Start Data")
+        self.optical_data_button.setCheckable(True)
         self.optical_data_button.setStyleSheet("""
-            QPushButton::clicked
-            {
-            background-color : orange;
+            QPushButton {
+                padding: 6px 12px;
+            }
+            QPushButton:checked {
+                background-color: orange;
+                color: black;
+                font-weight: bold;
             }
         """)
-        self.optical_data_button.clicked.connect(self.start_display_graph)
 
-    # Graph Portion Layout
-        optical_graph_group = QGroupBox("Data Graph")
-        optical_graph_layout = QHBoxLayout() #Can change to QVBoxLayout as well
+        data_layout.addWidget(self.optical_data_button)
+        data_layout.addStretch()
+        data_group.setLayout(data_layout)
+
+        # Graph
+        graph_group = QGroupBox("Graph")
+        graph_layout = QHBoxLayout()
+
         self.optical_graph = pg.PlotWidget()
         self.optical_graph.setBackground("w")
         self.optical_graph.showGrid(x=True, y=True, alpha=0.3)
-        self.optical_graph.setLabel("left", "Intensity") #TODO: Not sure? Written as placeholder
-        self.optical_graph.setLabel("bottom", "Wavelenght") #TODO: Not sure? Written as placeholder
-        optical_graph_layout.addWidget(self.optical_graph)
-        optical_graph_group.setLayout(optical_graph_layout)
-        graph_layout.addLayout(optical_graph_group)
+        self.optical_graph.setLabel("left", "Y Value")
+        self.optical_graph.setLabel("bottom", "Sample Index")
 
-        led_group.setLayout(led_layout)
-        position_group.setLayout(position_layout)
-        data_group.setLayout(data_layout)
+        graph_layout.addWidget(self.optical_graph)
         graph_group.setLayout(graph_layout)
-        optical_main_layout.addLayout(led_group)
-        optical_main_layout.addLayout(position_group)
-        optical_main_layout.addLayout(data_group)
-        optical_main_layout.addLayout(graph_group)
 
-        self.opticalTab.setLayout(optical_main_layout)        
+        optical_main_layout.addWidget(top_controls_group)
+        optical_main_layout.addWidget(data_group)
+        optical_main_layout.addWidget(graph_group)
+
+        self.opticalTab.setLayout(optical_main_layout)
+
+        self.optical_servo_backward_button.clicked.connect(self.optical_servo_backward)
+        self.optical_servo_forward_button.clicked.connect(self.optical_servo_forward)
+        self.led_uv_button.clicked.connect(self.led_uv_btnstate)
+        self.led_blue_button.clicked.connect(self.led_blue_btnstate)
+        self.optical_data_button.clicked.connect(self.start_display_graph)
 
     def led_uv_btnstate(self):
         if self.led_uv_button.isChecked():
@@ -2044,6 +2454,17 @@ class RoverGUI(QMainWindow):
         msg.data = self.led_uv  # TODO: confirm this command with science team
         self.science_led_uv_publisher.publish(msg)
 
+    def led_uv_btnstate(self):
+        if self.led_uv_button.isChecked():
+            self.led_uv = 1
+            self.led_uv_button.setText("UV LED On")
+        else:
+            self.led_uv = 0
+            self.led_uv_button.setText("UV LED Off")
+        msg = Bool()
+        msg.data = self.led_uv
+        self.science_led_uv_publisher.publish(msg)
+
     def led_blue_btnstate(self):
         if self.led_blue_button.isChecked():
             self.led_blue = 1
@@ -2052,8 +2473,20 @@ class RoverGUI(QMainWindow):
             self.led_blue = 0
             self.led_blue_button.setText("Blue LED Off")
         msg = Bool()
-        msg.data = self.led_blue #TODO: confirm this command with science team
+        msg.data = self.led_blue
         self.science_led_blue_publisher.publish(msg)
+
+    def optical_servo_forward(self):
+        msg = Int32()
+        msg.data = 1   # TODO: change if your servo command value is different
+        self.science_position_servo_publisher.publish(msg)
+        print("Optical servo forward")
+
+    def optical_servo_backward(self):
+        msg = Int32()
+        msg.data = -1  # TODO: change if your servo command value is different
+        self.science_position_servo_publisher.publish(msg)
+        print("Optical servo backward")
 
     def stop_site1_graphs(self):
         msg = Int32()
@@ -2067,46 +2500,91 @@ class RoverGUI(QMainWindow):
 
     #MODIFY
     def start_display_graph(self):
-        self.optical_graph.clear()
-        self.plotted_index = ([0, 0], [0, 0])
         if self.optical_data_active:
             self.stop_display_graph()
             return
-        if not self.optical_data_active:
-            self.optical_data_subscriber = node.create_subscription(Float32MultiArray, '/optical_data', self.optical_data_callback, 10) # TODO: Modify accordingly
-            #For now will assume that optical data topic passes two arrays: x, y
-            self.optical_data_active = True
-        # self.optical_plot_data()  # Removed: will plot when data arrives
+
+        # Start a fresh run
+        self.optical_graph.clear()
+        self.optical_data_x = []
+        self.optical_data_y = []
+        self.optical_sample_index = 0
+
+        self.optical_data_subscriber = self.node.create_subscription(
+            Float32MultiArray,
+            '/optical_data',   # TODO: replace if needed
+            self.optical_data_callback,
+            10
+        )
+
+        self.optical_data_active = True
+        self.optical_data_button.setChecked(True)
+        self.optical_data_button.setText("Stop Data")
     
     def optical_data_callback(self, msg):
-        if msg.data is not None:
-            self.plotted_index[0][0] = len(self.optical_data_array[0])
-            self.plotted_index[1][0] = len(self.optical_data_array[1])
-            self.optical_data_array[0].append(msg.data[0])
-            self.optical_data_array[1].append(msg.data[1])
-            self.plotted_index[0][1] = len(self.optical_data_array[0]) - 1
-            self.plotted_index[1][1] = len(self.optical_data_array[1]) - 1
-            self.optical_plot_data()
+        if not self.optical_data_active:
+            return
+
+        if msg.data is None or len(msg.data) == 0:
+            return
+
+        # x is constant progression/index, y is the changing incoming value
+        self.optical_sample_index += 1
+        self.optical_data_x.append(self.optical_sample_index)
+        self.optical_data_y.append(float(msg.data[0]))
+
+        self.optical_plot_data()
 
     def optical_plot_data(self):
-        if len(self.optical_data_array) == 0:
+        if len(self.optical_data_y) == 0:
             print("No data collected yet for optical page")
             return
 
-        x_values = self.optical_data_array[self.plotted_index[0][0]:self.plotted_index[0][1]]
-        y_values = self.optical_data_array[self.plotted_index[1][0]:self.plotted_index[1][1]]
+        self.optical_graph.clear()
 
         pen = pg.mkPen(color=(0, 0, 255), width=2)
-        self.optical_graph.plot(x_values, y_values, pen=pen, symbol='o', symbolSize=8, symbolBrush='b')
+        self.optical_graph.plot(
+            self.optical_data_x,
+            self.optical_data_y,
+            pen=pen,
+            symbol='o',
+            symbolSize=6,
+            symbolBrush='b'
+        )
 
     def stop_display_graph(self):
         self.optical_data_active = False
-        if hasattr(self, 'optical_data_subscriber'):
-            self.optical_data_subscriber.destroy()
-        self.optical_data_button.setEnabled(True)
-        self.optical_data_button.setText("Optical Data Stopped")
-        exporter = ImageExporter(self.optical_graph.scene())
-        exporter.export('optical_data_graph.png') #Will overwrite the graph at each save
+
+        # Reset button FIRST so even if saving/unsubscribing has an issue,
+        # the UI still goes back to Start Data.
+        self.optical_data_button.setChecked(False)
+        self.optical_data_button.setText("Start Data")
+        self.optical_data_button.update()
+
+        # Destroy ROS2 subscription correctly.
+        if self.optical_data_subscriber is not None:
+            self.node.destroy_subscription(self.optical_data_subscriber)
+            self.optical_data_subscriber = None
+
+        # Save graph image
+        try:
+            exporter = ImageExporter(self.optical_graph.plotItem)
+            exporter.export('optical_data_graph.png')
+            print("Optical graph saved to optical_data_graph.png")
+        except Exception as e:
+            print(f"Could not save optical graph image: {e}")
+
+        # Save data arrays
+        try:
+            with open('optical_data.csv', 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['x', 'y'])
+                for x_val, y_val in zip(self.optical_data_x, self.optical_data_y):
+                    writer.writerow([x_val, y_val])
+
+            print("Optical data saved to optical_data.csv")
+        except Exception as e:
+            print(f"Could not save optical data CSV: {e}")
 
 
     # Call Back functions
