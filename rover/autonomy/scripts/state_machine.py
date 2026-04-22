@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 
-#state_machine.py
-
 #this code is new becasue it includes the new straight line code (homes during straight line)
 """
 Code for the state machine
@@ -14,20 +12,15 @@ from rclpy.node import Node
 import smach
 import time
 import math
-from optimal_path_improved import OPmain
-import datetime
-import csv
-#from thomas_grid_search import thomasgrid
-#import ar_detection_node  
+from optimal_path import OPmain
 from std_msgs.msg import Float32MultiArray, Bool, Float64MultiArray
 from geometry_msgs.msg import Twist
 from sm_straight_line import StraightLineApproach
-from rover.autonomy.scripts.sm_straight_line_updated import StraightLineApproachNew
 from astar_obstacle_avoidance_algorithim import AstarObstacleAvoidance
 import astar_obstacle_avoidance_grid_search 
 import gps_conversion_functions as functions
 import gps_to_pose as gps_to_pose
-import sm_grid_search_unused
+import sm_grid_search
 import ar_detection_node
 from std_msgs.msg import String, Float32MultiArray
 from geometry_msgs.msg import PoseStamped, Pose
@@ -40,12 +33,12 @@ from rclpy.qos import QoSProfile, DurabilityPolicy
 
 print("I am in the final state machine file")
 # file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
-file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+file_path=os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
     print("I managed to load the yaml file")
-
+ 
 
 RUN_STATES_DEFAULT = ["GNSS1", "AR1", "OBJ2", "OBJ1","OBJ3", "AR2", "GNSS2"] 
 RUN_STATES = sm_config.get("RUN_STATES", RUN_STATES_DEFAULT)
@@ -143,7 +136,11 @@ class GLOB_MSGS(Node):
             self.gs_status = "OBJ_FOUND"
         if msg.state == "OBJ_NOT_FOUND":
             self.gs_status = "OBJ_NOT_FOUND"
-        
+        if msg.state == "SLA_AVOIDANCE_DONE":
+            self.sla_status = "SLA_AVOIDANCE_DONE"
+        if msg.state == "SLA_AVOIDANCE_FAILED":
+            self.sla_status = "SLA_AVOIDANCE_FAILED"
+
     def pose_callback(self, msg):
         self.pose = msg
         # print(self.pose, "in pose_callback")
@@ -178,7 +175,7 @@ class GLOB_MSGS(Node):
         relative_z = data.pose.pose.position.z - self.odom_zero.z
 
         self.current_position = (relative_x, relative_y, relative_z)
-        self.current_position =(0,0,0) # CHANGE WHEN TESTING OUTSIDE
+        # self.current_position =(0,0,0) # CHANGE WHEN TESTING OUTSIDE
             
     
     def get_odom(self):
@@ -187,10 +184,10 @@ class GLOB_MSGS(Node):
     def coord_callback(self, data): 
         self.pub_state(String(data="In GPS coordinates callback"))
         location_data = data 
-        if (len(location_data.data) >= 16): #Process all 8 GPS coordinates
+        if (len(location_data.data) == 16): #Process all 8 GPS coordinates
 
             locations = {} #Create empty locations dict
-            location_name_list = ["start", "GNSS1", "GNSS2", "AR1", "AR2", "OBJ1", "OBJ2", "OBJ3", "ARREC", "OBJREC"]
+            location_name_list = ["start", "GNSS1", "GNSS2", "AR1", "AR2", "OBJ1", "OBJ2", "OBJ3"]
             i = 0
             for name in location_name_list:
                 if location_data.data[i] is not None and location_data.data[i+1] is not None:
@@ -210,7 +207,7 @@ class GLOB_MSGS(Node):
     def pub_led_light(self, msg): #for publishing signals for the leds
         self.led_publisher.publish(msg)
     
-
+    
 class InitializeAutonomousNavigation(smach.State): #State for initialization
     def __init__(self):
         smach.State.__init__(self, 
@@ -255,7 +252,7 @@ class InitializeAutonomousNavigation(smach.State): #State for initialization
                 y = distance * math.cos(theta)
 
                 cartesian[el] = (x,y) 
-                cartesian[el] =(0,0) #Temporary for testing, remove later 
+                # cartesian[el] =(0,0) #Temporary for testing, remove later 
                 self.glob_msg.pub_state(String(data=str(cartesian[el])))
 
         print("Before CARTESIAN", cartesian)
@@ -317,31 +314,26 @@ class LocationSelection(smach.State): #State for determining which mission/state
                 target_name = list(path.items())[0][0]
                 self.glob_msg.pub_state_name(String(data=target_name)) 
                 print("target_name", target_name) # add check for if it's going to AR3, OBJ2 or leaving from those!
-                # normalize the check / fix typo
                 if target_name == 'change to obj3' or userdata.prev_loc == 'change to obj3':
                     print("doing obstacle_avoidance in straight line")
                     sla = AstarObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
                 else:
                     print("Not Doing Obstalce Avoidance")
-                    print("Print to figure out last print 0")
-                    #sla = StraightLineObstacleAvoidance(sm_config.get("straight_line_obstacle_lin_vel"), sm_config.get("straight_line_obstacle_ang_vel"), [target])
-                   # sla = StraightLineApproach(sm_config.get("straight_line_approach_lin_vel"), sm_config.get("straight_line_approach_ang_vel"), [target]) 
-                    if target_name=="GNSS1" or target_name=="GNSS2" or target_name=="start":
-                        msg = MissionState()
+                    msg = MissionState()
+                    if target_name=="GNSS1" or target_name=="GNSS2" or target_name=="start" or target_name=="AR1" or target_name=="AR2" or target_name=="OBJ1": #if the next location is AR1/2 or GNSS1/2, we do straight line approach without obstacle avoidance
                         msg.state = "START_SL"
-                        msg.current_goal = PoseStamped()
-                        msg.current_goal.pose.position.x = target[0]
-                        msg.current_goal.pose.position.y = target[1]  
-                        self.glob_msg.mission_state_pub.publish(msg)
                     else:
-                        msg = MissionState()
-                        msg.state = "START_SL" #change to "START_SL_NEW" later
-                        msg.current_goal = PoseStamped()
-                        msg.current_goal.pose.position.x = target[0]
-                        msg.current_goal.pose.position.y = target[1]
-                        self.glob_msg.mission_state_pub.publish(msg)
+                        msg.state = "START_SL_AVOIDANCE" 
+                        msg.current_pose = PoseStamped()
+                        msg.current_pose.pose.position.x=self.glob_msg.get_pose().pose.position.x
+                        msg.current_pose.pose.position.y=self.glob_msg.get_pose().pose.position.y
+           
+                    msg.current_goal = PoseStamped()
+                    msg.current_goal.pose.position.x = target[0]
+                    msg.current_goal.pose.position.y = target[1]
+                    self.glob_msg.mission_state_pub.publish(msg)
                       
-                while self.glob_msg.sla_status != "SLA_DONE" and rclpy.ok():
+                while self.glob_msg.sla_status != "SLA_DONE" and self.glob_msg.sla_status != "SLA_AVOIDANCE_DONE" and rclpy.ok():
                     time.sleep(1)
                     print("waiting for sla status", self.glob_msg.sla_status)
                     
@@ -471,25 +463,7 @@ class ARSearchState(smach.State):
                         pass
         finally:
             self._aruco_sub = None
-    def get_reattempt_targets(self):
-        session_id = datetime.now().strftime('%Y%m%d_%H%M%S')
-        traverse_path = f"/home/rsx-base/rover_ws/src/rsx-rover/scripts/GUI/points_to_traverse_{session_id}.csv"
-        targets_to_reattempt =[]
 
-        with open(traverse_path, mode='r', newline='') as csvfile:
-            # Create a reader object that iterates over lines in the CSV file
-            reader = csv.DictReader(csvfile)
-
-            # Loop through each row and print its contents
-            for row in reader:
-                distance = functions.getDistanceBetweenGPSCoordinates((self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1]), (row['lat'], row['long']))
-                theta = functions.getHeadingBetweenGPSCoordinates(self.glob_msg.locations["start"][0], self.glob_msg.locations["start"][1], row['lat'], row['long'])
-                # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
-                x = distance * math.sin(theta)
-                y = distance * math.cos(theta)
-
-                targets_to_reattempt.append(x,y)
-        return targets_to_reattempt
     def execute(self, userdata):
         # canonical state message
         self.glob_msg.pub_state(String(data=f"Performing {self.state_name} Search"))
@@ -516,17 +490,15 @@ class ARSearchState(smach.State):
             if not self.glob_msg.done_early:
                 # publish START_GS with starting_point
                 msg = MissionState()
-                if self.state_name == "ARREC":
-                    targets = self.get_reattempt_targets()
-                    msg.state = "START_REATTEMPT"
-                    msg.targets = targets
-                    
-                else:
-                    msg.state = "START_GS_TRAV"
-                # msg.starting_point = PoseStamped()
-                # msg.starting_point.pose.position.x = float(target[0])
-                # msg.starting_point.pose.position.y = float(target[1])
                 msg.current_state = self.state_name
+                if msg.current_state == "AR1" or msg.current_state == "AR2":
+                    msg.state = "START_GS_TRAV"
+                else: 
+                    msg.state = "START_GS_TRAV_AVOIDANCE"
+                    msg.current_pose.pose.position.x=self.glob_msg.get_pose().pose.position.x
+                    msg.current_pose.pose.position.y=self.glob_msg.get_pose().pose.position.y
+                    
+                
                 self.glob_msg.mission_state_pub.publish(msg)
 
                 # subscribe to aruco detection and wait for gs_status
@@ -607,8 +579,10 @@ class ObjectSearchState(smach.State):
         self.state_name = state_name
         self.glob_msg = None
         self.mallet_found = False
+        self.hammer_found = False
         self.waterbottle_found = False
         self._mallet_sub = None
+        self._hammer_sub = None
         self._waterbottle_sub = None
 
     def set_msg(self, glob_msg: GLOB_MSGS):
@@ -619,6 +593,9 @@ class ObjectSearchState(smach.State):
 
     def waterbottle_callback(self, msg: Bool):
         self.waterbottle_found = bool(msg.data)
+
+    def hammer_callback(self, msg: Bool):
+        self.hammer_found = bool(msg.data)
 
     def _subscribe_object_topics(self):
         try:
@@ -631,6 +608,11 @@ class ObjectSearchState(smach.State):
                 self._waterbottle_sub = self.glob_msg.create_subscription(Bool, "waterbottle_detected", self.waterbottle_callback, 10)
         except Exception:
             self._waterbottle_sub = None
+        try:
+            if self._hammer_sub is None:
+                self._hammer_sub = self.glob_msg.create_subscription(Bool, "pick_hammer_detected", self.hammer_callback, 10)
+        except Exception:
+            self._hammer_sub = None
 
     def _destroy_object_topics(self):
         try:
@@ -655,6 +637,18 @@ class ObjectSearchState(smach.State):
                         pass
         finally:
             self._waterbottle_sub = None
+        
+        try:
+            if self._hammer_sub is not None:
+                try:
+                    self.glob_msg.destroy_subscription(self._hammer_sub)
+                except Exception:
+                    try:
+                        self._hammer_sub.destroy()
+                    except Exception:
+                        pass
+        finally:
+            self._hammer_sub = None
         self.glob_msg.gs_status = None
 
     def execute(self, userdata):
@@ -689,16 +683,15 @@ class ObjectSearchState(smach.State):
                 print("checkpoint 2")
                 # publish START_GS (let grid-search node instantiate traversal)
                 msg = MissionState()
-                if self.state_name == "ARREC":
-                    targets = self.get_reattempt_targets()
-                    msg.state = "START_REATTEMPT"
-                    msg.targets = targets
-                else:
-                    msg.state = "START_GS_TRAV"
-                    # msg.starting_point = PoseStamped()
-                    # msg.starting_point.pose.position.x = float(target[0])
-                    # msg.starting_point.pose.position.y = float(target[1])
                 msg.current_state = self.state_name
+                if msg.current_state == "OBJ1" or msg.current_state == "OBJ2": 
+                    msg.state = "START_GS_TRAV"
+                else:
+                    msg.state = "START_GS_TRAV_AVOIDANCE"
+                # msg.starting_point = PoseStamped()
+                # msg.starting_point.pose.position.x = float(target[0])
+                # msg.starting_point.pose.position.y = float(target[1])
+                
                 self.glob_msg.mission_state_pub.publish(msg)
 
                 # subscribe object detectors and wait for gs_status from grid-search
@@ -725,23 +718,24 @@ class ObjectSearchState(smach.State):
                     return "ABORT"
 
 
-                if self.mallet_found or self.waterbottle_found or in_correct_loc:
+                if self.mallet_found or self.waterbottle_found or self.hammer_found:
                     if self.mallet_found:
                         self.glob_msg.pub_state(String(data="Grid Search did find Mallet"))
                     if self.waterbottle_found:
                         self.glob_msg.pub_state(String(data="Grid Search did find Waterbottle"))
-
-                    if in_correct_loc:
-                        self.glob_msg.pub_state(String(data=f"Close enough to {self.state_name}"))
-                        self.glob_msg.pub_state(String(data=f"Goal Point Reached: {self.state_name}"))
-                        self.glob_msg.pub_led_light(String(data="mission done"))
-                    else:
-                        self.glob_msg.pub_state(String(data=f"Grid Search did not get close enough for {self.state_name}"))
-                        if self.glob_msg.abort_check:
-                            userdata.aborted_state = self.state_name
-                            self.glob_msg.pub_state_name(String(data=""))
-                            self._destroy_object_topics()
-                            return "ABORT"
+                    if self.hammer_found:
+                        self.glob_msg.get_logger().info("Grid Search did find Hammer")
+                        self.glob_msg.pub_state(String(data="Grid Search did find Hammer"))
+                    
+                        
+                    self.glob_msg.pub_state(String(data=f"Goal Point Reached: {self.state_name}"))
+                    self.glob_msg.pub_led_light(String(data="mission done"))
+                    
+                    if self.glob_msg.abort_check:
+                        userdata.aborted_state = self.state_name
+                        self.glob_msg.pub_state_name(String(data=""))
+                        self._destroy_object_topics()
+                        return "ABORT"
                 else:
                     self.glob_msg.pub_state(String(data=f"Grid Search did not find objects for {self.state_name}"))
 
@@ -863,8 +857,6 @@ def main(args=None):
     obj1 = ObjectSearchState("OBJ1")
     obj2 = ObjectSearchState("OBJ2")
     obj3 = ObjectSearchState("OBJ3")
-    arrec = ARSearchState("ARREC")
-    objrec = ObjectSearchState("OBJREC")
     tasks_ended = TasksEnded()
     abort = ABORT() 
 
@@ -877,8 +869,6 @@ def main(args=None):
     obj1.set_msg(glob_msg)
     obj2.set_msg(glob_msg)
     obj3.set_msg(glob_msg)
-    arrec.set_msg(glob_msg)
-    objrec.set_msg(glob_msg)
     tasks_ended.set_msg(glob_msg)
     abort.set_msg(glob_msg)
 
@@ -1005,32 +995,7 @@ def main(args=None):
                         "aborted_state" : "aborted_state"
                     }
                 )
-                
-            if "ARREC" in RUN_STATES:
-                smach.StateMachine.add(
-                    "ARREC",
-                    arrec,
-                    transitions={"Location Selection": "Location Selection",
-                                 "ABORT" : "ABORT"},
-                    remapping={
-                        "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc",
-                        "aborted_state" : "aborted_state"
-                    }
-                )
-                
-            if "OBJREC" in RUN_STATES:
-                smach.StateMachine.add(
-                    "OBJREC",
-                    objrec,
-                    transitions={"Location Selection": "Location Selection",
-                                 "ABORT" : "ABORT"},
-                    remapping={
-                        "rem_loc_dict": "rem_loc_dict",
-                        "prev_loc": "prev_loc",
-                        "aborted_state" : "aborted_state"
-                    }
-                )
+            
             smach.StateMachine.add(
                 "ABORT",
                 abort,

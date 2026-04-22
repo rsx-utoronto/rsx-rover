@@ -11,7 +11,7 @@ if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
 
 import rclpy
 from rclpy.node import Node
-import map_viewer_2_electric_boogaloo as map_viewer
+import map_viewer_display as map_viewer
 from pathlib import Path
 import numpy as np
 
@@ -26,21 +26,23 @@ from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix, CompressedImage, Image
 from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
+from rover.msg import MissionState
 from cv_bridge import CvBridge
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy, HistoryPolicy
 
 #cache folder of map tiles generated from tile_scraper.py
-CACHE_DIR = Path(__file__).parent.resolve() / "tile_cache"
+CACHE_DIR = Path(__file__).parent.parent.parent.parent.parent.resolve() / "src/rsx-rover/scripts/GUI/tile_cache"
 
 #map widget that has map viewer 
 class mapOverlay(QWidget):
     def __init__(self, node):
         super().__init__()
         self.node = node
-        self.viewer = map_viewer.MapViewer()
+        self.viewer = map_viewer.MapViewerDisplay()
         #sets the source of map tiles to local tile cache folder
+        print(CACHE_DIR)
         self.viewer.set_map_server(
             str(CACHE_DIR) + '/arcgis_world_imagery/{z}/{y}/{x}.jpg', 19
         )
@@ -87,7 +89,7 @@ class statusTerminal(QWidget):
 
         # Connect signals to the corresponding update methods
         self.update_status_signal.connect(self.update_string_list)
-        # rospy.Subscriber('gui_status', String, self.string_callback)
+        
         self.received_strings = []
         self.strlength = -1
     def init_ui(self):
@@ -152,7 +154,7 @@ class ArucoWidget(QWidget):
 
         # Initialize ROS subscribers
         # rospy.Subscriber('aruco_found', Bool, self.bool_callback)
-        # rospy.Subscriber('aruco_name', String, self.string_callback)
+        
         node.create_subscription(Bool, 'aruco_found', self.bool_callback, 10)
         node.create_subscription(String, 'aruco_name', self.string_callback, 10)
 
@@ -246,9 +248,6 @@ class ArucoBar(QWidget):
         self.update_label_signal.connect(self.update_label)
         self.update_list_signal.connect(self.update_string_list)
 
-        # Initialize ROS subscribers
-        # rospy.Subscriber('aruco_found', Bool, self.bool_callback)
-        # rospy.Subscriber('aruco_name', String, self.string_callback)
         node.create_subscription(Bool, 'aruco_found', self.bool_callback, 10)
         node.create_subscription(String, 'aruco_name', self.string_callback, 10)
     
@@ -444,7 +443,7 @@ class ObjectBar(QWidget):
 
     def update_hammer(self, found):
         if found:
-            self.label_hammer.setText("Hammer Found")
+            self.label_hammer.setText("Pick Hammer Found")
             self.label_hammer.setStyleSheet("""
                 background-color: #4CAF50; 
                 color: white;   
@@ -453,7 +452,7 @@ class ObjectBar(QWidget):
                 padding: 10px; 
             """)
         else:
-            self.label_hammer.setText("Hammer not found")
+            self.label_hammer.setText("Pick Hammer not Found")
             self.label_hammer.setStyleSheet("""
                 background-color: #FF5252; 
                 color: white;  
@@ -653,7 +652,7 @@ class LngLatEntryFromFile(QWidget):
 
     def collect_data(self):
         # Read data from the file
-        file_path = Path(__file__).parent.resolve() / "long_lat_goal.csv"
+        file_path = Path("~/rover_ws/src/rsx-rover/long_lat_goal.csv").expanduser()
         with open(file_path, 'r') as file:
             lines = file.readlines()
 
@@ -1084,6 +1083,7 @@ class CameraFeed:
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
     statusSignal = pyqtSignal(str)
+    missionStateSignal = pyqtSignal(str)
     def __init__(self,node):
         super().__init__()
         self.node=node
@@ -1094,9 +1094,9 @@ class RoverGUI(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
         self.velocity_control = VelocityControl(node)
-        # self.gui_status_sub = self.node.('gui_status', String, self.string_callback)
-        # self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
+
         self.gui_status_sub=node.create_subscription(String, 'gui_status', self.string_callback, 10)
+        self.mission_state_sub=node.create_subscription(MissionState, 'mission_state', self.mission_state_callback, 10)
         self.auto_abort_pub=node.create_publisher(Bool, '/auto_abort_check', 5)
         # self.manual_abort_pub = rospy.Publisher('/manual_abort_check', Bool, queue_size=5)
         # self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
@@ -1120,6 +1120,7 @@ class RoverGUI(QMainWindow):
 
         
         self.statusSignal.connect(self.string_signal_receive)
+        self.missionStateSignal.connect(self.statusTerminal.update_string_list)
 
 
         self.setup_control_tab()
@@ -1131,6 +1132,26 @@ class RoverGUI(QMainWindow):
     def string_callback(self, msg):
         self.statusTerminal.string_callback(msg)
         self.statusSignal.emit(msg.data)
+
+    def mission_state_callback(self, msg):
+        details = []
+        if msg.state:
+            details.append(f"state={msg.state}")
+        if msg.current_state:
+            details.append(f"current_state={msg.current_state}")
+
+        try:
+            goal_x = msg.current_goal.pose.position.x
+            goal_y = msg.current_goal.pose.position.y
+            if goal_x != 0.0 or goal_y != 0.0:
+                details.append(f"goal=({goal_x:.2f}, {goal_y:.2f})")
+        except Exception:
+            pass
+
+        if not details:
+            details.append("<empty mission_state>")
+
+        self.missionStateSignal.emit("[mission_state] " + " | ".join(details))
 
     def string_signal_receive(self, msg):
         msg_list = msg.split(" ")
@@ -1493,7 +1514,7 @@ class RoverGUI(QMainWindow):
         left_side_splitter = QSplitter(Qt.Vertical)
         left_side_splitter.addWidget(status_group)
         left_side_splitter.addWidget(detection_group)
-        left_side_splitter.addWidget(camera_group)
+        left_side_splitter.addWidget(camera_group) # Camera feed expands to bottom of left column
 
         # Create the horizontal splitter for the main layout
         splitter.addWidget(left_side_splitter)  # Left side has new section stacked above camera

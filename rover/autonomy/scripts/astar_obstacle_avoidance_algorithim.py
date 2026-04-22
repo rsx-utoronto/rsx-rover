@@ -52,6 +52,7 @@ import os
 from rclpy.clock import Clock
 import yaml
 import time
+from rover.msg import MissionState
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 
@@ -70,14 +71,14 @@ class AstarObstacleAvoidance(Node):
         
         #  parameters with default values
         self.declare_parameter('realsense_detection', False)
-        self.declare_parameter('realsense_pointcloud', '/camera/depth/points')
-        self.declare_parameter('pointcloud_topic', '/zed_node/point_cloud/cloud_registered')
+        self.declare_parameter('realsense_pointcloud', '/camera/depth/points') #obstacle avoidance points from realsense
+        self.declare_parameter('pointcloud_topic', '/zed_node/point_cloud/cloud_registered') #obsatcle avoidance points from zed
 
         realsense_enabled = self.get_parameter('realsense_detection').get_parameter_value().bool_value
         realsense_topic = self.get_parameter('realsense_pointcloud').get_parameter_value().string_value
         fallback_topic = self.get_parameter('pointcloud_topic').get_parameter_value().string_value
 
-        if realsense_enabled:
+        if realsense_enabled: #check which camera we're using
             self.pointcloud_topic = realsense_topic
         else:
             self.pointcloud_topic = fallback_topic
@@ -142,6 +143,12 @@ class AstarObstacleAvoidance(Node):
         self.yaw = 0
         self.lin_vel = lin_vel
         self.ang_vel = ang_vel
+        # Navigation threading primitives
+        self._nav_event = threading.Event()
+        self._nav_lock = threading.Lock()
+        self.nav_thread = None
+        self.target = []
+        self.global_waypoints = []  # list of (x, y) world coords provided by global planner
         
         # Publishers
         self.bounding_box_pub = self.create_publisher(Marker, "/rover_bounding_box", 10)
@@ -153,6 +160,8 @@ class AstarObstacleAvoidance(Node):
         self.astar_marker_pub = self.create_publisher(MarkerArray, "/astar_waypoints_markers", 1)
         self.footprint_pub = self.create_publisher(Marker, "/robot_footprint", 1)
         self.drive_publisher = self.create_publisher(Twist, "/drive", 10)
+        self.pub = self.create_publisher(MissionState, 'mission_state', 10)
+        self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
 
         # Subscribers
         self.pointcloud_sub = self.create_subscription(PointCloud2, self.pointcloud_topic, self.pointcloud_callback, 10)
@@ -162,6 +171,51 @@ class AstarObstacleAvoidance(Node):
                 
     def abort_callback(self,msg):
         self.abort_check = msg.data
+    
+    def feedback_callback(self, msg):
+        print("in Obstacle Avoidance feedback callback, msg.state:", msg.state)
+        self.get_logger().info(f"in Obstacle Avoidance feedback callback, msg.state: {msg.state}")
+
+        if msg.state == "GLOBAL_PATH_READY":
+            self.current_state = getattr(msg, "current_state", "Location Selection")
+            print("in Obstacle Avoidance msg.current_goal", msg.current_goal)
+            target_x = msg.current_goal.pose.position.x
+            target_y = msg.current_goal.pose.position.y
+            self.global_waypoints=msg.global_waypoints
+            with self._nav_lock: #new 
+                self.target = [(target_x, target_y)] #had this
+            self._nav_event.set() #new
+            if self.nav_thread is None or not self.nav_thread.is_alive():
+                self.nav_thread = threading.Thread(target=self._nav_loop, daemon=True)
+                self.nav_thread.start()
+    
+    def _nav_loop(self):
+        while rclpy.ok():
+            self._nav_event.wait()
+            if not rclpy.ok():
+                break
+            # copy nav data under lock to avoid races
+            with self._nav_lock:
+                gw = list(self.global_waypoints) if self.global_waypoints else []
+                targets = list(self.target) if self.target else []
+
+            # If the global planner provided a waypoint list, follow it (use A* only when obstructed)
+            if gw:
+                try:
+                    self.follow_global_waypoints(gw)
+                except Exception as e:
+                    self.get_logger().error(f"Error in follow_global_waypoints: {e}")
+            else:
+                for tx, ty in targets:
+                    self.move_to_target(tx, ty)
+                    if self.abort_check:
+                        break
+            # publish SLA result correlated with current_state
+            resp = MissionState()
+            resp.current_state = getattr(self, "current_state", "")
+            resp.state = "SLA_AVOIDANCE_DONE" if not self.abort_check else "SLA_AVOIDANCE_FAILED"
+            self.pub.publish(resp)
+            self._nav_event.clear()
 
     def pointcloud_callback(self, msg):
         """
@@ -170,25 +224,25 @@ class AstarObstacleAvoidance(Node):
         #  rospy.loginfo("Received point cloud, processing…")
 
         # xyz = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
-        xyz = np.array([[point[0], point[1], point[2]] for point in point_cloud2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)])
+        xyz = np.array([[point[0], point[1], point[2]] for point in point_cloud2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)]) #getting the points --> from where?
         mask = np.isfinite(xyz).all(axis=1)
-        xyz = xyz[mask]
+        xyz = xyz[mask] #to filtre out non-finite numbers
 
         w,h = self.grid_size
         new_height_grid = np.zeros((h, w), dtype=np.float32)  # heights
         grid= np.zeros((h, w), dtype=np.int8)   # shape = (rows, cols) #confirm shape!!!
 
-        for x,y,z in xyz:
+        for x,y,z in xyz: #go through all points
             if not (self.z_min < z < self.z_max):
                # print("not in threshold", z)
                 continue
 
-            gx,gy=self.world_to_grid(x,y)
+            gx,gy=self.world_to_grid(x,y) #transform the loc into our coord
             if 0 <= gx < w and 0 <= gy < h: #whithin the height threshhold so assign obstacle_threshold
                 grid[gy, gx] = self.obstacle_threshold   # mark as occupied
                 new_height_grid[gy, gx] = z  # Store actual height
-                world_x, world_y = self.grid_to_world(gx, gy)       
-                self.publish_invalid_pose_marker(world_x, world_y)  # Publish invalid pose marker
+                world_x, world_y = self.grid_to_world(gx, gy) #transform back
+                self.publish_invalid_pose_marker(world_x, world_y)  # Publish invalid pose marker --> is it beacuse we've assigned its value to grid?
         
         self.height_grid=new_height_grid
         self.occupancy_grid=grid
@@ -215,7 +269,7 @@ class AstarObstacleAvoidance(Node):
             ])
         
 
-        self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
+        self.heading = self.to_euler_angles(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, #to roll, pitch, yaw
                                             msg.pose.pose.orientation.y, msg.pose.pose.orientation.z)[2]
         self.publish_bounding_box()
     
@@ -310,7 +364,7 @@ class AstarObstacleAvoidance(Node):
         # Points marker for waypoints (larger size)
         points_marker = Marker()
         points_marker.header.frame_id = "map"
-        points_marker.header.stamp = rospy.Time.now()
+        points_marker.header.stamp =  self.get_clock().now()
         points_marker.ns = "astar_points"
         points_marker.id = 0
         points_marker.type = Marker.POINTS
@@ -321,12 +375,12 @@ class AstarObstacleAvoidance(Node):
         points_marker.color.g = 0.0
         points_marker.color.b = 0.0
         points_marker.color.a = 1.0
-        points_marker.lifetime = rospy.Duration(0)
+        points_marker.lifetime = rclpy.duration.Duration(seconds=0)
 
         # Line strip connecting waypoints
         line_marker = Marker()
         line_marker.header.frame_id = "map"
-        line_marker.header.stamp = rospy.Time.now()
+        line_marker.header.stamp = self.get_clock().now().to_msg()
         line_marker.ns = "astar_line"
         line_marker.id = 1
         line_marker.type = Marker.LINE_STRIP
@@ -337,7 +391,7 @@ class AstarObstacleAvoidance(Node):
         line_marker.color.b = 0.0
         line_marker.color.a = 1.0
         line_marker.pose.orientation.w = 1.0
-        line_marker.lifetime = rospy.Duration(0)
+        line_marker.lifetime = rclpy.duration.Duration(seconds=0)
 
         # Populate both markers with waypoints
         for index in range(0, len(waypoints), 2):
@@ -358,7 +412,7 @@ class AstarObstacleAvoidance(Node):
         # note there is an older publish bounding box function that just makes a box around the rover..
         marker = Marker()
         marker.header.frame_id = "map"  
-        marker.header.stamp = rospy.Time.now()
+        marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = "rover_bounding_box"
         marker.id = 0
         marker.type = Marker.LINE_STRIP
@@ -398,16 +452,16 @@ class AstarObstacleAvoidance(Node):
         neighbor_gx, neighbor_gy = neighbor
         
         # Check obstacles first
-        if self.occupancy_grid[current_gy, current_gx] >= self.obstacle_threshold:
+        if self.occupancy_grid[current_gy, current_gx] >= self.obstacle_threshold: #if there is an obstacle at this point
             return float('inf')
-        if self.occupancy_grid[neighbor_gy, neighbor_gx] >= self.obstacle_threshold:
+        if self.occupancy_grid[neighbor_gy, neighbor_gx] >= self.obstacle_threshold: #if there is an obstacle at this point
             return float('inf')
         
         # Use actual height difference
         height_diff = abs(self.height_grid[current_gy, current_gx] - self.height_grid[neighbor_gy, neighbor_gx])
         return height_diff + 1  # +1 for base movement cost
         
-    def heuristic(self, node, goal): #h fucntion -> euclidean distance
+    def heuristic(self, node, goal): #h fucntion -> euclidean distance, measures how far apart start and goal are, both in (x, y)
         return np.linalg.norm(np.array(node) - np.array(goal))
 
     def reconstruct_path(self, came_from, current):
@@ -425,11 +479,11 @@ class AstarObstacleAvoidance(Node):
         open_set = PriorityQueue()
         open_set.put((0, start))
         came_from = {}
-        g_score = {start: 0}
-        f_score = {start: self.heuristic(start, goal)}
+        g_score = {start: 0} #keeps track of distance/cost from start
+        f_score = {start: self.heuristic(start, goal)} #keeps track of overall distance/cost from start to goal
         closed = set()
         
-        while not open_set.empty() and not self.abort_check:
+        while not open_set.empty() and not self.abort_check: #while we have points to go to?
             _, current = open_set.get()
           
             # Skip nodes already processed
@@ -440,23 +494,23 @@ class AstarObstacleAvoidance(Node):
 
             if current == goal:
                 #print("in a*, open set is closed", current)
-                return self.reconstruct_path(came_from, current)
+                return self.reconstruct_path(came_from, current) #if processed until goal, return the constructed path
           #  print("in get neighbors in astar", current)
-            for neighbor in self.get_neighbors(current):
+            for neighbor in self.get_neighbors(current): #get coord neighbours
                 
                 if neighbor in closed:
-                    continue  # Skip closed nodes
+                    continue  # Skip closed nodes, has been processed
 
                 height_cost = self.height_cost(current, neighbor)
                 tentative_g = g_score[current] + height_cost
 
-                if tentative_g < g_score.get(neighbor, float('inf')):
+                if tentative_g < g_score.get(neighbor, float('inf')): #if its a shorter path overall to get to this point (may be due to objects), add it to path
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g
-                    f_score[neighbor] = tentative_g + self.heuristic(neighbor, goal)
-                    open_set.put((f_score[neighbor], neighbor))
-           
-        rospy.logwarn("A* failed to find a path")
+                    f_score[neighbor] = tentative_g + self.heuristic(neighbor, goal) #overall path cost
+                    open_set.put((f_score[neighbor], neighbor)) #puts the neighbour in the queue to be inspected
+
+        self.get_logger().warn("A* failed to find a path")
         return []
          
     def is_pose_valid(self, pose):
@@ -493,9 +547,9 @@ class AstarObstacleAvoidance(Node):
     def publish_invalid_pose_marker(self, x, y, z=0.1):
         marker = Marker()
         marker.header.frame_id = "map"
-        marker.header.stamp = rospy.Time.now()
+        marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = "invalid_pose"
-        marker.id = int(rospy.Time.now().to_sec() * 1000) % 1000000  # give it a semi-unique ID
+        marker.id = int(self.get_clock().now().to_sec() * 1000) % 1000000  # give it a semi-unique ID
         marker.type = Marker.CUBE
         marker.action = Marker.ADD
         marker.pose.position.x = x
@@ -512,7 +566,7 @@ class AstarObstacleAvoidance(Node):
         marker.color.g = 1.0
         marker.color.b = 0.0
         marker.color.a = 1.0
-        marker.lifetime = rospy.Duration(8.0)  # markers disappear after 2 seconds
+        marker.lifetime = rclpy.duration.Duration(seconds=8.0)  # markers disappear after 8 seconds
 
         self.invaliid_pose_sub.publish(marker)
 
@@ -545,7 +599,7 @@ class AstarObstacleAvoidance(Node):
         
         flattened_waypoints = []
         for gx, gy in waypoints:
-            x, y = self.grid_to_world(gx, gy)
+            x, y = self.grid_to_world(gx, gy) #transform into world coords
             flattened_waypoints.extend([x, y])
             
         msg.data = flattened_waypoints  # Set the data field with the flattened list
@@ -560,6 +614,135 @@ class AstarObstacleAvoidance(Node):
             angle += 2 * math.pi
         return angle
     
+    def straight_line_clear(self, goal_x, goal_y, samples=20):
+        """Check the straight-line between current position and (goal_x,goal_y)
+        by sampling intermediate poses and using is_pose_valid. Returns True
+        if no sampled pose collides.
+        """
+        if self.occupancy_grid is None:
+            return False
+
+        sx = self.current_position_x
+        sy = self.current_position_y
+        for i in range(1, samples + 1):
+            t = i / float(samples)
+            ix = sx + (goal_x - sx) * t
+            iy = sy + (goal_y - sy) * t
+            if not self.is_pose_valid((ix, iy, self.yaw)):
+                return False
+        return True
+
+    def navigate_to_point_straight(self, goal_x, goal_y, threshold=0.5, angle_threshold=0.5):
+        """Drive directly toward goal_x,goal_y (world coords) using simple
+        heading control until within threshold. Returns when reached or aborted.
+        """
+        rate = self.create_rate(20)
+        kp = 0.5
+        while rclpy.ok() and not self.abort_check:
+            dx = goal_x - self.current_position_x
+            dy = goal_y - self.current_position_y
+            dist = math.hypot(dx, dy)
+            if dist < threshold:
+                # stop
+                msg = Twist()
+                msg.linear.x = 0
+                msg.angular.z = 0
+                self.drive_publisher.publish(msg)
+                return True
+
+            target_heading = math.atan2(dy, dx)
+            angle_diff = target_heading - self.heading
+            angle_diff = (angle_diff + math.pi) % (2 * math.pi) - math.pi
+
+            msg = Twist()
+            if abs(angle_diff) <= angle_threshold:
+                msg.linear.x = self.lin_vel
+                msg.angular.z = 0
+            else:
+                msg.linear.x = 0
+                msg.angular.z = angle_diff * kp
+                if abs(msg.angular.z) < 0.3:
+                    msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
+
+            self.drive_publisher.publish(msg)
+            rate.sleep()
+        return False
+
+    def follow_astar_path(self, path):
+        """ Follow a path returned by a_star (list of grid coords).
+        Converts to world points and drives through them sequentially.
+        """
+        if not path:
+            return
+        # make a shallow copy
+        pts = list(path)
+        rate = self.create_rate(20)
+        threshold = 0.5
+        kp = 0.5
+        while rclpy.ok() and pts and not self.abort_check:
+            gx, gy = pts[0]
+            tx, ty = self.grid_to_world(gx, gy)
+            dx = tx - self.current_position_x
+            dy = ty - self.current_position_y
+            dist = math.hypot(dx, dy)
+            msg = Twist()
+            if dist < threshold:
+                # reached waypoint
+                pts.pop(0)
+                msg.linear.x = 0
+                msg.angular.z = 0
+                self.drive_publisher.publish(msg)
+                continue
+
+            target_heading = math.atan2(dy, dx)
+            angle_diff = target_heading - self.heading
+            angle_diff = (angle_diff + math.pi) % (2 * math.pi) - math.pi
+
+            if abs(angle_diff) <= 0.5:
+                msg.linear.x = self.lin_vel
+                msg.angular.z = 0
+            else:
+                msg.linear.x = 0
+                msg.angular.z = angle_diff * kp
+                if abs(msg.angular.z) < 0.3:
+                    msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
+
+            self.drive_publisher.publish(msg)
+            rate.sleep()
+
+    def follow_global_waypoints(self, waypoints):
+        """Follow global planner waypoints (world coords). For each waypoint,
+        try to traverse the straight line. If a collision is detected, run
+        A* from current grid cell to the waypoint and follow that path.
+        """
+        # copy list so we can modify locally
+        wps = list(waypoints)
+        for wx, wy in wps:
+            if self.abort_check:
+                break
+
+            # Wait until we have a map
+            if self.occupancy_grid is None:
+                self.get_logger().info("Waiting for occupancy grid before following waypoints")
+                # small sleep
+                time.sleep(0.2)
+                continue
+
+            if self.straight_line_clear(wx, wy, samples=30):
+                self.get_logger().info(f"Straight-line clear to ({wx:.2f},{wy:.2f}), driving straight")
+                self.navigate_to_point_straight(wx, wy)
+            else:
+                self.get_logger().info(f"Obstacle detected on straight line to ({wx:.2f},{wy:.2f}), invoking A*")
+                start = self.world_to_grid(self.current_position_x, self.current_position_y)
+                goal = self.world_to_grid(wx, wy)
+                path = self.a_star(start, goal)
+                if path:
+                    self.current_path = path
+                    self.publish_waypoints(path)
+                    self.follow_astar_path(path)
+                else:
+                    self.get_logger().warn("A* failed to find a path to waypoint")     
+
     def navigate(self):
         need_replan = True
         last_position = (0, 0)
@@ -568,7 +751,7 @@ class AstarObstacleAvoidance(Node):
         replan_interval = Duration(seconds=5)
         path_available = False
         first_time = True
-        goal = self.world_to_grid(self.goal[0][0], self.goal[0][1])
+        goal = self.world_to_grid(self.goal[0][0], self.goal[0][1]) #transform points
         world_goal=(self.goal[0][0], self.goal[0][1])
         rate = self.create_rate(50)
         threshold = 0.5  # meters  for each waypoint
@@ -578,14 +761,14 @@ class AstarObstacleAvoidance(Node):
         target_reached_flag=False #when true, stop!
        
        #this makes sure the origin is the right origin before stating to plan
-        while not self.got_callback:
+        while not self.got_callback: #hasn't gotten pose coord yet
             if self.abort_check:
                 print("self.abort is true!")
                 break
             # rate.sleep()
-        self.grid_origin=(self.current_position_x, self.current_position_y)
+        self.grid_origin=(self.current_position_x, self.current_position_y) #set the grid origin to init/curr position
      
-        while rclpy.ok() and not target_reached_flag and not self.abort_check:
+        while rclpy.ok() and not target_reached_flag and not self.abort_check: #while hasn't aborted and hasn't been reached
             print("Self abort check is ", self.abort_check)
             msg = Twist()
             
@@ -593,27 +776,27 @@ class AstarObstacleAvoidance(Node):
                 print("self.abort is true!")
                 break
             
-            if self.occupancy_grid is None: 
+            if self.occupancy_grid is None: #if grid hasn't been init --> should include array with occupied points, init in pointcloud callback
                 if self.abort_check:
                     break
                 print("self.occupancy_grid for straught line is None")
                 rate.sleep()
                 continue
            
-            if self.abort_check or target_reached_flag:
+            if self.abort_check or target_reached_flag: 
                 break
             
-            current_x, current_y = self.world_to_grid(self.current_position_x,self.current_position_y)
-            final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
+            current_x, current_y = self.world_to_grid(self.current_position_x,self.current_position_y) #get transformed curr location 
+            final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2) #transformed 2d distance
             
-            world_final_goal_target_distance = math.sqrt(
+            world_final_goal_target_distance = math.sqrt( #real life 2d distance
                      (world_goal[0] - self.current_position_x) ** 2 +
                      (world_goal[1] - self.current_position_y) ** 2
                  )
             
             # if this isn't working, try world_final_goal_distance
             # if final_goal_target_distance < threshold_goal or target_reached_flag:
-            if world_final_goal_target_distance < threshold_goal or target_reached_flag:
+            if world_final_goal_target_distance < threshold_goal or target_reached_flag: #if within target threshold/reached
                 print("final goal target distance", final_goal_target_distance)
                 target_reached_flag=True
                 msg.linear.x = 0
@@ -623,15 +806,15 @@ class AstarObstacleAvoidance(Node):
                 return
                 # break
             
-            start = self.world_to_grid(self.current_position_x, self.current_position_y)
+            start = self.world_to_grid(self.current_position_x, self.current_position_y) #if target hasn't been reached set a start point from world coords
 
             # replanning conditions
             
             need_replan = False
-            if self.get_clock().now() - last_plan_time > replan_interval:
+            if self.get_clock().now() - last_plan_time > replan_interval: #check whether we need replan based on threashold time
                 need_replan = True
 
-            if last_position:
+            if last_position: #check whether we need replan based on threashold dist diff
                 dx = start[0] - last_position[0]
                 dy = start[1] - last_position[1]
                 if abs(dx) > 6 or abs(dy) > 6:
@@ -646,7 +829,7 @@ class AstarObstacleAvoidance(Node):
                     break
                 print("doing astar", start, goal)
                 
-                path = self.a_star(start, goal)
+                path = self.a_star(start, goal) #generate path
                 if self.abort_check:
                     break
                 if path:
@@ -655,14 +838,9 @@ class AstarObstacleAvoidance(Node):
                     last_position = start
                     path_available = True
                     self.publish_waypoints(path)
-            
-            # if len(self.current_path)==1:
-            #     path_available=False
-            #     print("len path is 1")
-            #     break
    
             # Follow waypoints
-            while path_available and self.current_path and not self.abort_check and not target_reached_flag:
+            while path_available and self.current_path and not self.abort_check and not target_reached_flag: #while loop to navigate to path points
                 print("self.abort_check in in inner loop is", self.abort_check)
                 current_x, current_y=self.world_to_grid(self.current_position_x,self.current_position_y)
                 final_goal_target_distance= math.sqrt((goal[0] - current_x) ** 2 + (goal[1] - current_y) ** 2)
@@ -709,7 +887,7 @@ class AstarObstacleAvoidance(Node):
                     self.drive_publisher.publish(msg)
                     if self.abort_check:
                         break
-                    if target_reached_flag:
+                    if target_reached_flag: #is redundant can be deleted
                         return
                     self.get_logger().info(f"Reached waypoint. Proceeding to next. There are {len(self.current_path)} waypoints left.")
                     

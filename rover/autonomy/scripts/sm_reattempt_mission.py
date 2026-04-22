@@ -23,6 +23,8 @@ import yaml
 import os
 
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
+#file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml" #Need to find a better way and change
+
 
 with open(file_path, "r") as f:
     sm_config = yaml.safe_load(f)
@@ -328,13 +330,19 @@ class reattemptTarget(Node):
                 # should publish that it is found
                 # rospy.init_node('aruco_homing', anonymous=True) # change node name if needed
                 # pub = rospy.Publisher('drive', Twist, queue_size=10) # change topic name
-                if state == "AR_REC":
-                    if self.aruco_bbox_sub is None:
-                        # self.aruco_bbox_sub= self.create_subscription(Float64MultiArray, 'aruco_node/bbox', aimer.rosUpdate, 10) 
-                        print(sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
+                pub=self.create_publisher(Twist, 'drive', 10) # change topic name
+                if state == "AR1" or state == "AR2" or state == "AR3":
+                    # this sees which camera it is using and then uses the parameters accordingly.
+                    if sm_config.get("realsense_detection"):
+                        aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+                    else: 
+                        aimer = aruco_homing.AimerROS(640, 360, 700, 100, 100, sm_config.get("Ar_homing_lin_vel") , sm_config.get("Ar_homing_ang_vel")) # FOR ARUCO
+
+                    self.create_subscription(Float64MultiArray, 'aruco_node/bbox', callback=aimer.rosUpdate) # change topic name
                     #print (sm_config.get("Ar_homing_lin_vel"),sm_config.get("Ar_homing_ang_vel"))
                 elif state == "OBJ_REC":
                     aimer = aruco_homing.AimerROS(640, 360, 1450, 100, 200, sm_config.get("Obj_homing_lin_vel"), sm_config.get("Obj_homing_ang_vel")) # FOR WATER BOTTLE
+                    self.create_subscription(Float64MultiArray, 'object/bbox', callback=aimer.rosUpdate)
                     #print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
                     print (sm_config.get("Obj_homing_lin_vel"),sm_config.get("Obj_homing_ang_vel"))
                  #this code needs to be adjusted
@@ -369,7 +377,7 @@ class reattemptTarget(Node):
                                 msg.linear.x=self.lin_vel
                                 self.drive_publisher.publish(msg)
                                 print("final homing movement",abs(initial_time-time.time()) )
-                                time.sleep(0.1)
+                                rclpy.timer.Rate(1).sleep()
                             twist.linear.x = 0.0
                             msgg=True
                             self.done_early.publish(msgg)
