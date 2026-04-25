@@ -5,6 +5,7 @@
 
 import csv
 import sys
+from calian_gnss_ros2_msg import msg
 import rclpy
 from rclpy.node import Node
 import map_viewer as map_viewer
@@ -12,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import os
 import time
+from science.msg import Science
 
 
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QGridLayout, \
@@ -1609,15 +1611,20 @@ class RoverGUI(QMainWindow):
         self.gui_status_sub = node.create_subscription(String, 'gui_status', self.string_callback, 5)
         # self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
         # self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
-        self.science_serial_controller = node.create_publisher( String, '/science_serial_control',5)
-        self.science_led_uv_publisher = self.node.create_publisher(Bool, '/science_led_uv', 10)
-        self.science_led_blue_publisher = self.node.create_publisher(Bool, '/science_led_blue', 10)
-        self.science_position_servo_publisher = self.node.create_publisher(Int32, '/science_position_servo', 10)
-        self.science_serial_data = node.create_subscription( String, '/science_serial_data', self.get_probe_data_callback, 10)
+        self.science_state_pub = node.create_publisher(Science, '/science_state',5)
+        self.science_state_sub = node.create_subscription(Science, '/science_state', self.science_state_callback, 10)
+        # self.science_serial_controller = node.create_publisher( String, '/science_serial_control',5)
+        # self.science_led_uv_publisher = self.node.create_publisher(Bool, '/science_led_uv', 10)
+        # self.science_led_blue_publisher = self.node.create_publisher(Bool, '/science_led_blue', 10)
+        # self.science_position_servo_publisher = self.node.create_publisher(Int32, '/science_position_servo', 10)
         self.optical_data_active = False
         self.optical_data_x = []
         self.optical_data_y = []
         self.optical_sample_index = 0
+        self.state_peripheral=None
+        self.state_command=None
+        self.state_response=None
+        self.state_data=None
         self.optical_data_subscriber = None
 
         # Adding stuff for chem+temp tab
@@ -1688,7 +1695,6 @@ class RoverGUI(QMainWindow):
         self.pmt_plot_data = []
         self.ph1_time, self.ph2_time, self.hum_time, self.temp_time, self.pmt_time = (1, 1, 1, 1, 1)
         # self.led_uv = 0
-        # self.science_led_uv_publisher.publish(self.led_uv)
         # self.led_blue = 0
         # self.science_led_blue_publisher.publish(self.led_blue)
 
@@ -1761,6 +1767,33 @@ class RoverGUI(QMainWindow):
         self.multispectralImageSavedSignal.connect(self.multispectral_on_image_saved)
         self.multispectralStatusSignal.connect(self.multispectral_set_status)
 
+    def science_state_callback(self, msg):
+        # print("in science state callback")
+        peripheral = msg.peripheral.strip().lower()
+        response = msg.response.strip().lower()
+        if msg.receiver == "rsx":
+            # self.statusTerminal.string_callback(String(data=msg.state))
+            # self.statusSignal.emit(msg.state)
+            self.state_peripheral = peripheral
+            self.state_command = msg.command
+            self.state_response = response
+            self.state_data = msg.data
+
+            # Stream optical samples into the graph whenever spectrometer data arrives.
+            if self.optical_data_active and self.state_peripheral == "spectrometer" and len(self.state_data) > 0:
+                self.optical_data_callback()
+            # print(f"Science state update - Peripheral: {self.state_peripheral}, Command: {self.state_command}, Response: {self.state_response}, Data: {self.state_data}")
+            if self.state_command == "temphum_data" and len(self.state_data) >= 2:
+                print("going in temp hum callback from science state callback")
+                if self.state_response == "site_1":
+                    print("going in site 1 callback from science state callback")
+                    self.chem_graph_site_1_callback()
+                elif self.state_response == "site_2":
+                    print("going in site 2 callback from science state callback")
+                    self.chem_graph_site_2_callback()
+            
+
+
     def setup_cameras_launcher_tab(self):
         layout = QVBoxLayout()
 
@@ -1822,7 +1855,7 @@ class RoverGUI(QMainWindow):
     def setup_chem_temp_tab(self):
         main_layout = QVBoxLayout() # I am just setting an outer container to stacks the chem + temp portion vertically
         temp_hum_group = QGroupBox("Temp/Humidity")   # top section
-        chem_group = QGroupBox("Chem")                # bottom section
+        chem_group = QGroupBox("Sorter")                # bottom section
         temp_hum_layout = QVBoxLayout()
         chem_layout = QVBoxLayout()
         
@@ -2029,7 +2062,7 @@ class RoverGUI(QMainWindow):
         self.ms_graph.setBackground("w")
         self.ms_graph.showGrid(x=True, y=True, alpha=0.3)
         self.ms_graph.setLabel("left", "Greyscale Value")
-        self.ms_graph.setLabel("bottom", "Filter Index")
+        self.ms_graph.setLabel("bottom", "Wavelength (nm)")
         self.ms_graph.setYRange(0, 255)
         graph_layout.addWidget(self.ms_graph)
         graph_group.setLayout(graph_layout)
@@ -2107,7 +2140,7 @@ class RoverGUI(QMainWindow):
     def multispectral_send_science_command(self, command: str):
         msg = String()
         msg.data = command
-        self.science_serial_controller.publish(msg)
+        # self.science_serial_controller.publish(msg)
 
     def multispectral_new_session(self, session_prefix: str):
         base_dir = os.path.join(os.path.expanduser("~"), "rover_ws/src/rsx-rover/science_data", "multispectral")
@@ -2140,12 +2173,27 @@ class RoverGUI(QMainWindow):
     def multispectral_move_servo_forward(self):
         self.multispectral_send_science_command("<MS_SERVO_FORWARD_STEP>")
         self.multispectralStatusSignal.emit("Servo moved forward by 1 step")
+        send=Science()
+        send.receiver ="multispectral"
+        send.peripheral = "servo"
+        send.command = "forward"
+        self.science_state_pub.publish(send)
 
     def multispectral_move_servo_backward(self):
         self.multispectral_send_science_command("<MS_SERVO_BACKWARD_STEP>")
         self.multispectralStatusSignal.emit("Servo moved backward by 1 step")
+        send=Science()
+        send.receiver ="multispectral"
+        send.peripheral = "servo"
+        send.command = "backward"
+        self.science_state_pub.publish(send)
 
     def multispectral_collect_13(self):
+        # print("Collect 13 button clicked")
+        send=Science()
+        send.receiver ="multispectral"
+        send.command = "collect_13"
+        self.science_state_pub.publish(send)
         if self.ms_expected_images > 0:
             self.multispectralStatusSignal.emit("Collection already in progress")
             return
@@ -2158,6 +2206,11 @@ class RoverGUI(QMainWindow):
         self.multispectralStatusSignal.emit(f"Collect 13 started. Saving to {self.ms_session_dir}")
 
     def multispectral_collect_single(self):
+        
+        send=Science()
+        send.receiver ="multispectral"
+        send.command = "collect_single"
+        self.science_state_pub.publish(send)
         if self.ms_expected_images > 0:
             self.multispectralStatusSignal.emit("Collection already in progress")
             return
@@ -2172,6 +2225,7 @@ class RoverGUI(QMainWindow):
         self.multispectralStatusSignal.emit(
             f"Collect single started ({self.multispectral_wavelength_text(wavelength)}). Saving to {self.ms_session_dir}"
         )
+        
 
     def multispectral_image_callback(self, msg):
         if self.ms_expected_images <= 0 or not self.ms_collect_queue or self.ms_session_dir is None:
@@ -2291,37 +2345,44 @@ class RoverGUI(QMainWindow):
         self.multispectral_plot_pixel(x, y)
 
     def multispectral_generate_graph(self):
+        print("Generate Graph button clicked")
         if self.ms_selected_pixel is None:
             self.multispectralStatusSignal.emit("Select a pixel first by clicking on the image")
             return
         x, y = self.ms_selected_pixel
         self.multispectral_plot_pixel(x, y)
+        
 
     def multispectral_plot_pixel(self, x: int, y: int):
+        print("in multispectral_plot_pixel")
         if not self.ms_entries:
             self.multispectralStatusSignal.emit("No images collected yet")
             return
 
         x_values = []
         y_values = []
+        wavelength = [440, 500, 530, 570, 610, 670, 740, 780, 840, 900, 950, 1000]
 
         for index, entry in enumerate(self.ms_entries, start=1):
-            if index > 13:
+            if index > len(wavelength):
                 break
+
             gray = entry["gray"]
             height, width = gray.shape[:2]
             if 0 <= x < width and 0 <= y < height:
                 greyscale_value = int(gray[y, x])
             else:
                 greyscale_value = 0
-            x_values.append(index)
+            x_values.append(float(wavelength[index - 1]))
+            print("print x-axis value:", x_values[-1])
             y_values.append(greyscale_value)
 
         self.ms_graph.clear()
         pen = pg.mkPen(color=(0, 0, 255), width=2)
         self.ms_graph.plot(x_values, y_values, pen=pen, symbol='o', symbolSize=8, symbolBrush='b')
-        self.ms_graph.getAxis('bottom').setTicks([[(i, str(i)) for i in range(1, 14)]])
-        self.ms_graph.setXRange(1, 13, padding=0)
+        self.ms_graph.getAxis('bottom').setTicks([[(float(w), str(w)) for w in wavelength]])
+        self.ms_graph.setXRange(min(wavelength), max(wavelength), padding=0.02)
+        self.ms_graph.getAxis('left').setTicks([[(i, str(i)) for i in range(0, 256, 51)]])
         self.ms_graph.setYRange(0, 255)
         self.multispectralStatusSignal.emit(f"Graph updated for pixel ({x}, {y})")
 
@@ -2331,21 +2392,33 @@ class RoverGUI(QMainWindow):
         self.stop_site1_button.setEnabled(False)
         self.stop_site1_button.setText("Site 1 Stopped")
         print("Site 1 graphs stopped")
+
     def stop_site2_graphs(self):
         self.site2_stopped = True
         self.stop_site2_button.setEnabled(False)
         self.stop_site2_button.setText("Site 2 Stopped")
         print("Site 2 graphs stopped")
+
     def chem_servo_forward(self):
         msg = String()
         msg.data = "<CHEM_SERVO_FORWARD>"  # TODO: confirm this command with science team
-        self.chem_servo_pub.publish(msg)
+        send = Science()
+        send.receiver = "sorter"
+        send.peripheral = "servo"
+        send.command = "forward"
+        self.science_state_pub.publish(send)
+        # self.chem_servo_pub.publish(msg)
         print("Chem servo forward")
 
     def chem_servo_backward(self):
         msg = String()
         msg.data = "<CHEM_SERVO_BACKWARD>"  # TODO: confirm this command with science team
-        self.chem_servo_pub.publish(msg)
+        send = Science()
+        send.receiver = "sorter"
+        send.peripheral = "servo"
+        send.command = "backward"
+        self.science_state_pub.publish(send)
+        # self.chem_servo_pub.publish(msg)
         print("Chem servo backward")
 
     def toggle_chem_image(self):
@@ -2357,6 +2430,74 @@ class RoverGUI(QMainWindow):
         else:
             self.chem_display_button.setStyleSheet("")
             print("Chem image display OFF")
+    
+    def chem_graph_site_1_callback(self):
+        # Always update Site 1 graphs from [temperature, humidity] payload.
+        if self.state_data is None or len(self.state_data) < 2 or self.site1_stopped:
+            return
+
+        try:
+            temp_value = float(self.state_data[0])
+            hum_value = float(self.state_data[1])
+        except (TypeError, ValueError):
+            return
+
+        sample_index = self.site1_temp_counter + 1
+        self.site1_temp_counter = sample_index
+        self.site1_hum_counter = sample_index
+
+        self.site1_temp_data.append(temp_value)
+        self.site1_temp_time.append(sample_index)
+        self.site1_hum_data.append(hum_value)
+        self.site1_hum_time.append(sample_index)
+
+        self.site1_temp_plot.clear()
+        self.site1_temp_plot.plot(
+            self.site1_temp_time,
+            self.site1_temp_data,
+            pen=pg.mkPen(color=(255, 0, 0))
+        )
+
+        self.site1_hum_plot.clear()
+        self.site1_hum_plot.plot(
+            self.site1_hum_time,
+            self.site1_hum_data,
+            pen=pg.mkPen(color=(0, 0, 255))
+        )
+
+    def chem_graph_site_2_callback(self):
+        if self.state_data is None or len(self.state_data) < 2 or self.site2_stopped:
+            return
+
+        try:
+            temp_value = float(self.state_data[0])
+            hum_value = float(self.state_data[1])
+        except (TypeError, ValueError):
+            return
+
+        sample_index = self.site2_temp_counter + 1
+        self.site2_temp_counter = sample_index
+        self.site2_hum_counter = sample_index
+
+        self.site2_temp_data.append(temp_value)
+        self.site2_temp_time.append(sample_index)
+        self.site2_hum_data.append(hum_value)
+        self.site2_hum_time.append(sample_index)
+
+        self.site2_temp_plot.clear()
+        self.site2_temp_plot.plot(
+            self.site2_temp_time,
+            self.site2_temp_data,
+            pen=pg.mkPen(color=(255, 0, 0))
+        )
+
+        self.site2_hum_plot.clear()
+        self.site2_hum_plot.plot(
+            self.site2_hum_time,
+            self.site2_hum_data,
+            pen=pg.mkPen(color=(0, 0, 255))
+        )
+
     
     #Adding Optical Module tab
     def setup_optical_tab(self):
@@ -2425,8 +2566,8 @@ class RoverGUI(QMainWindow):
         self.optical_graph = pg.PlotWidget()
         self.optical_graph.setBackground("w")
         self.optical_graph.showGrid(x=True, y=True, alpha=0.3)
-        self.optical_graph.setLabel("left", "Y Value")
-        self.optical_graph.setLabel("bottom", "Sample Index")
+        self.optical_graph.setLabel("left", "Intensity [AU]")
+        self.optical_graph.setLabel("bottom", "Wavelength [nm]")
 
         graph_layout.addWidget(self.optical_graph)
         graph_group.setLayout(graph_layout)
@@ -2444,63 +2585,86 @@ class RoverGUI(QMainWindow):
         self.optical_data_button.clicked.connect(self.start_display_graph)
 
     def led_uv_btnstate(self):
+        send=Science()
+        send.receiver ="optical"
+        send.peripheral = "uv_led"
+        
         if self.led_uv_button.isChecked():
-            self.led_uv = 1
+            self.led_uv = True 
             self.led_uv_button.setText("UV LED On")
+            send.command = "on"
+            self.science_state_pub.publish(send)
         else:
-            self.led_uv = 0
+            send.command = "off"
+            self.science_state_pub.publish(send)
+            self.led_uv = False
             self.led_uv_button.setText("UV LED Off")
         msg = Bool()
-        msg.data = self.led_uv  # TODO: confirm this command with science team
-        self.science_led_uv_publisher.publish(msg)
-
-    def led_uv_btnstate(self):
-        if self.led_uv_button.isChecked():
-            self.led_uv = 1
-            self.led_uv_button.setText("UV LED On")
-        else:
-            self.led_uv = 0
-            self.led_uv_button.setText("UV LED Off")
-        msg = Bool()
-        msg.data = self.led_uv
-        self.science_led_uv_publisher.publish(msg)
+        msg.data = self.led_uv 
 
     def led_blue_btnstate(self):
+        send=Science()
+        send.receiver ="optical"
+        send.peripheral = "blue_led"
+
         if self.led_blue_button.isChecked():
-            self.led_blue = 1
+            self.led_blue = True
             self.led_blue_button.setText("Blue LED On")
+            send.command = "on"
+            self.science_state_pub.publish(send)
         else:
-            self.led_blue = 0
+            send.command = "off"
+            self.science_state_pub.publish(send)
+            self.led_blue = False
             self.led_blue_button.setText("Blue LED Off")
         msg = Bool()
         msg.data = self.led_blue
-        self.science_led_blue_publisher.publish(msg)
+
 
     def optical_servo_forward(self):
-        msg = Int32()
-        msg.data = 1   # TODO: change if your servo command value is different
-        self.science_position_servo_publisher.publish(msg)
+        # msg = Int32()
+        # msg.data = 1   # TODO: change if your servo command value is different
+        # self.science_position_servo_publisher.publish(msg)
+
+        send=Science()
+        send.receiver ="optical"
+        send.peripheral = "servo"
+        send.command = "forward"
+        self.science_state_pub.publish(send)
         print("Optical servo forward")
 
     def optical_servo_backward(self):
-        msg = Int32()
-        msg.data = -1  # TODO: change if your servo command value is different
-        self.science_position_servo_publisher.publish(msg)
+        # msg = Int32()
+        # msg.data = -1  # TODO: change if your servo command value is different
+        # self.science_position_servo_publisher.publish(msg)
+        send=Science()
+        send.receiver ="optical"
+        send.peripheral = "servo"
+        send.command = "backward"
+        self.science_state_pub.publish(send)
         print("Optical servo backward")
 
-    def stop_site1_graphs(self):
-        msg = Int32()
-        msg.data = 1 #TODO: confirm this command with science team
-        self.science_position_servo_publisher.publish(msg)
+    # def stop_site1_graphs(self):
+        # msg = Int32()
+        # msg.data = 1 #TODO: confirm this command with science team
+        # self.science_position_servo_publisher.publish(msg)
 
-    def stop_site2_graphs(self):
-        msg = Int32()
-        msg.data = -1 #TODO: confirm this command with science team
-        self.science_position_servo_publisher.publish(msg)
+        # send=Science()
+        # send.receiver ="temp_hum"
+        # send.peripheral = ""
+        # send.command = "forward"
+        # self.science_state_pub.publish(send)
+
+
+    # def stop_site2_graphs(self):
+    #     msg = Int32()
+    #     msg.data = -1 #TODO: confirm this command with science team
+    #     self.science_position_servo_publisher.publish(msg)
 
     #MODIFY
     def start_display_graph(self):
         if self.optical_data_active:
+            print("stopping optical data collection and displaying graph")
             self.stop_display_graph()
             return
 
@@ -2510,28 +2674,58 @@ class RoverGUI(QMainWindow):
         self.optical_data_y = []
         self.optical_sample_index = 0
 
-        self.optical_data_subscriber = self.node.create_subscription(
-            Float32MultiArray,
-            '/optical_data',   # TODO: replace if needed
-            self.optical_data_callback,
-            10
-        )
+        # self.optical_data_subscriber = self.node.create_subscription(
+        #     Float32MultiArray,
+        #     '/optical_data',   # TODO: replace if needed
+        #     self.optical_data_callback,
+        #     10
+        # )
 
         self.optical_data_active = True
         self.optical_data_button.setChecked(True)
         self.optical_data_button.setText("Stop Data")
+        send = Science()
+        send.receiver ="optical"
+        send.peripheral = "spectrometer"
+        send.command = "start"
+        self.science_state_pub.publish(send)
     
-    def optical_data_callback(self, msg):
+    def optical_data_callback(self):
+        
         if not self.optical_data_active:
             return
 
-        if msg.data is None or len(msg.data) == 0:
+        if self.state_data is None or len(self.state_data) == 0 or self.state_peripheral != "spectrometer":
+            print("Received no optical data message")
             return
 
-        # x is constant progression/index, y is the changing incoming value
-        self.optical_sample_index += 1
-        self.optical_data_x.append(self.optical_sample_index)
-        self.optical_data_y.append(float(msg.data[0]))
+        try:
+            samples = [float(value) for value in self.state_data]
+        except (TypeError, ValueError):
+            print(f"Invalid optical data payload: {self.state_data}")
+            return
+
+        if len(samples) == 0:
+            return
+        
+        # X data:
+        A0 = 3.152446842e+2
+        B1 = 2.688494791
+        B2 = -8.964262020e-4
+        B3 = -1.030880174e-5
+        B4 = 2.083514791e-8
+        B5 = -1.290505933e-11
+        cl = lambda x: A0 +B1*x +B2*x**2 +B3*x**3 +B4*x**4 +B5*x**5
+        nm = [int(cl(i+1.)) for i in range(288)]
+        self.optical_data_x = nm
+
+
+
+        # Keep x fixed as channel index; replace y each callback with latest spectrum.
+        # if len(self.optical_data_x) != len(samples):
+        #     self.optical_data_x = list(range(len(samples)))
+
+        self.optical_data_y = samples
 
         self.optical_plot_data()
 
@@ -2585,6 +2779,11 @@ class RoverGUI(QMainWindow):
             print("Optical data saved to optical_data.csv")
         except Exception as e:
             print(f"Could not save optical data CSV: {e}")
+        send = Science()
+        send.receiver ="optical"
+        send.peripheral = "spectrometer"
+        send.command = "stop"
+        self.science_state_pub.publish(send)
 
 
     # Call Back functions
@@ -3100,143 +3299,6 @@ class RoverGUI(QMainWindow):
     #     self.setStyleSheet("background-color: #FFFFFF")
     #     self.status_label.setText("")
     
-    def get_probe_data_callback(self, data):
-        if "RECEIVED" in data.data or "ERROR" in data.data:
-            return
-        msgs = data.data.split(";")
-        msg = []
-        for i in msgs:
-            if i == "":
-                continue
-            msg.append(i.split(":"))
-
-        # PH1 block (no changes needed - this is already correct)
-        if self.left_middle_item1.display or self.left_middle_item1.site1_block.reading:
-            if self.ph1_time == 1:
-                self.ph1_time_buffer = []
-                self.ph1_data_buffer = []
-            self.ph1_time_buffer.append(self.ph1_time)
-            ph1_graph_data = float(msg[0][1])
-            self.ph1_data_buffer.append(ph1_graph_data)
-            self.ph1_time += 1
-            self.ph1_plot_data = [self.ph1_data_buffer, self.ph1_time_buffer]
-        if self.left_middle_item1.site1_block.start_read:
-            self.ph1_start = len(self.ph1_data_buffer)
-            self.left_middle_item1.site1_block.start_read = False
-        if not (self.left_middle_item1.site1_block.start_read or self.left_middle_item1.site1_block.reading) and self.left_middle_item1.site1_block.stop_read:
-            self.ph1_plot_avg = sum(self.ph1_plot_data[0]) / len(self.ph1_plot_data[0])
-            # Store a deep copy of the data for saving
-            self.ph1_save_data = [self.ph1_plot_data[0][:], self.ph1_plot_data[1][:]]
-            self.ph1_save_data[0].insert(0, self.ph1_plot_avg)
-            self.ph1_save_data[1].insert(0, -1)
-            # self.ph1_time = 1
-            self.left_middle_item1.site1_block.stop_read = False
-
-        # PH2 block - updated to match ph1 pattern
-        if self.left_middle_item1.display or self.left_middle_item1.site2_block.reading:
-            if self.ph2_time == 1:
-                self.ph2_time_buffer = []
-                self.ph2_data_buffer = []
-            self.ph2_time_buffer.append(self.ph2_time)
-            ph2_graph_data = float(msg[1][1])
-            self.ph2_data_buffer.append(ph2_graph_data)
-            self.ph2_time += 1
-            self.ph2_plot_data = [self.ph2_data_buffer, self.ph2_time_buffer]
-        if self.left_middle_item1.site2_block.start_read:
-            self.ph2_start = len(self.ph2_data_buffer)
-            self.left_middle_item1.site2_block.start_read = False
-        if not (self.left_middle_item1.site2_block.start_read or self.left_middle_item1.site2_block.reading) and self.left_middle_item1.site2_block.stop_read:
-            self.ph2_plot_avg = sum(self.ph2_plot_data[0]) / len(self.ph2_plot_data[0])
-            # Store a deep copy of the data for saving
-            self.ph2_save_data = [self.ph2_plot_data[0][:], self.ph2_plot_data[1][:]]
-            self.ph2_save_data[0].insert(0, self.ph2_plot_avg)
-            self.ph2_save_data[1].insert(0, -1)
-            # self.ph2_time = 1
-            self.left_middle_item1.site2_block.stop_read = False
-        
-        # Merged HUM & TEMP block
-        if self.left_top_widget.display or self.left_top_widget.reading:
-            # Initialize buffers if needed for both measurements
-            if self.hum_time == 1:
-                self.hum_time_buffer = []
-                self.hum_data_buffer = []
-                self.temp_time_buffer = []
-                self.temp_data_buffer = []
-            
-            # Process humidity data
-            self.hum_time_buffer.append(self.hum_time)
-            hum_graph_data = float(msg[2][1])
-            self.hum_data_buffer.append(hum_graph_data)
-            
-            # Process temperature data with same time index
-            self.temp_time_buffer.append(self.hum_time)  # Use same time counter for both
-            temp_graph_data = float(msg[3][1])
-            self.temp_data_buffer.append(temp_graph_data)
-            
-            # Increment shared time counter
-            self.hum_time += 1
-            self.temp_time = self.hum_time  # Keep temp time in sync
-            
-            # Create plot data for both
-            self.hum_plot_data = [self.hum_data_buffer, self.hum_time_buffer]
-            self.temp_plot_data = [self.temp_data_buffer, self.temp_time_buffer]
-
-        # Handle start reading event for both measurements
-        if self.left_top_widget.start_read:
-            self.hum_start = len(self.hum_data_buffer)
-            self.temp_start = len(self.temp_data_buffer)
-            self.left_top_widget.start_read = False
-
-        # Handle stop reading event for both measurements
-        if not (self.left_top_widget.start_read or self.left_top_widget.reading) and self.left_top_widget.stop_read:
-            # Process humidity final data
-            if len(self.hum_plot_data[0]) > 0:
-                self.hum_plot_avg = sum(self.hum_plot_data[0]) / len(self.hum_plot_data[0])
-                # Store a deep copy of the data for saving
-                self.hum_save_data = [self.hum_plot_data[0][:], self.hum_plot_data[1][:]]
-                self.hum_save_data[0].insert(0, self.hum_plot_avg)
-                self.hum_save_data[1].insert(0, -1)
-            
-            # Process temperature final data
-            if len(self.temp_plot_data[0]) > 0:
-                self.temp_plot_avg = sum(self.temp_plot_data[0]) / len(self.temp_plot_data[0])
-                # Store a deep copy of the data for saving
-                self.temp_save_data = [self.temp_plot_data[0][:], self.temp_plot_data[1][:]]
-                self.temp_save_data[0].insert(0, self.temp_plot_avg)
-                self.temp_save_data[1].insert(0, -1)
-            
-            # Reset counters and buffers
-            # self.hum_time = 1
-            # self.temp_time = 1
-            self.left_top_widget.stop_read = False
-
-        # PMT block - updated to match ph1 pattern
-        if self.left_middle_item2.display or self.left_middle_item2.site1_block.reading:
-            if self.pmt_time == 1:
-                self.pmt_time_buffer = []
-                self.pmt_data_buffer = []
-            self.pmt_time_buffer.append(self.pmt_time)
-            pmt_graph_data = float(msg[4][1])
-            self.pmt_data_buffer.append(pmt_graph_data)
-            self.pmt_time += 1
-            self.pmt_plot_data = [self.pmt_data_buffer, self.pmt_time_buffer]
-        if self.left_middle_item2.site1_block.start_read:
-            self.pmt_start = len(self.pmt_data_buffer)
-            self.left_middle_item2.site1_block.start_read = False
-        if not (self.left_middle_item2.site1_block.start_read or self.left_middle_item2.site1_block.reading) and self.left_middle_item2.site1_block.stop_read:
-            self.pmt_plot_avg = sum(self.pmt_plot_data[0]) / len(self.pmt_plot_data[0])
-            # Store a deep copy of the data for saving
-            self.pmt_save_data = [self.pmt_plot_data[0][:], self.pmt_plot_data[1][:]]
-            self.pmt_save_data[0].insert(0, self.pmt_plot_avg)
-            self.pmt_save_data[1].insert(0, -1)
-            # self.pmt_time = 1
-            self.left_middle_item2.site1_block.stop_read = False
-        
-        self.pmt_switch = int(msg[5][1])
-        self.left_middle_item2.pmtWidget.setText(f"PMT: {msg[5][1]}")
-
-        self.probeUpdateSignal.emit(True)
-
     def plot_science_temperature_data(self, data_buffer, time_buffer):
         pen = pg.mkPen(color=(255, 0, 0))
         self.science_temperature_plot.plot(time_buffer, data_buffer, pen=pen, symbol="+",symbolSize=10, symbolBrush="b")
@@ -4095,7 +4157,8 @@ class CameraSelect(QWidget):
 
 if __name__ == '__main__':
     rclpy.init()
-    node=rclpy.create_node('rover_gui')
+    node = rclpy.create_node('rover_gui')
+    
     # rospy.init_node('rover_gui', anonymous=False)
     app = QApplication(sys.argv)
     gui = RoverGUI(node)
@@ -4124,4 +4187,18 @@ if __name__ == '__main__':
     """)
 
     gui.show()
+
+    # Keep ROS callbacks alive without blocking the Qt event loop.
+    ros_spin_timer = QTimer()
+    ros_spin_timer.timeout.connect(lambda: rclpy.spin_once(node, timeout_sec=0.0))
+    ros_spin_timer.start(10)
+
+    def shutdown_ros():
+        ros_spin_timer.stop()
+        if rclpy.ok():
+            node.destroy_node()
+            rclpy.shutdown()
+
+    app.aboutToQuit.connect(shutdown_ros)
+
     sys.exit(app.exec_())
