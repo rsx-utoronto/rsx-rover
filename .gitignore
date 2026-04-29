@@ -13,3 +13,4 @@ build/
 install/
 log/
 venv/
+.DS_Store

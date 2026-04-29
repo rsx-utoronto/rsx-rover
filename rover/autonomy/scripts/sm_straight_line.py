@@ -15,6 +15,7 @@ import os
 import numpy as np
 import threading
 
+
 file_path = os.path.join(os.path.dirname(__file__), "sm_config.yaml")
 #file_path = "/home/rsx/rover_ws/src/rsx-rover/rover/autonomy/scripts/sm_config.yaml"
 
@@ -33,9 +34,9 @@ class StraightLineApproach(Node):
         self.x = 0#-100000
         self.y = 0#-100000
         self.heading = 0
-        self.active = False
+       
         self.target = None
-        self.sub = self.create_subscription(String, 'chatter', self.callback, 10)
+
         # Use QoS depth 10 and add callback logging
         self.pose_subscriber = self.create_subscription(
             PoseStamped, '/pose', self.pose_callback, 10)
@@ -47,26 +48,22 @@ class StraightLineApproach(Node):
         self.aruco_sub = self.create_subscription(
             Bool, "/aruco_found", self.detection_callback, 10)
         
-        self.pub = self.create_publisher(MissionState, 'mission_state', 10)
         self.sla_pub = self.create_publisher(String, 'sla_pub', 10)
         self.lin_vel= sm_config.get("straight_line_approach_lin_vel")
         self.ang_vel = sm_config.get("straight_line_approach_ang_vel")
-        self.target = None
+        self.pub = self.create_publisher(MissionState, 'mission_state', 10)
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
         self._nav_lock = threading.Lock()
         self._pose_lock = threading.Lock()
         self._nav_event = threading.Event()
         self.nav_thread = None
-    
-    def callback(self, msg):
-        #print("I heard: ", msg.data)
-        pass
 
     def feedback_callback(self, msg):
-        print("in SL feedback callback, msg.state:", msg.state)
+        # print("in SL feedback callback, msg.state:", msg.state)
         self.get_logger().info(f"in SL feedback callback, msg.state: {msg.state}")
 
         if msg.state == "START_SL":
+            print("Reached START_SL state in SL")
             self.current_state = getattr(msg, "current_state", "Location Selection")
             print("in SL msg.current_goal", msg.current_goal)
             target_x = msg.current_goal.pose.position.x
@@ -75,10 +72,9 @@ class StraightLineApproach(Node):
                 self.target = [(target_x, target_y)] #had this
             self._nav_event.set() #new
             if self.nav_thread is None or not self.nav_thread.is_alive():
+                print(("Starting navigation thread in SL"))
                 self.nav_thread = threading.Thread(target=self._nav_loop, daemon=True)
                 self.nav_thread.start()
-        else:
-            self.active = False
     
     def pose_callback(self, msg):
         print("in SL pose callback")
@@ -127,14 +123,12 @@ class StraightLineApproach(Node):
         self.found = data
 
     def move_to_target(self, target_x, target_y, state="Location Selection"): #navigate needs to take in a state value as well (FINISH IT)
-        
         kp = 0.5
         threshold = 0.5
         angle_threshold = 0.2
         print(f"Starting move_to_target towards: ({target_x}, {target_y})")
         print(self.x, self.y, self.heading)
         while (rclpy.ok()) and (self.abort_check is False):
-            # rclpy.spin_once(self, timeout_sec=0.1)
             print("in move to target loop", self.x, self.y, self.heading)
             msg = Twist()
             if target_x is None or target_y is None or self.x is None or self.y is None:
@@ -145,21 +139,13 @@ class StraightLineApproach(Node):
                 heading=self.heading
             target_heading = math.atan2(target_y - y, target_x - x)
             target_distance = math.sqrt((target_x - x) ** 2 + (target_y - y) ** 2)
-            # print(f"Current Position: ({self.x}, {self.y})")
-            # print("Target Heading:", math.degrees(target_heading), " Target Distance:", target_distance)
-            # print(f"x: {self.x}, y {self.y}, heading {self.heading}")
 
             angle_diff = target_heading - heading
-            
-            # print ( f"angle_diff: {angle_diff}")
 
             if angle_diff > math.pi:
                 angle_diff -= 2 * math.pi
             elif angle_diff < -math.pi:
                 angle_diff += 2 * math.pi
-                
-            # print (f"diff in heading: {angle_diff}", f"target_distance: {target_distance}")
-            # rclpy.spin_once(self, timeout_sec=0.1)
 
             if target_distance < threshold:
                 msg.linear.x = 0.0
@@ -179,29 +165,10 @@ class StraightLineApproach(Node):
 
             self.drive_publisher.publish(msg)
             time.sleep(1/50)
-
-    # def navigate(self, state="Location Selection"): # navigate needs to take in a state value as well
-    #     print("self.targets", self.target)
-    #     for target_x, target_y in self.target:
-    #         print(f"Moving towards target: ({target_x}, {target_y})")
-    #         self.move_to_target(target_x, target_y)
-    #         if self.abort_check:
-    #             self.abort_check = False
-    #             break
-    #         time.sleep(1)
-    #     sla_msg = MissionState()
-    #     # compute success against first target we were given
-    #     tx, ty = targets[0]
-    #     if (np.abs(self.x - tx) < 0.5) and (np.abs(self.y - ty) < 0.5):
-    #          sla_msg.state = "SLA_DONE"
-    #     else:
-    #          sla_msg.state = "SLA_FAILED"
- 
-    #     self.active = False
-    #     self.pub.publish(sla_msg)
         
     def _nav_loop(self):
         while rclpy.ok():
+            print("in nav loop for SL, waiting for event")
             self._nav_event.wait()
             if not rclpy.ok():
                 break
@@ -218,8 +185,6 @@ class StraightLineApproach(Node):
             resp.state = "SLA_DONE" if not self.abort_check else "SLA_FAILED"
             self.pub.publish(resp)
             self._nav_event.clear()
-
-        
 
 def main():
     rclpy.init(args=None)

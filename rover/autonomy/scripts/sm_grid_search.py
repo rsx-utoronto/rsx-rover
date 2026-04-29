@@ -94,10 +94,7 @@ class GS_Traversal(Node):
             if self._nav_thread is None or not self._nav_thread.is_alive():
                 self._nav_thread = threading.Thread(target=self.navigate, daemon=True)
                 self._nav_thread.start()
-        # elif msg.state in ("HOMING_DONE", "HOMING_SUCCESS", "HOMING_FAILED"):
-        #     self.homing_status = msg.state
-        else:
-            self.active = False
+      
        
     def pose_callback(self, msg):
         self.x = msg.pose.position.x
@@ -421,10 +418,10 @@ def main():
     import rclpy
     rclpy.init()
     executor = MultiThreadedExecutor()
+    gs = GS_Traversal()
     executor.add_node(gs)
-    gs= GS_Traversal() 
     try:
-        executor.spin(gs)
+        executor.spin()
     finally:
         gs.destroy_node()
         rclpy.shutdown()

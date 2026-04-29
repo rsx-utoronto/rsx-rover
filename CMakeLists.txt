@@ -152,6 +152,10 @@ install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(DIRECTORY rover/autonomy/launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
 # Install configuration files (e.g., Fast DDS profiles)
 install(DIRECTORY config
   DESTINATION share/${PROJECT_NAME}
@@ -211,7 +215,18 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  scripts/GUI/map_path_planner_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/GUI/map_viewer_display.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   scripts/GUI/map_viewer.py
+  scripts/GUI/map_viewer_display.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -223,6 +238,11 @@ install(PROGRAMS
 install(PROGRAMS
   rover/autonomy/scripts/aruco_homing.py
   rover/autonomy/scripts/aruco_homing_improve.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  rover/autonomy/scripts/local_astar.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -241,11 +261,6 @@ install(PROGRAMS
 )
 install(PROGRAMS
   rover/autonomy/scripts/led_light.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-install(PROGRAMS
-  rover/autonomy/scripts/sm_straight_line_new.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -11,7 +11,7 @@ if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
 
 import rclpy
 from rclpy.node import Node
-import map_viewer as map_viewer
+import map_viewer_display as map_viewer
 from pathlib import Path
 import numpy as np
 
@@ -26,6 +26,7 @@ from PyQt5.QtCore import Qt, QPointF
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import NavSatFix, CompressedImage, Image
 from std_msgs.msg import Float32MultiArray, Float64MultiArray, String, Bool
+from rover.msg import MissionState
 from cv_bridge import CvBridge
 from PyQt5.QtGui import QImage, QPixmap, QPainter,QPalette,QStandardItemModel, QTextCursor, QFont
 from calian_gnss_ros2_msg.msg import GnssSignalStatus
@@ -39,7 +40,7 @@ class mapOverlay(QWidget):
     def __init__(self, node):
         super().__init__()
         self.node = node
-        self.viewer = map_viewer.MapViewer()
+        self.viewer = map_viewer.MapViewerDisplay()
         #sets the source of map tiles to local tile cache folder
         print(CACHE_DIR)
         self.viewer.set_map_server(
@@ -88,7 +89,7 @@ class statusTerminal(QWidget):
 
         # Connect signals to the corresponding update methods
         self.update_status_signal.connect(self.update_string_list)
-        # rospy.Subscriber('gui_status', String, self.string_callback)
+        
         self.received_strings = []
         self.strlength = -1
     def init_ui(self):
@@ -153,7 +154,7 @@ class ArucoWidget(QWidget):
 
         # Initialize ROS subscribers
         # rospy.Subscriber('aruco_found', Bool, self.bool_callback)
-        # rospy.Subscriber('aruco_name', String, self.string_callback)
+        
         node.create_subscription(Bool, 'aruco_found', self.bool_callback, 10)
         node.create_subscription(String, 'aruco_name', self.string_callback, 10)
 
@@ -228,21 +229,28 @@ class ArucoBar(QWidget):
     update_label_signal = pyqtSignal(bool)
     update_list_signal = pyqtSignal(str)
 
-    def __init__(self, node):
+    def __init__(self, node, index):
         super().__init__()
         self.init_ui()
         self.node=node
+        self.aruco_name = ''
+
+        self.index = index 
+        self.found_count = 0
+        self.aruco_max = 2
+        self.prev_found = False 
+        self.assigned = False
+
+
+        self.found_list = []
+        
         # Connect signals to the corresponding update methods
         self.update_label_signal.connect(self.update_label)
         self.update_list_signal.connect(self.update_string_list)
 
-        # Initialize ROS subscribers
-        # rospy.Subscriber('aruco_found', Bool, self.bool_callback)
-        # rospy.Subscriber('aruco_name', String, self.string_callback)
         node.create_subscription(Bool, 'aruco_found', self.bool_callback, 10)
         node.create_subscription(String, 'aruco_name', self.string_callback, 10)
-        
-        
+    
         self.received_string = ""
 
     def init_ui(self):
@@ -269,12 +277,25 @@ class ArucoBar(QWidget):
 
     def string_callback(self, msg):
         # Emit signal to update the list in the main thread
-        self.update_list_signal.emit(msg.data.strip())
+        self.aruco_name = msg.data.strip()
+        self.update_list_signal.emit(msg.data.strip())            
 
     def update_label(self, found):
-        # Update the label in the main thread
-        if found:
-            self.label.setText("Aruco Found: " + self.received_string)
+
+        rising_edge = found and not self.prev_found
+
+        current_count = self.found_count   # <-- ADD THIS
+
+        # Assign ONCE using snapshot of count
+        if rising_edge and not self.assigned and current_count == self.index:
+            self.assigned = True
+
+        # Increment AFTER checking
+        if rising_edge and self.found_count < self.aruco_max:
+            self.found_count += 1
+
+        if self.assigned:
+            self.label.setText(self.received_string)
             self.label.setStyleSheet("""
                 background-color: #4CAF50; 
                 color: white;   
@@ -292,9 +313,12 @@ class ArucoBar(QWidget):
                 padding: 10px;  
             """)
 
+        self.prev_found = found    
+
     def update_string_list(self, new_string):
         # Append the string to the list in the main thread
         self.received_string = new_string
+
 
 class ObjectBar(QWidget):
     # Define signals to communicate with the main thread
@@ -437,6 +461,7 @@ class ObjectBar(QWidget):
                 padding: 10px;  
             """)
 
+
 class StateMachineStatus(QWidget):
     # Define signal to update the label
     update_label_signal = pyqtSignal(str)
@@ -451,6 +476,7 @@ class StateMachineStatus(QWidget):
         # Initialize ROS subscriber
         # rospy.Subscriber('/led_colour', String, self.callback)
         node.create_subscription(String, '/led_colour', self.callback, 10)
+
 
     def init_ui(self):
         # Create a label
@@ -626,7 +652,7 @@ class LngLatEntryFromFile(QWidget):
 
     def collect_data(self):
         # Read data from the file
-        file_path = Path(__file__).parent.resolve() / "long_lat_goal.csv"
+        file_path = Path("~/rover_ws/src/rsx-rover/long_lat_goal.csv").expanduser()
         with open(file_path, 'r') as file:
             lines = file.readlines()
 
@@ -1057,6 +1083,7 @@ class CameraFeed:
 #main gui class, make updates here to change top level hierarchy
 class RoverGUI(QMainWindow):
     statusSignal = pyqtSignal(str)
+    missionStateSignal = pyqtSignal(str)
     def __init__(self,node):
         super().__init__()
         self.node=node
@@ -1067,9 +1094,9 @@ class RoverGUI(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
         self.velocity_control = VelocityControl(node)
-        # self.gui_status_sub = self.node.('gui_status', String, self.string_callback)
-        # self.auto_abort_pub = rospy.Publisher('/auto_abort_check', Bool, queue_size=5)
+
         self.gui_status_sub=node.create_subscription(String, 'gui_status', self.string_callback, 10)
+        self.mission_state_sub=node.create_subscription(MissionState, 'mission_state', self.mission_state_callback, 10)
         self.auto_abort_pub=node.create_publisher(Bool, '/auto_abort_check', 5)
         # self.manual_abort_pub = rospy.Publisher('/manual_abort_check', Bool, queue_size=5)
         # self.next_state_pub = rospy.Publisher('/next_state', Bool, queue_size=5)
@@ -1093,6 +1120,7 @@ class RoverGUI(QMainWindow):
 
         
         self.statusSignal.connect(self.string_signal_receive)
+        self.missionStateSignal.connect(self.statusTerminal.update_string_list)
 
 
         self.setup_control_tab()
@@ -1104,6 +1132,26 @@ class RoverGUI(QMainWindow):
     def string_callback(self, msg):
         self.statusTerminal.string_callback(msg)
         self.statusSignal.emit(msg.data)
+
+    def mission_state_callback(self, msg):
+        details = []
+        if msg.state:
+            details.append(f"state={msg.state}")
+        if msg.current_state:
+            details.append(f"current_state={msg.current_state}")
+
+        try:
+            goal_x = msg.current_goal.pose.position.x
+            goal_y = msg.current_goal.pose.position.y
+            if goal_x != 0.0 or goal_y != 0.0:
+                details.append(f"goal=({goal_x:.2f}, {goal_y:.2f})")
+        except Exception:
+            pass
+
+        if not details:
+            details.append("<empty mission_state>")
+
+        self.missionStateSignal.emit("[mission_state] " + " | ".join(details))
 
     def string_signal_receive(self, msg):
         msg_list = msg.split(" ")
@@ -1191,9 +1239,11 @@ class RoverGUI(QMainWindow):
         self.camsTab.setLayout(cam_tab_layout)
 
     def setup_control_tab(self):
-        self.controls_group = QGroupBox("Controls")
+        
+        #self.controls_group = QGroupBox("Controls")
         controls_layout = QHBoxLayout()
 
+        '''
         # Joystick (for Controls tab)
         joystick_group = QGroupBox("Joystick")
         joystick_layout = QVBoxLayout()
@@ -1234,6 +1284,7 @@ class RoverGUI(QMainWindow):
         control_tab_layout = QVBoxLayout()
         control_tab_layout.addWidget(self.controls_group)
         self.controlTab.setLayout(control_tab_layout)
+        '''
 
         
         # self.controlTab.setLayout(control_tab_layout)
@@ -1273,6 +1324,7 @@ class RoverGUI(QMainWindow):
     #used to initialize main tab with splitters
     def setup_split_screen_tab(self):
         # Controls section
+        '''
         self.controls_group = QGroupBox("Controls")
         controls_layout = QHBoxLayout()
 
@@ -1284,7 +1336,7 @@ class RoverGUI(QMainWindow):
         joystick_group.setLayout(joystick_layout)
         self.joystick_splitter.joystickMoved.connect(self.sync_joysticks)
 
-
+        
         # Gear slider
         gear_group = QGroupBox("Gear Control")
         slider_layout = QVBoxLayout()
@@ -1323,7 +1375,7 @@ class RoverGUI(QMainWindow):
         # vertical_splitter.addWidget(controls_group)
         control_tab_layout = QVBoxLayout()
         control_tab_layout.addWidget(self.controls_group)
-
+        '''
         # Create the new section to appear above camera
         status_group = QGroupBox("Status")
         status_layout = QHBoxLayout()  # Changed from QVBoxLayout to QHBoxLayout
@@ -1366,11 +1418,13 @@ class RoverGUI(QMainWindow):
         detection_group.setMaximumHeight(150)  # Increase from 120 to 150
         
         # Create components
-        self.aruco_bar = ArucoBar(node)
+        self.aruco_bar = ArucoBar(node, 1)
+        self.aruco2_bar = ArucoBar(node, 2)
         self.object_bar = ObjectBar(node)
         
         # Add components to horizontal layout
         detection_layout.addWidget(self.aruco_bar)
+        detection_layout.addWidget(self.aruco2_bar)
         detection_layout.addWidget(self.object_bar)
         detection_group.setLayout(detection_layout)
 
@@ -1439,11 +1493,13 @@ class RoverGUI(QMainWindow):
         self.clear_map_button.setStyleSheet(button_style)
         self.clear_map_button.clicked.connect(self.map_overlay_splitter.clear_map)
 
+        
         # Create horizontal layout for checkbox and clear button
         checkbox_layout = QHBoxLayout()
         checkbox_layout.addWidget(self.checkbox_setting_splitter)
         checkbox_layout.addStretch(1)  # This pushes the checkbox left and button right
         checkbox_layout.addWidget(self.clear_map_button)
+        
         
         # Create a container widget for the checkbox layout
         checkbox_container = QWidget()
@@ -1460,27 +1516,40 @@ class RoverGUI(QMainWindow):
         left_side_splitter.addWidget(detection_group)
         left_side_splitter.addWidget(camera_group) # Camera feed expands to bottom of left column
 
-        # Create the status terminal group box
+        # Create the horizontal splitter for the main layout
+        splitter.addWidget(left_side_splitter)  # Left side has new section stacked above camera
+        # splitter.addWidget(map_group)           # Right side has map
+        
+
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 1)
+        
+        
+        # Create a group box for the status terminal
+        vertSplitter = QSplitter(Qt.Vertical)
+        vertSplitter.addWidget(splitter)
         self.statusTermGroupBox = QGroupBox("Status Messages")
         status_term_layout = QVBoxLayout()
         status_term_layout.addWidget(self.statusTerminal)
-        self.statusTermGroupBox.setLayout(status_term_layout)
-        
-        # Create a vertical splitter for the right side (Map + Status Messages)
+        self.statusTermGroupBox.setMinimumHeight(100)
+
         right_side_splitter = QSplitter(Qt.Vertical)
         right_side_splitter.addWidget(map_group)
         right_side_splitter.addWidget(self.statusTermGroupBox)
-        
-        # Main Horizontal splitter
-        main_horizontal_splitter = QSplitter(Qt.Horizontal)
-        main_horizontal_splitter.addWidget(left_side_splitter)
-        main_horizontal_splitter.addWidget(right_side_splitter)
-        
-        main_horizontal_splitter.setStretchFactor(0, 1)
-        main_horizontal_splitter.setStretchFactor(1, 1)
 
+        splitter.addWidget(right_side_splitter)
+        self.statusTermGroupBox.setLayout(status_term_layout)
+        # bottom_layout = QHBoxLayout()
+        # bottom_layout.addWidget(self.controls_group)  
+        # bottom_layout.addWidget(self.statusTermGroupBox)
+
+        # bottom_container = QWidget()
+        # bottom_container.setLayout(bottom_layout)
+        # vertSplitter.addWidget(bottom_container)
         split_screen_layout = QVBoxLayout()
-        split_screen_layout.addWidget(main_horizontal_splitter)
+        # # split_screen_layout.addWidget(splitter)
+        split_screen_layout.addWidget(splitter)
+        split_screen_layout.addWidget(self.statusTermGroupBox) 
         self.split_screen_tab.setLayout(split_screen_layout)
 
     def on_checkbox_state_changed(self, state,map_overlay):

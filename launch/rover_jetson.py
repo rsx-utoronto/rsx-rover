@@ -99,8 +99,39 @@ def generate_launch_description():
             executable='heartbeat_monitor.py',
             name='heartbeat_monitor',
             output='screen'
-        )
+        ),
 
+	Node(
+	    package='tf2_ros',
+	    executable='static_transform_publisher',
+	    name='base_link_to_zed',
+	    arguments=['0.5', '0.0', '0.0', '0.0', '0.0', '0.0', 'base_link', 'zed_camera_link']
+	),
+
+    Node(
+	    package='tf2_ros',
+	    executable='static_transform_publisher',
+	    name='base_link_to_footprint',
+	    arguments=['0.0', '0.0', '-0.39', '0.0', '0.0', '0.0', 'base_link', 'base_footprint']
+	),
+
+	Node(
+            package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
+            remappings=[('cloud_in', '/zed/zed_node/point_cloud/cloud_registered'), ('scan', '/scan')],
+            parameters=[{
+                'target_frame': 'base_link',
+                'transform_tolerance': 0.01,
+                'min_height': 0.1,  # Ignore the ground (crucial!)
+                'max_height': 1.0,  # Ignore the ceiling/sky
+                'angle_min': -1.0472, # ~ -60 degrees (ZED FOV)
+                'angle_max': 1.0472,  # ~ +60 degrees
+                'angle_increment': 0.0087, # ~ 0.5 degree resolution
+                'scan_time': 0.033,
+                'range_min': 0.3,   # ZED blind spot
+                'range_max': 10.0,
+                'use_inf': True,
+            }]
+        )
         # Webcam nodes (for the arm)
         # Node(
         #     package='rover',

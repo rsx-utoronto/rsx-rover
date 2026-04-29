@@ -28,8 +28,8 @@ class ARucoTagDetectionNode(Node):
     def __init__(self):
         super().__init__('aruco_tag_detector')
         self.bridge = CvBridge()
-        # self.curr_state = None
-        self.curr_state = "AR1" #COMMENT OUT WHEN RUNNING!
+        self.curr_state = None
+        # self.curr_state = "AR1" #TODO: COMMENT OUT WHEN RUNNING!
         # self.image_topic = "/camera/color/image_raw"
         
         if sm_config.get("realsense_detection"):
@@ -84,7 +84,7 @@ class ARucoTagDetectionNode(Node):
             print(e)
         else:
             if self.curr_state == "AR1" or self.curr_state == "AR2":
-                print("calling findArucoMarkers")
+                # print("calling findArucoMarkers")
                 self.findArucoMarkers(cv_image)
             
     def mission_state_callback(self, msg):
