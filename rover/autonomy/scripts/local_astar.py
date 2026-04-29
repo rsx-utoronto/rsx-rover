@@ -20,6 +20,10 @@ Reim Notes Documentary:
 
 If self.auto abort is still not working:
 print it ou† to see.
+
+Notes from Jiaxu (20260425):
+- There are so many if statements checking for abort in every loop; surely there's some way to clean this up? 
+- Maybe add a check_abort helper method and just call it every time instead of if statements?
 """
 
 import rclpy 
@@ -61,7 +65,7 @@ with open(file_path, "r") as f:
 
 
 class AstarObstacleAvoidance(Node):
-    def __init__(self, lin_vel = 0.3, ang_vel= 0.3, goal=[(5,0)]):
+    def __init__(self, lin_vel = 0.3, ang_vel= 0.3, goal=[(5,0)]): # default lin/ang velocities and goal coordinates. 
         super().__init__('octomap_a_star_planner')
         
         # if sm_config.get("realsense_detection"):
@@ -154,7 +158,7 @@ class AstarObstacleAvoidance(Node):
         self.marker_array_pub = self.create_publisher(MarkerArray, "/dwa_trajectories", 1)
         self.astar_marker_pub = self.create_publisher(MarkerArray, "/astar_waypoints_markers", 1)
         self.footprint_pub = self.create_publisher(Marker, "/robot_footprint", 1)
-        self.drive_publisher = self.create_publisher(Twist, "/drive", 10)
+        self.drive_publisher = self.create_publisher(Twist, "/drive", 10) # publishing final drive instructions
         self.pub = self.create_publisher(MissionState, 'mission_state', 10)
         self.create_subscription(MissionState,'mission_state',self.feedback_callback, 10)
 
@@ -166,6 +170,16 @@ class AstarObstacleAvoidance(Node):
                 
     def abort_callback(self,msg):
         self.abort_check = msg.data
+        
+        # Jiaxu 20260425: added a thing that stops the rover immediately when aborting. 
+        if self.abort_check:
+            self.get_logger().warn("Abort triggered! Halting rover immediately.")
+            
+            # Stop the rover instantly from the callback
+            stop_msg = Twist()
+            stop_msg.linear.x = 0.0
+            stop_msg.angular.z = 0.0
+            self.drive_publisher.publish(stop_msg)
     
     def feedback_callback(self, msg):
         print("in Obstacle Avoidance feedback callback, msg.state:", msg.state)
@@ -626,7 +640,7 @@ class AstarObstacleAvoidance(Node):
         self.grid_origin=(self.current_position_x, self.current_position_y) #set the grid origin to init/curr position
      
         while rclpy.ok() and not target_reached_flag and not self.abort_check: #while hasn't aborted and hasn't been reached
-            print("Self abort check is ", self.abort_check)
+            print("Self abort check is ", self.abort_check) # print when false
             msg = Twist()
             
             if self.abort_check:
@@ -674,7 +688,7 @@ class AstarObstacleAvoidance(Node):
             if last_position: #check whether we need replan based on threashold dist diff
                 dx = start[0] - last_position[0]
                 dy = start[1] - last_position[1]
-                if abs(dx) > 6 or abs(dy) > 6:
+                if abs(dx) > 6 or abs(dy) > 6: # arbitrary distance? 6m
                     need_replan = True
 
             if (need_replan or first_time) and not target_reached_flag and not path_available and not self.abort_check:
@@ -686,7 +700,7 @@ class AstarObstacleAvoidance(Node):
                     break
                 print("doing astar", start, goal)
                 
-                path = self.a_star(start, goal) #generate path
+                path = self.a_star(start, goal) #generate path using a_star
                 if self.abort_check:
                     break
                 if path:
@@ -694,7 +708,7 @@ class AstarObstacleAvoidance(Node):
                     self.current_path = path
                     last_position = start
                     path_available = True
-                    self.publish_waypoints(path)
+                    self.publish_waypoints(path) # publish waypoints. 
             
             # if len(self.current_path)==1:
             #     path_available=False
@@ -734,7 +748,7 @@ class AstarObstacleAvoidance(Node):
                 
                 angle_diff = target_heading - self.heading
                 
-                if angle_diff > math.pi:
+                if angle_diff > math.pi: # accounting for edge cases 
                     angle_diff -= 2 * math.pi
                 elif angle_diff < -math.pi:
                     angle_diff += 2 * math.pi
@@ -749,8 +763,6 @@ class AstarObstacleAvoidance(Node):
                     self.drive_publisher.publish(msg)
                     if self.abort_check:
                         break
-                    if target_reached_flag: #is redundant can be deleted
-                        return
                     self.get_logger().info(f"Reached waypoint. Proceeding to next. There are {len(self.current_path)} waypoints left.")
                     
                     if self.abort_check:
@@ -773,7 +785,7 @@ class AstarObstacleAvoidance(Node):
                     msg.linear.x = 0
                     msg.angular.z = angle_diff * kp
                     if abs(msg.angular.z) < 0.3:
-                        msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3
+                        msg.angular.z = 0.3 if msg.angular.z > 0 else -0.3 # clip to 0.3 if too high.
 
                 self.drive_publisher.publish(msg)
                 rate.sleep()

@@ -27,7 +27,7 @@ class GPSToPose(Node):
         # Declare and retrieve parameters
         self.declare_parameter('origin_coordinates', [0.0, 0.0]) #instead of None
         self.declare_parameter('base_coordinates', [0.0, 0.0])
-        self.declare_parameter('rover_coordinates', [0.0, 1.055])
+        self.declare_parameter('rover_coordinates', [0.0, 1.055]) 
 
         self.origin_coordinates = self.get_parameter('origin_coordinates').value
         self.base_coordinates = self.get_parameter('base_coordinates').value

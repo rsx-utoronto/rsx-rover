@@ -215,6 +215,16 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  scripts/GUI/map_path_planner_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/GUI/map_viewer_display.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
   scripts/GUI/map_viewer.py
   scripts/GUI/map_viewer_display.py
   DESTINATION lib/${PROJECT_NAME}

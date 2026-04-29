@@ -7,11 +7,15 @@ planner outputs on MissionState and renders the returned global path.
 
 from __future__ import annotations
 
+import threading
 from typing import List, Optional, Tuple
 
+import rclpy
 from geometry_msgs.msg import PoseStamped
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QMessageBox
 from rclpy.node import Node
+from rclpy.executors import SingleThreadedExecutor
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile
 
 from rover.msg import MissionState
@@ -28,14 +32,24 @@ class MapViewerDisplay(base_map_viewer.MapViewer):
     Path requests and path responses are exchanged through MissionState.
     """
 
+    path_ready_signal = pyqtSignal(list)
+    clear_path_signal = pyqtSignal()
+
     def __init__(self, ros_node: Optional[Node] = None, *args, **kwargs) -> None:
         self._ros_node = ros_node
+        self._owns_ros_node = False
+        self._executor: Optional[SingleThreadedExecutor] = None
+        self._spin_thread: Optional[threading.Thread] = None
+
         self._mission_pub = None
         self._mission_sub = None
 
         self.current_path_line = None
         self.current_path_points: List[List[float]] = []
         self.old_path_lines = []
+
+        self.path_ready_signal.connect(self.draw_global_path)
+        self.clear_path_signal.connect(self.clear_global_path)
 
         super().__init__(*args, **kwargs)
 
@@ -56,6 +70,17 @@ class MapViewerDisplay(base_map_viewer.MapViewer):
 
     def _setup_mission_state_io(self) -> None:
         if self._ros_node is None:
+            if not rclpy.ok():
+                return
+            self._ros_node = rclpy.create_node("map_viewer_display_bridge")
+            self._owns_ros_node = True
+
+            self._executor = SingleThreadedExecutor()
+            self._executor.add_node(self._ros_node)
+            self._spin_thread = threading.Thread(target=self._executor.spin, daemon=True)
+            self._spin_thread.start()
+
+        if self._ros_node is None:
             return
 
         qos = QoSProfile(depth=10)
@@ -71,7 +96,7 @@ class MapViewerDisplay(base_map_viewer.MapViewer):
 
     def _mission_state_callback(self, msg: MissionState) -> None:
         if msg.state == "START_SL_AVOIDANCE":
-            self.clear_global_path()
+            self.clear_path_signal.emit()
             return
 
         if msg.state != "GLOBAL_PATH_READY":
@@ -80,7 +105,7 @@ class MapViewerDisplay(base_map_viewer.MapViewer):
         waypoints = self._deserialize_waypoints(msg.global_planner_waypoints)
         if not waypoints:
             return
-        self.draw_global_path(waypoints)
+        self.path_ready_signal.emit([(lat, lng) for lat, lng in waypoints])
 
     @staticmethod
     def _deserialize_waypoints(flat: List[float]) -> List[LatLng]:
@@ -170,6 +195,15 @@ class MapViewerDisplay(base_map_viewer.MapViewer):
 
         msg.targets = self._serialize_waypoints([start, goal])
         self._mission_pub.publish(msg)
+
+    def closeEvent(self, event) -> None:  # type: ignore[override]
+        try:
+            if self._owns_ros_node and self._executor is not None and self._ros_node is not None:
+                self._executor.remove_node(self._ros_node)
+                self._executor.shutdown()
+                self._ros_node.destroy_node()
+        finally:
+            super().closeEvent(event)
 
 
 class MapViewer(MapViewerDisplay):

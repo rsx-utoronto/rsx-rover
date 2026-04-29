@@ -19,14 +19,14 @@ def generate_launch_description():
             output='screen'
         ), 
 
-          Node(
+        Node(
             package='rover',
             executable='sm_grid_search.py',
             name='grid_search',
             output='screen'
         ),
 
-                Node(
+        Node(
             package='rover',
             executable='state_machine.py',
             name='rover_state_machine',
@@ -34,38 +34,45 @@ def generate_launch_description():
         ),
         
 
-        # Node(
-        #     package='rover',
-        #     executable='local_astar.py',
-        #     name='local_astar',
-        #     output='screen'
-        # ),
+        Node(
+            package='rover',
+            executable='local_astar.py',
+            name='local_astar',
+            output='screen'
+        ),
 
         # Node(
         #     package='rover',
-        #     executable='globalPathPlanner.py',
-        #     name='global_path_planner',
+        #     executable='map_viewer_display.py',
+        #     name='global_path_planner_viewer',
         #     output='screen'
         # ),
+
+        Node(
+            package='rover',
+            executable='map_path_planner_node.py',
+            name='global_path_planner_viewer',
+            output='screen'
+        ),
 
         
-         Node(
-             package='rover',
+        Node(
+            package='rover',
             executable='ar_detection_node.py',
             name='aruco_detector',
             output='screen'
-         ), 
+        ), 
 
         Node(
             package='rover',
             executable='object_subscriber_node.py',
             name='object_subscriber',
             output='screen'
-        )
+        ),
 
         
-        # Node(
-            #  package='rover',
+        # Node( # not needed, grid search calls homing aimer class
+        #      package='rover',
         #     executable='aruco_homing.py',
         #     name='aruco_homing',
         #     output='screen'
