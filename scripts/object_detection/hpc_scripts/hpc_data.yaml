@@ -1,0 +1,19 @@
+# Object Detection Dataset for HPC Training
+# Configuration file for YOLO training on Killarney HPC
+
+# Paths relative to this yaml file location
+# After extraction, data will be in: $SLURM_TMPDIR/yolo_data/
+train: train/images
+val: val/images
+test: test/images
+
+# Number of classes
+nc: 3
+
+# Class names (0: waterbottle, 1: mallet, 2: hammer)
+names: ['waterbottle', 'mallet', 'hammer']
+
+# Dataset info
+# Total images after augmentation: ~18,000 training images
+# Balanced classes: ~6,000 images per class
+

@@ -1,0 +1,10 @@
+<launch>
+    <!-- NO NEED - USING A BASH SCRIPT INSTEAD
+    <arg name="occupancy_grid" default="/ransac_grid"/>
+  <node name="map_saver" pkg="map_server" type="map_saver" args="-f $(find rover)/rover/autonomy/maps/current_map">
+        <remap from="/map" to="$(arg occupancy_grid)"/>
+  </node> -->
+
+  <node pkg="rover" type="map_saver.sh" name="map_saver" output="screen"/>
+
+</launch>

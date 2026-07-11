@@ -1,0 +1,15 @@
+<launch> 
+
+    <!-- Launch Motors -->
+    <include file="$(find rover)/rover/drive/launch/falcons.launch" />
+
+    <!-- Launch Manual Control -->
+    <node pkg="rover" type="drive_sender_node" name="manual_control_node" output="screen" />
+
+    <!-- Launch Sensors -->
+    <include file="$(find rover)/rover/drive/launch/sensors.launch" />
+
+    <!-- Launch LeGO LOAM (mapping and odometry node) -->    
+    <!-- <include file="$(find lego_loam)/launch/run.launch" /> -->
+
+</launch>

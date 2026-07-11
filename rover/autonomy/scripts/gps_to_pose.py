@@ -1,0 +1,256 @@
+#!/usr/bin/env python3
+import rclpy 
+from rclpy.node import Node
+from sensor_msgs.msg import NavSatFix, Imu
+from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped, Pose, PoseWithCovarianceStamped, TransformStamped
+from math import asin, atan2, pi, sin, cos, radians
+import gps_conversion_functions as functions
+import message_filters
+from calian_gnss_ros2_msg.msg import GnssSignalStatus
+from tf2_ros import TransformBroadcaster
+# import tf
+
+
+def quaternion_to_euler(x, y, z, w):
+    """Convert quaternion (x, y, z, w) to Euler angles (roll, pitch, yaw)."""
+    t0 = 2.0 * (w * x + y * z)
+    t1 = 1.0 - 2.0 * (x * x + y * y)
+    roll = atan2(t0, t1)
+
+    t2 = 2.0 * (w * y - z * x)
+    t2 = max(-1.0, min(1.0, t2))
+    pitch = asin(t2)
+
+    t3 = 2.0 * (w * z + x * y)
+    t4 = 1.0 - 2.0 * (y * y + z * z)
+    yaw = atan2(t3, t4)
+    return roll, pitch, yaw
+
+
+def euler_to_quaternion(roll, pitch, yaw):
+    """Convert Euler angles (roll, pitch, yaw) to quaternion (x, y, z, w)."""
+    cy = cos(yaw * 0.5)
+    sy = sin(yaw * 0.5)
+    cp = cos(pitch * 0.5)
+    sp = sin(pitch * 0.5)
+    cr = cos(roll * 0.5)
+    sr = sin(roll * 0.5)
+
+    w = cr * cp * cy + sr * sp * sy
+    x = sr * cp * cy - cr * sp * sy
+    y = cr * sp * cy + sr * cp * sy
+    z = cr * cp * sy - sr * sp * cy
+    return x, y, z, w
+
+class GPSToPose(Node): 
+    
+    def __init__(self, origin_coordinates=None, base_coordinates=None, rover_coordinates=None):
+        """_summary_
+
+        Args:
+            origin_coordinates: Coordinates of the starting point in gps frame. Defaults to gps coordinates when this file is launchd.
+            base_coordinates: coordinates of the moving base gps antenna in rover frame. Defaults to None.
+            rover_coordinates: coordinates of rover gps in rover frame. Defaults to None.
+        """
+        super().__init__('gps_to_pose')
+    
+        # Declare and retrieve parameters
+        self.declare_parameter('origin_coordinates', [0.0, 0.0]) #instead of None
+        self.declare_parameter('base_coordinates', [0.0, 0.0])
+        self.declare_parameter('rover_coordinates', [0.0, 1.055]) 
+
+        self.origin_coordinates = self.get_parameter('origin_coordinates').value
+        self.base_coordinates = self.get_parameter('base_coordinates').value
+        self.rover_coordinates = self.get_parameter('rover_coordinates').value
+        self.origin_altitude = -1000.0
+
+        # Initialize variables
+        self.imu = Imu()
+        self.x = 0
+        self.y = 0
+        self.msg = PoseStamped()
+        self.pose_with_cov = PoseWithCovarianceStamped()
+        self.mag_declination_rad = -10.04 * pi / 180
+
+        # ROS 2-style publishers/subscribers
+        self.pose_pub = self.create_publisher(PoseStamped, '/pose', 10)
+        self.pose_with_cov_pub = self.create_publisher(PoseWithCovarianceStamped, '/pose_gps_cov', 10)
+        self.imu_sub = self.create_subscription(Imu, '/imu/orient', self.imu_callback, 10)
+        self.set_origin_sub = self.create_subscription(Pose, '/set_origin', self.set_origin, 10)
+
+        self.gps1 = message_filters.Subscriber(self, GnssSignalStatus, "calian_gnss/gps_extended")
+        self.gps2 = message_filters.Subscriber(self, GnssSignalStatus, "calian_gnss/base_gps_extended")
+        # here 5 is the size of the queue and 0.2 is the time allowed between messages
+        self.ts = message_filters.ApproximateTimeSynchronizer([self.gps1, self.gps2], 5, 0.4)
+        self.ts.registerCallback(self.callback)
+
+        self.gnss_tf_broadcaster = TransformBroadcaster(self)
+
+        self.mag_declination_rad = -10.13 * (pi / 180)  # Magnetic declination in radians
+
+        self.run_in_no_gnss_heading_mode = False
+
+    def transform_heading(self, heading):
+        # important constants, make sure these are accurate to the current state of the rover (read below description)
+        # doens't matter which antenna is 1 or 2, the positive y axis is the direction of the front of the rover and
+        # the positive x axis is to the right, give the units don't matter as long as you are consitent for all
+        X_POS_ANTENNA_1 = self.base_coordinates[0]
+        Y_POS_ANTENNA_1 = self.base_coordinates[1]
+        X_POS_ANTENNA_2 = self.rover_coordinates[0]
+        Y_POS_ANTENNA_2 = self.rover_coordinates[1]
+
+
+        # our heading is calculated as the direction from antenna 1 to 2, so we 
+        # need to find the correction angle that places the heading as the direction the rover is moving by
+        # using the positions of the antennas
+        # we first get the heading from antenna 1 to 2, note atan2 returns the direction from 1 to 2 in (-pi, pi]
+        # scale so if antenna 1 is in the middle then 2 being directly up returns pi/2 or directly right returns 0
+        # for example
+        ORIG_HEADING = atan2(Y_POS_ANTENNA_2-Y_POS_ANTENNA_1, X_POS_ANTENNA_2-X_POS_ANTENNA_1)
+        # we know (since we mandated it above) that the front of the rover would be in direction x=0,y=1 which
+        # using the same scale as above puts the heading at pi/2, if the calculated heading between antenna is not
+        # this then we need to correct any given angle by the difference (note pi is added first to simiplify there
+        # being positive and negative values for ORIG_HEADING)
+        ANGLE_CORRECTION = - ORIG_HEADING
+        # the above angle correct means if we calculate the heading from antenna 1 to 2, then add the correction
+        # we get the heading of the direction of the front of the rover
+        # print(math.degrees(ANGLE_CORRECTION))
+        if heading > pi:
+            heading -= 2*pi
+        res = functions.getAddedAngles(heading, ANGLE_CORRECTION)
+        return res
+
+    def callback(self, gps1, gps2):
+        # first we get the most recent longitudes and latitudes
+        # self.get_logger().info("IN GPS TO POSE!")
+
+        lat1 = gps1.latitude
+        long1 = gps1.longitude
+        lat2 = gps2.latitude
+        long2 = gps2.longitude
+        avg_lat = (lat1 + lat2) / 2
+        avg_long = (long1 + long2) / 2
+        """
+        # let's first calculate our heading
+        heading = functions.getHeadingBetweenGPSCoordinates(lat1, long1, lat2, long2)
+        # now we apply the angle correction so its the heading towards the front of the rover
+        heading = functions.getAddedAngles(heading, ANGLE_CORRECTION)
+        # now we convert our angle to a quaternion for our pose data
+        qx,qy,qz,qw = functions.eulerToQuaternion(0.0, 0.0, heading)
+        """
+        
+        # let's first transform our heading (also changing it to anti-clockwise being positive, east is 0.0)
+        # heading = 2*pi - radians(gps1.heading) # + pi
+        if self.run_in_no_gnss_heading_mode:
+            heading = functions.getHeadingBetweenGPSCoordinates(lat2, long2, lat1, long1)
+            self.get_logger().info(f"Calculated heading: {heading * 180 / pi}")
+            heading = pi/2 - heading
+        else:
+            heading = pi/2 - radians(gps1.heading)
+        
+        rover_heading = self.transform_heading(heading)
+        # self.get_logger().info(f"heading: {rover_heading}")
+        qx,qy,qz,qw = functions.eulerToQuaternion(0.0, 0.0, rover_heading)        
+
+        # now let's get our coordinate
+        # if the value for origin_coordinates is None then this is the first callback and we set the current
+        # current gps location as the origin
+        # note that we consider north (or 0.0 as a calculated gps heading on the -pi to pi scale) to be the
+        # positive y direction for our coordinate system 
+        # self.get_logger().info(f"{self.origin_coordinates}")
+        if self.origin_coordinates == [0.0, 0.0]:
+            # note that since the gps antenna locations are fixed distances from the origin, to not have to
+            # we use the coordinates for antenna one, then apply a fix based of where antenna 1 is from the
+            # center of the rover if needed afterwards
+            self.origin_coordinates = (avg_lat, avg_long)
+            self.x = 0.0
+            self.y = 0.0
+            self.origin_altitude = gps1.altitude
+        else:
+            # it is difficult to calculate from decimal degrees the x and y distance between two points
+            # this is because a degree of longitude at te equator is a different distance that at 23 degree
+            # North, for example
+            # thus, I first get the distance and angle between the origin and our current rover position,
+            # then use these value to convert to our coordinate system (where North is 0.0 degrees)
+            orig_lat, orig_long = self.origin_coordinates
+            distance = functions.getDistanceBetweenGPSCoordinates((orig_lat, orig_long), (avg_lat, avg_long))
+            theta = functions.getHeadingBetweenGPSCoordinates(orig_lat, orig_long, avg_lat, avg_long)
+            # since we measure from north y is r*cos(theta) and x is -r*sin(theta)
+            self.x = distance * sin(theta)
+            self.y = distance * cos(theta)
+
+        # now that we have the coordinate and angle quaternion information we can return the pose message
+        msg = self.msg
+        # msg.header.stamp = rospy.Time.now()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = "map"
+        msg.pose.position.x = self.x
+        msg.pose.position.y = self.y
+        # msg.pose.position.z = gps1.altitude - self.origin_altitude
+        msg.pose.position.z = rover_heading * 180 / pi 
+
+        if abs(gps1.length - 1.65) > 0.4:
+            msg.pose.orientation = self.imu.orientation
+        else:
+            msg.pose.orientation.x = qx
+            msg.pose.orientation.y = qy
+            msg.pose.orientation.z = qz
+            msg.pose.orientation.w = qw
+        self.pose_with_cov.header = msg.header
+        self.pose_with_cov.pose.pose = msg.pose
+        pos_var = (gps1.accuracy_2d + (gps2.accuracy_2d)) / 2 if gps1.valid_fix and gps2.valid_fix else 1000000
+        self.pose_with_cov.pose.covariance[0] = pos_var / 2
+        self.pose_with_cov.pose.covariance[7] = pos_var / 2
+        self.pose_with_cov.pose.covariance[14] = gps1.accuracy_3d if gps1.valid_fix else 1000000
+        self.pose_with_cov.pose.covariance[21] = 1000000
+        self.pose_with_cov.pose.covariance[28] = 1000000
+        self.pose_with_cov.pose.covariance[35] = 0.01 if gps1.valid_fix else 1000000
+        t = TransformStamped()
+        t.header.stamp = msg.header.stamp
+        t.header.frame_id = "map"
+        t.child_frame_id = "base_link"
+        t.transform.translation.x = msg.pose.position.x
+        t.transform.translation.y = msg.pose.position.y
+        t.transform.translation.z = msg.pose.position.z
+        t.transform.rotation.x = msg.pose.orientation.x
+        t.transform.rotation.y = msg.pose.orientation.y
+        t.transform.rotation.z = msg.pose.orientation.z
+        t.transform.rotation.w = msg.pose.orientation.w
+        self.gnss_tf_broadcaster.sendTransform(t)
+        self.pose_pub.publish(msg)
+        self.pose_with_cov_pub.publish(self.pose_with_cov)
+
+    def set_origin(self, msg: Pose):
+        self.origin_coordinates = [msg.position.x, msg.position.y]
+
+    def imu_callback(self, msg):
+        # Convert quaternion to Euler angles (roll, pitch, yaw)
+        orientation_list = [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
+        # (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(orientation_list)
+        (roll, pitch, yaw) = quaternion_to_euler(*orientation_list)
+        
+        yaw = yaw + self.mag_declination_rad
+        # Convert back to quaternion
+        qx, qy, qz, qw = euler_to_quaternion(roll, pitch, yaw)
+        msg.orientation.x = qx
+        msg.orientation.y = qy
+        msg.orientation.z = qz
+        msg.orientation.w = qw
+        self.imu = msg
+
+    
+def main(args=None):
+    rclpy.init(args=args)
+    node = GPSToPose()
+    try:
+        rclpy.spin(node)
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+    
+
+if __name__ == '__main__':
+    main()

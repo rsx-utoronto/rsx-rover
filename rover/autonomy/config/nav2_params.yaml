@@ -1,0 +1,84 @@
+#translated this from move_base to nav 2 params using chat
+controller_frequency: 5.0
+recovery_behaviors_enabled: false
+
+planner_server:
+  expected_planner_frequency: 1.0
+  planner_plugins: ["GridBased"]
+  GridBased:
+    plugin: "nav2_navfn_planner/NavfnPlanner"
+    allow_unknown: true
+    default_tolerance: 0.8
+
+controller_server:
+  expected_controller_frequency: 5.0
+  controller_plugins: ["FollowPath"]
+  FollowPath:
+    plugin: "dwb_core:DwbController"
+    acc_lim_x: 2.5
+    acc_lim_y: 0.0
+    acc_lim_theta: 1.9
+
+    max_vel_x: 3.5
+    min_vel_x: 2.0
+    max_vel_y: 0.0
+    min_vel_y: 0.0
+
+    max_vel_theta: 3.5
+    min_vel_theta: 2.0
+
+    xy_goal_tolerance: 0.5
+    yaw_goal_tolerance: 0.5
+    latch_xy_goal_tolerance: false
+
+    sim_time: 2.0
+    prune_plan: false
+    occdist_scale: 0.005
+    publish_cost_grid: true
+
+    # Optional DWB parameters you can uncomment and tune:
+    # sim_granularity: 0.02
+    # vx_samples: 6
+    # vy_samples: 0
+    # vtheta_samples: 20
+
+planner_frequency: 1.0
+
+bt_navigator:
+  plugin: "nav2_behavior_tree::BehaviorTreeEngine"
+  default_bt_xml_filename: "navigate_w_replanning_and_recovery.xml"
+
+recoveries_server:
+  recovery_behavior_plugins: []
+  # disable recovery behaviors because recovery_behaviour_enabled: false
+
+amcl:
+  use_sim_time: false
+
+# Optional parameters for costmap (can be adjusted in separate costmap params file)
+# global_costmap:
+#   global_frame: map
+#   robot_base_frame: base_link
+#   update_frequency: 5.0
+#   publish_frequency: 2.0
+#   rolling_window: false
+#   width: 10.0
+#   height: 10.0
+#   resolution: 0.05
+#   plugins:
+#     - {name: static_layer, type: "nav2_costmap_2d::StaticLayer"}
+#     - {name: obstacle_layer, type: "nav2_costmap_2d::ObstacleLayer"}
+#     - {name: inflation_layer, type: "nav2_costmap_2d::InflationLayer"}
+
+# local_costmap:
+#   global_frame: odom
+#   robot_base_frame: base_link
+#   update_frequency: 10.0
+#   publish_frequency: 5.0
+#   rolling_window: true
+#   width: 6.0
+#   height: 6.0
+#   resolution: 0.05
+#   plugins:
+#     - {name: obstacle_layer, type: "nav2_costmap_2d::ObstacleLayer"}
+#     - {name: inflation_layer, type: "nav2_costmap_2d::InflationLayer"}

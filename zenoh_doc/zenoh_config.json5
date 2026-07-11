@@ -1,0 +1,11 @@
+{
+  mode: "client",
+  connect: {
+    endpoints: ["tcp/192.168.0.125:7447"]
+  },
+  scouting: {
+    multicast: {
+      enabled: false   // Disable multicast — rely on router only
+    }
+  }
+}

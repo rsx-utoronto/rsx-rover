@@ -1,0 +1,1 @@
+scp ~/rover_ws/src/rsx-rover/scripts/GUI/permanent_obstacles.csv jetson:/home/rsx/rover_ws/src/rsx-rover/scripts/GUI

@@ -1,0 +1,16 @@
+# request fields
+float32 x 
+float32 y 
+float32 w
+string type
+bool give_priority
+---
+# response fields
+string service_response
+
+# Goal types and corresponding coordinate format 
+# gps - x = lat, y = long
+# light_beacon (provided in odom frame) - x = x, y = y, w = w
+# radio_beacon - x = lat, y = long 
+# odom - x = x, y = y, w = w
+# sign - x = dist, w = heading
