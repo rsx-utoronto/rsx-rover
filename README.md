@@ -12,7 +12,7 @@ For more information, visit our [website](https://rsx.skule.ca/).
 
 ## Repository Details 
 
-We primarily develop is C++ and Python using ROS noetic. 
+We primarily develop is C++ and Python using ROS2 Humble
 
 ## Getting Started 
 
@@ -20,8 +20,8 @@ Note: It is recommended to set up [ssh keys](https://docs.github.com/en/authenti
 
 ### Requirements
 
-- Ubuntu 20.04
-- ROS Noetic
+- Ubuntu 22.04
+- ROS2 Humble
 
 ### On Ubuntu Focal w/ ROS noetic 
 ```
