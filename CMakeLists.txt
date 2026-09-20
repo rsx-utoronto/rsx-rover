@@ -214,14 +214,6 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(PROGRAMS
-  rover/autonomy/scripts/state_machine_remAR3_addObj3.py
-  rover/autonomy/scripts/optimal_path_improved.py
-  rover/autonomy/scripts/sm_grid_search_unused.py
-  rover/autonomy/scripts/sm_straight_line_unused.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
 # install(DIRECTORY 
 #   scripts/GUI/tile_cache 
 #   DESTINATION lib/${PROJECT_NAME}
@@ -264,7 +256,6 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-  rover/autonomy/scripts/aruco_homing.py
   rover/autonomy/scripts/aruco_homing_improve.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -336,14 +327,6 @@ install(PROGRAMS
 
 install(PROGRAMS
   rover/autonomy/scripts/object_subscriber_node.py
-  rover/autonomy/scripts/model_v1.pt
-  rover/autonomy/scripts/best.pt
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-
-install(PROGRAMS
-  rover/autonomy/scripts/mallet.pt
   DESTINATION lib/${PROJECT_NAME}
 )
 
