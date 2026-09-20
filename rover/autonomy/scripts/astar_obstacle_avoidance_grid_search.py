@@ -46,7 +46,7 @@ from transforms3d.euler import quat2euler
 import threading
 from rclpy.duration import Duration
 from threading import Lock
-import aruco_homing as aruco_homing
+import aruco_homing_improve as aruco_homing
 import ar_detection_node as ar_detect
 
 from geometry_msgs.msg import Point
