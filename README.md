@@ -23,7 +23,7 @@ Note: It is recommended to set up [ssh keys](https://docs.github.com/en/authenti
 - Ubuntu 22.04
 - ROS2 Humble
 
-### On Ubuntu Focal w/ ROS noetic 
+### On Ubuntu Focal w/ ROS2 Huumble
 ```
 cd ~
 mkdir -p rover_ws/src 
