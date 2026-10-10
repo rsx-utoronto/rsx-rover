@@ -336,6 +336,7 @@ install(PROGRAMS
 
 install(PROGRAMS
   rover/autonomy/scripts/object_subscriber_node.py
+  rover/autonomy/scripts/gesture_node.py
   rover/autonomy/scripts/model_v1.pt
   rover/autonomy/scripts/best.pt
   DESTINATION lib/${PROJECT_NAME}
