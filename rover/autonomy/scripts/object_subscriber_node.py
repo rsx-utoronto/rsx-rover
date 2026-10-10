@@ -59,9 +59,13 @@ class ObjectDetectionNode(Node):
         self.last_cv_image = None
         self.K = None
         self.D = None
+
+        # Loads the YOLO model from the specified path. Ensure that 'model_v1.pt' is in the same directory as this script.
         script_dir=os.path.dirname(os.path.abspath(__file__))
         model_path=os.path.join(script_dir, 'model_v1.pt')
         self.model = YOLO(model_path)  # Load YOLO model
+
+
         self.device = 0 if torch.cuda.is_available() else "cpu"
         print("device",self.device)
         self.model.to(self.device)
