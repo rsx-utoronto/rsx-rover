@@ -5,8 +5,8 @@ Route-finding state machine
 State Machine Diagram: https://lucid.app/lucidspark/de548cc5-ef6a-402f-8165-6ba17ecb4b84/edit?viewport_loc=-1796%2C-218%2C5637%2C3109%2C0_0&invitationId=inv_bac4b471-60e8-4381-884b-c70ed722c39a
 
 Status of each state:
-  INIT                [FAKE]         uses the made-up targets in FAKE below
-  START_GATE          [PARTLY REAL]  LED is real; "at the start" check is fake
+  INIT                [REAL]         reads GPS from the GUI on /long_lat_goal_array, converts to x/y
+  START_GATE          [PARTLY REAL]  LED is real; "at the start" check is a placeholder (always passes)
   LOCATION_SELECTION  [PARTLY REAL]  works, but takes targets in list order
   CRUISE              [REAL]         drives via sm_straight_line.py (START_SL -> SLA_DONE/SLA_FAILED)
   CHECK_TAG           [REAL]         watches aruco_found from ar_detection_node.py
@@ -24,32 +24,41 @@ Unresolved questions for TODO:
 - Start gate: how do we check the rover is at the start, and how far off counts as not at the start?
 """
 
+import math
 import queue
+import signal
 import threading
 import time
 
 import rclpy
 import smach
 from geometry_msgs.msg import PoseStamped
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from std_msgs.msg import Bool, String
+from std_msgs.msg import Bool, Float32MultiArray, String
 
 from rover.msg import MissionState
 from rover_qos import STATE_QOS
+import gps_conversion_functions as gps
 
 # ---------------------------------------------------------------------------
 # Settings
 # ---------------------------------------------------------------------------
 
-# Replace with GPS from GUI
-FAKE = {
-    "at_start": True,                                  # START_GATE position check
-    "targets": {"POST1": (10.0, 20.0),                 # x/y in metres from the start
-                "POST2": (35.0, -5.0)},
-}
+# Target names, in the order their coordinates appear after Start in long_lat_goal.csv.
+# The GUI sends: start_lat, start_lon, POST1_lat, POST1_lon, POST2_lat, POST2_lon
+TARGET_NAMES = ["POST1", "POST2"]
 
-CRUISE_TIMEOUT_S = 600    # give up on a drive after 10 minutes
-CHECK_TAG_WINDOW_S = 5.0  # after arriving, how long to look for the tag before giving up
+# Values marked TBD are placeholders nobody has decided yet. Each says what should decide it.
+# States take these as constructor arguments, so tests pass their own values instead.
+
+# How long CRUISE waits for sm_straight_line.py to answer before giving up on a drive.
+# TBD: placeholder until tested on the rover. Longest real drive plus a margin?
+CRUISE_TIMEOUT_S = 600
+
+# After arriving, how long CHECK_TAG looks for the tag before moving on.
+# TBD: placeholder. How long does ar_detection_node.py need to spot a tag once stopped?
+CHECK_TAG_WINDOW_S = 5.0
 
 
 # ---------------------------------------------------------------------------
@@ -69,10 +78,12 @@ class RoverNode(Node):
         self.create_subscription(PoseStamped, "/pose", self._pose_callback, 10)
         # ar_detection_node.py publishes True on aruco_found whenever it sees a tag
         self.create_subscription(Bool, "aruco_found", self._aruco_callback, 10)
+        self.create_subscription(Float32MultiArray, "/long_lat_goal_array", self._gps_callback, 10)
 
         self.feedback = queue.Queue()
         self.pose = None          # latest PoseStamped from /pose, None until one arrives
         self.last_tag_seen = 0.0  # time.time() when a tag was last seen, 0 = never
+        self.gps_values = None    # latest list of numbers from the GUI, None until one arrives
 
     def _feedback_callback(self, msg):
         self.feedback.put(msg.state)
@@ -84,15 +95,22 @@ class RoverNode(Node):
         if msg.data:
             self.last_tag_seen = time.time()
 
+    def _gps_callback(self, msg):
+        self.gps_values = list(msg.data)
+
     # helpers
+    # Both helpers skip publishing once ROS has shut down (e.g. Ctrl+C): publishing then
+    # raises an error that would crash the state machine on its way out.
     def set_led(self, mode):
         """mode: "auto" (red), "manual" (blue), "mission done" (green). See led_light.py."""
-        self.led_pub.publish(String(data=mode))
+        if rclpy.ok():
+            self.led_pub.publish(String(data=mode))
 
     def gui(self, text):
         """Status line for the GUI, and printed locally."""
         print(text)
-        self.gui_pub.publish(String(data=text))
+        if rclpy.ok():
+            self.gui_pub.publish(String(data=text))
 
     def clear_feedback(self):
         """Throw away old replies so a stale "SLA_DONE" can't end the next drive early."""
@@ -108,33 +126,77 @@ class RoverNode(Node):
 # ---------------------------------------------------------------------------
 
 class Init(smach.State):
-    """Initialize Autonomous Navigation: get the target GPS points, convert to x/y.  [FAKE]"""
+    """Initialize Autonomous Navigation: get the target GPS points, convert to x/y.  [REAL]
 
-    def __init__(self, node):
+    Waits for the GUI to publish coordinates on /long_lat_goal_array, then converts each
+    target into metres from the start (x = east, y = north), the frame the
+    straight-line node drives in.
+      ready: targets and remaining are set
+    """
+
+    def __init__(self, node, target_names=TARGET_NAMES):
         smach.State.__init__(self, outcomes=["ready"],
                              output_keys=["targets", "remaining"])
         self.node = node
+        self.target_names = target_names
 
     def execute(self, userdata):
-        self.node.gui("INIT: getting target coordinates (fake)")
-        # TODO: wait for GPS points on /long_lat_goal_array and convert each to x/y.
-        userdata.targets = dict(FAKE["targets"])
-        userdata.remaining = list(FAKE["targets"].keys())
+        # To test without the real GUI, run tests/route_finding/fake_gui.py
+        targets = self._wait_for_gps_targets()
+
+        for name, (x, y) in targets.items():
+            self.node.gui(f"INIT: {name} is {x:.1f} m east, {y:.1f} m north of the start")
+        userdata.targets = targets
+        userdata.remaining = list(targets.keys())
         return "ready"
+
+    def _wait_for_gps_targets(self):
+        """Block until the GUI sends the right number of coordinates, then convert them."""
+        expected = 2 * (1 + len(self.target_names))      # start + each target, lat and lon
+        last_warning = 0.0
+
+        while rclpy.ok():
+            values = self.node.gps_values
+            if values is not None and len(values) == expected:
+                return self._to_xy(values)
+            if time.time() - last_warning > 5.0:
+                if values is None:
+                    self.node.gui(f"INIT: waiting for GPS coordinates on /long_lat_goal_array "
+                                  f"(Start, {', '.join(self.target_names)})")
+                else:
+                    self.node.gui(f"INIT: got {len(values)} numbers but expected {expected} "
+                                  f"(Start, {', '.join(self.target_names)}). Check long_lat_goal.csv")
+                last_warning = time.time()
+            time.sleep(0.1)
+        return {}
+
+    def _to_xy(self, values):
+        """values = [start_lat, start_lon, lat1, lon1, lat2, lon2, ...] in decimal degrees."""
+        start_lat, start_lon = values[0], values[1]
+        targets = {}
+        for i, name in enumerate(self.target_names):
+            lat, lon = values[2 + 2 * i], values[3 + 2 * i]
+            distance = gps.getDistanceBetweenGPSCoordinates((start_lat, start_lon), (lat, lon))
+            heading = gps.getHeadingBetweenGPSCoordinates(start_lat, start_lon, lat, lon)  # 0 = north
+            targets[name] = (distance * math.sin(heading), distance * math.cos(heading))
+        return targets
 
 
 class StartGate(smach.State):
-    """Start Gate Verification + Signal Red LED.  [PARTLY REAL: LED real, position check fake]"""
+    """Start Gate Verification + Signal Red LED.  [PARTLY REAL: LED real, position check PLACEHOLDER]
+
+      ok:           at the start, LED set to red
+      not_at_start: rover is too far from Start -> back to INIT to re-adjust.
+                    Never happens yet: there is no position check.
+    """
 
     def __init__(self, node):
         smach.State.__init__(self, outcomes=["ok", "not_at_start"])
         self.node = node
 
     def execute(self, userdata):
-        # TODO (real): check the rover is actually at the start location.
-        if not FAKE["at_start"]:
-            self.node.gui("START_GATE: not at start, re-adjust")
-            return "not_at_start"
+        # PLACEHOLDER: always passes. TODO (real): compare the rover's position with Start
+        #   and return "not_at_start" if it's too far (see the start gate open question).
         self.node.set_led("auto")      # red = autonomous (rule 1.e.ii)
         self.node.gui("START_GATE: at start, LED red")
         return "ok"
@@ -207,6 +269,8 @@ class Cruise(smach.State):
                 self.node.gui(f"CRUISE: drive to {name} failed")
                 return "failed"
 
+        if not rclpy.ok():
+            return "failed"    # ROS shut down (Ctrl+C) mid-drive
         self.node.gui(f"CRUISE: no reply for {name} within {self.timeout_s}s")
         return "failed"
 
@@ -237,6 +301,8 @@ class CheckTag(smach.State):
                 return "found"
             time.sleep(0.1)
 
+        if not rclpy.ok():
+            return "not_found"    
         self.node.gui(f"CHECK_TAG: no tag seen at {name} within {self.window_s:.0f}s")
         return "not_found"
 
@@ -291,7 +357,8 @@ class AwaitApproval(smach.State):
         # TODO (real): wait for the Next Task button (Bool on /next_state from the GUI).
         #   Target 2 is behind the hill, out of radio range (rule 1.e.xvi), so the
         #   button may never arrive there.
-        time.sleep(1.0)                 # leave the green LED on for a moment
+        # PLACEHOLDER pause so the green LED is visible; goes away once this waits for the button.
+        time.sleep(1.0)
         self.node.set_led("auto")       # back to red: still autonomous
         return "next_objective" if userdata.remaining else "finish"
 
@@ -331,22 +398,43 @@ def build_machine(node):
     return sm
 
 
+def spin(node):
+    """Run ROS callbacks until shutdown. Ctrl+C makes rclpy.spin raise; that's a normal stop."""
+    try:
+        rclpy.spin(node)
+    except ExternalShutdownException:
+        pass
+
+
+def stop_on_ctrl_c(signum, frame):
+    """Ctrl+C: shut ROS down so every waiting loop sees rclpy.ok() == False and the machine
+    stops cleanly. Without this, Ctrl+C raises KeyboardInterrupt inside whichever state is
+    running and SMACH reports it as a crash. A second Ctrl+C force-quits as usual."""
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+    rclpy.try_shutdown()
+
+
 def main():
     smach.set_loggers(smach.loginfo, smach.logwarn, lambda msg: None, smach.logerr)
     rclpy.init()
+    signal.signal(signal.SIGINT, stop_on_ctrl_c)   # after rclpy.init(), which sets its own handler
     node = RoverNode()
     smach.set_shutdown_check(lambda: not rclpy.ok())
 
     # ROS callbacks run in this background thread while the machine runs in the main one.
-    threading.Thread(target=rclpy.spin, args=(node,), daemon=True).start()
+    spin_thread = threading.Thread(target=spin, args=(node,), daemon=True)
+    spin_thread.start()
     time.sleep(0.5)
 
     try:
         result = build_machine(node).execute()
         print("Machine finished with outcome:", result)
     finally:
+        # Order matters: stop the spin thread before destroying the node it's using,
+        # or the program crashes on exit ("terminate called without an active exception").
+        rclpy.try_shutdown()   # Ctrl+C has usually shut ROS down already; shutting down twice raises
+        spin_thread.join(timeout=2.0)
         node.destroy_node()
-        rclpy.shutdown()
 
 
 if __name__ == "__main__":
