@@ -44,7 +44,6 @@ How it works:
 Known limitations:
 - Every target is driven to in a straight line (START_SL), and the route order uses
   straight-line distance, so neither knows about the hill.
-- The GUI sends coordinates as 32-bit floats, which only gives about 1 m of precision.
 """
 
 import itertools
@@ -71,22 +70,18 @@ import gps_conversion_functions as gps
 # Settings
 # ---------------------------------------------------------------------------
 
-# Target names, in the order their coordinates appear after Start in long_lat_goal.csv.
-# The GUI sends: start_lat, start_lon, POST1_lat, POST1_lon, POST2_lat, POST2_lon
+# Target names
 TARGET_NAMES = ["POST1", "POST2"]
 
 # What to publish on the "state" topic while heading to each target. ar_detection_node.py
 # only looks for tags while "state" is AR1 or AR2 (the GNSS[i] / AR Tag[i] boxes).
 TARGET_DETECTOR_STATES = {"POST1": "AR1", "POST2": "AR2"}
 
-# Values marked TBD are placeholders nobody has decided yet. Each says what should decide it.
-# States take these as constructor arguments, so tests pass their own values instead.
-
 # Move gps_to_pose.py's origin to Start so /pose is in the same frame as the targets.
 # Without this, /pose starts wherever the rover was when gps_to_pose.py launched.
 SET_POSE_ORIGIN_TO_START = True
 
-# How close to Start (metres) the rover must be to begin. TBD: GPS error plus a margin?
+# How close to Start (meters) the rover must be to begin. 
 START_TOLERANCE_M = 3.0
 
 # How long START_GATE waits for a fresh /pose before saying the rover isn't at the start.
@@ -96,15 +91,12 @@ POSE_TIMEOUT_S = 5.0
 START_RECHECK_S = 2.0
 
 # How long CRUISE waits for sm_straight_line.py to answer before giving up on a drive.
-# TBD: placeholder until tested on the rover. Longest real drive plus a margin?
 CRUISE_TIMEOUT_S = 600
 
 # After arriving, how long CHECK_TAG looks for the tag before moving on.
-# TBD: placeholder. How long does ar_detection_node.py need to spot a tag once stopped?
 CHECK_TAG_WINDOW_S = 5.0
 
 # Longest APPROACH_TAG may home on a tag before treating it as lost.
-# TBD: aruco_homing_improve.py used 35 s; homing from 5+ m away may need more.
 APPROACH_TIMEOUT_S = 60.0
 
 # Homing numbers, the same as sm_grid_search.py's. Speeds come from sm_config.yaml.
@@ -123,7 +115,6 @@ HOMING_LOST_AFTER_S = 2.0          # no bounding box for this long = tag lost
 MAX_APPROACH_ATTEMPTS = 3
 
 # How long AWAIT_APPROVAL waits for Next Task before continuing on its own (None = forever).
-# TBD: target 2 is behind the hill, out of radio range (rule 1.e.xvi).
 APPROVAL_TIMEOUT_S = 120.0
 
 # Green LED flash half-period while waiting for approval (rule 1.e.ii: flashing green).
@@ -302,7 +293,6 @@ class Init(smach.State):
         self.set_origin = set_origin
 
     def execute(self, userdata):
-        # To test without the real GUI, run tests/route_finding/fake_gui.py
         values = self._wait_for_gps_values()
         if values is None:
             return "aborted"
@@ -405,7 +395,7 @@ class StartGate(smach.State):
 
 def shortest_route(start, names, targets):
     """Order of `names` with the shortest total straight-line distance from `start`.
-    Tries every order, which is fine for the handful of targets a mission has."""
+    Tries every order."""
     def length(order):
         points = [start] + [targets[name] for name in order]
         return sum(math.dist(a, b) for a, b in zip(points, points[1:]))
@@ -580,7 +570,7 @@ class ApproachTag(smach.State):
         name = userdata.current_target
         self.node.gui(f"APPROACH_TAG: homing on {name}'s tag")
         result = self._home()
-        self.node.drive()                       # stop, whatever happened
+        self.node.drive()                     
 
         if result == "aborted":
             return "aborted"
@@ -609,7 +599,7 @@ class ApproachTag(smach.State):
                 continue
 
             command = homing_command(self.node.bbox, self.min_area, self.lin_vel, self.ang_vel)
-            if command is None:                 # close enough: final push, as sm_grid_search.py
+            if command is None:              
                 end = time.time() + self.final_push_s
                 while time.time() < end and rclpy.ok() and not self.node.aborted:
                     self.node.drive(self.lin_vel)
