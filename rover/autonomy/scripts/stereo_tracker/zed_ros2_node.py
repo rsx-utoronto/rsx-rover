@@ -12,16 +12,26 @@ from stereo_tracker import StereoRig, StereoTracker, annotate
 
 
 def find_zed_device() -> str:
-    """Scan V4L2 devices and return the first /dev/videoX path belonging to a ZED camera."""
+    """Scan V4L2 devices and return the active, openable /dev/videoX path for a ZED camera."""
+    candidates = []
     for name_path in sorted(glob.glob("/sys/class/video4linux/video*/name")):
         try:
             with open(name_path, "r") as f:
                 if "ZED" in f.read().upper():
                     dev_name = os.path.basename(os.path.dirname(name_path))
-                    return f"/dev/{dev_name}"
+                    candidates.append(f"/dev/{dev_name}")
         except OSError:
             continue
-    return "/dev/video0"
+
+    for dev in reversed(candidates):
+        cap = cv2.VideoCapture(dev, cv2.CAP_V4L2)
+        if cap.isOpened():
+            cap.release()
+            return dev
+
+    if not candidates:
+        raise RuntimeError("No ZED camera detected in /sys/class/video4linux. Check USB 3.0 connection.")
+    raise RuntimeError(f"ZED camera detected at {candidates}, but none could be opened (busy or stale handle).")
 
 
 class ZedStereoTrackerNode(Node):

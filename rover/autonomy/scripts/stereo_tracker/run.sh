@@ -16,4 +16,10 @@ if [ "$RMW_IMPLEMENTATION" = "rmw_zenoh_cpp" ] && ! pgrep -x rmw_zenohd > /dev/n
     export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 fi
 
+# Reset ZED USB device automatically if present (prevents lid-close/sleep UVC locks)
+if command -v usbreset >/dev/null 2>&1; then
+    sudo -n usbreset 2b03:f880 >/dev/null 2>&1 || true
+    sleep 1
+fi
+
 exec "$SCRIPT_DIR/.venv/bin/python3" "$SCRIPT_DIR/zed_ros2_node.py" "$@"
