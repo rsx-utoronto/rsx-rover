@@ -24,7 +24,6 @@ States (flowchart box -> state):
   (abort, any time)                     ABORT               GUI abort button (/auto_abort_check):
                                                             stop, blue LED, operator drives back
 
-How it works:
 - Coordinate frame: targets are metres from Start (x = east, y = north). INIT moves
   gps_to_pose.py's origin to Start (/set_origin) so /pose uses the same frame. Turn this off
   with SET_POSE_ORIGIN_TO_START.
@@ -40,10 +39,6 @@ How it works:
 - Abort: the GUI abort button also stops sm_straight_line.py, which then won't drive again
   until it restarts. So ABORT stops the mission, turns the LED blue and the operator
   teleoperates back the way the rover came.
-
-Known limitations:
-- Every target is driven to in a straight line (START_SL), and the route order uses
-  straight-line distance, so neither knows about the hill.
 """
 
 import itertools
@@ -438,11 +433,13 @@ class LocationSelection(smach.State):
 class Cruise(smach.State):
     """Rover Cruise to Selected Location, then the GNSS[i] / AR Tag[i] branch.
 
-    Turns tag detection on for this target (AR1/AR2 on "state"), asks the straight-line
-    node (sm_straight_line.py) to drive by publishing START_SL on mission_state, then waits.
-      arrived: got SLA_DONE
-      failed:  got SLA_FAILED, timed out, or ROS shut down
-      aborted: abort button pressed (sm_straight_line.py stops itself on the same button)
+    Turns tag detection on for this target (AR1/AR2 on "state"), asks the obstacle-avoidance
+    nodes to drive by publishing START_SL_AVOIDANCE on mission_state, then waits.
+    map_path_planner_node.py plans around the GUI's obstacles and publishes GLOBAL_PATH_READY,
+    then local_astar.py drives that path.
+      arrived: got SLA_AVOIDANCE_DONE
+      failed:  got SLA_FAILED / SLA_AVOIDANCE_FAILED, timed out, or ROS shut down
+      aborted: abort button pressed (local_astar.py stops itself on the same button)
     """
 
     def __init__(self, node, timeout_s=CRUISE_TIMEOUT_S, detector_states=TARGET_DETECTOR_STATES):
@@ -458,17 +455,18 @@ class Cruise(smach.State):
 
         self.node.set_detector_state(self.detector_states.get(name, name))
         self.node.clear_feedback()
-        self.node.send("START_SL", name, (x, y))
+        self.node.send("START_SL_AVOIDANCE", name, (x, y))
         self.node.gui(f"CRUISE: driving to {name} at ({x:.1f}, {y:.1f})")
 
-        reply = self.node.wait_for_reply({"SLA_DONE", "SLA_FAILED"}, self.timeout_s)
+        reply = self.node.wait_for_reply(
+            {"SLA_AVOIDANCE_DONE", "SLA_FAILED", "SLA_AVOIDANCE_FAILED"}, self.timeout_s)
         if self.node.aborted:
             self.node.gui(f"CRUISE: aborted on the way to {name}")
             return "aborted"
-        if reply == "SLA_DONE":
+        if reply == "SLA_AVOIDANCE_DONE":
             self.node.gui(f"CRUISE: arrived at {name}")
             return "arrived"
-        if reply == "SLA_FAILED":
+        if reply in ("SLA_FAILED", "SLA_AVOIDANCE_FAILED"):
             self.node.gui(f"CRUISE: drive to {name} failed")
             return "failed"
         if not rclpy.ok():
